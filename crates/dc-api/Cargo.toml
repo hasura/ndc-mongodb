@@ -1,0 +1,20 @@
+[package]
+name = "dc-api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = { version = "0.6.18", features = ["headers"] }
+bytes = "1"
+dc-api-types = { path = "../dc-api-types" }
+http = "^0.2"
+jsonwebtoken = "8"
+mime = "^0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+thiserror = "1.0.40"
+tracing = "0.1.37"
+
+[dev-dependencies]
+axum-test-helper = "0.3.0"
+tokio = "1"

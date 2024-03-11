@@ -1,0 +1,16 @@
+{
+  "$jsonSchema": {
+    "properties": {
+      "_id": {
+        "bsonType": "objectId"
+      },
+      "PlaylistId": {
+        "bsonType": "int"
+      },
+      "TrackId": {
+        "bsonType": "int"
+      }
+    },
+    "required": ["PlaylistId", "TrackId"]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$jsonSchema": {
+    "properties": {
+      "_id": {
+        "bsonType": "objectId"
+      },
+      "GenreId": {
+        "bsonType": "int"
+      },
+      "Name": {
+        "bsonType": "string"
+      }
+    },
+    "required": ["GenreId"]
+  }
+}

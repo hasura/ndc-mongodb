@@ -1,0 +1,35 @@
+[package]
+name = "mongodb-agent-common"
+description = "logic that is common to v2 and v3 agent versions"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.71"
+async-trait = "0.1"
+axum = { version = "0.6", features = ["headers"] }
+bytes = "1"
+configuration = { path = "../configuration" }
+dc-api = { path = "../dc-api" }
+dc-api-types = { path = "../dc-api-types" }
+enum-iterator = "1.4.1"
+futures = "0.3.28"
+futures-util = "0.3.28"
+http = "^0.2"
+indexmap = { version = "1", features = ["serde"] } # must match the version that ndc-client uses
+itertools = "^0.10"
+mongodb = "2.8"
+mongodb-support = { path = "../mongodb-support" }
+once_cell = "1"
+regex = "1"
+schemars = { version = "^0.8.12", features = ["smol_str"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+thiserror = "1"
+time = { version = "0.3.29", features = ["formatting", "parsing", "serde"] }
+tracing = "0.1"
+
+[dev-dependencies]
+mockall = "0.11.4"
+pretty_assertions = "1"
+tokio = { version = "1", features = ["full"] }

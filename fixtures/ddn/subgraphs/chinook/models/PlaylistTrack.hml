@@ -1,0 +1,77 @@
+kind: ObjectType
+version: v1
+definition:
+  name: PlaylistTrack
+  graphql:
+    typeName: playlistTrack
+    inputTypeName: playlistTrackInput
+  fields:
+    - name: PlaylistId
+      type: Int!
+    - name: TrackId
+      type: Int!
+    - name: _id
+      type: ObjectId
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: PlaylistTrack
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - PlaylistId
+          - TrackId
+          - _id
+
+---
+kind: Model
+version: v1
+definition:
+  name: PlaylistTrack
+  objectType: PlaylistTrack
+  filterableFields:
+    - fieldName: PlaylistId
+      operators:
+        enableAll: true
+    - fieldName: TrackId
+      operators:
+        enableAll: true
+    - fieldName: _id
+      operators:
+        enableAll: true
+  orderableFields:
+    - fieldName: PlaylistId
+      orderByDirections:
+        enableAll: true
+    - fieldName: TrackId
+      orderByDirections:
+        enableAll: true
+    - fieldName: _id
+      orderByDirections:
+        enableAll: true
+  arguments: []
+  graphql:
+    selectUniques:
+      - queryRootField: playlistTrackById
+        uniqueIdentifier:
+          - _id
+    selectMany:
+      queryRootField: playlistTrack
+    filterExpressionType: playlistTrackBoolExp
+    orderByExpressionType: playlistTrackOrderBy
+  source:
+    collection: PlaylistTrack
+    dataConnectorName: mongodb
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: PlaylistTrack
+  permissions:
+    - role: admin
+      select:
+        filter: null

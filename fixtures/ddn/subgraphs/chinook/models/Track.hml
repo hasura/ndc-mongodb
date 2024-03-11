@@ -1,0 +1,140 @@
+kind: ObjectType
+version: v1
+definition:
+  name: Track
+  graphql:
+    typeName: track
+    inputTypeName: trackInput
+  fields:
+    - name: AlbumId
+      type: Int
+    - name: Bytes
+      type: Int
+    - name: Composer
+      type: String
+    - name: GenreId
+      type: Int
+    - name: MediaTypeId
+      type: Int!
+    - name: Milliseconds
+      type: Int!
+    - name: Name
+      type: String!
+    - name: TrackId
+      type: Int!
+    - name: UnitPrice
+      type: Float!
+    - name: _id
+      type: ObjectId
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Track
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - AlbumId
+          - Bytes
+          - Composer
+          - GenreId
+          - MediaTypeId
+          - Milliseconds
+          - Name
+          - TrackId
+          - UnitPrice
+          - _id
+
+---
+kind: Model
+version: v1
+definition:
+  name: Track
+  objectType: Track
+  filterableFields:
+    - fieldName: AlbumId
+      operators:
+        enableAll: true
+    - fieldName: Bytes
+      operators:
+        enableAll: true
+    - fieldName: Composer
+      operators:
+        enableAll: true
+    - fieldName: GenreId
+      operators:
+        enableAll: true
+    - fieldName: MediaTypeId
+      operators:
+        enableAll: true
+    - fieldName: Milliseconds
+      operators:
+        enableAll: true
+    - fieldName: Name
+      operators:
+        enableAll: true
+    - fieldName: TrackId
+      operators:
+        enableAll: true
+    - fieldName: UnitPrice
+      operators:
+        enableAll: true
+    - fieldName: _id
+      operators:
+        enableAll: true
+  orderableFields:
+    - fieldName: AlbumId
+      orderByDirections:
+        enableAll: true
+    - fieldName: Bytes
+      orderByDirections:
+        enableAll: true
+    - fieldName: Composer
+      orderByDirections:
+        enableAll: true
+    - fieldName: GenreId
+      orderByDirections:
+        enableAll: true
+    - fieldName: MediaTypeId
+      orderByDirections:
+        enableAll: true
+    - fieldName: Milliseconds
+      orderByDirections:
+        enableAll: true
+    - fieldName: Name
+      orderByDirections:
+        enableAll: true
+    - fieldName: TrackId
+      orderByDirections:
+        enableAll: true
+    - fieldName: UnitPrice
+      orderByDirections:
+        enableAll: true
+    - fieldName: _id
+      orderByDirections:
+        enableAll: true
+  arguments: []
+  graphql:
+    selectUniques:
+      - queryRootField: trackById
+        uniqueIdentifier:
+          - _id
+    selectMany:
+      queryRootField: track
+    filterExpressionType: trackBoolExp
+    orderByExpressionType: trackOrderBy
+  source:
+    collection: Track
+    dataConnectorName: mongodb
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Track
+  permissions:
+    - role: admin
+      select:
+        filter: null

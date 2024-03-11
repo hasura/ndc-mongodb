@@ -1,0 +1,22 @@
+[workspace.package]
+version = "0.1.0"
+
+[workspace]
+members = [
+  "crates/configuration",
+  "crates/mongodb-connector",
+  "crates/mongodb-agent-common",
+  "crates/mongodb-support",
+  "crates/dc-api",
+  "crates/dc-api-types",
+  "crates/dc-api-test-helpers",
+  "crates/ndc-test-helpers"
+]
+resolver = "2"
+
+# We have a fork of the mongodb driver with a fix for reading metadata from time
+# series collections.
+# See the upstream PR: https://github.com/mongodb/mongo-rust-driver/pull/1003
+[patch.crates-io.mongodb]
+git = "https://github.com/hasura/mongo-rust-driver.git"
+branch = "time-series-fix"

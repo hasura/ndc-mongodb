@@ -1,0 +1,16 @@
+{
+  "$jsonSchema": {
+    "properties": {
+      "_id": {
+        "bsonType": "objectId"
+      },
+      "MediaTypeId": {
+        "bsonType": "int"
+      },
+      "Name": {
+        "bsonType": "string"
+      }
+    },
+    "required": ["MediaTypeId"]
+  }
+}

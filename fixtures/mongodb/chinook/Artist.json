@@ -1,0 +1,16 @@
+{
+  "$jsonSchema": {
+    "properties": {
+      "_id": {
+        "bsonType": "objectId"
+      },
+      "ArtistId": {
+        "bsonType": "int"
+      },
+      "Name": {
+        "bsonType": "string"
+      }
+    },
+    "required": ["ArtistId"]
+  }
+}

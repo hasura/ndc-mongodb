@@ -1,0 +1,77 @@
+kind: ObjectType
+version: v1
+definition:
+  name: Genre
+  graphql:
+    typeName: genre
+    inputTypeName: genreInput
+  fields:
+    - name: GenreId
+      type: Int!
+    - name: Name
+      type: String
+    - name: _id
+      type: ObjectId
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Genre
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - GenreId
+          - Name
+          - _id
+
+---
+kind: Model
+version: v1
+definition:
+  name: Genre
+  objectType: Genre
+  filterableFields:
+    - fieldName: GenreId
+      operators:
+        enableAll: true
+    - fieldName: Name
+      operators:
+        enableAll: true
+    - fieldName: _id
+      operators:
+        enableAll: true
+  orderableFields:
+    - fieldName: GenreId
+      orderByDirections:
+        enableAll: true
+    - fieldName: Name
+      orderByDirections:
+        enableAll: true
+    - fieldName: _id
+      orderByDirections:
+        enableAll: true
+  arguments: []
+  graphql:
+    selectUniques:
+      - queryRootField: genreById
+        uniqueIdentifier:
+          - _id
+    selectMany:
+      queryRootField: genre
+    filterExpressionType: genreBoolExp
+    orderByExpressionType: genreOrderBy
+  source:
+    collection: Genre
+    dataConnectorName: mongodb
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Genre
+  permissions:
+    - role: admin
+      select:
+        filter: null

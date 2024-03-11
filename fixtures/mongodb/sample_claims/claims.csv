@@ -1,0 +1,134 @@
+id,prescription_description,amount,date,status,patient_id,account_group_id
+1,Simvastatin 20 mg,1737.45,2022-08-16,closed,83C6A022,1
+2,Lisinopril 10 mg,6855.42,2023-01-31,open,C73ACB5A,1
+3,Metformin 500 mg,7244.9,2023-02-09,open,8A32DDC9,1
+4,Levothyroxine 50 mcg,7000.83,2022-09-13,open,83050DB2,1
+5,Amlodipine 5 mg,5241.81,2022-11-29,open,1877552E,1
+6,Omeprazole 20 mg,6484.45,2023-05-15,in progress,FE6A2519,1
+7,Atorvastatin 40 mg,3701.5,2022-11-16,in progress,5CFDF754,1
+8,Metoprolol 25 mg,8377.24,2023-01-30,in progress,EAC8127F,1
+9,Sertraline 50 mg,6059.97,2023-06-26,in progress,ED01367E,1
+10,Alprazolam 0.5 mg,4659.3,2023-05-09,open,663B6BDD,1
+11,Citalopram 20 mg,9972.11,2023-02-22,closed,2CB60BEE,1
+12,Gabapentin 300 mg,6921.42,2023-05-15,in progress,E4AC278A,1
+13,Hydrochlorothiazide 25 mg,6483.9,2022-10-15,open,9CFA0CF9,1
+14,Fluoxetine 20 mg,4470.83,2022-07-18,closed,9C738590,1
+15,Losartan 50 mg,6967.77,2023-06-20,open,15F2FC82,1
+16,Pantoprazole 40 mg,8983.63,2022-11-13,in progress,4907A7A8,2
+17,Tramadol 50 mg,697.93,2022-11-30,closed,FAF0918C,2
+18,Warfarin 5 mg,4686.17,2022-09-14,in progress,F7CEB109,2
+19,Ibuprofen 200 mg,4550.49,2023-06-27,open,1BB86245,2
+20,Prednisone 10 mg,5058.34,2022-10-30,open,D3047ED9,2
+21,Escitalopram 10 mg,5931.6,2023-03-09,closed,FD6F2F1B,2
+22,Carvedilol 25 mg,2697.1,2023-04-08,in progress,C9BB4C02,2
+23,Furosemide 40 mg,1235.11,2023-05-20,closed,D8D1F6E6,2
+24,Montelukast 10 mg,9272.86,2022-08-29,in progress,6BB0DA3A,2
+25,Bupropion 150 mg,6987.05,2023-03-26,closed,9FA494C8,2
+26,Amoxicillin 500 mg,6785.82,2023-04-05,in progress,0936EA98,3
+27,Allopurinol 100 mg,7746.26,2023-03-29,closed,A762D024,3
+28,Budesonide 3 mg,6502.22,2023-07-08,in progress,EC0725A3,3
+29,Cefalexin 500 mg,6448.39,2023-02-04,in progress,369C19E6,3
+30,Cyclobenzaprine 10 mg,8423.1,2023-04-25,closed,6AC7BC06,3
+31,Diclofenac 50 mg,4354.54,2022-12-11,in progress,A4316A30,3
+32,Donepezil 10 mg,1503.6,2022-12-09,closed,5F875B04,3
+33,Duloxetine 30 mg,1856.81,2023-01-01,in progress,2F2FEE78,3
+34,Enalapril 10 mg,8745.09,2022-12-01,closed,AECC4429,3
+35,Escitalopram 20 mg,9634.3,2022-10-08,open,5A7A8229,3
+36,Fexofenadine 180 mg,3606.36,2023-05-02,closed,AA3BA060,3
+37,Fluticasone 50 mcg,9653.99,2022-09-29,closed,C41F1F59,3
+38,Gabapentin 600 mg,3221.15,2023-02-20,closed,1C9B5E94,3
+39,Glimepiride 4 mg,4568.75,2023-05-01,open,F454C133,4
+40,Hydrochlorothiazide 12.5 mg,7263.28,2023-03-18,closed,364235BB,4
+41,Hydroxyzine 25 mg,5943.81,2023-03-19,closed,FEF167C3,4
+42,Isosorbide 20 mg,4551.17,2023-02-05,closed,B62E97FC,4
+43,Ketoconazole 200 mg,6904.64,2023-04-20,closed,82EF35AB,4
+44,Lamotrigine 100 mg,2241.43,2023-02-28,in progress,F636B463,4
+45,Loratadine 10 mg,3838.62,2022-11-05,in progress,4192D4A0,4
+46,Meloxicam 15 mg,4276.31,2022-10-26,open,AD50D1CD,4
+47,Methylprednisolone 4 mg,5807.55,2022-09-07,open,51349E8D,4
+48,Metoclopramide 10 mg,6328.57,2022-12-12,closed,9B149D6B,4
+49,Montelukast 5 mg,2932.69,2022-11-24,open,A9D135EE,4
+50,Nitrofurantoin 100 mg,8659.8,2023-04-07,closed,088B3C03,4
+51,Olanzapine 5 mg,7550.02,2023-02-02,in progress,3A9D86BD,5
+52,Oxycodone 5 mg,7004.72,2023-06-15,closed,556D381D,5
+53,Paroxetine 20 mg,5449.07,2022-11-12,in progress,DB256243,5
+54,Pregabalin 75 mg,5738.3,2022-08-17,closed,334A991F,5
+55,Quetiapine 100 mg,5785.06,2022-12-12,open,AF3B2CB6,5
+56,Ranitidine 150 mg,8817.98,2023-06-04,open,DB0ABFED,5
+57,Rosuvastatin 10 mg,4737.48,2022-09-11,open,1E72489E,5
+58,Sertraline 100 mg,5501.33,2022-11-06,closed,69F6D522,5
+59,Sildenafil 50 mg,7071.6,2022-11-19,in progress,6545403D,5
+60,Spironolactone 25 mg,2730.99,2023-01-27,closed,B35AE3B3,5
+61,Tamsulosin 0.4 mg,6956.05,2023-01-06,open,52A3D3A4,5
+62,Terbinafine 250 mg,6104.75,2023-06-13,open,8FF6ED1B,5
+63,Tizanidine 4 mg,8210.63,2023-01-16,in progress,B7B46B5B,5
+64,Topiramate 50 mg,3585.93,2023-02-21,closed,FE3A9372,6
+65,Tramadol 100 mg,7943.28,2023-01-29,open,DC579B70,6
+66,Valacyclovir 500 mg,2187.03,2022-09-30,in progress,02DB2466,6
+67,Valsartan 80 mg,3389.23,2022-12-13,closed,58B3AD27,6
+68,Venlafaxine 75 mg,392.87,2022-12-03,closed,01FD1FD5,6
+69,Zolpidem 10 mg,5268.41,2023-07-05,open,9DF967EE,6
+70,Alendronate 70 mg,1147.28,2022-09-09,in progress,6B278BE4,6
+71,Amiodarone 200 mg,8902.24,2022-09-29,closed,4DF283E5,6
+72,Aripiprazole 10 mg,5485.21,2022-08-08,open,CEC8A7CF,6
+73,Azathioprine 50 mg,9458.59,2022-08-06,open,04FD8468,6
+74,Benazepril 20 mg,7229.85,2022-09-10,closed,6078D82A,6
+75,Bisoprolol 5 mg,7068.26,2022-11-08,in progress,2421E74E,6
+76,Ciprofloxacin 500 mg,3137.21,2022-11-01,in progress,2EA1D773,6
+77,Clonazepam 0.5 mg,2421.72,2023-03-15,closed,6422E0EE,6
+78,Clopidogrel 75 mg,5158.38,2022-09-03,in progress,F3FD8856,7
+79,Dexamethasone 4 mg,2276.34,2022-11-15,closed,E62614FA,7
+80,Diazepam 10 mg,6640.42,2022-08-20,open,EAC0F605,7
+81,Digoxin 0.25 mg,1843.92,2023-05-22,closed,25E70561,7
+82,Enoxaparin 40 mg,4326.58,2022-08-31,open,D97D5C26,7
+83,Esomeprazole 40 mg,7076.31,2023-05-12,closed,ABC727DA,7
+84,Famotidine 20 mg,5646.42,2022-11-14,in progress,280A45E4,7
+85,Furosemide 20 mg,5579.98,2023-01-05,closed,DD95D425,7
+86,Gabapentin 800 mg,3735.2,2022-08-19,open,F4691B09,7
+87,Glipizide 5 mg,6412.26,2022-12-25,closed,82EA85B4,7
+88,Haloperidol 1 mg,8236.13,2023-04-07,closed,3DC3B06F,7
+89,Hydralazine 25 mg,5758.08,2022-09-03,in progress,E09F1BEC,7
+90,Hydrochlorothiazide 50 mg,5921.34,2022-08-27,in progress,83ACA9E7,7
+91,Insulin Aspart 10 units,2396.65,2022-07-19,closed,0D9F16FB,7
+92,Ipratropium 0.5 mg,7309.68,2023-04-07,in progress,F2E1C7B7,7
+93,Isotretinoin 20 mg,4822.73,2023-05-28,closed,DD1BFAA6,8
+94,Labetalol 100 mg,805.3,2022-12-23,in progress,043D71DC,8
+95,Levetiracetam 500 mg,9614.82,2022-11-21,in progress,6E8653B4,8
+96,Loperamide 2 mg,3989.43,2023-03-11,closed,7F861261,8
+97,Meclizine 25 mg,2695.63,2022-08-14,in progress,D5AE0FD7,8
+98,Memantine 10 mg,2646.03,2023-01-09,closed,279F1714,8
+99,Methotrexate 10 mg,1615.74,2022-07-31,open,04641C1D,8
+100,Metoclopramide 5 mg,2847,2022-08-04,open,0988AB5C,8
+101,Mirtazapine 15 mg,6797.32,2022-11-14,closed,06227F9D,8
+102,Nebivolol 5 mg,9748.35,2022-10-04,in progress,E8D87F4B,8
+103,Nifedipine 30 mg,9099.02,2022-08-29,open,04DF6476,8
+104,Nitroglycerin 0.4 mg,9185.05,2022-12-31,closed,9427309F,8
+105,Olmesartan 40 mg,2331.71,2023-05-01,open,7782C4BE,8
+106,Ondansetron 8 mg,6519.76,2022-07-26,in progress,DF9327E5,9
+107,Orphenadrine 100 mg,4566.19,2022-08-26,open,3DBDAE69,9
+108,Pantoprazole 20 mg,7486.82,2022-10-24,closed,8433004D,9
+109,Pioglitazone 30 mg,6178.18,2023-02-11,open,757D529B,9
+110,Prazosin 1 mg,307.73,2023-02-15,open,6E5ECC29,9
+111,Prochlorperazine 10 mg,8123.57,2023-02-13,closed,2323546F,9
+112,Propranolol 40 mg,3853.25,2023-02-06,closed,EB58C91C,9
+113,Rabeprazole 20 mg,5382.92,2022-11-05,closed,AA500973,9
+114,Rivaroxaban 20 mg,256.17,2023-02-11,closed,4E535C8C,9
+115,Sertraline 150 mg,4284.88,2023-01-20,open,D8A2A382,9
+116,Sildenafil 100 mg,986.17,2022-07-23,closed,C65B673A,9
+117,Simvastatin 40 mg,1444.37,2022-10-16,in progress,619E7638,9
+118,Sitagliptin 100 mg,9703.74,2023-01-28,in progress,478B4511,9
+119,Sucralfate 1 g,3461.58,2022-11-23,in progress,1223C730,9
+120,Tadalafil 20 mg,1324.33,2022-10-29,closed,3B5C1319,9
+121,Terazosin 2 mg,8098.69,2023-06-09,closed,55DDE7F4,10
+122,Timolol 0.5% eye drops,7570.73,2022-07-16,closed,9B30038F,10
+123,Trazodone 50 mg,374.66,2022-09-12,in progress,80EF81A1,10
+124,Triamcinolone 0.1% cream,3095.79,2023-03-19,closed,AE89E176,10
+125,Venlafaxine 150 mg,4721.25,2022-09-15,in progress,77414FA2,10
+126,Warfarin 2.5 mg,2460.61,2023-07-08,open,C1130D9D,10
+127,Zolpidem 5 mg,1790.69,2023-05-10,open,0066B7F8,10
+128,Albuterol 2 mg,8003.68,2023-01-01,in progress,34D28F1F,10
+129,Amoxicillin 875 mg,3982.94,2022-09-14,in progress,4E4EF576,10
+130,Atenolol 50 mg,7121.67,2022-10-27,open,A00D07FE,10
+131,Azithromycin 250 mg,1142.95,2023-03-02,closed,DD30CC6E,10
+132,Clindamycin 150 mg,4294.35,2022-08-24,in progress,856EA263,10
+133,Diclofenac Gel 1%,1391.41,2023-05-23,closed,F789F806,10

@@ -1,0 +1,10 @@
+[package]
+name = "ndc-test-helpers"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+indexmap = "2"
+itertools = "^0.10"
+ndc-sdk = { git = "https://github.com/hasura/ndc-hub.git" }
+serde_json = "1"

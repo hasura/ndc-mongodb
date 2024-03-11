@@ -1,0 +1,37 @@
+{
+  "$jsonSchema": {
+    "properties": {
+      "_id": {
+        "bsonType": "objectId"
+      },
+      "BillingAddress": {
+        "bsonType": "string"
+      },
+      "BillingCity": {
+        "bsonType": "string"
+      },
+      "BillingCountry": {
+        "bsonType": "string"
+      },
+      "BillingPostalCode": {
+        "bsonType": "string"
+      },
+      "BillingState": {
+        "bsonType": "string"
+      },
+      "CustomerId": {
+        "bsonType": "int"
+      },
+      "InvoiceDate": {
+        "bsonType": "string"
+      },
+      "InvoiceId": {
+        "bsonType": "int"
+      },
+      "Total": {
+        "bsonType": "double"
+      }
+    },
+    "required": ["CustomerId", "InvoiceDate", "InvoiceId", "Total"]
+  }
+}

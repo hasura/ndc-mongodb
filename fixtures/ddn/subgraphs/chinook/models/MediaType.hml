@@ -1,0 +1,77 @@
+kind: ObjectType
+version: v1
+definition:
+  name: MediaType
+  graphql:
+    typeName: mediaType
+    inputTypeName: mediaTypeInput
+  fields:
+    - name: MediaTypeId
+      type: Int!
+    - name: Name
+      type: String
+    - name: _id
+      type: ObjectId
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: MediaType
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - MediaTypeId
+          - Name
+          - _id
+
+---
+kind: Model
+version: v1
+definition:
+  name: MediaType
+  objectType: MediaType
+  filterableFields:
+    - fieldName: MediaTypeId
+      operators:
+        enableAll: true
+    - fieldName: Name
+      operators:
+        enableAll: true
+    - fieldName: _id
+      operators:
+        enableAll: true
+  orderableFields:
+    - fieldName: MediaTypeId
+      orderByDirections:
+        enableAll: true
+    - fieldName: Name
+      orderByDirections:
+        enableAll: true
+    - fieldName: _id
+      orderByDirections:
+        enableAll: true
+  arguments: []
+  graphql:
+    selectUniques:
+      - queryRootField: mediaTypeById
+        uniqueIdentifier:
+          - _id
+    selectMany:
+      queryRootField: mediaType
+    filterExpressionType: mediaTypeBoolExp
+    orderByExpressionType: mediaTypeOrderBy
+  source:
+    collection: MediaType
+    dataConnectorName: mongodb
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: MediaType
+  permissions:
+    - role: admin
+      select:
+        filter: null
