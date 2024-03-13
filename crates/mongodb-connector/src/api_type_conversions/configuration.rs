@@ -1,4 +1,7 @@
-use configuration::{metadata::{Collection, ObjectField, ObjectType}, Configuration};
+use configuration::{
+    metadata::{Collection, ObjectField, ObjectType},
+    Configuration,
+};
 
 pub fn v2_schema_response_to_configuration(
     response: dc_api_types::SchemaResponse,
@@ -11,19 +14,15 @@ fn v2_schema_response_to_metadata(
     response: dc_api_types::SchemaResponse,
 ) -> configuration::Metadata {
     let table_object_types = response.tables.iter().map(table_to_object_type);
-    let nested_object_types =
-        response
-            .object_types
+    let nested_object_types = response.object_types.into_iter().map(|ot| ObjectType {
+        name: ot.name.to_string(),
+        description: ot.description,
+        fields: ot
+            .columns
             .into_iter()
-            .map(|ot| ObjectType {
-                name: ot.name.to_string(),
-                description: ot.description,
-                fields: ot
-                    .columns
-                    .into_iter()
-                    .map(column_info_to_object_field)
-                    .collect(),
-            });
+            .map(column_info_to_object_field)
+            .collect(),
+    });
     let object_types = table_object_types.chain(nested_object_types).collect();
 
     let collections = response
@@ -41,19 +40,41 @@ fn v2_schema_response_to_metadata(
 fn column_info_to_object_field(column_info: dc_api_types::ColumnInfo) -> ObjectField {
     let t = v2_to_v3_column_type(column_info.r#type);
     let is_nullable = column_info.nullable;
-        ObjectField {
-            name: column_info.name,
-            description: column_info.description.flatten(),
-            r#type: maybe_nullable(t, is_nullable),
+    ObjectField {
+        name: column_info.name,
+        description: column_info.description.flatten(),
+        r#type: maybe_nullable(t, is_nullable),
+    }
+}
+
+fn maybe_nullable(
+    t: configuration::metadata::Type,
+    is_nullable: bool,
+) -> configuration::metadata::Type {
+    if is_nullable {
+        configuration::metadata::Type::Nullable(Box::new(t))
+    } else {
+        t
+    }
+}
+
+fn v2_to_v3_column_type(t: dc_api_types::ColumnType) -> configuration::metadata::Type {
+    match t {
+        dc_api_types::ColumnType::Scalar(name) => {
+            let bson_scalar_type = mongodb_support::BsonScalarType::from_bson_name(&name).unwrap(); // XXX TODO: handle error
+            configuration::metadata::Type::Scalar(bson_scalar_type)
         }
-}
-
-fn maybe_nullable(t: configuration::metadata::Type, is_nullable: bool) -> configuration::metadata::Type {
-    todo!()
-}
-
-fn v2_to_v3_column_type(r#type: dc_api_types::ColumnType) -> configuration::metadata::Type {
-    todo!()
+        dc_api_types::ColumnType::Object(name) => {
+            configuration::metadata::Type::Object(name.to_string())
+        }
+        dc_api_types::ColumnType::Array {
+            element_type,
+            nullable,
+        } => configuration::metadata::Type::ArrayOf(Box::new(maybe_nullable(
+            v2_to_v3_column_type(*element_type),
+            nullable,
+        ))),
+    }
 }
 
 fn table_to_object_type(table: &dc_api_types::TableInfo) -> ObjectType {
@@ -69,21 +90,23 @@ fn table_to_object_type(table: &dc_api_types::TableInfo) -> ObjectType {
     }
 }
 
-fn collection_type_name_from_table_name(clone: Vec<String>) -> String {
-    todo!()
+fn collection_type_name_from_table_name(table_name: Vec<String>) -> String {
+    name_from_qualified_name(table_name)
 }
 
-fn table_to_collection(
-    table: dc_api_types::TableInfo,
-) -> Collection {
+fn table_to_collection(table: dc_api_types::TableInfo) -> Collection {
     let collection_type = collection_type_name_from_table_name(table.name.clone());
     Collection {
         name: name_from_qualified_name(table.name),
         description: table.description.flatten(),
-        r#type: todo!(),
-        }
+        r#type: collection_type,
+    }
 }
 
-fn name_from_qualified_name(name: Vec<String>) -> String {
-    todo!()
+// TODO: handle qualified names
+pub fn name_from_qualified_name(qualified_name: Vec<String>) -> String {
+    qualified_name
+        .into_iter()
+        .last()
+        .expect("qualified name vec is not empty")
 }

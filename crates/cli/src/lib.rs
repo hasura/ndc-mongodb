@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use clap::Subcommand;
 
 use mongodb_agent_common::{interface_types::MongoConfig, schema::get_schema};
-use configuration::Configuration;
+use mongodb_connector::api_type_conversions::v2_schema_response_to_configuration;
 
 /// The command invoked by the user.
 #[derive(Debug, Clone, Subcommand)]
@@ -40,7 +40,6 @@ pub async fn run(command: Command, context: &Context) -> anyhow::Result<()> {
     Ok(())
 }
 
-
 /// Initialize an empty directory with an empty connector configuration.
 ///
 /// An empty configuration contains default settings and options, and is expected to be filled with
@@ -65,11 +64,11 @@ pub async fn run(command: Command, context: &Context) -> anyhow::Result<()> {
 ///
 /// This expects a configuration with a valid connection URI.
 async fn update(context: &Context) -> anyhow::Result<()> {
-    // let input_configuration: Configuration = configuration::read_directory(&context.path).await?;
     let schema = get_schema(&context.mongo_config).await?;
 
-    // let output_configuration = input_configuration; // XXX TODO: update configuration
-    // configuration::write_directory(&context.path, &output_configuration).await?;
+    let configuration = v2_schema_response_to_configuration(schema);
+
+    configuration::write_directory(&context.path, &configuration).await?;
 
     Ok(())
 }

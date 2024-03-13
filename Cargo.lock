@@ -1556,6 +1556,7 @@ dependencies = [
  "itertools 0.10.5",
  "mongodb",
  "mongodb-agent-common",
+ "mongodb-support",
  "ndc-sdk",
  "ndc-test-helpers",
  "pretty_assertions",
