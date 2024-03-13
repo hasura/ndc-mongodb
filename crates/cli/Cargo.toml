@@ -9,7 +9,7 @@ path = "./src/main.rs"
 
 [dependencies]
 configuration = { path = "../configuration" }
-mongodb-agent-v3 = { path = "../mongodb-agent-v3" }
+mongodb-connector = { path = "../mongodb-connector" }
 mongodb-agent-common = { path = "../mongodb-agent-common" }
 mongodb = "2.8"
 ndc-sdk = { git = "https://github.com/hasura/ndc-hub.git" }
