@@ -9,7 +9,11 @@ pub const DATABASE_URI_ENV_VAR: &str = "MONGODB_DATABASE_URI";
 pub async fn try_init_state() -> Result<MongoConfig, Box<dyn Error + Send + Sync>> {
     // Splitting this out of the `Connector` impl makes error translation easier
     let database_uri = env::var(DATABASE_URI_ENV_VAR)?;
-    let client = get_mongodb_client(&database_uri).await?;
+    try_init_state_from_uri(&database_uri).await
+}
+
+pub async fn try_init_state_from_uri(database_uri: &str)  -> Result<MongoConfig, Box<dyn Error + Send + Sync>> {
+    let client = get_mongodb_client(database_uri).await?;
     let database_name = match client.default_database() {
         Some(database) => Ok(database.name().to_owned()),
         None => Err(anyhow!(

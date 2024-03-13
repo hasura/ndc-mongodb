@@ -1,0 +1,15 @@
+packagingDefinition:
+  type: PrebuiltDockerImage
+  dockerImage:
+supportedEnvironmentVariables:
+  - name: MONGODB_DATABASE_URI
+    description: The URI for the MongoDB database
+commands:
+  update: hasura-mongodb update
+cliPlugin:
+  name: hasura-mongodb
+  version: "0.0.1"
+dockerComposeWatch:
+  - path: ./
+    target: /etc/connector
+    action: sync+restart
