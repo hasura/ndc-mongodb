@@ -89,6 +89,7 @@
           # arion-compose.nix.
           mongodb-connector-workspace = final.callPackage ./nix/mongodb-connector-workspace.nix { }; # builds all packages in this repo
           mongodb-connector = final.mongodb-connector-workspace.override { package = "mongodb-connector"; }; # override `package` to build one specific crate
+          mongodb-cli-plugin = final.mongodb-connector-workspace.override { package = "mongodb-cli-plugin"; };
           v3-engine = final.callPackage ./nix/v3-engine.nix { src = v3-engine-source; };
           v3-e2e-testing = final.callPackage ./nix/v3-e2e-testing.nix { src = v3-e2e-testing-source; database-to-test = "mongodb"; };
           inherit v3-e2e-testing-source; # include this source so we can read files from it in arion-compose configs
@@ -169,6 +170,16 @@
           mongodb-connector = pkgs.pkgsCross.aarch64-linux.mongodb-connector; # Note: dynamically-linked
           architecture = "arm64";
         };
+
+        # CLI plugin packages with cross-compilation options
+        mongodb-cli-plugin = pkgs.mongodb-cli-plugin.override { staticallyLinked = true; };
+        mongodb-cli-plugin-x86_64-linux = pkgs.pkgsCross.x86_64-linux.mongodb-cli-plugin.override { staticallyLinked = true; };
+        mongodb-cli-plugin-aarch64-linux = pkgs.pkgsCross.aarch64-linux.mongodb-cli-plugin.override { staticallyLinked = true; };
+
+        # CLI plugin docker images
+        mongodb-cli-plugin-docker = pkgs.callPackage ./nix/docker-cli-plugin.nix { };
+        mongodb-cli-plugin-docker-x86_64-linux = pkgs.pkgsCross.x86_64-linux.callPackage ./nix/docker-cli-plugin.nix { };
+        mongodb-cli-plugin-docker-aarch64-linux = pkgs.pkgsCross.aarch64-linux.callPackage ./nix/docker-cli-plugin.nix { };
 
         publish-docker-image = pkgs.writeShellApplication {
           name = "publish-docker-image";
