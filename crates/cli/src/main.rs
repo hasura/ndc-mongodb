@@ -8,7 +8,7 @@ use std::env;
 use std::path::PathBuf;
 
 use clap::Parser;
-use mongodb_connector::state::{try_init_state_from_uri, DATABASE_URI_ENV_VAR};
+use mongodb_agent_common::state::{try_init_state_from_uri, DATABASE_URI_ENV_VAR};
 use mongodb_cli_plugin::{run, Command, Context};
 
 /// The command-line arguments.

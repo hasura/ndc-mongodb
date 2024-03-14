@@ -1,7 +1,7 @@
 use std::{env, error::Error};
 
 use anyhow::anyhow;
-use mongodb_agent_common::{interface_types::MongoConfig, mongodb_connection::get_mongodb_client};
+use crate::{interface_types::MongoConfig, mongodb_connection::get_mongodb_client};
 
 pub const DATABASE_URI_ENV_VAR: &str = "MONGODB_DATABASE_URI";
 

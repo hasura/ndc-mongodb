@@ -8,7 +8,7 @@ use tokio::fs;
 
 use crate::Configuration;
 
-pub const CONFIGURATION_FILENAME: &str = "configuration";
+pub const CONFIGURATION_FILENAME: &str = "metadata";
 pub const CONFIGURATION_EXTENSIONS: [(&str, FileFormat); 3] =
     [("json", JSON), ("yaml", YAML), ("yml", YAML)];
 pub const DEFAULT_EXTENSION: &str = "json";

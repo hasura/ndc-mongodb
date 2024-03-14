@@ -3,12 +3,13 @@
 //! The CLI can do a few things. This provides a central point where those things are routed and
 //! then done, making it easier to test this crate deterministically.
 
+
 use std::path::PathBuf;
 
 use clap::Subcommand;
 
+use configuration::Configuration;
 use mongodb_agent_common::{interface_types::MongoConfig, schema::get_schema};
-use mongodb_connector::api_type_conversions::v2_schema_response_to_configuration;
 
 /// The command invoked by the user.
 #[derive(Debug, Clone, Subcommand)]
@@ -64,9 +65,10 @@ pub async fn run(command: Command, context: &Context) -> anyhow::Result<()> {
 ///
 /// This expects a configuration with a valid connection URI.
 async fn update(context: &Context) -> anyhow::Result<()> {
-    let schema = get_schema(&context.mongo_config).await?;
+    // TODO: Get metadata directly from DB introspection instead of going via v2 get_schema()
+    let _schema = get_schema(&context.mongo_config).await?;
 
-    let configuration = v2_schema_response_to_configuration(schema);
+    let configuration = Configuration::default(); // v2_schema_response_to_configuration(schema);
 
     configuration::write_directory(&context.path, &configuration).await?;
 
