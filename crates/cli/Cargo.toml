@@ -11,7 +11,6 @@ path = "./src/main.rs"
 configuration = { path = "../configuration" }
 mongodb-agent-common = { path = "../mongodb-agent-common" }
 mongodb = "2.8"
-ndc-sdk = { git = "https://github.com/hasura/ndc-hub.git" }
 
 anyhow = "1.0.80"
 clap = { version = "4.5.1", features = ["derive", "env"] }

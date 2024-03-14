@@ -1533,7 +1533,6 @@ dependencies = [
  "configuration",
  "mongodb",
  "mongodb-agent-common",
- "ndc-sdk",
  "serde_json",
  "thiserror",
  "tokio",
