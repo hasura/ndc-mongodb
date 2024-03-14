@@ -31,6 +31,18 @@ pub struct NativeQuery {
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+
+    /// Set to `readWrite` if this native query might modify data in the database.
+    #[serde(default)]
+    pub mode: Mode,
+}
+
+#[derive(Clone, Default, Debug, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum Mode {
+    #[default]
+    ReadOnly,
+    ReadWrite,
 }
 
 type Object = serde_json::Map<String, serde_json::Value>;
