@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use clap::Subcommand;
 
 use configuration::Configuration;
-use mongodb_agent_common::{interface_types::MongoConfig, schema::get_schema};
+use mongodb_agent_common::interface_types::MongoConfig;
 
 /// The command invoked by the user.
 #[derive(Debug, Clone, Subcommand)]

@@ -1,5 +1,4 @@
 mod capabilities;
-mod configuration;
 mod conversion_error;
 mod helpers;
 mod json_response;
