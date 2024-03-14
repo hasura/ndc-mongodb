@@ -33,8 +33,9 @@ pub async fn read_directory(
 
     let schema = parse_json_or_yaml(dir, SCHEMA_FILENAME).await?;
 
-    let native_queries: Vec<NativeQuery> =
-        read_subdir_configs(&dir.join(NATIVE_QUERIES_DIRNAME)).await?;
+    let native_queries: Vec<NativeQuery> = read_subdir_configs(&dir.join(NATIVE_QUERIES_DIRNAME))
+        .await?
+        .unwrap_or_default();
 
     Ok(Configuration {
         schema,
@@ -45,12 +46,16 @@ pub async fn read_directory(
 /// Parse all files in a directory with one of the allowed configuration extensions according to
 /// the given type argument. For example if `T` is `NativeQuery` this function assumes that all
 /// json and yaml files in the given directory should be parsed as native query configurations.
-async fn read_subdir_configs<T>(subdir: &Path) -> io::Result<Vec<T>>
+async fn read_subdir_configs<T>(subdir: &Path) -> io::Result<Option<Vec<T>>>
 where
     for<'a> T: Deserialize<'a>,
 {
+    if !(fs::try_exists(subdir).await?) {
+        return Ok(None);
+    }
+
     let dir_stream = ReadDirStream::new(fs::read_dir(subdir).await?);
-    dir_stream
+    let configs = dir_stream
         .try_filter_map(|dir_entry| async move {
             // Permits regular files and symlinks, does not filter out symlinks to directories.
             let is_file = !(dir_entry.file_type().await?.is_dir());
@@ -73,7 +78,9 @@ where
         })
         .and_then(|(path, format)| async move { parse_config_file::<T>(path, format).await })
         .try_collect::<Vec<T>>()
-        .await
+        .await?;
+
+    Ok(Some(configs))
 }
 
 /// Given a base name, like "connection", looks for files of the form "connection.json",
