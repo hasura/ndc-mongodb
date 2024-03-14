@@ -68,9 +68,13 @@ jobs:
       run: nix run .#publish-docker-image ${{ github.ref }}
 
   connector-definition:
+    # For now, only run on tagged releases because main builds generate a Docker image tag name that
+    # is not easily accessible here
+    # if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Build connector definition
         run: |
           set -e pipefail
@@ -78,6 +82,7 @@ jobs:
           export CLI_VERSION=$GITHUB_REF_NAME
           make build
         working-directory: ./connector-definition
+
       - uses: actions/upload-artifact@v4
         with:
           name: connector-definition.tgz
@@ -170,4 +175,56 @@ jobs:
           name: hasura-mongodb-${{ matrix.target }}${{ matrix.extension }}
           path: release
           if-no-files-found: error
+
+  release:
+    name: release to GitHub
+    needs:
+      # - docker
+      - connector-definition
+      - build-cli-binaries
+    runs-on: ubuntu-latest
+    # if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: release/artifacts
+          merge-multiple: true
+
+      - name: generate SHA-256 checksums
+        run: |
+          cd release/artifacts
+          sha256sum * > ./sha256sum
+          cat ./sha256sum
+
+      - name: generate CLI manifest
+        run: |
+          export VERSION="$GITHUB_REF_NAME"
+          ./scripts/generate-manifest.sh
       
+      - uses: actions/upload-artifact@v4
+        with:
+          name: manifest.yaml
+          path: release/manifest.yaml
+          if-no-files-found: error
+
+      - name: Get version from tag
+        id: get-version
+        run: |
+          echo "tagged_version=0.1.0" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - uses: mindsers/changelog-reader-action@v2
+        id: changelog-reader
+        with:
+          version: ${{ steps.get-version.outputs.tagged_version }}
+          path: ./CHANGELOG.md
+
+      - name: create a draft release
+        uses: ncipollo/release-action@v1
+        with:
+          draft: true
+          tag: v${{ steps.get-version.outputs.tagged_version }}
+          body: ${{ steps.changelog-reader.outputs.changes }}
+          artifacts: release/artifacts/*
