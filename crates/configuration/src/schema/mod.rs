@@ -7,7 +7,7 @@ pub use self::database::{Collection, ObjectField, ObjectType, Type};
 
 #[derive(Clone, Debug, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct Metadata {
+pub struct Schema {
     #[serde(default)]
     pub collections: Vec<Collection>,
     #[serde(default)]

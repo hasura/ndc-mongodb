@@ -2,7 +2,7 @@ use mongodb::{bson, options::SelectionCriteria};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::metadata::ObjectField;
+use crate::schema::ObjectField;
 
 /// An arbitrary database command using MongoDB's runCommand API.
 /// See https://www.mongodb.com/docs/manual/reference/method/db.runCommand/
@@ -13,7 +13,7 @@ pub struct NativeQuery {
     pub name: String,
 
     /// The name of an object type that specifies the type of data returned from the query. This
-    /// must correspond to a configuration definition in `metadata.objectTypes`.
+    /// must correspond to a configuration definition in `schema.objectTypes`.
     pub result_type: String,
 
     /// Arguments for per-query customization

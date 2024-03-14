@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use configuration::{metadata, native_queries::NativeQuery, Configuration};
+use configuration::{native_queries::NativeQuery, schema, Configuration};
 use ndc_sdk::{connector, models};
 
 use crate::capabilities;
@@ -8,9 +8,9 @@ use crate::capabilities;
 pub async fn get_schema(
     config: &Configuration,
 ) -> Result<models::SchemaResponse, connector::SchemaError> {
-    let metadata = &config.metadata;
-    let object_types = map_object_types(&metadata.object_types);
-    let configured_collections = metadata.collections.iter().map(map_collection);
+    let schema = &config.schema;
+    let object_types = map_object_types(&schema.object_types);
+    let configured_collections = schema.collections.iter().map(map_collection);
     let native_queries = config.native_queries.iter().map(map_native_query);
 
     Ok(models::SchemaResponse {
@@ -22,7 +22,7 @@ pub async fn get_schema(
     })
 }
 
-fn map_object_types(object_types: &[metadata::ObjectType]) -> BTreeMap<String, models::ObjectType> {
+fn map_object_types(object_types: &[schema::ObjectType]) -> BTreeMap<String, models::ObjectType> {
     object_types
         .iter()
         .map(|t| {
@@ -37,7 +37,7 @@ fn map_object_types(object_types: &[metadata::ObjectType]) -> BTreeMap<String, m
         .collect()
 }
 
-fn map_field_infos(fields: &[metadata::ObjectField]) -> BTreeMap<String, models::ObjectField> {
+fn map_field_infos(fields: &[schema::ObjectField]) -> BTreeMap<String, models::ObjectField> {
     fields
         .iter()
         .map(|f| {
@@ -52,22 +52,22 @@ fn map_field_infos(fields: &[metadata::ObjectField]) -> BTreeMap<String, models:
         .collect()
 }
 
-fn map_type(t: &metadata::Type) -> models::Type {
+fn map_type(t: &schema::Type) -> models::Type {
     match t {
-        metadata::Type::Scalar(t) => models::Type::Named {
+        schema::Type::Scalar(t) => models::Type::Named {
             name: t.graphql_name(),
         },
-        metadata::Type::Object(t) => models::Type::Named { name: t.clone() },
-        metadata::Type::ArrayOf(t) => models::Type::Array {
+        schema::Type::Object(t) => models::Type::Named { name: t.clone() },
+        schema::Type::ArrayOf(t) => models::Type::Array {
             element_type: Box::new(map_type(t)),
         },
-        metadata::Type::Nullable(t) => models::Type::Nullable {
+        schema::Type::Nullable(t) => models::Type::Nullable {
             underlying_type: Box::new(map_type(t)),
         },
     }
 }
 
-fn map_collection(collection: &metadata::Collection) -> models::CollectionInfo {
+fn map_collection(collection: &schema::Collection) -> models::CollectionInfo {
     models::CollectionInfo {
         name: collection.name.clone(),
         collection_type: collection.r#type.clone(),

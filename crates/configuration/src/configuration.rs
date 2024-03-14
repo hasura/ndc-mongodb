@@ -3,13 +3,13 @@ use std::{io, path::Path};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::{read_directory, Metadata, native_queries::NativeQuery};
+use crate::{read_directory, Schema, native_queries::NativeQuery};
 
 #[derive(Clone, Debug, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Configuration {
     /// Descriptions of collections and types used in the database
-    pub metadata: Metadata,
+    pub schema: Schema,
 
     /// Native queries allow arbitrary MongoDB aggregation pipelines where types of results are
     /// specified via user configuration.

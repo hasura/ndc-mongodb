@@ -10,7 +10,7 @@ use tokio_stream::wrappers::ReadDirStream;
 
 use crate::{native_queries::NativeQuery, Configuration};
 
-pub const METADATA_FILENAME: &str = "metadata";
+pub const SCHEMA_FILENAME: &str = "schema";
 pub const NATIVE_QUERIES_DIRNAME: &str = "native_queries";
 
 pub const CONFIGURATION_EXTENSIONS: [(&str, FileFormat); 3] =
@@ -31,13 +31,13 @@ pub async fn read_directory(
 ) -> io::Result<Configuration> {
     let dir = configuration_dir.as_ref();
 
-    let metadata = parse_json_or_yaml(dir, METADATA_FILENAME).await?;
+    let schema = parse_json_or_yaml(dir, SCHEMA_FILENAME).await?;
 
     let native_queries: Vec<NativeQuery> =
         read_subdir_configs(&dir.join(NATIVE_QUERIES_DIRNAME)).await?;
 
     Ok(Configuration {
-        metadata,
+        schema,
         native_queries,
     })
 }
