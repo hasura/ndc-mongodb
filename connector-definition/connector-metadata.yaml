@@ -8,7 +8,7 @@ commands:
   update: hasura-mongodb update
 cliPlugin:
   name: hasura-mongodb
-  version: "0.0.1"
+  version: 
 dockerComposeWatch:
   - path: ./
     target: /etc/connector
