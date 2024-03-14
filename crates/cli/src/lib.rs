@@ -4,6 +4,8 @@
 //! then done, making it easier to test this crate deterministically.
 
 
+mod introspection;
+
 use std::path::PathBuf;
 
 use clap::Subcommand;
@@ -65,10 +67,8 @@ pub async fn run(command: Command, context: &Context) -> anyhow::Result<()> {
 ///
 /// This expects a configuration with a valid connection URI.
 async fn update(context: &Context) -> anyhow::Result<()> {
-    // TODO: Get metadata directly from DB introspection instead of going via v2 get_schema()
-    let _schema = get_schema(&context.mongo_config).await?;
-
-    let configuration = Configuration::default(); // v2_schema_response_to_configuration(schema);
+    let metadata = introspection::get_metadata_from_validation_schema(&context.mongo_config).await?;
+    let configuration = Configuration { metadata };
 
     configuration::write_directory(&context.path, &configuration).await?;
 
