@@ -410,6 +410,7 @@ dependencies = [
 name = "configuration"
 version = "0.1.0"
 dependencies = [
+ "futures",
  "itertools 0.12.1",
  "mongodb",
  "mongodb-support",
@@ -418,6 +419,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "tokio",
+ "tokio-stream",
 ]
 
 [[package]]
