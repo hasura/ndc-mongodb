@@ -411,6 +411,7 @@ name = "configuration"
 version = "0.1.0"
 dependencies = [
  "itertools 0.12.1",
+ "mongodb",
  "mongodb-support",
  "schemars",
  "serde",

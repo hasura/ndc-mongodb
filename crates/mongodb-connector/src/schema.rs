@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use configuration::{metadata, Configuration};
+use configuration::{metadata, native_queries::NativeQuery, Configuration};
 use ndc_sdk::{connector, models};
 
 use crate::capabilities;
@@ -10,9 +10,11 @@ pub async fn get_schema(
 ) -> Result<models::SchemaResponse, connector::SchemaError> {
     let metadata = &config.metadata;
     let object_types = map_object_types(&metadata.object_types);
-    let collections = metadata.collections.iter().map(map_collection).collect();
+    let configured_collections = metadata.collections.iter().map(map_collection);
+    let native_queries = config.native_queries.iter().map(map_native_query);
+
     Ok(models::SchemaResponse {
-        collections,
+        collections: configured_collections.chain(native_queries).collect(),
         object_types,
         scalar_types: capabilities::scalar_types(),
         functions: Default::default(),
@@ -73,5 +75,29 @@ fn map_collection(collection: &metadata::Collection) -> models::CollectionInfo {
         arguments: Default::default(),
         foreign_keys: Default::default(),
         uniqueness_constraints: Default::default(),
+    }
+}
+
+fn map_native_query(query: &NativeQuery) -> models::CollectionInfo {
+    let arguments = query
+        .arguments
+        .iter()
+        .map(|field| {
+            (
+                field.name.clone(),
+                models::ArgumentInfo {
+                    argument_type: map_type(&field.r#type),
+                    description: field.description.clone(),
+                },
+            )
+        })
+        .collect();
+    models::CollectionInfo {
+        name: query.name.clone(),
+        collection_type: query.result_type.clone(),
+        uniqueness_constraints: Default::default(),
+        foreign_keys: Default::default(),
+        description: query.description.clone(),
+        arguments,
     }
 }

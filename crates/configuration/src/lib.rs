@@ -1,5 +1,6 @@
 mod configuration;
 pub mod metadata;
+pub mod native_queries;
 mod read_directory;
 
 pub use crate::configuration::Configuration;

@@ -1,3 +1,4 @@
+use configuration::native_queries::NativeQuery;
 use mongodb::Client;
 
 #[derive(Clone, Debug)]
@@ -6,4 +7,6 @@ pub struct MongoConfig {
 
     /// Name of the database to connect to
     pub database: String,
+
+    pub native_queries: Vec<NativeQuery>,
 }

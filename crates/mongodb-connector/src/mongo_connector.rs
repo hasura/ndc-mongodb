@@ -45,10 +45,10 @@ impl Connector for MongoConnector {
 
     /// Reads database connection URI from environment variable
     async fn try_init_state(
-        _configuration: &Self::Configuration,
+        configuration: &Self::Configuration,
         _metrics: &mut prometheus::Registry,
     ) -> Result<Self::State, InitializationError> {
-        let state = crate::state::try_init_state().await?;
+        let state = crate::state::try_init_state(configuration).await?;
         Ok(state)
     }
 
