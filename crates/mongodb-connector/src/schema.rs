@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 
-use configuration::{native_queries::NativeQuery, schema, Configuration};
+use configuration::{
+    native_queries::{self, NativeQuery},
+    schema, Configuration,
+};
 use ndc_sdk::{connector, models};
 
 use crate::capabilities;
@@ -10,15 +13,28 @@ pub async fn get_schema(
 ) -> Result<models::SchemaResponse, connector::SchemaError> {
     let schema = &config.schema;
     let object_types = map_object_types(&schema.object_types);
-    let configured_collections = schema.collections.iter().map(map_collection);
-    let native_queries = config.native_queries.iter().map(map_native_query);
+    let collections = schema.collections.iter().map(map_collection).collect();
+
+    let functions = config
+        .native_queries
+        .iter()
+        .filter(|q| q.mode == native_queries::Mode::ReadOnly)
+        .map(native_query_to_function)
+        .collect();
+
+    let procedures = config
+        .native_queries
+        .iter()
+        .filter(|q| q.mode == native_queries::Mode::ReadWrite)
+        .map(native_query_to_procedure)
+        .collect();
 
     Ok(models::SchemaResponse {
-        collections: configured_collections.chain(native_queries).collect(),
+        collections,
         object_types,
         scalar_types: capabilities::scalar_types(),
-        functions: Default::default(),
-        procedures: Default::default(),
+        functions,
+        procedures,
     })
 }
 
@@ -78,7 +94,8 @@ fn map_collection(collection: &schema::Collection) -> models::CollectionInfo {
     }
 }
 
-fn map_native_query(query: &NativeQuery) -> models::CollectionInfo {
+/// For read-only native queries
+fn native_query_to_function(query: &NativeQuery) -> models::FunctionInfo {
     let arguments = query
         .arguments
         .iter()
@@ -92,12 +109,33 @@ fn map_native_query(query: &NativeQuery) -> models::CollectionInfo {
             )
         })
         .collect();
-    models::CollectionInfo {
+    models::FunctionInfo {
         name: query.name.clone(),
-        collection_type: query.result_type.clone(),
-        uniqueness_constraints: Default::default(),
-        foreign_keys: Default::default(),
         description: query.description.clone(),
         arguments,
+        result_type: map_type(&query.result_type),
+    }
+}
+
+/// For read-write native queries
+fn native_query_to_procedure(query: &NativeQuery) -> models::ProcedureInfo {
+    let arguments = query
+        .arguments
+        .iter()
+        .map(|field| {
+            (
+                field.name.clone(),
+                models::ArgumentInfo {
+                    argument_type: map_type(&field.r#type),
+                    description: field.description.clone(),
+                },
+            )
+        })
+        .collect();
+    models::ProcedureInfo {
+        name: query.name.clone(),
+        description: query.description.clone(),
+        arguments,
+        result_type: map_type(&query.result_type),
     }
 }
