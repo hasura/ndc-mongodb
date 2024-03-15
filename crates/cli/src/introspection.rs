@@ -1,6 +1,6 @@
 use configuration::{
-    metadata::{Collection, ObjectField, ObjectType, Type},
-    Metadata,
+    schema::{Collection, ObjectField, ObjectType, Type},
+    Schema,
 };
 use futures_util::{StreamExt, TryStreamExt};
 use indexmap::IndexMap;
@@ -12,7 +12,7 @@ use mongodb_agent_common::interface_types::{MongoAgentError, MongoConfig};
 
 pub async fn get_metadata_from_validation_schema(
     config: &MongoConfig,
-) -> Result<Metadata, MongoAgentError> {
+) -> Result<Schema, MongoAgentError> {
     let db = config.client.database(&config.database);
     let collections_cursor = db.list_collections(None, None).await?;
 
@@ -51,7 +51,7 @@ pub async fn get_metadata_from_validation_schema(
         .try_collect::<(Vec<Vec<ObjectType>>, Vec<Collection>)>()
         .await?;
 
-    Ok(Metadata {
+    Ok(Schema {
         collections,
         object_types: object_types.concat(),
     })
@@ -121,11 +121,11 @@ fn make_object_field(
 }
 
 fn maybe_nullable(
-    t: configuration::metadata::Type,
+    t: configuration::schema::Type,
     is_nullable: bool,
-) -> configuration::metadata::Type {
+) -> configuration::schema::Type {
     if is_nullable {
-        configuration::metadata::Type::Nullable(Box::new(t))
+        configuration::schema::Type::Nullable(Box::new(t))
     } else {
         t
     }
