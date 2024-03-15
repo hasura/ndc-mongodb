@@ -3,10 +3,6 @@ name = "mongodb-cli-plugin"
 edition = "2021"
 version.workspace = true
 
-[[bin]]
-name = "hasura-mongodb"
-path = "./src/main.rs"
-
 [dependencies]
 configuration = { path = "../configuration" }
 mongodb-agent-common = { path = "../mongodb-agent-common" }

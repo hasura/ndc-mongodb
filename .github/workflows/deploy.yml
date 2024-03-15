@@ -78,7 +78,7 @@ jobs:
       - name: Build connector definition
         run: |
           set -e pipefail
-          export DOCKER_IMAGE="ghcr.io/hasura/mongodb-connector:$GITHUB_REF_NAME"
+          export DOCKER_IMAGE="ghcr.io/hasura/ndc-mongodb:$GITHUB_REF_NAME"
           export CLI_VERSION=$GITHUB_REF_NAME
           make build
         working-directory: ./connector-definition
@@ -168,11 +168,11 @@ jobs:
           cargo build --release --package=mongodb-cli-plugin
 
           mkdir -p release
-          mv -v target/${{ matrix.target }}/release/hasura-mongodb release/hasura-mongodb-${{ matrix.target }}${{ matrix.extension }}
+          mv -v target/${{ matrix.target }}/release/mongodb-cli-plugin release/mongodb-cli-plugin-${{ matrix.target }}${{ matrix.extension }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: hasura-mongodb-${{ matrix.target }}${{ matrix.extension }}
+          name: mongodb-cli-plugin-${{ matrix.target }}${{ matrix.extension }}
           path: release
           if-no-files-found: error
 

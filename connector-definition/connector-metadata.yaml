@@ -7,7 +7,7 @@ supportedEnvironmentVariables:
 commands:
   update: hasura-mongodb update
 cliPlugin:
-  name: hasura-mongodb
+  name: mongodb
   version: 
 dockerComposeWatch:
   - path: ./
