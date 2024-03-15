@@ -15,6 +15,7 @@ indexmap = { version = "2.1.0", features = ["serde"] }
 itertools = "^0.10"
 mongodb = "2.8"
 mongodb-agent-common = { path = "../mongodb-agent-common" }
+mongodb-support = { path = "../mongodb-support" }
 ndc-sdk = { git = "https://github.com/hasura/ndc-hub.git" }
 prometheus = "*" # share version from ndc-sdk
 serde = { version = "1.0", features = ["derive"] }

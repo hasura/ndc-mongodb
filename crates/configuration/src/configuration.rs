@@ -3,7 +3,7 @@ use std::{io, path::Path};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::{read_directory, Schema, native_queries::NativeQuery};
+use crate::{native_queries::NativeQuery, read_directory, Schema};
 
 #[derive(Clone, Debug, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -18,6 +18,13 @@ pub struct Configuration {
 }
 
 impl Configuration {
+    pub fn from_schema(schema: Schema) -> Self {
+        Self {
+            schema,
+            ..Default::default()
+        }
+    }
+
     pub async fn parse_configuration(
         configuration_dir: impl AsRef<Path> + Send,
     ) -> io::Result<Self> {

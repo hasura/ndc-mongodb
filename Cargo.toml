@@ -10,7 +10,8 @@ members = [
   "crates/dc-api",
   "crates/dc-api-types",
   "crates/dc-api-test-helpers",
-  "crates/ndc-test-helpers"
+  "crates/ndc-test-helpers",
+  "crates/cli"
 ]
 resolver = "2"
 

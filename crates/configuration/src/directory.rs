@@ -1,6 +1,6 @@
 use futures::stream::TryStreamExt as _;
 use itertools::Itertools as _;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{
     io,
     path::{Path, PathBuf},
@@ -15,6 +15,7 @@ pub const NATIVE_QUERIES_DIRNAME: &str = "native_queries";
 
 pub const CONFIGURATION_EXTENSIONS: [(&str, FileFormat); 3] =
     [("json", JSON), ("yaml", YAML), ("yml", YAML)];
+pub const DEFAULT_EXTENSION: &str = "json";
 
 #[derive(Clone, Copy, Debug)]
 pub enum FileFormat {
@@ -129,4 +130,30 @@ where
             .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?,
     };
     Ok(value)
+}
+
+/// Currently only writes `schema.json`
+pub async fn write_directory(
+    configuration_dir: impl AsRef<Path>,
+    configuration: &Configuration,
+) -> io::Result<()> {
+    write_file(configuration_dir, SCHEMA_FILENAME, &configuration.schema).await
+}
+
+fn default_file_path(configuration_dir: impl AsRef<Path>, basename: &str) -> PathBuf {
+    let dir = configuration_dir.as_ref();
+    dir.join(format!("{basename}.{DEFAULT_EXTENSION}"))
+}
+
+async fn write_file<T>(
+    configuration_dir: impl AsRef<Path>,
+    basename: &str,
+    value: &T,
+) -> io::Result<()>
+where
+    T: Serialize,
+{
+    let path = default_file_path(configuration_dir, basename);
+    let bytes = serde_json::to_vec_pretty(value)?;
+    fs::write(path, bytes).await
 }

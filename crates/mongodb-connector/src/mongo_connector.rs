@@ -48,7 +48,7 @@ impl Connector for MongoConnector {
         configuration: &Self::Configuration,
         _metrics: &mut prometheus::Registry,
     ) -> Result<Self::State, InitializationError> {
-        let state = crate::state::try_init_state(configuration).await?;
+        let state = mongodb_agent_common::state::try_init_state(configuration).await?;
         Ok(state)
     }
 

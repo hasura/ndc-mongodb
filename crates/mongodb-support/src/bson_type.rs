@@ -1,7 +1,7 @@
 use dc_api_types::GraphQlType;
 use enum_iterator::{all, Sequence};
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
 
@@ -80,7 +80,7 @@ impl<'de> Deserialize<'de> for BsonType {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Sequence, Deserialize, JsonSchema)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Sequence, Serialize, Deserialize, JsonSchema)]
 #[serde(try_from = "BsonType", rename_all = "camelCase")]
 pub enum BsonScalarType {
     // numeric
