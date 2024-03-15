@@ -5,8 +5,8 @@ use configuration::{
 use futures_util::{StreamExt, TryStreamExt};
 use indexmap::IndexMap;
 use mongodb::bson::from_bson;
-use mongodb_support::{BsonScalarType, BsonType};
 use mongodb_agent_common::schema::{get_property_description, Property, ValidatorSchema};
+use mongodb_support::{BsonScalarType, BsonType};
 
 use mongodb_agent_common::interface_types::{MongoAgentError, MongoConfig};
 
@@ -28,7 +28,7 @@ pub async fn get_metadata_from_validation_schema(
                     .as_ref()
                     .and_then(|x| x.get("$jsonSchema"));
 
-                let table_info = match schema_bson_option {
+                match schema_bson_option {
                     Some(schema_bson) => {
                         from_bson::<ValidatorSchema>(schema_bson.clone()).map_err(|err| {
                             MongoAgentError::BadCollectionSchema(
@@ -45,8 +45,7 @@ pub async fn get_metadata_from_validation_schema(
                         properties: IndexMap::new(),
                     }),
                 }
-                .map(|validator_schema| make_collection(name, &validator_schema));
-                table_info
+                .map(|validator_schema| make_collection(name, &validator_schema))
             },
         )
         .try_collect::<(Vec<Vec<ObjectType>>, Vec<Collection>)>()
@@ -114,7 +113,7 @@ fn make_object_field(
 
     let object_field = ObjectField {
         name: prop_name.clone(),
-        description: description,
+        description,
         r#type: maybe_nullable(field_type, !required_labels.contains(prop_name)),
     };
 
@@ -167,11 +166,11 @@ fn make_field_type(object_type_name: &str, prop_schema: &Property) -> (Vec<Objec
             let item_schemas = *items.clone();
 
             let (mut otds, element_type) = make_field_type(object_type_name, &item_schemas);
-            let column_type = Type::ArrayOf(Box::new(element_type));
+            let field_type = Type::ArrayOf(Box::new(element_type));
 
             collected_otds.append(&mut otds);
 
-            (collected_otds, column_type)
+            (collected_otds, field_type)
         }
         Property::Scalar {
             bson_type,

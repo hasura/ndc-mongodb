@@ -16,7 +16,7 @@ use mongodb_cli_plugin::{run, Command, Context};
 pub struct Args {
     /// The path to the configuration. Defaults to the current directory.
     #[arg(
-        long = "context",
+        long = "context-path",
         env = "HASURA_PLUGIN_CONNECTOR_CONTEXT_PATH",
         value_name = "DIRECTORY"
     )]
