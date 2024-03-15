@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - test-ci/**
     tags:
       - 'v*'
 
@@ -70,7 +69,7 @@ jobs:
   connector-definition:
     # For now, only run on tagged releases because main builds generate a Docker image tag name that
     # is not easily accessible here
-    # if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -111,7 +110,7 @@ jobs:
     env:
       CARGO_BUILD_TARGET: ${{ matrix.target }}
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
-      # RUSTFLAGS: "-D warnings" # fail on warnings
+      RUSTFLAGS: "-D warnings" # fail on warnings
     defaults:
       run:
         shell: bash
@@ -179,11 +178,11 @@ jobs:
   release:
     name: release to GitHub
     needs:
-      # - docker
+      - docker
       - connector-definition
       - build-cli-binaries
     runs-on: ubuntu-latest
-    # if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     steps:
       - uses: actions/checkout@v4
 
@@ -212,7 +211,7 @@ jobs:
       - name: Get version from tag
         id: get-version
         run: |
-          echo "tagged_version=0.1.0" >> $GITHUB_OUTPUT
+          echo "tagged_version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
         shell: bash
 
       - uses: mindsers/changelog-reader-action@v2
