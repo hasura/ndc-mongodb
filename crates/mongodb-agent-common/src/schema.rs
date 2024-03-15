@@ -202,22 +202,22 @@ fn make_column_type(
 
 #[derive(Debug, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
-struct ValidatorSchema {
+pub struct ValidatorSchema {
     #[serde(rename = "bsonType", alias = "type", default = "default_bson_type")]
     #[allow(dead_code)]
-    bson_type: BsonType,
+    pub bson_type: BsonType,
     #[serde(skip_serializing_if = "Option::is_none")]
-    description: Option<String>,
+    pub description: Option<String>,
     #[serde(default)]
-    required: Vec<String>,
+    pub required: Vec<String>,
     #[serde(default)]
-    properties: IndexMap<String, Property>,
+    pub properties: IndexMap<String, Property>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
 #[serde(untagged)]
-enum Property {
+pub enum Property {
     Object {
         #[serde(rename = "bsonType", default = "default_bson_type")]
         #[allow(dead_code)]
@@ -244,7 +244,7 @@ enum Property {
     },
 }
 
-fn get_property_description(p: &Property) -> Option<String> {
+pub fn get_property_description(p: &Property) -> Option<String> {
     match p {
         Property::Object {
             bson_type: _,

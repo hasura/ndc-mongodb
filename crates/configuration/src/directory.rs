@@ -8,9 +8,10 @@ use tokio::fs;
 
 use crate::Configuration;
 
-pub const CONFIGURATION_FILENAME: &str = "configuration";
+pub const CONFIGURATION_FILENAME: &str = "schema";
 pub const CONFIGURATION_EXTENSIONS: [(&str, FileFormat); 3] =
     [("json", JSON), ("yaml", YAML), ("yml", YAML)];
+pub const DEFAULT_EXTENSION: &str = "json";
 
 #[derive(Clone, Copy, Debug)]
 pub enum FileFormat {
@@ -79,4 +80,26 @@ where
             .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?,
     };
     Ok(value)
+}
+
+pub async fn write_directory(
+    configuration_dir: impl AsRef<Path>,
+    configuration: &Configuration,
+) -> io::Result<()> {
+    write_file(configuration_dir, CONFIGURATION_FILENAME, configuration).await
+}
+
+fn default_file_path(configuration_dir: impl AsRef<Path>, basename: &str) -> PathBuf {
+    let dir = configuration_dir.as_ref();
+    dir.join(format!("{basename}.{DEFAULT_EXTENSION}"))
+}
+
+async fn write_file(
+    configuration_dir: impl AsRef<Path>,
+    basename: &str,
+    configuration: &Configuration,
+) -> io::Result<()> {
+    let path = default_file_path(configuration_dir, basename);
+    let bytes = serde_json::to_vec_pretty(configuration)?;
+    fs::write(path, bytes).await
 }
