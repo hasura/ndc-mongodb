@@ -2,7 +2,7 @@ use mongodb::{bson, options::SelectionCriteria};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::schema::{ObjectField, Type};
+use crate::schema::{ObjectField, Type, ObjectType};
 
 /// An arbitrary database command using MongoDB's runCommand API.
 /// See https://www.mongodb.com/docs/manual/reference/method/db.runCommand/
@@ -12,7 +12,15 @@ pub struct NativeQuery {
     /// Name that will be used to identify the query in your data graph
     pub name: String,
 
-    /// Type of data returned by the query.
+    /// You may define object types here to reference in `result_type`. Any types defined here will
+    /// be merged with the definitions in `schema.json`. This allows you to maintain hand-written
+    /// types for native queries without having to edit a generated `schema.json` file.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub object_types: Vec<ObjectType>,
+
+    /// Type of data returned by the query. You may reference object types defined in the
+    /// `object_types` list in this definition, or you may reference object types from
+    /// `schema.json`.
     pub result_type: Type,
 
     /// Arguments for per-query customization

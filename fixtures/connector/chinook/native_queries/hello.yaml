@@ -1,4 +1,12 @@
 name: hello
-result_type: !scalar string
+objectTypes:
+  - name: helloResult
+    fields:
+      - name: ok
+        type: !scalar int
+      - name: readOnly
+        type: !scalar bool
+      # There are more fields but you get the idea
+resultType: !object helloResult
 command:
   hello: 1
