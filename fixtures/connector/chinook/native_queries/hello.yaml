@@ -1,12 +1,12 @@
 name: hello
 objectTypes:
-  - name: helloResult
+  - name: HelloResult
     fields:
       - name: ok
         type: !scalar int
       - name: readOnly
         type: !scalar bool
       # There are more fields but you get the idea
-resultType: !object helloResult
+resultType: !object HelloResult
 command:
   hello: 1
