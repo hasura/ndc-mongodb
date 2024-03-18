@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 
-use configuration::{metadata, Configuration};
+use configuration::{
+    native_queries::{self, NativeQuery},
+    schema, Configuration,
+};
 use ndc_sdk::{connector, models};
 
 use crate::capabilities;
@@ -8,19 +11,34 @@ use crate::capabilities;
 pub async fn get_schema(
     config: &Configuration,
 ) -> Result<models::SchemaResponse, connector::SchemaError> {
-    let metadata = &config.metadata;
-    let object_types = map_object_types(&metadata.object_types);
-    let collections = metadata.collections.iter().map(map_collection).collect();
+    let schema = &config.schema;
+    let object_types = map_object_types(&schema.object_types);
+    let collections = schema.collections.iter().map(map_collection).collect();
+
+    let functions = config
+        .native_queries
+        .iter()
+        .filter(|q| q.mode == native_queries::Mode::ReadOnly)
+        .map(native_query_to_function)
+        .collect();
+
+    let procedures = config
+        .native_queries
+        .iter()
+        .filter(|q| q.mode == native_queries::Mode::ReadWrite)
+        .map(native_query_to_procedure)
+        .collect();
+
     Ok(models::SchemaResponse {
         collections,
         object_types,
         scalar_types: capabilities::scalar_types(),
-        functions: Default::default(),
-        procedures: Default::default(),
+        functions,
+        procedures,
     })
 }
 
-fn map_object_types(object_types: &[metadata::ObjectType]) -> BTreeMap<String, models::ObjectType> {
+fn map_object_types(object_types: &[schema::ObjectType]) -> BTreeMap<String, models::ObjectType> {
     object_types
         .iter()
         .map(|t| {
@@ -35,7 +53,7 @@ fn map_object_types(object_types: &[metadata::ObjectType]) -> BTreeMap<String, m
         .collect()
 }
 
-fn map_field_infos(fields: &[metadata::ObjectField]) -> BTreeMap<String, models::ObjectField> {
+fn map_field_infos(fields: &[schema::ObjectField]) -> BTreeMap<String, models::ObjectField> {
     fields
         .iter()
         .map(|f| {
@@ -50,22 +68,22 @@ fn map_field_infos(fields: &[metadata::ObjectField]) -> BTreeMap<String, models:
         .collect()
 }
 
-fn map_type(t: &metadata::Type) -> models::Type {
+fn map_type(t: &schema::Type) -> models::Type {
     match t {
-        metadata::Type::Scalar(t) => models::Type::Named {
+        schema::Type::Scalar(t) => models::Type::Named {
             name: t.graphql_name(),
         },
-        metadata::Type::Object(t) => models::Type::Named { name: t.clone() },
-        metadata::Type::ArrayOf(t) => models::Type::Array {
+        schema::Type::Object(t) => models::Type::Named { name: t.clone() },
+        schema::Type::ArrayOf(t) => models::Type::Array {
             element_type: Box::new(map_type(t)),
         },
-        metadata::Type::Nullable(t) => models::Type::Nullable {
+        schema::Type::Nullable(t) => models::Type::Nullable {
             underlying_type: Box::new(map_type(t)),
         },
     }
 }
 
-fn map_collection(collection: &metadata::Collection) -> models::CollectionInfo {
+fn map_collection(collection: &schema::Collection) -> models::CollectionInfo {
     models::CollectionInfo {
         name: collection.name.clone(),
         collection_type: collection.r#type.clone(),
@@ -73,5 +91,51 @@ fn map_collection(collection: &metadata::Collection) -> models::CollectionInfo {
         arguments: Default::default(),
         foreign_keys: Default::default(),
         uniqueness_constraints: Default::default(),
+    }
+}
+
+/// For read-only native queries
+fn native_query_to_function(query: &NativeQuery) -> models::FunctionInfo {
+    let arguments = query
+        .arguments
+        .iter()
+        .map(|field| {
+            (
+                field.name.clone(),
+                models::ArgumentInfo {
+                    argument_type: map_type(&field.r#type),
+                    description: field.description.clone(),
+                },
+            )
+        })
+        .collect();
+    models::FunctionInfo {
+        name: query.name.clone(),
+        description: query.description.clone(),
+        arguments,
+        result_type: map_type(&query.result_type),
+    }
+}
+
+/// For read-write native queries
+fn native_query_to_procedure(query: &NativeQuery) -> models::ProcedureInfo {
+    let arguments = query
+        .arguments
+        .iter()
+        .map(|field| {
+            (
+                field.name.clone(),
+                models::ArgumentInfo {
+                    argument_type: map_type(&field.r#type),
+                    description: field.description.clone(),
+                },
+            )
+        })
+        .collect();
+    models::ProcedureInfo {
+        name: query.name.clone(),
+        description: query.description.clone(),
+        arguments,
+        result_type: map_type(&query.result_type),
     }
 }

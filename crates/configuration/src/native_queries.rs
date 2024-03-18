@@ -2,7 +2,7 @@ use mongodb::{bson, options::SelectionCriteria};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::metadata::ObjectField;
+use crate::schema::{ObjectField, Type};
 
 /// An arbitrary database command using MongoDB's runCommand API.
 /// See https://www.mongodb.com/docs/manual/reference/method/db.runCommand/
@@ -12,9 +12,8 @@ pub struct NativeQuery {
     /// Name that will be used to identify the query in your data graph
     pub name: String,
 
-    /// The name of an object type that specifies the type of data returned from the query. This
-    /// must correspond to a configuration definition in `metadata.objectTypes`.
-    pub result_type: String,
+    /// Type of data returned by the query.
+    pub result_type: Type,
 
     /// Arguments for per-query customization
     pub arguments: Vec<ObjectField>,
@@ -31,6 +30,18 @@ pub struct NativeQuery {
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+
+    /// Set to `readWrite` if this native query might modify data in the database.
+    #[serde(default)]
+    pub mode: Mode,
+}
+
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum Mode {
+    #[default]
+    ReadOnly,
+    ReadWrite,
 }
 
 type Object = serde_json::Map<String, serde_json::Value>;

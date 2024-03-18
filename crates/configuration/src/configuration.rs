@@ -1,17 +1,30 @@
 use std::{io, path::Path};
 
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
-use crate::{read_directory, Metadata};
+use crate::{native_queries::NativeQuery, read_directory, Schema};
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Configuration {
-    pub metadata: Metadata,
+    /// Descriptions of collections and types used in the database
+    pub schema: Schema,
+
+    /// Native queries allow arbitrary MongoDB aggregation pipelines where types of results are
+    /// specified via user configuration.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub native_queries: Vec<NativeQuery>,
 }
 
 impl Configuration {
+    pub fn from_schema(schema: Schema) -> Self {
+        Self {
+            schema,
+            ..Default::default()
+        }
+    }
+
     pub async fn parse_configuration(
         configuration_dir: impl AsRef<Path> + Send,
     ) -> io::Result<Self> {
