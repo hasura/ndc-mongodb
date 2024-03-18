@@ -994,7 +994,11 @@ definition:
               unique_columns:
                 - _id
           foreign_keys: {}
-      functions: []
+      functions:
+        - name: hello
+          result_type: { type: named, name: String } 
+          arguments: {}
+          command: { hello: 1 }
       procedures: []
     capabilities:
       version: ^0.1.0

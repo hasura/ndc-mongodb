@@ -16,6 +16,7 @@ pub struct NativeQuery {
     pub result_type: Type,
 
     /// Arguments for per-query customization
+    #[serde(default)]
     pub arguments: Vec<ObjectField>,
 
     /// Command to run expressed as a BSON document
@@ -31,7 +32,11 @@ pub struct NativeQuery {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 
-    /// Set to `readWrite` if this native query might modify data in the database.
+    /// Set to `readWrite` if this native query might modify data in the database. When refreshing
+    /// a dataconnector native queries will appear in the corresponding `DataConnectorLink`
+    /// definition as `functions` if they are read-only, or as `procedures` if they are read-rite.
+    /// Functions are intended to map to GraphQL Query fields, while procedures map to Mutation
+    /// fields.
     #[serde(default)]
     pub mode: Mode,
 }

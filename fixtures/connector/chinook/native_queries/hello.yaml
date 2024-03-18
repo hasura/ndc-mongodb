@@ -1,0 +1,4 @@
+name: hello
+result_type: !scalar string
+command:
+  hello: 1

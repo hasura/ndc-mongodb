@@ -1,0 +1,23 @@
+kind: Command
+version: v1
+definition:
+  name: hello
+  description: Example of a read-only native query
+  outputType: String
+  arguments: []
+  source:
+    dataConnectorName: mongodb
+    dataConnectorCommand:
+      function: hello
+  graphql:
+    rootFieldName: hello
+    rootFieldKind: Query
+    
+---
+kind: CommandPermissions
+version: v1
+definition:
+  commandName: hello
+  permissions:
+    - role: admin
+      allowExecution: true
