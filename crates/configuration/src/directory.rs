@@ -36,10 +36,7 @@ pub async fn read_directory(
         .await?
         .unwrap_or_default();
 
-    Ok(Configuration {
-        schema,
-        native_queries,
-    })
+    Configuration::validate(schema, native_queries)
 }
 
 /// Parse all files in a directory with one of the allowed configuration extensions according to
