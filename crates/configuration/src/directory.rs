@@ -1,10 +1,8 @@
+use anyhow::{anyhow, Context as _};
 use futures::stream::TryStreamExt as _;
 use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
-use std::{
-    io,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 use tokio::fs;
 use tokio_stream::wrappers::ReadDirStream;
 
@@ -29,7 +27,7 @@ const YAML: FileFormat = FileFormat::Yaml;
 /// Read configuration from a directory
 pub async fn read_directory(
     configuration_dir: impl AsRef<Path> + Send,
-) -> io::Result<Configuration> {
+) -> anyhow::Result<Configuration> {
     let dir = configuration_dir.as_ref();
 
     let schema = parse_json_or_yaml(dir, SCHEMA_FILENAME).await?;
@@ -47,7 +45,7 @@ pub async fn read_directory(
 /// Parse all files in a directory with one of the allowed configuration extensions according to
 /// the given type argument. For example if `T` is `NativeQuery` this function assumes that all
 /// json and yaml files in the given directory should be parsed as native query configurations.
-async fn read_subdir_configs<T>(subdir: &Path) -> io::Result<Option<Vec<T>>>
+async fn read_subdir_configs<T>(subdir: &Path) -> anyhow::Result<Option<Vec<T>>>
 where
     for<'a> T: Deserialize<'a>,
 {
@@ -57,6 +55,7 @@ where
 
     let dir_stream = ReadDirStream::new(fs::read_dir(subdir).await?);
     let configs = dir_stream
+        .map_err(|err| err.into())
         .try_filter_map(|dir_entry| async move {
             // Permits regular files and symlinks, does not filter out symlinks to directories.
             let is_file = !(dir_entry.file_type().await?.is_dir());
@@ -86,7 +85,7 @@ where
 
 /// Given a base name, like "connection", looks for files of the form "connection.json",
 /// "connection.yaml", etc; reads the file; and parses it according to its extension.
-async fn parse_json_or_yaml<T>(configuration_dir: &Path, basename: &str) -> io::Result<T>
+async fn parse_json_or_yaml<T>(configuration_dir: &Path, basename: &str) -> anyhow::Result<T>
 where
     for<'a> T: Deserialize<'a>,
 {
@@ -96,7 +95,10 @@ where
 
 /// Given a base name, like "connection", looks for files of the form "connection.json",
 /// "connection.yaml", etc, and returns the found path with its file format.
-async fn find_file(configuration_dir: &Path, basename: &str) -> io::Result<(PathBuf, FileFormat)> {
+async fn find_file(
+    configuration_dir: &Path,
+    basename: &str,
+) -> anyhow::Result<(PathBuf, FileFormat)> {
     for (extension, format) in CONFIGURATION_EXTENSIONS {
         let path = configuration_dir.join(format!("{basename}.{extension}"));
         if fs::try_exists(&path).await? {
@@ -104,30 +106,28 @@ async fn find_file(configuration_dir: &Path, basename: &str) -> io::Result<(Path
         }
     }
 
-    Err(io::Error::new(
-        io::ErrorKind::NotFound,
-        format!(
-            "could not find file, {:?}",
-            configuration_dir.join(format!(
-                "{basename}.{{{}}}",
-                CONFIGURATION_EXTENSIONS
-                    .into_iter()
-                    .map(|(ext, _)| ext)
-                    .join(",")
-            ))
-        ),
+    Err(anyhow!(
+        "could not find file, {:?}",
+        configuration_dir.join(format!(
+            "{basename}.{{{}}}",
+            CONFIGURATION_EXTENSIONS
+                .into_iter()
+                .map(|(ext, _)| ext)
+                .join(",")
+        ))
     ))
 }
 
-async fn parse_config_file<T>(path: impl AsRef<Path>, format: FileFormat) -> io::Result<T>
+async fn parse_config_file<T>(path: impl AsRef<Path>, format: FileFormat) -> anyhow::Result<T>
 where
     for<'a> T: Deserialize<'a>,
 {
     let bytes = fs::read(path.as_ref()).await?;
     let value = match format {
-        FileFormat::Json => serde_json::from_slice(&bytes)?,
+        FileFormat::Json => serde_json::from_slice(&bytes)
+            .with_context(|| format!("error parsing {:?}", path.as_ref()))?,
         FileFormat::Yaml => serde_yaml::from_slice(&bytes)
-            .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?,
+            .with_context(|| format!("error parsing {:?}", path.as_ref()))?,
     };
     Ok(value)
 }
@@ -136,7 +136,7 @@ where
 pub async fn write_directory(
     configuration_dir: impl AsRef<Path>,
     configuration: &Configuration,
-) -> io::Result<()> {
+) -> anyhow::Result<()> {
     write_file(configuration_dir, SCHEMA_FILENAME, &configuration.schema).await
 }
 
@@ -149,11 +149,13 @@ async fn write_file<T>(
     configuration_dir: impl AsRef<Path>,
     basename: &str,
     value: &T,
-) -> io::Result<()>
+) -> anyhow::Result<()>
 where
     T: Serialize,
 {
     let path = default_file_path(configuration_dir, basename);
     let bytes = serde_json::to_vec_pretty(value)?;
-    fs::write(path, bytes).await
+    fs::write(path.clone(), bytes)
+        .await
+        .with_context(|| format!("error writing {:?}", path))
 }

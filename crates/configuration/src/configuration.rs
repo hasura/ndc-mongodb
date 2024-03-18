@@ -1,4 +1,4 @@
-use std::{io, path::Path};
+use std::path::Path;
 
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -27,7 +27,7 @@ impl Configuration {
 
     pub async fn parse_configuration(
         configuration_dir: impl AsRef<Path> + Send,
-    ) -> io::Result<Self> {
+    ) -> anyhow::Result<Self> {
         read_directory(configuration_dir).await
     }
 }
