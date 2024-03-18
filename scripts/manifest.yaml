@@ -11,11 +11,11 @@ platforms:
       - from: "./mongodb-cli-plugin-aarch64-apple-darwin"
         to: "hasura-mongodb"
   - selector: linux-arm64
-    uri: "https://github.com/hasura/ndc-mongodb/releases/download/${VERSION}/mongodb-cli-plugin-aarch64-unknown-linux-gnu"
+    uri: "https://github.com/hasura/ndc-mongodb/releases/download/${VERSION}/mongodb-cli-plugin-aarch64-unknown-linux-musl"
     sha256: "${LINUX_ARM64_SHA256}"
     bin: "hasura-mongodb"
     files:
-      - from: "./mongodb-cli-plugin-aarch64-unknown-linux-gnu"
+      - from: "./mongodb-cli-plugin-aarch64-unknown-linux-musl"
         to: "hasura-mongodb"
   - selector: darwin-amd64
     uri: "https://github.com/hasura/ndc-mongodb/releases/download/${VERSION}/mongodb-cli-plugin-x86_64-apple-darwin"
@@ -32,9 +32,9 @@ platforms:
       - from: "./mongodb-cli-plugin-x86_64-pc-windows-msvc.exe"
         to: "hasura-mongodb.exe"
   - selector: linux-amd64
-    uri: "https://github.com/hasura/ndc-mongodb/releases/download/${VERSION}/mongodb-cli-plugin-x86_64-unknown-linux-gnu"
+    uri: "https://github.com/hasura/ndc-mongodb/releases/download/${VERSION}/mongodb-cli-plugin-x86_64-unknown-linux-musl"
     sha256: "${LINUX_AMD64_SHA256}"
     bin: "hasura-mongodb"
     files:
-      - from: "./mongodb-cli-plugin-x86_64-unknown-linux-gnu"
+      - from: "./mongodb-cli-plugin-x86_64-unknown-linux-musl"
         to: "hasura-mongodb"
