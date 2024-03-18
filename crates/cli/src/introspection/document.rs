@@ -12,26 +12,35 @@ use mongodb_support::{
 };
 use std::string::String;
 
-pub fn schema_from_document(collection_name: &str, document: &Document) -> Schema {
-    let (object_types, collection) = make_collection(collection_name, document);
-    Schema {
+pub fn schema_from_document(
+    collection_name: &str,
+    document: &Document,
+) -> Result<Schema, TypeUnificationError> {
+    let (object_types, collection) = make_collection(collection_name, document)?;
+    Ok(Schema {
         collections: vec![collection],
         object_types,
-    }
+    })
 }
 
-fn make_collection(collection_name: &str, document: &Document) -> (Vec<ObjectType>, Collection) {
-    let object_type_defs = make_object_type(collection_name, document);
+fn make_collection(
+    collection_name: &str,
+    document: &Document,
+) -> Result<(Vec<ObjectType>, Collection), TypeUnificationError> {
+    let object_type_defs = make_object_type(collection_name, document)?;
     let collection_info = Collection {
         name: collection_name.to_string(),
         description: None,
         r#type: collection_name.to_string(),
     };
 
-    (object_type_defs, collection_info)
+    Ok((object_type_defs, collection_info))
 }
 
-fn make_object_type(object_type_name: &str, document: &Document) -> Vec<ObjectType> {
+fn make_object_type(
+    object_type_name: &str,
+    document: &Document,
+) -> Result<Vec<ObjectType>, TypeUnificationError> {
     let (mut object_type_defs, object_fields) = {
         let type_prefix = format!("{object_type_name}_");
         let (object_type_defs, object_fields): (Vec<Vec<ObjectType>>, Vec<ObjectField>) = document
@@ -39,6 +48,8 @@ fn make_object_type(object_type_name: &str, document: &Document) -> Vec<ObjectTy
             .map(|(field_name, field_value)| {
                 make_object_fields(&type_prefix, field_name, field_value)
             })
+            .collect::<Result<Vec<(Vec<ObjectType>, ObjectField)>, TypeUnificationError>>()?
+            .into_iter()
             .unzip();
         (object_type_defs.concat(), object_fields)
     };
@@ -50,16 +61,16 @@ fn make_object_type(object_type_name: &str, document: &Document) -> Vec<ObjectTy
     };
 
     object_type_defs.push(object_type);
-    object_type_defs
+    Ok(object_type_defs)
 }
 
 fn make_object_fields(
     type_prefix: &str,
     field_name: &str,
     field_value: &Bson,
-) -> (Vec<ObjectType>, ObjectField) {
+) -> Result<(Vec<ObjectType>, ObjectField), TypeUnificationError> {
     let object_type_name = format!("{type_prefix}{field_name}");
-    let (collected_otds, field_type) = make_field_type(&object_type_name, field_value);
+    let (collected_otds, field_type) = make_field_type(&object_type_name, field_value)?;
 
     let object_field = ObjectField {
         name: field_name.to_owned(),
@@ -67,27 +78,33 @@ fn make_object_fields(
         r#type: Type::Nullable(Box::new(field_type)),
     };
 
-    (collected_otds, object_field)
+    Ok((collected_otds, object_field))
 }
 
-fn make_field_type(object_type_name: &str, field_value: &Bson) -> (Vec<ObjectType>, Type) {
-    fn scalar(t: BsonScalarType) -> (Vec<ObjectType>, Type) {
-        (vec![], Type::Scalar(t))
+fn make_field_type(
+    object_type_name: &str,
+    field_value: &Bson,
+) -> Result<(Vec<ObjectType>, Type), TypeUnificationError> {
+    fn scalar(t: BsonScalarType) -> Result<(Vec<ObjectType>, Type), TypeUnificationError> {
+        Ok((vec![], Type::Scalar(t)))
     }
     match field_value {
         Bson::Double(_) => scalar(Double),
         Bson::String(_) => scalar(String),
         Bson::Array(arr) => {
-            // TODO: examine all elements of the array and take the union.
-            let (collected_otds, element_type) = match arr.first() {
-                Some(elem) => make_field_type(object_type_name, elem),
-                None => scalar(Undefined),
-            };
-            (collected_otds, Type::ArrayOf(Box::new(element_type)))
+            // Examine all elements of the array and take the union of the resulting types.
+            let mut collected_otds = vec![];
+            let mut result_type = Type::Scalar(Undefined);
+            for elem in arr {
+              let (elem_collected_otds, elem_type) = make_field_type(object_type_name, elem)?;
+              collected_otds = unify_object_types(collected_otds, elem_collected_otds)?;
+              result_type = unify_type(result_type, elem_type)?;
+            }
+            Ok((collected_otds, Type::ArrayOf(Box::new(result_type))))
         }
         Bson::Document(document) => {
-            let collected_otds = make_object_type(object_type_name, document);
-            (collected_otds, Type::Object(object_type_name.to_owned()))
+            let collected_otds = make_object_type(object_type_name, document)?;
+            Ok((collected_otds, Type::Object(object_type_name.to_owned())))
         }
         Bson::Boolean(_) => scalar(Bool),
         Bson::Null => scalar(Null),
@@ -115,7 +132,7 @@ pub enum TypeUnificationError {
     TypeKindMismatch(Type, Type),
 }
 
-fn unify_types(type_a: Type, type_b: Type) -> Result<Type, TypeUnificationError> {
+fn unify_type(type_a: Type, type_b: Type) -> Result<Type, TypeUnificationError> {
     match (type_a, type_b) {
         // If one type is undefined, the union is the other type.
         // This is used as the base case when inferring array types from documents.
@@ -141,15 +158,15 @@ fn unify_types(type_a: Type, type_b: Type) -> Result<Type, TypeUnificationError>
             }
         }
         (Type::ArrayOf(elem_type_a), Type::ArrayOf(elem_type_b)) => {
-            let elem_type = unify_types(*elem_type_a, *elem_type_b)?;
+            let elem_type = unify_type(*elem_type_a, *elem_type_b)?;
             Ok(Type::ArrayOf(Box::new(elem_type)))
         }
         (Type::Nullable(nullable_type_a), type_b) => {
-            let result_type = unify_types(*nullable_type_a, type_b)?;
+            let result_type = unify_type(*nullable_type_a, type_b)?;
             Ok(make_nullable(result_type))
         }
         (type_a, Type::Nullable(nullable_type_b)) => {
-            let result_type = unify_types(type_a, *nullable_type_b)?;
+            let result_type = unify_type(type_a, *nullable_type_b)?;
             Ok(make_nullable(result_type))
         }
         (type_a, type_b) => Err(TypeUnificationError::TypeKindMismatch(type_a, type_b)),
@@ -171,7 +188,7 @@ fn make_nullable_field<E>(field: ObjectField) -> Result<ObjectField, E> {
     })
 }
 
-fn unify_object_types(
+fn unify_object_type(
     object_type_a: ObjectType,
     object_type_b: ObjectType,
 ) -> Result<ObjectType, TypeUnificationError> {
@@ -191,7 +208,7 @@ fn unify_object_types(
         field_map_b,
         make_nullable_field,
         make_nullable_field,
-        unify_object_fields,
+        unify_object_field,
     )?;
 
     Ok(ObjectType {
@@ -201,18 +218,18 @@ fn unify_object_types(
     })
 }
 
-fn unify_object_fields(
+fn unify_object_field(
     object_field_a: ObjectField,
     object_field_b: ObjectField,
 ) -> Result<ObjectField, TypeUnificationError> {
     Ok(ObjectField {
         name: object_field_a.name,
-        r#type: unify_types(object_field_a.r#type, object_field_b.r#type)?,
+        r#type: unify_type(object_field_a.r#type, object_field_b.r#type)?,
         description: object_field_a.description.or(object_field_b.description),
     })
 }
 
-fn unify(
+fn unify_object_types(
     object_types_a: Vec<ObjectType>,
     object_types_b: Vec<ObjectType>,
 ) -> Result<Vec<ObjectType>, TypeUnificationError> {
@@ -225,7 +242,7 @@ fn unify(
         .map(|t| (t.name.to_owned(), t))
         .collect();
 
-    let merged_type_map = align_with_result(type_map_a, type_map_b, Ok, Ok, unify_object_types)?;
+    let merged_type_map = align_with_result(type_map_a, type_map_b, Ok, Ok, unify_object_type)?;
 
     Ok(merged_type_map.into_values().collect())
 }
