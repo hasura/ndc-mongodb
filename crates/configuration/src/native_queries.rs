@@ -42,7 +42,7 @@ pub struct NativeQuery {
 
     /// Set to `readWrite` if this native query might modify data in the database. When refreshing
     /// a dataconnector native queries will appear in the corresponding `DataConnectorLink`
-    /// definition as `functions` if they are read-only, or as `procedures` if they are read-rite.
+    /// definition as `functions` if they are read-only, or as `procedures` if they are read-write.
     /// Functions are intended to map to GraphQL Query fields, while procedures map to Mutation
     /// fields.
     #[serde(default)]
