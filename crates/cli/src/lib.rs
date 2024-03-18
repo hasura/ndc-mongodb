@@ -31,8 +31,8 @@ pub async fn run(command: Command, context: &Context) -> anyhow::Result<()> {
 
 /// Update the configuration in the current directory by introspecting the database.
 async fn update(context: &Context) -> anyhow::Result<()> {
-    let metadata = introspection::get_metadata_from_validation_schema(&context.mongo_config).await?;
-    let configuration = Configuration { metadata };
+    let schema = introspection::get_metadata_from_validation_schema(&context.mongo_config).await?;
+    let configuration = Configuration::from_schema(schema);
 
     configuration::write_directory(&context.path, &configuration).await?;
 
