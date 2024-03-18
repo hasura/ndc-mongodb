@@ -2,7 +2,7 @@ use mongodb::{bson, options::SelectionCriteria};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::schema::{ObjectField, Type, ObjectType};
+use crate::schema::{ObjectField, ObjectType, Type};
 
 /// An arbitrary database command using MongoDB's runCommand API.
 /// See https://www.mongodb.com/docs/manual/reference/method/db.runCommand/
