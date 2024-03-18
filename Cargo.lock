@@ -1541,6 +1541,7 @@ dependencies = [
  "mongodb-support",
  "serde",
  "serde_json",
+ "these",
  "thiserror",
  "tokio",
 ]
@@ -1580,9 +1581,11 @@ dependencies = [
  "anyhow",
  "dc-api-types",
  "enum-iterator",
+ "indexmap 1.9.3",
  "schemars",
  "serde",
  "serde_json",
+ "these",
  "thiserror",
 ]
 
@@ -1771,7 +1774,7 @@ version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "75e56d5c441965b6425165b7e3223cc933ca469834f4a8b4786817a1f9dc4f13"
 dependencies = [
- "indexmap 1.9.3",
+ "indexmap 2.2.5",
  "serde",
  "serde_json",
 ]
@@ -2958,6 +2961,12 @@ name = "termtree"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
+
+[[package]]
+name = "these"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7162adbff4f8c44e938e0e51f6d3d829818c2ffefd793702a3a6f6ef0551de43"
 
 [[package]]
 name = "thiserror"
