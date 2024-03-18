@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - test-ci/**
     tags:
       - 'v*'
 
@@ -94,10 +95,11 @@ jobs:
       matrix:
         include:
           - runner: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
+            target: x86_64-unknown-linux-musl
+            linux-packages: musl-tools
           - runner: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            linux-packages: gcc-aarch64-linux-gnu
+            target: aarch64-unknown-linux-musl
+            linux-packages: gcc-aarch64-linux-gnu musl-tools
             linker: /usr/bin/aarch64-linux-gnu-gcc
           - runner: macos-latest
             target: x86_64-apple-darwin
