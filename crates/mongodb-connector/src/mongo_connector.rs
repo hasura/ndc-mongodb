@@ -19,7 +19,6 @@ use ndc_sdk::{
     },
 };
 
-use crate::capabilities::mongo_capabilities_response;
 use crate::{
     api_type_conversions::{
         v2_to_v3_explain_response, v2_to_v3_query_response, v3_to_v2_query_request, QueryContext,
@@ -27,6 +26,7 @@ use crate::{
     capabilities::scalar_types,
     error_mapping::{mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error},
 };
+use crate::{capabilities::mongo_capabilities_response, mutation::handle_mutation_request};
 
 #[derive(Clone, Default)]
 pub struct MongoConnector;
@@ -115,12 +115,10 @@ impl Connector for MongoConnector {
 
     async fn mutation(
         _configuration: &Self::Configuration,
-        _state: &Self::State,
-        _request: MutationRequest,
+        state: &Self::State,
+        request: MutationRequest,
     ) -> Result<JsonResponse<MutationResponse>, MutationError> {
-        Err(MutationError::UnsupportedOperation(
-            "The MongoDB agent does not yet support mutations".to_owned(),
-        ))
+        handle_mutation_request(state, request).await
     }
 
     async fn query(
