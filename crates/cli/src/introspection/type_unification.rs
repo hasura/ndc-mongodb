@@ -63,7 +63,7 @@ impl Display for TypeUnificationError {
                 write!(f, "Object type mismatch {} {}", object_a, object_b)
             }
             Self::TypeKind(type_a, type_b) => {
-                write!(f, "Object type mismatch {:?} {:?}", type_a, type_b)
+                write!(f, "Type mismatch {:?} {:?}", type_a, type_b)
             }
         }
     }
