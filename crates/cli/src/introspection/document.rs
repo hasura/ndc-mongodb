@@ -10,7 +10,10 @@ use mongodb::bson::{doc, Bson, Document};
 use mongodb_agent_common::interface_types::MongoConfig;
 use mongodb_support::BsonScalarType::{self, *};
 
-// Sample from all collections in the database
+/// Sample from all collections in the database and return a Schema.
+/// Return an error if there are any errors accessing the database
+/// or if the types derived from the sample documents for a collection
+/// are not unifiable.
 pub async fn sample_schema_from_db(
     sample_size: u32,
     config: &MongoConfig,

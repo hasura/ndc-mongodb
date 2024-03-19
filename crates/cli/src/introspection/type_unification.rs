@@ -1,3 +1,7 @@
+/// This module contains functions for unifying types.
+/// This is useful when deriving a schema from set of sample documents.
+/// It allows the information in the schemas derived from several documents to be combined into one schema.
+///
 use configuration::{
     schema::{ObjectField, ObjectType, Type},
     Schema,
@@ -67,6 +71,8 @@ impl Display for TypeUnificationError {
 
 pub type TypeUnificationResult<T> = Result<T, TypeUnificationError>;
 
+/// Unify two types.
+/// Return an error if the types are not unifiable.
 pub fn unify_type(
     context: TypeUnificationContext,
     type_a: Type,
@@ -82,6 +88,7 @@ pub fn unify_type(
         (Type::Scalar(Null), type_b) => Ok(make_nullable(type_b)),
         (type_a, Type::Scalar(Null)) => Ok(make_nullable(type_a)),
 
+        // Scalar types only unify if they are the same type.
         (Type::Scalar(scalar_a), Type::Scalar(scalar_b)) => {
             if scalar_a == scalar_b {
                 Ok(Type::Scalar(scalar_a))
@@ -91,6 +98,8 @@ pub fn unify_type(
                 ))
             }
         }
+
+        // Object types only unify if they have the same name.
         (Type::Object(object_a), Type::Object(object_b)) => {
             if object_a == object_b {
                 Ok(Type::Object(object_a))
@@ -98,10 +107,15 @@ pub fn unify_type(
                 Err(TypeUnificationError::ObjectType(object_a, object_b))
             }
         }
+
+        // Array types unify iff their element types unify.
         (Type::ArrayOf(elem_type_a), Type::ArrayOf(elem_type_b)) => {
             let elem_type = unify_type(context, *elem_type_a, *elem_type_b)?;
             Ok(Type::ArrayOf(Box::new(elem_type)))
         }
+
+        // A Nullable type will unify with another type iff the underlying type is unifiable.
+        // The resulting type will be Nullable.
         (Type::Nullable(nullable_type_a), type_b) => {
             let result_type = unify_type(context, *nullable_type_a, type_b)?;
             Ok(make_nullable(result_type))
@@ -110,6 +124,8 @@ pub fn unify_type(
             let result_type = unify_type(context, type_a, *nullable_type_b)?;
             Ok(make_nullable(result_type))
         }
+
+        // Anything else is a unification error.
         (type_a, type_b) => Err(TypeUnificationError::TypeKind(type_a, type_b)),
     }
 }
@@ -129,6 +145,8 @@ fn make_nullable_field<E>(field: ObjectField) -> Result<ObjectField, E> {
     })
 }
 
+/// Unify two `ObjectType`s.
+/// Any field that appears in only one of the `ObjectType`s will be made nullable.
 fn unify_object_type(
     object_type_a: ObjectType,
     object_type_b: ObjectType,
@@ -159,6 +177,8 @@ fn unify_object_type(
     })
 }
 
+/// The types of two `ObjectField`s.
+/// If the types are not unifiable then return an error.
 fn unify_object_field(
     object_type_name: &str,
     object_field_a: ObjectField,
@@ -172,6 +192,9 @@ fn unify_object_field(
     })
 }
 
+/// Unify two sets of `ObjectType`s.
+/// Any `ObjectType` that appears in only one set will be unchanged in the output.
+/// Any type that appears in both sets will be unified using `unify_object_type`.
 pub fn unify_object_types(
     object_types_a: Vec<ObjectType>,
     object_types_b: Vec<ObjectType>,
@@ -190,7 +213,7 @@ pub fn unify_object_types(
     Ok(merged_type_map.into_values().collect())
 }
 
-// Unify two schemas. Assumes that the schemas describe mutually exclusive sets of collections.
+/// Unify two schemas. Assumes that the schemas describe mutually exclusive sets of collections.
 pub fn unify_schema(schema_a: Schema, schema_b: Schema) -> TypeUnificationResult<Schema> {
     let collections = schema_a
         .collections
