@@ -1,3 +1,6 @@
+use super::type_unification::{
+    unify_object_types, unify_schema, unify_type, TypeUnificationContext, TypeUnificationResult,
+};
 use configuration::{
     schema::{Collection, ObjectField, ObjectType, Type},
     Schema,
@@ -6,10 +9,6 @@ use futures_util::TryStreamExt;
 use mongodb::bson::{doc, Bson, Document};
 use mongodb_agent_common::interface_types::MongoConfig;
 use mongodb_support::BsonScalarType::{self, *};
-
-use crate::introspection::type_unification::{unify_type, TypeUnificationContext};
-
-use super::type_unification::{unify_object_types, unify_schema, TypeUnificationResult};
 
 // Sample from all collections in the database
 pub async fn sample_schema_from_db(
@@ -32,7 +31,7 @@ pub async fn sample_schema_from_db(
     Ok(schema)
 }
 
-pub async fn sample_schema_from_collection(
+async fn sample_schema_from_collection(
     collection_name: &str,
     sample_size: u32,
     config: &MongoConfig,
