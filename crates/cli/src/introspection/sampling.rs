@@ -48,7 +48,11 @@ async fn sample_schema_from_collection(
     let mut collected_object_types = vec![];
     while let Some(document) = cursor.try_next().await? {
         let object_types = make_object_type(collection_name, &document)?;
-        collected_object_types = unify_object_types(collected_object_types, object_types)?;
+        collected_object_types = if collected_object_types.is_empty() {
+            object_types
+        } else {
+            unify_object_types(collected_object_types, object_types)?
+        };
     }
     let collection_info = Collection {
         name: collection_name.to_string(),
@@ -124,7 +128,11 @@ fn make_field_type(
             for elem in arr {
                 let (elem_collected_otds, elem_type) =
                     make_field_type(object_type_name, field_name, elem)?;
-                collected_otds = unify_object_types(collected_otds, elem_collected_otds)?;
+                collected_otds = if collected_otds.is_empty() {
+                    elem_collected_otds
+                } else {
+                    unify_object_types(collected_otds, elem_collected_otds)?
+                };
                 let context = TypeUnificationContext::new(object_type_name, field_name);
                 result_type = unify_type(context, result_type, elem_type)?;
             }
