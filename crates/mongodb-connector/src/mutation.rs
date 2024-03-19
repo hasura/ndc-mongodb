@@ -8,9 +8,7 @@ use mongodb_agent_common::interface_types::MongoConfig;
 use ndc_sdk::{
     connector::MutationError,
     json_response::JsonResponse,
-    models::{
-        MutationOperation, MutationOperationResults, MutationRequest, MutationResponse, NestedField,
-    },
+    models::{MutationOperation, MutationOperationResults, MutationRequest, MutationResponse},
 };
 use serde_json::Value;
 
@@ -21,19 +19,13 @@ struct Job<'a> {
     // For the time being all procedures are native queries.
     native_query: &'a NativeQuery,
     arguments: BTreeMap<String, Value>,
-    fields: Option<NestedField>,
 }
 
 impl<'a> Job<'a> {
-    pub fn new(
-        native_query: &'a NativeQuery,
-        arguments: BTreeMap<String, Value>,
-        fields: Option<NestedField>,
-    ) -> Self {
+    pub fn new(native_query: &'a NativeQuery, arguments: BTreeMap<String, Value>) -> Self {
         Job {
             native_query,
             arguments,
-            fields,
         }
     }
 }
@@ -64,17 +56,13 @@ fn look_up_procedures(
         .into_iter()
         .map(|operation| match operation {
             MutationOperation::Procedure {
-                name,
-                arguments,
-                fields,
+                name, arguments, ..
             } => {
                 let native_query = config
                     .native_queries
                     .iter()
                     .find(|native_query| native_query.name == name);
-                native_query
-                    .ok_or(name)
-                    .map(|nq| Job::new(nq, arguments, fields))
+                native_query.ok_or(name).map(|nq| Job::new(nq, arguments))
             }
         })
         .partition_result();
