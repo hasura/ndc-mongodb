@@ -40,25 +40,25 @@ impl Display for TypeUnificationContext {
 
 #[derive(Debug, Error)]
 pub enum TypeUnificationError {
-    ScalarTypeMismatch(TypeUnificationContext, BsonScalarType, BsonScalarType),
-    ObjectTypeMismatch(String, String),
-    TypeKindMismatch(Type, Type),
+    ScalarType(TypeUnificationContext, BsonScalarType, BsonScalarType),
+    ObjectType(String, String),
+    TypeKind(Type, Type),
 }
 
 impl Display for TypeUnificationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::ScalarTypeMismatch(context, scalar_a, scalar_b) => write!(
+            Self::ScalarType(context, scalar_a, scalar_b) => write!(
                 f,
                 "Scalar type mismatch {} {} at {}",
                 scalar_a.bson_name(),
                 scalar_b.bson_name(),
                 context
             ),
-            Self::ObjectTypeMismatch(object_a, object_b) => {
+            Self::ObjectType(object_a, object_b) => {
                 write!(f, "Object type mismatch {} {}", object_a, object_b)
             }
-            Self::TypeKindMismatch(type_a, type_b) => {
+            Self::TypeKind(type_a, type_b) => {
                 write!(f, "Object type mismatch {:?} {:?}", type_a, type_b)
             }
         }
@@ -86,7 +86,7 @@ pub fn unify_type(
             if scalar_a == scalar_b {
                 Ok(Type::Scalar(scalar_a))
             } else {
-                Err(TypeUnificationError::ScalarTypeMismatch(
+                Err(TypeUnificationError::ScalarType(
                     context, scalar_a, scalar_b,
                 ))
             }
@@ -95,7 +95,7 @@ pub fn unify_type(
             if object_a == object_b {
                 Ok(Type::Object(object_a))
             } else {
-                Err(TypeUnificationError::ObjectTypeMismatch(object_a, object_b))
+                Err(TypeUnificationError::ObjectType(object_a, object_b))
             }
         }
         (Type::ArrayOf(elem_type_a), Type::ArrayOf(elem_type_b)) => {
@@ -110,7 +110,7 @@ pub fn unify_type(
             let result_type = unify_type(context, type_a, *nullable_type_b)?;
             Ok(make_nullable(result_type))
         }
-        (type_a, type_b) => Err(TypeUnificationError::TypeKindMismatch(type_a, type_b)),
+        (type_a, type_b) => Err(TypeUnificationError::TypeKind(type_a, type_b)),
     }
 }
 
@@ -195,12 +195,12 @@ pub fn unify_schema(schema_a: Schema, schema_b: Schema) -> TypeUnificationResult
     let collections = schema_a
         .collections
         .into_iter()
-        .chain(schema_b.collections.into_iter())
+        .chain(schema_b.collections)
         .collect();
     let object_types = schema_a
         .object_types
         .into_iter()
-        .chain(schema_b.object_types.into_iter())
+        .chain(schema_b.object_types)
         .collect();
     Ok(Schema {
         collections,
