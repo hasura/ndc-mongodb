@@ -1,4 +1,5 @@
 name: hello
+description: Example of a read-only native query
 objectTypes:
   - name: HelloResult
     fields:
