@@ -13,4 +13,4 @@ command:
   insert: "Artist"
   documents:
     - ArtistId: 1001
-    - Name: Regina Spektor
+      Name: Regina Spektor
