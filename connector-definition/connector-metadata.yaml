@@ -7,8 +7,8 @@ supportedEnvironmentVariables:
 commands:
   update: hasura-mongodb update
 cliPlugin:
-  name: hasura-mongodb
-  version: "0.0.1"
+  name: mongodb
+  version: 
 dockerComposeWatch:
   - path: ./
     target: /etc/connector
