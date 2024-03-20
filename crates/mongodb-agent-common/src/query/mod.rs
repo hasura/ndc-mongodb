@@ -77,7 +77,7 @@ mod tests {
 
         let expected_pipeline = json!([
             { "$match": { "gpa": { "$lt": 4.0 } } },
-            { "$replaceWith": { "student_gpa": "$gpa" } },
+            { "$replaceWith": { "student_gpa": { "$ifNull": ["$gpa", null] } } },
         ]);
 
         let mut collection = MockCollectionTrait::new();
@@ -222,7 +222,7 @@ mod tests {
                     ],
                     "__ROWS__": [{
                         "$replaceWith": {
-                            "student_gpa": "$gpa",
+                            "student_gpa": { "$ifNull": ["$gpa", null] },
                         },
                     }],
                 },
@@ -300,7 +300,7 @@ mod tests {
                 "$replaceWith": {
                     "date": {
                         "$dateToString": {
-                            "date": "$date",
+                            "date": { "$ifNull": ["$date", null] },
                         },
                     },
                 }
