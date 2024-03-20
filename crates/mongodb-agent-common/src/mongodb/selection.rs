@@ -58,8 +58,14 @@ fn from_query_request_helper(
 /// If column_type is date we want to format it as a string.
 /// TODO: do we want to format any other BSON types in any particular way,
 /// e.g. formated ObjectId as string?
-pub fn format_col_path(col_path: String, column_type: &str) -> Bson {
+///
+/// Wraps column reference with an `$isNull` check. That catches cases where a field is missing
+/// from a document, and substitutes a concrete null value. Otherwise the field would be omitted
+/// from query results which leads to an error in the engine.
+pub fn serialized_null_checked_column_reference(col_path: String, column_type: &str) -> Bson {
+    let col_path = doc! { "$ifNull": [col_path, Bson::Null] };
     match column_type {
+        // Don't worry, $dateToString will returns `null` if `col_path` is null
         "date" => bson!({"$dateToString": {"date": col_path}}),
         _ => bson!(col_path),
     }
@@ -80,7 +86,7 @@ fn selection_for_field(
                 [] => format!("${column}"),
                 _ => format!("${}.{}", parent_columns.join("."), column),
             };
-            let bson_col_path = format_col_path(col_path, column_type);
+            let bson_col_path = serialized_null_checked_column_reference(col_path, column_type);
             Ok(bson_col_path)
         }
         Field::NestedObject { column, query } => {
@@ -258,14 +264,14 @@ mod tests {
         assert_eq!(
             Into::<Document>::into(selection),
             doc! {
-               "foo": "$foo",
-               "foo_again": "$foo",
+               "foo": { "$ifNull": ["$foo", null] },
+               "foo_again": { "$ifNull": ["$foo", null] },
                "bar": {
                    "$cond": {
                         "if": "$bar",
                         "then":  {
-                            "baz": "$bar.baz",
-                            "baz_again": "$bar.baz"
+                            "baz": { "$ifNull": ["$bar.baz", null] },
+                            "baz_again": { "$ifNull": ["$bar.baz", null] }
                         },
                         "else": null
                    }
@@ -274,24 +280,24 @@ mod tests {
                     "$cond": {
                         "if": "$bar",
                         "then": {
-                            "baz": "$bar.baz"
+                            "baz": { "$ifNull": ["$bar.baz", null] }
                         },
                         "else": null
                     }
                },
                "my_date": {
                     "$dateToString": {
-                        "date": "$my_date"
+                        "date": { "$ifNull": ["$my_date", null] }
                     }
                },
-               "array_of_scalars": "$foo",
+               "array_of_scalars": { "$ifNull": ["$foo", null] },
                "array_of_objects": {
                     "$cond": {
                         "if": "$foo",
                         "then": {
                             "$map": {
                                 "input": "$foo",
-                                "in": {"baz": "$$this.baz"}
+                                "in": {"baz": { "$ifNull": ["$$this.baz", null] }}
                             }
                         },
                         "else": null
@@ -306,7 +312,7 @@ mod tests {
                                 "in": {
                                     "$map": {
                                         "input": "$$this",
-                                        "in": {"baz": "$$this.baz"}
+                                        "in": {"baz": { "$ifNull": ["$$this.baz", null] }}
                                     }
                                 }
                             }
