@@ -128,6 +128,20 @@ pub fn unify_type(
         // Anything else is a unification error.
         (type_a, type_b) => Err(TypeUnificationError::TypeKind(type_a, type_b)),
     }
+    .map(normalize_type)
+}
+
+fn normalize_type(t: Type) -> Type {
+    match t {
+        Type::Scalar(s) => Type::Scalar(s),
+        Type::Object(o) => Type::Object(o),
+        Type::ArrayOf(a) => Type::ArrayOf(Box::new(normalize_type(*a))),
+        Type::Nullable(n) => match *n {
+            Type::Scalar(BsonScalarType::Null) => Type::Scalar(BsonScalarType::Null),
+            Type::Nullable(t) => normalize_type(Type::Nullable(t)),
+            t => Type::Nullable(Box::new(normalize_type(t))),
+        },
+    }
 }
 
 fn make_nullable(t: Type) -> Type {
@@ -234,8 +248,8 @@ pub fn unify_schema(schema_a: Schema, schema_b: Schema) -> Schema {
 
 #[cfg(test)]
 mod tests {
-    use super::{unify_type, TypeUnificationContext, TypeUnificationError};
-    use configuration::schema::{ObjectType, Type};
+    use super::{normalize_type, unify_type, TypeUnificationContext, TypeUnificationError};
+    use configuration::schema::Type;
     use mongodb_support::BsonScalarType;
     use proptest::prelude::*;
 
@@ -269,18 +283,18 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_unify_object_type() -> Result<(), anyhow::Error> {
-        let name = "foo";
-        let description = "the type foo";
-        let object_type_a = ObjectType {
-            name: name.to_owned(),
-            fields: vec![],
-            description: Some(description.to_owned()),
-        };
+    // #[test]
+    // fn test_unify_object_type() -> Result<(), anyhow::Error> {
+    //     let name = "foo";
+    //     let description = "the type foo";
+    //     let object_type_a = ObjectType {
+    //         name: name.to_owned(),
+    //         fields: vec![],
+    //         description: Some(description.to_owned()),
+    //     };
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     prop_compose! {
         fn arb_type_unification_context()(object_type_name in any::<String>(), field_name in any::<String>()) -> TypeUnificationContext {
@@ -325,15 +339,11 @@ mod tests {
         })
     }
 
-    fn normalize_type(t: Type) -> Type {
-        match t {
-            Type::Scalar(s) => Type::Scalar(s),
-            Type::Object(o) => Type::Object(o),
-            Type::ArrayOf(a) => Type::ArrayOf(Box::new(normalize_type(*a))),
-            Type::Nullable(n) => match *n {
-                Type::Nullable(t) => normalize_type(Type::Nullable(t)),
-                t => Type::Nullable(Box::new(normalize_type(t)))
-            }
+    fn swap_error(err: TypeUnificationError) -> TypeUnificationError {
+        match err {
+            TypeUnificationError::ScalarType(c, a, b) => TypeUnificationError::ScalarType(c, b, a),
+            TypeUnificationError::ObjectType(a, b) => TypeUnificationError::ObjectType(b, a),
+            TypeUnificationError::TypeKind(a, b) => TypeUnificationError::TypeKind(b, a),
         }
     }
 
@@ -342,6 +352,32 @@ mod tests {
         fn test_type_unifies_with_itself_and_normalizes(c in arb_type_unification_context(), t in arb_type()) {
             let u = unify_type(c, t.clone(), t.clone());
             prop_assert_eq!(Ok(normalize_type(t)), u)
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_unify_type_is_commutative(c in arb_type_unification_context(), ta in arb_type(), tb in arb_type()) {
+            let result_a_b = unify_type(c.clone(), ta.clone(), tb.clone());
+            let result_b_a = unify_type(c, tb, ta);
+            prop_assert_eq!(result_a_b, result_b_a.map_err(swap_error))
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_unify_type_is_associative(c in arb_type_unification_context(), ta in arb_type(), tb in arb_type(), tc in arb_type()) {
+            let result_lr = unify_type(c.clone(), ta.clone(), tb.clone()).and_then(|tab| unify_type(c.clone(), tab, tc.clone()));
+            let result_rl = unify_type(c.clone(), tb, tc).and_then(|tbc| unify_type(c, ta, tbc));
+            match result_lr {
+                Ok(tlr) =>
+                    prop_assert_eq!(Ok(tlr), result_rl),
+                Err(_) =>
+                    match result_rl {
+                        Ok(_) => panic!("Err, Ok"),
+                        Err(_) => ()
+                    }
+            }
         }
     }
 }
