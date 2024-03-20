@@ -12,8 +12,8 @@ pub async fn get_schema(
     config: &Configuration,
 ) -> Result<models::SchemaResponse, connector::SchemaError> {
     let schema = &config.schema;
-    let object_types = map_object_types(&schema.object_types);
     let collections = schema.collections.iter().map(map_collection).collect();
+    let object_types = config.object_types().map(map_object_type).collect();
 
     let functions = config
         .native_queries
@@ -38,19 +38,14 @@ pub async fn get_schema(
     })
 }
 
-fn map_object_types(object_types: &[schema::ObjectType]) -> BTreeMap<String, models::ObjectType> {
-    object_types
-        .iter()
-        .map(|t| {
-            (
-                t.name.clone(),
-                models::ObjectType {
-                    fields: map_field_infos(&t.fields),
-                    description: t.description.clone(),
-                },
-            )
-        })
-        .collect()
+fn map_object_type(object_type: &schema::ObjectType) -> (String, models::ObjectType) {
+    (
+        object_type.name.clone(),
+        models::ObjectType {
+            fields: map_field_infos(&object_type.fields),
+            description: object_type.description.clone(),
+        },
+    )
 }
 
 fn map_field_infos(fields: &[schema::ObjectField]) -> BTreeMap<String, models::ObjectField> {

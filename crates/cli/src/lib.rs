@@ -43,7 +43,7 @@ async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
             introspection::sample_schema_from_db(sample_size, &context.mongo_config).await?
         }
     };
-    let configuration = Configuration::from_schema(schema);
+    let configuration = Configuration::from_schema(schema)?;
 
     configuration::write_directory(&context.path, &configuration).await?;
 

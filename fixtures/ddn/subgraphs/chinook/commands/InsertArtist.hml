@@ -1,0 +1,54 @@
+kind: Command
+version: v1
+definition:
+  name: insertArtist
+  description: Example of a database update using a native query
+  outputType: InsertArtist
+  arguments: []
+  source:
+    dataConnectorName: mongodb
+    dataConnectorCommand:
+      procedure: insertArtist
+    typeMapping:
+      InsertArtist:
+        fieldMapping:
+          ok: { column: ok }
+          n: { column: n }
+  graphql:
+    rootFieldName: insertArtist
+    rootFieldKind: Mutation
+
+---
+kind: CommandPermissions
+version: v1
+definition:
+  commandName: insertArtist
+  permissions:
+    - role: admin
+      allowExecution: true
+    
+---
+kind: ObjectType
+version: v1
+definition:
+  name: InsertArtist
+  graphql:
+    typeName: InsertArtist
+  fields:
+    - name: ok
+      type: Int!
+    - name: n
+      type: Int!
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: InsertArtist
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - ok
+          - n
+

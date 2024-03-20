@@ -410,6 +410,7 @@ dependencies = [
 name = "configuration"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "futures",
  "itertools 0.12.1",
  "mongodb",
@@ -1557,6 +1558,7 @@ dependencies = [
  "dc-api-test-helpers",
  "dc-api-types",
  "enum-iterator",
+ "futures",
  "http",
  "indexmap 2.2.5",
  "itertools 0.10.5",
