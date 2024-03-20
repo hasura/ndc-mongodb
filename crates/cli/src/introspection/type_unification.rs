@@ -17,7 +17,7 @@ use std::{
 };
 use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct TypeUnificationContext {
     object_type_name: String,
     field_name: String,
@@ -42,7 +42,7 @@ impl Display for TypeUnificationContext {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum TypeUnificationError {
     ScalarType(TypeUnificationContext, BsonScalarType, BsonScalarType),
     ObjectType(String, String),
@@ -133,6 +133,7 @@ pub fn unify_type(
 fn make_nullable(t: Type) -> Type {
     match t {
         Type::Nullable(t) => Type::Nullable(t),
+        Type::Scalar(BsonScalarType::Null) => Type::Scalar(BsonScalarType::Null),
         t => Type::Nullable(Box::new(t)),
     }
 }
@@ -228,5 +229,119 @@ pub fn unify_schema(schema_a: Schema, schema_b: Schema) -> Schema {
     Schema {
         collections,
         object_types,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{unify_type, TypeUnificationContext, TypeUnificationError};
+    use configuration::schema::{ObjectType, Type};
+    use mongodb_support::BsonScalarType;
+    use proptest::prelude::*;
+
+    #[test]
+    fn test_unify_scalar() -> Result<(), anyhow::Error> {
+        let context = TypeUnificationContext::new("foo", "bar");
+        let expected = Ok(Type::Scalar(BsonScalarType::Int));
+        let actual = unify_type(
+            context,
+            Type::Scalar(BsonScalarType::Int),
+            Type::Scalar(BsonScalarType::Int),
+        );
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_unify_scalar_error() -> Result<(), anyhow::Error> {
+        let context = TypeUnificationContext::new("foo", "bar");
+        let expected = Err(TypeUnificationError::ScalarType(
+            context.clone(),
+            BsonScalarType::Int,
+            BsonScalarType::String,
+        ));
+        let actual = unify_type(
+            context,
+            Type::Scalar(BsonScalarType::Int),
+            Type::Scalar(BsonScalarType::String),
+        );
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_unify_object_type() -> Result<(), anyhow::Error> {
+        let name = "foo";
+        let description = "the type foo";
+        let object_type_a = ObjectType {
+            name: name.to_owned(),
+            fields: vec![],
+            description: Some(description.to_owned()),
+        };
+
+        Ok(())
+    }
+
+    prop_compose! {
+        fn arb_type_unification_context()(object_type_name in any::<String>(), field_name in any::<String>()) -> TypeUnificationContext {
+            TypeUnificationContext { object_type_name, field_name }
+        }
+    }
+
+    fn arb_bson_scalar_type() -> impl Strategy<Value = BsonScalarType> {
+        prop_oneof![
+            Just(BsonScalarType::Double),
+            Just(BsonScalarType::Decimal),
+            Just(BsonScalarType::Int),
+            Just(BsonScalarType::Long),
+            Just(BsonScalarType::String),
+            Just(BsonScalarType::Date),
+            Just(BsonScalarType::Timestamp),
+            Just(BsonScalarType::BinData),
+            Just(BsonScalarType::ObjectId),
+            Just(BsonScalarType::Bool),
+            Just(BsonScalarType::Null),
+            Just(BsonScalarType::Regex),
+            Just(BsonScalarType::Javascript),
+            Just(BsonScalarType::JavascriptWithScope),
+            Just(BsonScalarType::MinKey),
+            Just(BsonScalarType::MaxKey),
+            Just(BsonScalarType::Undefined),
+            Just(BsonScalarType::DbPointer),
+            Just(BsonScalarType::Symbol),
+        ]
+    }
+
+    fn arb_type() -> impl Strategy<Value = Type> {
+        let leaf = prop_oneof![
+            arb_bson_scalar_type().prop_map(Type::Scalar),
+            any::<String>().prop_map(Type::Object)
+        ];
+        leaf.prop_recursive(3, 10, 10, |inner| {
+            prop_oneof![
+                inner.clone().prop_map(|t| Type::ArrayOf(Box::new(t))),
+                inner.prop_map(|t| Type::Nullable(Box::new(t)))
+            ]
+        })
+    }
+
+    fn normalize_type(t: Type) -> Type {
+        match t {
+            Type::Scalar(s) => Type::Scalar(s),
+            Type::Object(o) => Type::Object(o),
+            Type::ArrayOf(a) => Type::ArrayOf(Box::new(normalize_type(*a))),
+            Type::Nullable(n) => match *n {
+                Type::Nullable(t) => normalize_type(Type::Nullable(t)),
+                t => Type::Nullable(Box::new(normalize_type(t)))
+            }
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_type_unifies_with_itself_and_normalizes(c in arb_type_unification_context(), t in arb_type()) {
+            let u = unify_type(c, t.clone(), t.clone());
+            prop_assert_eq!(Ok(normalize_type(t)), u)
+        }
     }
 }

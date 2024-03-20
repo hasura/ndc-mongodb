@@ -1539,6 +1539,7 @@ dependencies = [
  "mongodb",
  "mongodb-agent-common",
  "mongodb-support",
+ "proptest",
  "serde",
  "serde_json",
  "these",
