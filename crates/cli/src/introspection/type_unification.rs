@@ -349,7 +349,8 @@ mod tests {
 
     proptest! {
         #[test]
-        fn test_type_unifies_with_itself_and_normalizes(c in arb_type_unification_context(), t in arb_type()) {
+        fn test_type_unifies_with_itself_and_normalizes(t in arb_type()) {
+            let c = TypeUnificationContext::new("", "");
             let u = unify_type(c, t.clone(), t.clone());
             prop_assert_eq!(Ok(normalize_type(t)), u)
         }
@@ -357,7 +358,8 @@ mod tests {
 
     proptest! {
         #[test]
-        fn test_unify_type_is_commutative(c in arb_type_unification_context(), ta in arb_type(), tb in arb_type()) {
+        fn test_unify_type_is_commutative(ta in arb_type(), tb in arb_type()) {
+            let c = TypeUnificationContext::new("", "");
             let result_a_b = unify_type(c.clone(), ta.clone(), tb.clone());
             let result_b_a = unify_type(c, tb, ta);
             prop_assert_eq!(result_a_b, result_b_a.map_err(swap_error))
@@ -366,18 +368,33 @@ mod tests {
 
     proptest! {
         #[test]
-        fn test_unify_type_is_associative(c in arb_type_unification_context(), ta in arb_type(), tb in arb_type(), tc in arb_type()) {
+        fn test_unify_type_is_associative(ta in arb_type(), tb in arb_type(), tc in arb_type()) {
+            let c = TypeUnificationContext::new("", "");
             let result_lr = unify_type(c.clone(), ta.clone(), tb.clone()).and_then(|tab| unify_type(c.clone(), tab, tc.clone()));
             let result_rl = unify_type(c.clone(), tb, tc).and_then(|tbc| unify_type(c, ta, tbc));
-            match result_lr {
-                Ok(tlr) =>
-                    prop_assert_eq!(Ok(tlr), result_rl),
-                Err(_) =>
-                    match result_rl {
-                        Ok(_) => panic!("Err, Ok"),
-                        Err(_) => ()
-                    }
+            if let Ok(tlr) = result_lr {
+                prop_assert_eq!(Ok(tlr), result_rl)
+            } else if let Ok(_) = result_rl {
+                panic!("Err, Ok")
             }
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_undefined_is_left_identity(t in arb_type()) {
+            let c = TypeUnificationContext::new("", "");
+            let u = unify_type(c, Type::Scalar(BsonScalarType::Undefined), t.clone());
+            prop_assert_eq!(Ok(normalize_type(t)), u)
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_undefined_is_right_identity(t in arb_type()) {
+            let c = TypeUnificationContext::new("", "");
+            let u = unify_type(c, t.clone(), Type::Scalar(BsonScalarType::Undefined));
+            prop_assert_eq!(Ok(normalize_type(t)), u)
         }
     }
 }
