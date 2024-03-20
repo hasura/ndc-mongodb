@@ -29,7 +29,7 @@ pub async fn sample_schema_from_db(
         let collection_name = collection_spec.name;
         let collection_schema =
             sample_schema_from_collection(&collection_name, sample_size, config).await?;
-        schema = unify_schema(schema, collection_schema)?;
+        schema = unify_schema(schema, collection_schema);
     }
     Ok(schema)
 }

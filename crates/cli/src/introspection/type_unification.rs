@@ -177,7 +177,7 @@ fn unify_object_type(
     })
 }
 
-/// The types of two `ObjectField`s.
+/// Unify the types of two `ObjectField`s.
 /// If the types are not unifiable then return an error.
 fn unify_object_field(
     object_type_name: &str,
@@ -214,7 +214,7 @@ pub fn unify_object_types(
 }
 
 /// Unify two schemas. Assumes that the schemas describe mutually exclusive sets of collections.
-pub fn unify_schema(schema_a: Schema, schema_b: Schema) -> TypeUnificationResult<Schema> {
+pub fn unify_schema(schema_a: Schema, schema_b: Schema) -> Schema {
     let collections = schema_a
         .collections
         .into_iter()
@@ -225,8 +225,8 @@ pub fn unify_schema(schema_a: Schema, schema_b: Schema) -> TypeUnificationResult
         .into_iter()
         .chain(schema_b.object_types)
         .collect();
-    Ok(Schema {
+    Schema {
         collections,
         object_types,
-    })
+    }
 }
