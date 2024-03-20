@@ -1558,6 +1558,7 @@ dependencies = [
  "dc-api-test-helpers",
  "dc-api-types",
  "enum-iterator",
+ "futures",
  "http",
  "indexmap 2.2.5",
  "itertools 0.10.5",
