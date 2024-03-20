@@ -39,7 +39,9 @@ impl Connector for MongoConnector {
     async fn parse_configuration(
         configuration_dir: impl AsRef<Path> + Send,
     ) -> Result<Self::Configuration, ParseError> {
-        let configuration = Configuration::parse_configuration(configuration_dir).await?;
+        let configuration = Configuration::parse_configuration(configuration_dir)
+            .await
+            .map_err(|err| ParseError::Other(err.into()))?;
         Ok(configuration)
     }
 

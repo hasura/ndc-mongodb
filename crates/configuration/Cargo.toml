@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1"
 futures = "^0.3"
 itertools = "^0.12"
 mongodb = "2.8"

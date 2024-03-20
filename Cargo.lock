@@ -410,6 +410,7 @@ dependencies = [
 name = "configuration"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "futures",
  "itertools 0.12.1",
  "mongodb",
