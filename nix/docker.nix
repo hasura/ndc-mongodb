@@ -3,7 +3,7 @@
 , dockerTools
 , lib
 , architecture ? null
-, name ? "ghcr.io/hasura/mongodb-connector"
+, name ? "ghcr.io/hasura/ndc-mongodb"
 
   # See config options at https://github.com/moby/docker-image-spec/blob/main/spec.md
 , extraConfig ? { }

@@ -6,7 +6,7 @@
 #
 set -euo pipefail
 
-IMAGE_PATH=ghcr.io/hasura/ndc-mongo
+IMAGE_PATH=ghcr.io/hasura/ndc-mongodb
 
 if [ -z "${1+x}" ]; then
     echo "Expected argument of the form refs/heads/<branch name> or refs/tags/<tag name>."
