@@ -1,0 +1,16 @@
+name: insertArtist
+description: Example of a database update using a native query
+objectTypes:
+  - name: InsertArtist
+    fields:
+      - name: ok
+        type: !scalar int
+      - name: n
+        type: !scalar int
+resultType: !object InsertArtist
+# TODO: implement arguments instead of hard-coding inputs
+command:
+  insert: "Artist"
+  documents:
+    - ArtistId: 1001
+      Name: Regina Spektor

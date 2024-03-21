@@ -300,7 +300,7 @@ mod tests {
                         },
                         {
                             "$replaceWith": {
-                                "student_name": "$name",
+                                "student_name": { "$ifNull": ["$name", null] },
                             },
                         }
                     ],
@@ -309,7 +309,7 @@ mod tests {
             },
             {
                 "$replaceWith": {
-                    "class_title": "$title",
+                    "class_title": { "$ifNull": ["$title", null] },
                     "students": {
                         "rows": {
                             "$getField": { "$literal": "students" },
@@ -399,7 +399,7 @@ mod tests {
                         },
                         {
                             "$replaceWith": {
-                                "class_title": "$title",
+                                "class_title": { "$ifNull": ["$title", null] },
                             },
                         }
                     ],
@@ -408,7 +408,7 @@ mod tests {
             },
             {
                 "$replaceWith": {
-                    "student_name": "$name",
+                    "student_name": { "$ifNull": ["$name", null] },
                     "class": { "rows": {
                         "$getField": { "$literal": "class" } }
                     },
@@ -502,7 +502,7 @@ mod tests {
                         },
                         {
                             "$replaceWith": {
-                                "student_name": "$name",
+                                "student_name": { "$ifNull": ["$name", null] },
                             },
                         },
                     ],
@@ -511,7 +511,7 @@ mod tests {
             },
             {
                 "$replaceWith": {
-                    "class_title": "$title",
+                    "class_title": { "$ifNull": ["$title", null] },
                     "students": {
                         "rows": { "$getField": { "$literal": "students" } },
                     },
@@ -647,7 +647,7 @@ mod tests {
                                     },
                                     {
                                         "$replaceWith": {
-                                            "assignment_title": "$title",
+                                            "assignment_title": { "$ifNull": ["$title", null] },
                                         },
                                     },
                                 ],
@@ -659,7 +659,7 @@ mod tests {
                                 "assignments": {
                                     "rows": { "$getField": { "$literal": "assignments" } },
                                 },
-                                "student_name": "$name",
+                                "student_name": { "$ifNull": ["$name", null] },
                             },
                         },
                     ],
@@ -668,7 +668,7 @@ mod tests {
             },
             {
                 "$replaceWith": {
-                    "class_title": "$title",
+                    "class_title": { "$ifNull": ["$title", null] },
                     "students": {
                         "rows": { "$getField": { "$literal": "students" } },
                     },
@@ -905,8 +905,8 @@ mod tests {
                 },
                 {
                   "$replaceWith": {
-                    "year": "$year",
-                    "title": "$title"
+                    "year": { "$ifNull": ["$year", null] },
+                    "title": { "$ifNull": ["$title", null] }
                   }
                 }
               ],
@@ -932,7 +932,7 @@ mod tests {
                   }
                 }
               },
-              "name": "$name"
+              "name": { "$ifNull": ["$name", null] }
             }
           },
         ]);
@@ -1049,7 +1049,7 @@ mod tests {
                                 "credits": {
                                     "$cond": {
                                         "if": "$credits",
-                                        "then": { "director": "$credits.director" },
+                                        "then": { "director": { "$ifNull": ["$credits.director", null] } },
                                         "else": null,
                                     }
                                 },
@@ -1071,7 +1071,7 @@ mod tests {
             },
             {
                 "$replaceWith": {
-                    "name": "$name",
+                    "name": { "$ifNull": ["$name", null] },
                     "movie": {
                         "rows": {
                             "$getField": {

@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use dc_api_types::Field;
 
-use crate::mongodb::selection::format_col_path;
+use crate::mongodb::selection::serialized_null_checked_column_reference;
 
 /// A projection determines which fields to request from the result of a query.
 ///
@@ -58,7 +58,7 @@ fn project_field_as(parent_columns: &[&str], field: &Field) -> ProjectAs {
                 [] => format!("${column}"),
                 _ => format!("${}.{}", parent_columns.join("."), column),
             };
-            let bson_col_path = format_col_path(col_path, column_type);
+            let bson_col_path = serialized_null_checked_column_reference(col_path, column_type);
             ProjectAs::Expression(bson_col_path)
         }
         Field::NestedObject { column, query } => {
@@ -198,18 +198,18 @@ mod tests {
         assert_eq!(
             to_document(&projection)?,
             doc! {
-               "foo": "$foo",
-               "foo_again": "$foo",
+               "foo": { "$ifNull": ["$foo", null] },
+               "foo_again": { "$ifNull": ["$foo", null] },
                "bar": {
-                   "baz": "$bar.baz",
-                   "baz_again": "$bar.baz"
+                   "baz": { "$ifNull": ["$bar.baz", null] },
+                   "baz_again": { "$ifNull": ["$bar.baz", null] }
                },
                "bar_again": {
-                   "baz": "$bar.baz"
+                   "baz": { "$ifNull": ["$bar.baz", null] }
                },
                "my_date": {
                     "$dateToString": {
-                        "date": "$my_date"
+                        "date": { "$ifNull": ["$my_date", null] }
                     }
                }
             }
@@ -260,10 +260,10 @@ mod tests {
             to_document(&projection)?,
             doc! {
                 "class_students": {
-                    "name": "$class_students.name",
+                    "name": { "$ifNull": ["$class_students.name", null] },
                 },
                 "students": {
-                    "student_name": "$class_students.name",
+                    "student_name": { "$ifNull": ["$class_students.name", null] },
                 },
             }
         );
