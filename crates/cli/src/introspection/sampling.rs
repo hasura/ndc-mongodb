@@ -203,7 +203,7 @@ mod tests {
     #[test]
     fn array_of_objects() -> Result<(), anyhow::Error> {
         let object_name = "foo";
-        let doc = doc! {"my_array": [{"foo": 42, "bar": ""}, {"bar": "wut", "baz": 3.14}]};
+        let doc = doc! {"my_array": [{"foo": 42, "bar": ""}, {"bar": "wut", "baz": 3.77}]};
         let result = make_object_type(object_name, &doc);
 
         let expected = Ok(vec![
@@ -247,7 +247,7 @@ mod tests {
     #[test]
     fn non_unifiable_array_of_objects() -> Result<(), anyhow::Error> {
         let object_name = "foo";
-        let doc = doc! {"my_array": [{"foo": 42, "bar": ""}, {"bar": 17, "baz": 3.14}]};
+        let doc = doc! {"my_array": [{"foo": 42, "bar": ""}, {"bar": 17, "baz": 3.77}]};
         let result = make_object_type(object_name, &doc);
 
         let expected = Err(TypeUnificationError::ScalarType(

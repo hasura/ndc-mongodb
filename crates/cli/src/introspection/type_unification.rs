@@ -340,11 +340,7 @@ mod tests {
     }
 
     fn is_nullable(t: &Type) -> bool {
-        match t {
-            Type::Scalar(BsonScalarType::Null) => true,
-            Type::Nullable(_) => true,
-            _ => false,
-        }
+        matches!(t, Type::Scalar(BsonScalarType::Null) | Type::Nullable(_))
     }
 
     proptest! {
@@ -374,7 +370,7 @@ mod tests {
             let result_rl = unify_type(c.clone(), tb, tc).and_then(|tbc| unify_type(c, ta, tbc));
             if let Ok(tlr) = result_lr {
                 prop_assert_eq!(Ok(tlr), result_rl)
-            } else if let Ok(_) = result_rl {
+            } else if result_rl.is_ok() {
                 panic!("Err, Ok")
             }
         }
