@@ -1,5 +1,6 @@
 mod column_ref;
 mod constants;
+mod execute_native_query_request;
 mod execute_query_request;
 mod foreach;
 mod make_selector;
@@ -17,7 +18,10 @@ pub use self::{
     make_sort::make_sort,
     pipeline::{is_response_faceted, pipeline_for_non_foreach, pipeline_for_query_request},
 };
-use crate::interface_types::{MongoAgentError, MongoConfig};
+use crate::{
+    interface_types::{MongoAgentError, MongoConfig},
+    query::execute_native_query_request::handle_native_query_request,
+};
 
 pub fn collection_name(query_request_target: &Target) -> String {
     query_request_target.name().join(".")
@@ -29,10 +33,17 @@ pub async fn handle_query_request(
 ) -> Result<JsonResponse<QueryResponse>, MongoAgentError> {
     tracing::debug!(?config, query_request = %serde_json::to_string(&query_request).unwrap(), "executing query");
 
-    let collection = config
-        .client
-        .database(&config.database)
-        .collection::<Document>(&collection_name(&query_request.target));
+    let database = config.client.database(&config.database);
+
+    let target = &query_request.target;
+    if let Some(native_query) = config.native_queries.iter().find(|query| {
+        let target_name = target.name();
+        target_name.len() == 1 && target_name[0] == query.name
+    }) {
+        return handle_native_query_request(native_query.clone(), database).await;
+    }
+
+    let collection = database.collection::<Document>(&collection_name(&query_request.target));
 
     execute_query_request(&collection, query_request).await
 }
@@ -77,7 +88,7 @@ mod tests {
 
         let expected_pipeline = json!([
             { "$match": { "gpa": { "$lt": 4.0 } } },
-            { "$replaceWith": { "student_gpa": "$gpa" } },
+            { "$replaceWith": { "student_gpa": { "$ifNull": ["$gpa", null] } } },
         ]);
 
         let mut collection = MockCollectionTrait::new();
@@ -222,7 +233,7 @@ mod tests {
                     ],
                     "__ROWS__": [{
                         "$replaceWith": {
-                            "student_gpa": "$gpa",
+                            "student_gpa": { "$ifNull": ["$gpa", null] },
                         },
                     }],
                 },
@@ -300,7 +311,7 @@ mod tests {
                 "$replaceWith": {
                     "date": {
                         "$dateToString": {
-                            "date": "$date",
+                            "date": { "$ifNull": ["$date", null] },
                         },
                     },
                 }

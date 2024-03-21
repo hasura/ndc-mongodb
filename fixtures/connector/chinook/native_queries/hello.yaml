@@ -1,0 +1,13 @@
+name: hello
+description: Example of a read-only native query
+objectTypes:
+  - name: HelloResult
+    fields:
+      - name: ok
+        type: !scalar int
+      - name: readOnly
+        type: !scalar bool
+      # There are more fields but you get the idea
+resultType: !object HelloResult
+command:
+  hello: 1

@@ -905,6 +905,18 @@ definition:
                 underlying_type:
                   type: named
                   name: ObjectId
+        HelloResult:
+          fields:
+            ok:
+              type: { type: named, name: Int }
+            readOnly:
+              type: { type: named, name: Boolean }
+        InsertArtist:
+          fields:
+            ok:
+              type: { type: named, name: Int }
+            n:
+              type: { type: named, name: Int }
       collections:
         - name: Album
           arguments: {}
@@ -994,8 +1006,18 @@ definition:
               unique_columns:
                 - _id
           foreign_keys: {}
-      functions: []
-      procedures: []
+      functions:
+        - name: hello
+          description: Example of a read-only native query
+          result_type: { type: named, name: HelloResult } 
+          arguments: {}
+          command: { hello: 1 }
+      procedures:
+        - name: insertArtist
+          description: Example of a database update using a native query
+          result_type: { type: named, name: InsertArtist }
+          arguments: {}
+          command: { insert: Artist, documents: [{ ArtistId: 1001, Name: Regina Spektor }] }
     capabilities:
       version: ^0.1.0
       capabilities:
