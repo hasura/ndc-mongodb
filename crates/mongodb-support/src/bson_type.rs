@@ -168,6 +168,42 @@ impl BsonScalarType {
     }
 }
 
+impl std::fmt::Display for BsonScalarType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.bson_name())
+    }
+}
+
+impl TryFrom<&Bson> for BsonScalarType {
+    type Error = Error;
+
+    fn try_from(value: &Bson) -> Result<Self, Self::Error> {
+        match value {
+            Bson::Double(_) => Ok(S::Double),
+            Bson::String(_) => Ok(S::String),
+            Bson::Array(_) => Err(Error::ExpectedScalarType(BsonType::Array)),
+            Bson::Document(_) => Err(Error::ExpectedScalarType(BsonType::Object)),
+            Bson::Boolean(_) => Ok(S::Bool),
+            Bson::Null => Ok(S::Null),
+            Bson::RegularExpression(_) => Ok(S::Regex),
+            Bson::JavaScriptCode(_) => Ok(S::Javascript),
+            Bson::JavaScriptCodeWithScope(_) => Ok(S::JavascriptWithScope),
+            Bson::Int32(_) => Ok(S::Int),
+            Bson::Int64(_) => Ok(S::Long),
+            Bson::Timestamp(_) => Ok(S::Timestamp),
+            Bson::Binary(_) => Ok(S::BinData),
+            Bson::ObjectId(_) => Ok(S::ObjectId),
+            Bson::DateTime(_) => Ok(S::Date),
+            Bson::Symbol(_) => Ok(S::Symbol),
+            Bson::Decimal128(_) => Ok(S::Decimal),
+            Bson::Undefined => Ok(S::Undefined),
+            Bson::MaxKey => Ok(S::MaxKey),
+            Bson::MinKey => Ok(S::MinKey),
+            Bson::DbPointer(_) => Ok(S::DbPointer),
+        }
+    }
+}
+
 impl TryFrom<BsonType> for BsonScalarType {
     type Error = Error;
 
