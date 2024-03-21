@@ -248,10 +248,15 @@ pub fn unify_schema(schema_a: Schema, schema_b: Schema) -> Schema {
 
 #[cfg(test)]
 mod tests {
-    use super::{normalize_type, unify_type, TypeUnificationContext, TypeUnificationError};
+    use std::collections::{HashMap, HashSet};
+
+    use super::{
+        normalize_type, unify_object_type, unify_type, ObjectField, ObjectType,
+        TypeUnificationContext, TypeUnificationError,
+    };
     use configuration::schema::Type;
     use mongodb_support::BsonScalarType;
-    use proptest::prelude::*;
+    use proptest::{collection::hash_map, prelude::*};
 
     #[test]
     fn test_unify_scalar() -> Result<(), anyhow::Error> {
@@ -282,19 +287,6 @@ mod tests {
         assert_eq!(expected, actual);
         Ok(())
     }
-
-    // #[test]
-    // fn test_unify_object_type() -> Result<(), anyhow::Error> {
-    //     let name = "foo";
-    //     let description = "the type foo";
-    //     let object_type_a = ObjectType {
-    //         name: name.to_owned(),
-    //         fields: vec![],
-    //         description: Some(description.to_owned()),
-    //     };
-
-    //     Ok(())
-    // }
 
     prop_compose! {
         fn arb_type_unification_context()(object_type_name in any::<String>(), field_name in any::<String>()) -> TypeUnificationContext {
@@ -347,6 +339,14 @@ mod tests {
         }
     }
 
+    fn is_nullable(t: &Type) -> bool {
+        match t {
+            Type::Scalar(BsonScalarType::Null) => true,
+            Type::Nullable(_) => true,
+            _ => false,
+        }
+    }
+
     proptest! {
         #[test]
         fn test_type_unifies_with_itself_and_normalizes(t in arb_type()) {
@@ -395,6 +395,51 @@ mod tests {
             let c = TypeUnificationContext::new("", "");
             let u = unify_type(c, t.clone(), Type::Scalar(BsonScalarType::Undefined));
             prop_assert_eq!(Ok(normalize_type(t)), u)
+        }
+    }
+
+    fn type_hash_map() -> impl Strategy<Value = HashMap<String, Type>> {
+        hash_map(".*", arb_type(), 0..10)
+    }
+
+    proptest! {
+        #[test]
+        fn test_object_type_unification(left in type_hash_map(), right in type_hash_map(), shared in type_hash_map()) {
+            let mut left_fields = left.clone();
+            let mut right_fields: HashMap<String, Type> = right.clone().into_iter().filter(|(k, _)| !left_fields.contains_key(k)).collect();
+            for (k, v) in shared.clone() {
+                left_fields.insert(k.clone(), v.clone());
+                right_fields.insert(k, v);
+            }
+
+            let name = "foo";
+            let left_object = ObjectType {
+                name: name.to_owned(),
+                fields: left_fields.into_iter().map(|(k, v)| ObjectField{name: k, r#type: v, description: None}).collect(),
+                description: None
+            };
+            let right_object = ObjectType {
+                name: name.to_owned(),
+                fields: right_fields.into_iter().map(|(k, v)| ObjectField{name: k, r#type: v, description: None}).collect(),
+                description: None
+            };
+            let result = unify_object_type(left_object, right_object);
+            match result {
+                Err(err) => panic!("Got error result {err}"),
+                Ok(ot) => {
+                    for field in &ot.fields {
+                        // Any fields not shared between the two input types should be nullable.
+                        if !shared.contains_key(&field.name) {
+                            assert!(is_nullable(&field.r#type), "Found a non-shared field that is not nullable")
+                        }
+                    }
+
+                    // All input fields must appear in the result.
+                    let fields: HashSet<String> = ot.fields.into_iter().map(|f| f.name).collect();
+                    assert!(left.into_keys().chain(right.into_keys()).chain(shared.into_keys()).all(|k| fields.contains(&k)),
+                      "Missing field in result type")
+                }
+            }
         }
     }
 }
