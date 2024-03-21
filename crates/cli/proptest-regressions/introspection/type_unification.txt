@@ -8,3 +8,4 @@ cc 45028da671f86113f58b8ec86468ec593b8e33488eecb154950098054ee15675 # shrinks to
 cc e7368f0503761c52e2ce47fa2e64454ecd063f2e019c511759162d0be049e665 # shrinks to c = TypeUnificationContext { object_type_name: "", field_name: "" }, t = Nullable(Nullable(Scalar(Double)))
 cc bd6f440b7ea7e51d8c369e802b8cbfbc0c3f140c01cd6b54d9c61e6d84d7e77d # shrinks to c = TypeUnificationContext { object_type_name: "", field_name: "" }, t = Nullable(Scalar(Null))
 cc d16279848ea51c4be376436423d342afd077a737efcab03ba2d29d5a0dee9df2 # shrinks to left = {"": Scalar(Double)}, right = {"": Scalar(Decimal)}, shared = {}
+cc fc85c97eeccb12e144f548fe65fd262d4e7b1ec9c799be69fd30535aa032e26d # shrinks to ta = Nullable(Scalar(Null)), tb = Nullable(Scalar(Undefined))

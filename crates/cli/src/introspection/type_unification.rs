@@ -84,6 +84,17 @@ pub fn unify_type(
         (Type::Scalar(Undefined), type_b) => Ok(type_b),
         (type_a, Type::Scalar(Undefined)) => Ok(type_a),
 
+        // A Nullable type will unify with another type iff the underlying type is unifiable.
+        // The resulting type will be Nullable.
+        (Type::Nullable(nullable_type_a), type_b) => {
+            let result_type = unify_type(context, *nullable_type_a, type_b)?;
+            Ok(make_nullable(result_type))
+        }
+        (type_a, Type::Nullable(nullable_type_b)) => {
+            let result_type = unify_type(context, type_a, *nullable_type_b)?;
+            Ok(make_nullable(result_type))
+        }
+
         // Union of any type with Null is the Nullable version of that type
         (Type::Scalar(Null), type_b) => Ok(make_nullable(type_b)),
         (type_a, Type::Scalar(Null)) => Ok(make_nullable(type_a)),
@@ -112,17 +123,6 @@ pub fn unify_type(
         (Type::ArrayOf(elem_type_a), Type::ArrayOf(elem_type_b)) => {
             let elem_type = unify_type(context, *elem_type_a, *elem_type_b)?;
             Ok(Type::ArrayOf(Box::new(elem_type)))
-        }
-
-        // A Nullable type will unify with another type iff the underlying type is unifiable.
-        // The resulting type will be Nullable.
-        (Type::Nullable(nullable_type_a), type_b) => {
-            let result_type = unify_type(context, *nullable_type_a, type_b)?;
-            Ok(make_nullable(result_type))
-        }
-        (type_a, Type::Nullable(nullable_type_b)) => {
-            let result_type = unify_type(context, type_a, *nullable_type_b)?;
-            Ok(make_nullable(result_type))
         }
 
         // Anything else is a unification error.
