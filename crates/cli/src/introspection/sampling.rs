@@ -161,3 +161,39 @@ fn make_field_type(
         Bson::DbPointer(_) => scalar(DbPointer),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use configuration::schema::{ObjectField, ObjectType, Type};
+    use mongodb::bson::doc;
+
+    use super::make_object_type;
+
+    #[test]
+    fn simple_doc() -> Result<(), anyhow::Error> {
+        let object_name = "foo";
+        let doc = doc! {"my_int": 1, "my_string": "two"};
+        let result = make_object_type(object_name, &doc);
+
+        let expected = Ok(vec![ObjectType {
+            name: "foo".to_owned(),
+            fields: vec![
+                ObjectField {
+                    name: "my_int".to_owned(),
+                    r#type: Type::Scalar(mongodb_support::BsonScalarType::Int),
+                    description: None,
+                },
+                ObjectField {
+                    name: "my_string".to_owned(),
+                    r#type: Type::Scalar(mongodb_support::BsonScalarType::String),
+                    description: None,
+                },
+            ],
+            description: None,
+        }]);
+
+        assert_eq!(expected, result);
+
+        Ok(())
+    }
+}
