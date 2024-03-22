@@ -68,7 +68,6 @@ pub fn json_to_bson(
 /// Works like json_to_bson, but only converts BSON scalar types.
 pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Result<Bson> {
     let result = match expected_type {
-        // BsonScalarType::Double => Bson::Double(from_number(expected_type, value)?),
         BsonScalarType::Double => Bson::Double(deserialize(expected_type, value)?),
         BsonScalarType::Int => Bson::Int32(deserialize(expected_type, value)?),
         BsonScalarType::Long => Bson::Int64(deserialize(expected_type, value)?),
@@ -81,20 +80,11 @@ pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Resul
                 )
             })?,
         ),
-        BsonScalarType::String => Bson::String(from_string(expected_type, value)?),
+        BsonScalarType::String => Bson::String(deserialize(expected_type, value)?),
         BsonScalarType::Date => convert_date(&from_string(expected_type, value)?)?,
         BsonScalarType::Timestamp => deserialize::<de::Timestamp>(expected_type, value)?.into(),
         BsonScalarType::BinData => deserialize::<de::BinData>(expected_type, value)?.into(),
         BsonScalarType::ObjectId => Bson::ObjectId(deserialize(expected_type, value)?),
-        // BsonScalarType::ObjectId => Bson::ObjectId(
-        //     ObjectId::from_str(&from_string(expected_type, value)?).map_err(|err| {
-        //         JsonToBsonError::ConversionErrorWithContext(
-        //             Type::Scalar(expected_type),
-        //             value,
-        //             err.into(),
-        //         )
-        //     })?,
-        // ),
         BsonScalarType::Bool => match value {
             Value::Bool(b) => Bson::Boolean(b),
             _ => incompatible_scalar_type(BsonScalarType::Bool, value)?,
@@ -258,10 +248,6 @@ fn convert_date(value: &str) -> Result<Bson> {
     )))
 }
 
-// fn convert_timestamp(value: Value) -> Result<Bson> {
-//     match value
-// }
-
 fn deserialize<T>(expected_type: BsonScalarType, value: Value) -> Result<T>
 where
     T: DeserializeOwned,
@@ -270,31 +256,6 @@ where
         JsonToBsonError::ConversionErrorWithContext(Type::Scalar(expected_type), value, err.into())
     })
 }
-
-// fn from_number<T>(expected_type: BsonScalarType, value: Value) -> Result<T>
-// where
-//     T: NumCast,
-// {
-//     let mk_err = || JsonToBsonError::ConversionError(Type::Scalar(expected_type), value);
-//     match value {
-//         Value::Number(n) => {
-//             if let Some(n) = n.as_u64() {
-//                 <T as NumCast>::from(n).ok_or_else(mk_err)
-//             } else if let Some(n) = n.as_i64() {
-//                 <T as NumCast>::from(n).ok_or_else(mk_err)
-//             } else if let Some(n) = n.as_f64() {
-//                 <T as NumCast>::from(n).ok_or_else(mk_err)
-//             } else {
-//                 Err(mk_err())
-//             }
-//         }
-//         _ => Err(JsonToBsonError::IncompatibleBackingType {
-//             expected_type: Type::Scalar(expected_type),
-//             expected_backing_type: "Int or Float",
-//             value,
-//         }),
-//     }
-// }
 
 fn from_string(expected_type: BsonScalarType, value: Value) -> Result<String> {
     match value {
