@@ -1,5 +1,6 @@
 mod accumulator;
 mod collection;
+pub mod json_to_bson;
 mod pipeline;
 mod projection;
 pub mod sanitize;

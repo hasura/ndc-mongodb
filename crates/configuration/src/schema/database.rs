@@ -45,3 +45,13 @@ pub struct ObjectField {
     #[serde(default)]
     pub description: Option<String>,
 }
+
+impl ObjectField {
+    pub fn new(name: &str, r#type: Type) -> Self {
+        ObjectField {
+            name: name.to_owned(),
+            r#type,
+            description: Default::default(),
+        }
+    }
+}

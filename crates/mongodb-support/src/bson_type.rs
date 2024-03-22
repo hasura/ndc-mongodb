@@ -1,5 +1,6 @@
 use dc_api_types::GraphQlType;
 use enum_iterator::{all, Sequence};
+use mongodb::bson::Bson;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -163,7 +164,10 @@ impl BsonScalarType {
         if name == "number" {
             return Ok(S::Double);
         }
-        let scalar_type = all::<BsonScalarType>().find(|s| s.bson_name() == name);
+        // case-insensitive comparison because we are inconsistent about initial-letter
+        // capitalization between v2 and v3
+        let scalar_type =
+            all::<BsonScalarType>().find(|s| s.bson_name().eq_ignore_ascii_case(name));
         scalar_type.ok_or_else(|| Error::UnknownScalarType(name.to_owned()))
     }
 }
