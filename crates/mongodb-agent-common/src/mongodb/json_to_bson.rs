@@ -48,19 +48,19 @@ type Result<T> = std::result::Result<T, JsonToBsonError>;
 /// implementation cannot take advantage of the type information that we have available. Instead it
 /// uses Extended JSON which uses tags in JSON data to distinguish BSON types.
 pub fn json_to_bson(
-    expected_type: Type,
+    expected_type: &Type,
     object_types: &BTreeMap<String, ObjectType>,
     value: Value,
 ) -> Result<Bson> {
     match expected_type {
-        Type::Scalar(t) => json_to_bson_scalar(t, value),
+        Type::Scalar(t) => json_to_bson_scalar(*t, value),
         Type::Object(object_type_name) => {
             let object_type = object_types
-                .get(&object_type_name)
-                .ok_or_else(|| JsonToBsonError::UnknownObjectType(object_type_name))?;
+                .get(object_type_name)
+                .ok_or_else(|| JsonToBsonError::UnknownObjectType(object_type_name.to_owned()))?;
             convert_object(object_type, object_types, value)
         }
-        Type::ArrayOf(_) => todo!(),
+        Type::ArrayOf(element_type) => convert_array(&*element_type, object_types, value),
         Type::Nullable(_) => todo!(),
     }
 }
@@ -196,6 +196,19 @@ mod de {
     }
 }
 
+fn convert_array(
+    element_type: &Type,
+    object_types: &BTreeMap<String, ObjectType>,
+    value: Value,
+) -> Result<Bson> {
+    let input_elements: Vec<Value> = serde_json::from_value(value)?;
+    let bson_array = input_elements
+        .into_iter()
+        .map(|v| json_to_bson(element_type, object_types, v))
+        .try_collect()?;
+    Ok(Bson::Array(bson_array))
+}
+
 fn convert_object(
     object_type: &ObjectType,
     object_types: &BTreeMap<String, ObjectType>,
@@ -214,11 +227,7 @@ fn convert_object(
             })?;
             Ok((
                 field.name.clone(),
-                json_to_bson(
-                    field.r#type.clone(),
-                    object_types,
-                    input_field_value.clone(),
-                )?,
+                json_to_bson(&field.r#type, object_types, input_field_value.clone())?,
             ))
         })
         .try_collect::<_, _, JsonToBsonError>()?;
@@ -391,13 +400,34 @@ mod tests {
         };
 
         let actual = json_to_bson(
-            Type::Object(object_type.name.clone()),
+            &Type::Object(object_type.name.clone()),
             &[(object_type.name.clone(), object_type)]
                 .into_iter()
                 .collect(),
             input,
         )?;
         assert_eq!(actual, expected.into());
+        Ok(())
+    }
+
+    #[test]
+    fn deserializes_arrays() -> anyhow::Result<()> {
+        let input = json!([
+            "e7c8f79873814cbae1f8d84c",
+            "76a3317b46f1eea7fae4f643",
+            "fae1840a2b85872385c67de5",
+        ]);
+        let expected = Bson::Array(vec![
+            Bson::ObjectId(FromStr::from_str("e7c8f79873814cbae1f8d84c")?),
+            Bson::ObjectId(FromStr::from_str("76a3317b46f1eea7fae4f643")?),
+            Bson::ObjectId(FromStr::from_str("fae1840a2b85872385c67de5")?),
+        ]);
+        let actual = json_to_bson(
+            &Type::ArrayOf(Box::new(Type::Scalar(BsonScalarType::ObjectId))),
+            &Default::default(),
+            input,
+        )?;
+        assert_eq!(actual, expected);
         Ok(())
     }
 }
