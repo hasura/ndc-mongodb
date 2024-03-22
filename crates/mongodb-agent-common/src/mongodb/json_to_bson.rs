@@ -61,7 +61,7 @@ pub fn json_to_bson(
             convert_object(object_type, object_types, value)
         }
         Type::ArrayOf(element_type) => convert_array(&*element_type, object_types, value),
-        Type::Nullable(_) => todo!(),
+        Type::Nullable(t) => convert_nullable(&*t, object_types, value),
     }
 }
 
@@ -232,6 +232,17 @@ fn convert_object(
         })
         .try_collect::<_, _, JsonToBsonError>()?;
     Ok(bson_doc.into())
+}
+
+fn convert_nullable(
+    underlying_type: &Type,
+    object_types: &BTreeMap<String, ObjectType>,
+    value: Value,
+) -> Result<Bson> {
+    match value {
+        Value::Null => Ok(Bson::Null),
+        non_null_value => json_to_bson(underlying_type, object_types, non_null_value),
+    }
 }
 
 fn convert_date(value: &str) -> Result<Bson> {
@@ -424,6 +435,25 @@ mod tests {
         ]);
         let actual = json_to_bson(
             &Type::ArrayOf(Box::new(Type::Scalar(BsonScalarType::ObjectId))),
+            &Default::default(),
+            input,
+        )?;
+        assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn deserializes_nullable_values() -> anyhow::Result<()> {
+        let input = json!(["e7c8f79873814cbae1f8d84c", null, "fae1840a2b85872385c67de5",]);
+        let expected = Bson::Array(vec![
+            Bson::ObjectId(FromStr::from_str("e7c8f79873814cbae1f8d84c")?),
+            Bson::Null,
+            Bson::ObjectId(FromStr::from_str("fae1840a2b85872385c67de5")?),
+        ]);
+        let actual = json_to_bson(
+            &Type::ArrayOf(Box::new(Type::Nullable(Box::new(Type::Scalar(
+                BsonScalarType::ObjectId,
+            ))))),
             &Default::default(),
             input,
         )?;
