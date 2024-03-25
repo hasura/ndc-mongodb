@@ -18,14 +18,14 @@ pub async fn get_schema(
     let functions = config
         .native_queries
         .iter()
-        .filter(|q| q.mode == native_queries::Mode::ReadOnly)
+        .filter(|(_, q)| q.mode == native_queries::Mode::ReadOnly)
         .map(native_query_to_function)
         .collect();
 
     let procedures = config
         .native_queries
         .iter()
-        .filter(|q| q.mode == native_queries::Mode::ReadWrite)
+        .filter(|(_, q)| q.mode == native_queries::Mode::ReadWrite)
         .map(native_query_to_procedure)
         .collect();
 
@@ -38,9 +38,11 @@ pub async fn get_schema(
     })
 }
 
-fn map_object_type(object_type: &schema::ObjectType) -> (String, models::ObjectType) {
+fn map_object_type(
+    (name, object_type): (&String, &schema::ObjectType),
+) -> (String, models::ObjectType) {
     (
-        object_type.name.clone(),
+        name.clone(),
         models::ObjectType {
             fields: map_field_infos(&object_type.fields),
             description: object_type.description.clone(),
@@ -48,15 +50,17 @@ fn map_object_type(object_type: &schema::ObjectType) -> (String, models::ObjectT
     )
 }
 
-fn map_field_infos(fields: &[schema::ObjectField]) -> BTreeMap<String, models::ObjectField> {
+fn map_field_infos(
+    fields: &BTreeMap<String, schema::ObjectField>,
+) -> BTreeMap<String, models::ObjectField> {
     fields
         .iter()
-        .map(|f| {
+        .map(|(name, field)| {
             (
-                f.name.clone(),
+                name.clone(),
                 models::ObjectField {
-                    r#type: map_type(&f.r#type),
-                    description: f.description.clone(),
+                    r#type: map_type(&field.r#type),
+                    description: field.description.clone(),
                 },
             )
         })
@@ -78,9 +82,9 @@ fn map_type(t: &schema::Type) -> models::Type {
     }
 }
 
-fn map_collection(collection: &schema::Collection) -> models::CollectionInfo {
+fn map_collection((name, collection): (&String, &schema::Collection)) -> models::CollectionInfo {
     models::CollectionInfo {
-        name: collection.name.clone(),
+        name: name.clone(),
         collection_type: collection.r#type.clone(),
         description: collection.description.clone(),
         arguments: Default::default(),
@@ -90,13 +94,13 @@ fn map_collection(collection: &schema::Collection) -> models::CollectionInfo {
 }
 
 /// For read-only native queries
-fn native_query_to_function(query: &NativeQuery) -> models::FunctionInfo {
+fn native_query_to_function((query_name, query): (&String, &NativeQuery)) -> models::FunctionInfo {
     let arguments = query
         .arguments
         .iter()
-        .map(|field| {
+        .map(|(name, field)| {
             (
-                field.name.clone(),
+                name.clone(),
                 models::ArgumentInfo {
                     argument_type: map_type(&field.r#type),
                     description: field.description.clone(),
@@ -105,7 +109,7 @@ fn native_query_to_function(query: &NativeQuery) -> models::FunctionInfo {
         })
         .collect();
     models::FunctionInfo {
-        name: query.name.clone(),
+        name: query_name.clone(),
         description: query.description.clone(),
         arguments,
         result_type: map_type(&query.result_type),
@@ -113,13 +117,15 @@ fn native_query_to_function(query: &NativeQuery) -> models::FunctionInfo {
 }
 
 /// For read-write native queries
-fn native_query_to_procedure(query: &NativeQuery) -> models::ProcedureInfo {
+fn native_query_to_procedure(
+    (query_name, query): (&String, &NativeQuery),
+) -> models::ProcedureInfo {
     let arguments = query
         .arguments
         .iter()
-        .map(|field| {
+        .map(|(name, field)| {
             (
-                field.name.clone(),
+                name.clone(),
                 models::ArgumentInfo {
                     argument_type: map_type(&field.r#type),
                     description: field.description.clone(),
@@ -128,7 +134,7 @@ fn native_query_to_procedure(query: &NativeQuery) -> models::ProcedureInfo {
         })
         .collect();
     models::ProcedureInfo {
-        name: query.name.clone(),
+        name: query_name.clone(),
         description: query.description.clone(),
         arguments,
         result_type: map_type(&query.result_type),

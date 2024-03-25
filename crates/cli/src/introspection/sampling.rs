@@ -1,14 +1,19 @@
+use std::collections::BTreeMap;
+
 use super::type_unification::{
     unify_object_types, unify_schema, unify_type, TypeUnificationContext, TypeUnificationResult,
 };
 use configuration::{
-    schema::{Collection, ObjectField, ObjectType, Type},
-    Schema,
+    schema::{self, Type},
+    Schema, WithName,
 };
 use futures_util::TryStreamExt;
 use mongodb::bson::{doc, Bson, Document};
 use mongodb_agent_common::interface_types::MongoConfig;
 use mongodb_support::BsonScalarType::{self, *};
+
+type ObjectField = WithName<schema::ObjectField>;
+type ObjectType = WithName<schema::ObjectType>;
 
 /// Sample from all collections in the database and return a Schema.
 /// Return an error if there are any errors accessing the database
@@ -19,8 +24,8 @@ pub async fn sample_schema_from_db(
     config: &MongoConfig,
 ) -> anyhow::Result<Schema> {
     let mut schema = Schema {
-        collections: vec![],
-        object_types: vec![],
+        collections: BTreeMap::new(),
+        object_types: BTreeMap::new(),
     };
     let db = config.client.database(&config.database);
     let mut collections_cursor = db.list_collections(None, None).await?;
@@ -54,15 +59,17 @@ async fn sample_schema_from_collection(
             unify_object_types(collected_object_types, object_types)?
         };
     }
-    let collection_info = Collection {
-        name: collection_name.to_string(),
-        description: None,
-        r#type: collection_name.to_string(),
-    };
+    let collection_info = WithName::named(
+        collection_name.to_string(),
+        schema::Collection {
+            description: None,
+            r#type: collection_name.to_string(),
+        },
+    );
 
     Ok(Schema {
-        collections: vec![collection_info],
-        object_types: collected_object_types,
+        collections: WithName::into_map([collection_info]),
+        object_types: WithName::into_map(collected_object_types),
     })
 }
 
@@ -83,11 +90,13 @@ fn make_object_type(
         (object_type_defs.concat(), object_fields)
     };
 
-    let object_type = ObjectType {
-        name: object_type_name.to_string(),
-        description: None,
-        fields: object_fields,
-    };
+    let object_type = WithName::named(
+        object_type_name.to_string(),
+        schema::ObjectType {
+            description: None,
+            fields: WithName::into_map(object_fields),
+        },
+    );
 
     object_type_defs.push(object_type);
     Ok(object_type_defs)
@@ -101,11 +110,13 @@ fn make_object_field(
     let object_type_name = format!("{type_prefix}{field_name}");
     let (collected_otds, field_type) = make_field_type(&object_type_name, field_name, field_value)?;
 
-    let object_field = ObjectField {
-        name: field_name.to_owned(),
-        description: None,
-        r#type: field_type,
-    };
+    let object_field = WithName::named(
+        field_name.to_owned(),
+        schema::ObjectField {
+            description: None,
+            r#type: field_type,
+        },
+    );
 
     Ok((collected_otds, object_field))
 }
@@ -164,7 +175,12 @@ fn make_field_type(
 
 #[cfg(test)]
 mod tests {
-    use configuration::schema::{ObjectField, ObjectType, Type};
+    use std::collections::BTreeMap;
+
+    use configuration::{
+        schema::{ObjectField, ObjectType, Type},
+        WithName,
+    };
     use mongodb::bson::doc;
     use mongodb_support::BsonScalarType;
 
@@ -176,24 +192,30 @@ mod tests {
     fn simple_doc() -> Result<(), anyhow::Error> {
         let object_name = "foo";
         let doc = doc! {"my_int": 1, "my_string": "two"};
-        let result = make_object_type(object_name, &doc);
+        let result = make_object_type(object_name, &doc).map(WithName::into_map::<BTreeMap<_, _>>);
 
-        let expected = Ok(vec![ObjectType {
-            name: object_name.to_owned(),
-            fields: vec![
-                ObjectField {
-                    name: "my_int".to_owned(),
-                    r#type: Type::Scalar(BsonScalarType::Int),
-                    description: None,
-                },
-                ObjectField {
-                    name: "my_string".to_owned(),
-                    r#type: Type::Scalar(BsonScalarType::String),
-                    description: None,
-                },
-            ],
-            description: None,
-        }]);
+        let expected = Ok(BTreeMap::from([(
+            object_name.to_owned(),
+            ObjectType {
+                fields: BTreeMap::from([
+                    (
+                        "my_int".to_owned(),
+                        ObjectField {
+                            r#type: Type::Scalar(BsonScalarType::Int),
+                            description: None,
+                        },
+                    ),
+                    (
+                        "my_string".to_owned(),
+                        ObjectField {
+                            r#type: Type::Scalar(BsonScalarType::String),
+                            description: None,
+                        },
+                    ),
+                ]),
+                description: None,
+            },
+        )]));
 
         assert_eq!(expected, result);
 
@@ -204,40 +226,56 @@ mod tests {
     fn array_of_objects() -> Result<(), anyhow::Error> {
         let object_name = "foo";
         let doc = doc! {"my_array": [{"foo": 42, "bar": ""}, {"bar": "wut", "baz": 3.77}]};
-        let result = make_object_type(object_name, &doc);
+        let result = make_object_type(object_name, &doc).map(WithName::into_map::<BTreeMap<_, _>>);
 
-        let expected = Ok(vec![
-            ObjectType {
-                name: "foo_my_array".to_owned(),
-                fields: vec![
-                    ObjectField {
-                        name: "foo".to_owned(),
-                        r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::Int))),
-                        description: None,
-                    },
-                    ObjectField {
-                        name: "bar".to_owned(),
-                        r#type: Type::Scalar(BsonScalarType::String),
-                        description: None,
-                    },
-                    ObjectField {
-                        name: "baz".to_owned(),
-                        r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::Double))),
-                        description: None,
-                    },
-                ],
-                description: None,
-            },
-            ObjectType {
-                name: object_name.to_owned(),
-                fields: vec![ObjectField {
-                    name: "my_array".to_owned(),
-                    r#type: Type::ArrayOf(Box::new(Type::Object("foo_my_array".to_owned()))),
+        let expected = Ok(BTreeMap::from([
+            (
+                "foo_my_array".to_owned(),
+                ObjectType {
+                    fields: BTreeMap::from([
+                        (
+                            "foo".to_owned(),
+                            ObjectField {
+                                r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::Int))),
+                                description: None,
+                            },
+                        ),
+                        (
+                            "bar".to_owned(),
+                            ObjectField {
+                                r#type: Type::Scalar(BsonScalarType::String),
+                                description: None,
+                            },
+                        ),
+                        (
+                            "baz".to_owned(),
+                            ObjectField {
+                                r#type: Type::Nullable(Box::new(Type::Scalar(
+                                    BsonScalarType::Double,
+                                ))),
+                                description: None,
+                            },
+                        ),
+                    ]),
                     description: None,
-                }],
-                description: None,
-            },
-        ]);
+                },
+            ),
+            (
+                object_name.to_owned(),
+                ObjectType {
+                    fields: BTreeMap::from([(
+                        "my_array".to_owned(),
+                        ObjectField {
+                            r#type: Type::ArrayOf(Box::new(Type::Object(
+                                "foo_my_array".to_owned(),
+                            ))),
+                            description: None,
+                        },
+                    )]),
+                    description: None,
+                },
+            ),
+        ]));
 
         assert_eq!(expected, result);
 

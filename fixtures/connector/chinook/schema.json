@@ -1,742 +1,555 @@
 {
-  "collections": [
-    {
-      "name": "Invoice",
-      "type": "Invoice",
-      "description": null
-    },
-    {
-      "name": "Track",
-      "type": "Track",
-      "description": null
-    },
-    {
-      "name": "MediaType",
-      "type": "MediaType",
-      "description": null
-    },
-    {
-      "name": "InvoiceLine",
-      "type": "InvoiceLine",
-      "description": null
-    },
-    {
-      "name": "Employee",
-      "type": "Employee",
-      "description": null
-    },
-    {
-      "name": "PlaylistTrack",
-      "type": "PlaylistTrack",
-      "description": null
-    },
-    {
-      "name": "Album",
+  "collections": {
+    "Album": {
       "type": "Album",
       "description": null
     },
-    {
-      "name": "Genre",
-      "type": "Genre",
-      "description": null
-    },
-    {
-      "name": "Artist",
+    "Artist": {
       "type": "Artist",
       "description": null
     },
-    {
-      "name": "Playlist",
+    "Customer": {
+      "type": "Customer",
+      "description": null
+    },
+    "Employee": {
+      "type": "Employee",
+      "description": null
+    },
+    "Genre": {
+      "type": "Genre",
+      "description": null
+    },
+    "Invoice": {
+      "type": "Invoice",
+      "description": null
+    },
+    "InvoiceLine": {
+      "type": "InvoiceLine",
+      "description": null
+    },
+    "MediaType": {
+      "type": "MediaType",
+      "description": null
+    },
+    "Playlist": {
       "type": "Playlist",
       "description": null
     },
-    {
-      "name": "Customer",
-      "type": "Customer",
+    "PlaylistTrack": {
+      "type": "PlaylistTrack",
+      "description": null
+    },
+    "Track": {
+      "type": "Track",
       "description": null
     }
-  ],
-  "objectTypes": [
-    {
-      "name": "Invoice",
-      "fields": [
-        {
-          "name": "_id",
-          "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "BillingAddress",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "BillingCity",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "BillingCountry",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "BillingPostalCode",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "BillingState",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "CustomerId",
+  },
+  "objectTypes": {
+    "Album": {
+      "fields": {
+        "AlbumId": {
           "type": {
             "scalar": "int"
           },
           "description": null
         },
-        {
-          "name": "InvoiceDate",
+        "ArtistId": {
+          "type": {
+            "scalar": "int"
+          },
+          "description": null
+        },
+        "Title": {
           "type": {
             "scalar": "string"
           },
           "description": null
         },
-        {
-          "name": "InvoiceId",
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          },
+          "description": null
+        }
+      },
+      "description": null
+    },
+    "Artist": {
+      "fields": {
+        "ArtistId": {
           "type": {
             "scalar": "int"
           },
           "description": null
         },
-        {
-          "name": "Total",
+        "Name": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          },
+          "description": null
+        }
+      },
+      "description": null
+    },
+    "Customer": {
+      "fields": {
+        "Address": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "City": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "Company": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "Country": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "CustomerId": {
+          "type": {
+            "scalar": "int"
+          },
+          "description": null
+        },
+        "Email": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "Fax": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "FirstName": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "LastName": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "Phone": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "PostalCode": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "State": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "SupportRepId": {
+          "type": {
+            "scalar": "int"
+          },
+          "description": null
+        },
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          },
+          "description": null
+        }
+      },
+      "description": null
+    },
+    "Employee": {
+      "fields": {
+        "Address": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "BirthDate": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "City": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "Country": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "Email": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "EmployeeId": {
+          "type": {
+            "scalar": "int"
+          },
+          "description": null
+        },
+        "Fax": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "FirstName": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "HireDate": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "LastName": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "Phone": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "PostalCode": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "ReportsTo": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "State": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "Title": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          },
+          "description": null
+        }
+      },
+      "description": null
+    },
+    "Genre": {
+      "fields": {
+        "GenreId": {
+          "type": {
+            "scalar": "int"
+          },
+          "description": null
+        },
+        "Name": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          },
+          "description": null
+        }
+      },
+      "description": null
+    },
+    "Invoice": {
+      "fields": {
+        "BillingAddress": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "BillingCity": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "BillingCountry": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "BillingPostalCode": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "BillingState": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "CustomerId": {
+          "type": {
+            "scalar": "int"
+          },
+          "description": null
+        },
+        "InvoiceDate": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "InvoiceId": {
+          "type": {
+            "scalar": "int"
+          },
+          "description": null
+        },
+        "Total": {
           "type": {
             "scalar": "double"
           },
           "description": null
+        },
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          },
+          "description": null
         }
-      ],
-      "description": "Object type for collection Invoice"
+      },
+      "description": null
     },
-    {
-      "name": "Track",
-      "fields": [
-        {
-          "name": "_id",
-          "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "AlbumId",
-          "type": {
-            "nullable": {
-              "scalar": "int"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "Bytes",
-          "type": {
-            "nullable": {
-              "scalar": "int"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "Composer",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "GenreId",
-          "type": {
-            "nullable": {
-              "scalar": "int"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "MediaTypeId",
+    "InvoiceLine": {
+      "fields": {
+        "InvoiceId": {
           "type": {
             "scalar": "int"
           },
           "description": null
         },
-        {
-          "name": "Milliseconds",
+        "InvoiceLineId": {
           "type": {
             "scalar": "int"
           },
           "description": null
         },
-        {
-          "name": "Name",
-          "type": {
-            "scalar": "string"
-          },
-          "description": null
-        },
-        {
-          "name": "TrackId",
+        "Quantity": {
           "type": {
             "scalar": "int"
           },
           "description": null
         },
-        {
-          "name": "UnitPrice",
+        "TrackId": {
+          "type": {
+            "scalar": "int"
+          },
+          "description": null
+        },
+        "UnitPrice": {
           "type": {
             "scalar": "double"
           },
           "description": null
-        }
-      ],
-      "description": "Object type for collection Track"
-    },
-    {
-      "name": "MediaType",
-      "fields": [
-        {
-          "name": "_id",
-          "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
-          },
-          "description": null
         },
-        {
-          "name": "MediaTypeId",
+        "_id": {
           "type": {
-            "scalar": "int"
-          },
-          "description": null
-        },
-        {
-          "name": "Name",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "objectId"
           },
           "description": null
         }
-      ],
-      "description": "Object type for collection MediaType"
+      },
+      "description": null
     },
-    {
-      "name": "InvoiceLine",
-      "fields": [
-        {
-          "name": "_id",
-          "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "InvoiceId",
+    "MediaType": {
+      "fields": {
+        "MediaTypeId": {
           "type": {
             "scalar": "int"
           },
           "description": null
         },
-        {
-          "name": "InvoiceLineId",
+        "Name": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          },
+          "description": null
+        }
+      },
+      "description": null
+    },
+    "Playlist": {
+      "fields": {
+        "Name": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "PlaylistId": {
           "type": {
             "scalar": "int"
           },
           "description": null
         },
-        {
-          "name": "Quantity",
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          },
+          "description": null
+        }
+      },
+      "description": null
+    },
+    "PlaylistTrack": {
+      "fields": {
+        "PlaylistId": {
           "type": {
             "scalar": "int"
           },
           "description": null
         },
-        {
-          "name": "TrackId",
+        "TrackId": {
           "type": {
             "scalar": "int"
           },
           "description": null
         },
-        {
-          "name": "UnitPrice",
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          },
+          "description": null
+        }
+      },
+      "description": null
+    },
+    "Track": {
+      "fields": {
+        "AlbumId": {
+          "type": {
+            "scalar": "int"
+          },
+          "description": null
+        },
+        "Bytes": {
+          "type": {
+            "scalar": "int"
+          },
+          "description": null
+        },
+        "Composer": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "GenreId": {
+          "type": {
+            "scalar": "int"
+          },
+          "description": null
+        },
+        "MediaTypeId": {
+          "type": {
+            "scalar": "int"
+          },
+          "description": null
+        },
+        "Milliseconds": {
+          "type": {
+            "scalar": "int"
+          },
+          "description": null
+        },
+        "Name": {
+          "type": {
+            "scalar": "string"
+          },
+          "description": null
+        },
+        "TrackId": {
+          "type": {
+            "scalar": "int"
+          },
+          "description": null
+        },
+        "UnitPrice": {
           "type": {
             "scalar": "double"
           },
           "description": null
-        }
-      ],
-      "description": "Object type for collection InvoiceLine"
-    },
-    {
-      "name": "Employee",
-      "fields": [
-        {
-          "name": "_id",
-          "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
-          },
-          "description": null
         },
-        {
-          "name": "Address",
+        "_id": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "BirthDate",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "City",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "Country",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "Email",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "EmployeeId",
-          "type": {
-            "scalar": "int"
-          },
-          "description": null
-        },
-        {
-          "name": "Fax",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "FirstName",
-          "type": {
-            "scalar": "string"
-          },
-          "description": null
-        },
-        {
-          "name": "HireDate",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "LastName",
-          "type": {
-            "scalar": "string"
-          },
-          "description": null
-        },
-        {
-          "name": "Phone",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "PostalCode",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "ReportsTo",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "State",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "Title",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "objectId"
           },
           "description": null
         }
-      ],
-      "description": "Object type for collection Employee"
-    },
-    {
-      "name": "PlaylistTrack",
-      "fields": [
-        {
-          "name": "_id",
-          "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "PlaylistId",
-          "type": {
-            "scalar": "int"
-          },
-          "description": null
-        },
-        {
-          "name": "TrackId",
-          "type": {
-            "scalar": "int"
-          },
-          "description": null
-        }
-      ],
-      "description": "Object type for collection PlaylistTrack"
-    },
-    {
-      "name": "Album",
-      "fields": [
-        {
-          "name": "_id",
-          "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "AlbumId",
-          "type": {
-            "scalar": "int"
-          },
-          "description": null
-        },
-        {
-          "name": "ArtistId",
-          "type": {
-            "scalar": "int"
-          },
-          "description": null
-        },
-        {
-          "name": "Title",
-          "type": {
-            "scalar": "string"
-          },
-          "description": null
-        }
-      ],
-      "description": "Object type for collection Album"
-    },
-    {
-      "name": "Genre",
-      "fields": [
-        {
-          "name": "_id",
-          "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "GenreId",
-          "type": {
-            "scalar": "int"
-          },
-          "description": null
-        },
-        {
-          "name": "Name",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        }
-      ],
-      "description": "Object type for collection Genre"
-    },
-    {
-      "name": "Artist",
-      "fields": [
-        {
-          "name": "_id",
-          "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "ArtistId",
-          "type": {
-            "scalar": "int"
-          },
-          "description": null
-        },
-        {
-          "name": "Name",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        }
-      ],
-      "description": "Object type for collection Artist"
-    },
-    {
-      "name": "Playlist",
-      "fields": [
-        {
-          "name": "_id",
-          "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "Name",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "PlaylistId",
-          "type": {
-            "scalar": "int"
-          },
-          "description": null
-        }
-      ],
-      "description": "Object type for collection Playlist"
-    },
-    {
-      "name": "Customer",
-      "fields": [
-        {
-          "name": "_id",
-          "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "Address",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "City",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "Company",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "Country",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "CustomerId",
-          "type": {
-            "scalar": "int"
-          },
-          "description": null
-        },
-        {
-          "name": "Email",
-          "type": {
-            "scalar": "string"
-          },
-          "description": null
-        },
-        {
-          "name": "Fax",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "FirstName",
-          "type": {
-            "scalar": "string"
-          },
-          "description": null
-        },
-        {
-          "name": "LastName",
-          "type": {
-            "scalar": "string"
-          },
-          "description": null
-        },
-        {
-          "name": "Phone",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "PostalCode",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "State",
-          "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          },
-          "description": null
-        },
-        {
-          "name": "SupportRepId",
-          "type": {
-            "nullable": {
-              "scalar": "int"
-            }
-          },
-          "description": null
-        }
-      ],
-      "description": "Object type for collection Customer"
+      },
+      "description": null
     }
-  ]
+  }
 }
