@@ -3,7 +3,7 @@ use mongodb::bson::{self, Bson};
 use thiserror::Error;
 
 #[derive(Clone, Debug, Error)]
-pub enum CommandError {
+pub enum ProcedureError {
     #[error("error converting parsing argument as extjson: {0}")]
     ExtJsonConversionError(#[from] bson::extjson::de::Error),
 

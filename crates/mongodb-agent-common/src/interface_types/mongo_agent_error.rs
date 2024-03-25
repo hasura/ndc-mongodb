@@ -12,7 +12,7 @@ use thiserror::Error;
 pub enum MongoAgentError {
     BadCollectionSchema(String, bson::Bson, bson::de::Error),
     BadQuery(anyhow::Error),
-    CommandError(#[from] crate::command::CommandError),
+    CommandError(#[from] crate::procedure::ProcedureError),
     InvalidVariableName(String),
     JsonToBson(#[from] JsonToBsonError),
     MongoDB(#[from] mongodb::error::Error),

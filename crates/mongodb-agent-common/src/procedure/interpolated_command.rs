@@ -3,9 +3,9 @@ use std::collections::BTreeMap;
 use itertools::Itertools as _;
 use mongodb::bson::{self, Bson};
 
-use super::CommandError;
+use super::ProcedureError;
 
-type Result<T> = std::result::Result<T, CommandError>;
+type Result<T> = std::result::Result<T, ProcedureError>;
 
 /// Parse native query commands, and interpolate arguments.
 pub fn interpolated_command(
@@ -44,7 +44,7 @@ fn interpolate_document(
             let interpolated_key = interpolate_string(&key, arguments)?;
             match interpolated_key {
                 Bson::String(string_key) => Ok((string_key, interpolated_value)),
-                _ => Err(CommandError::NonStringKey(interpolated_key)),
+                _ => Err(ProcedureError::NonStringKey(interpolated_key)),
             }
         })
         .try_collect()
@@ -77,7 +77,7 @@ fn interpolate_string(string: &str, arguments: &BTreeMap<String, Bson>) -> Resul
                     let argument_value = resolve_argument(&param, arguments)?;
                     match argument_value {
                         Bson::String(string) => Ok(string),
-                        _ => Err(CommandError::NonStringInStringContext(param)),
+                        _ => Err(ProcedureError::NonStringInStringContext(param)),
                     }
                 }
             })
@@ -89,7 +89,7 @@ fn interpolate_string(string: &str, arguments: &BTreeMap<String, Bson>) -> Resul
 fn resolve_argument(argument_name: &str, arguments: &BTreeMap<String, Bson>) -> Result<Bson> {
     let argument = arguments
         .get(argument_name)
-        .ok_or_else(|| CommandError::MissingArgument(argument_name.to_owned()))?;
+        .ok_or_else(|| ProcedureError::MissingArgument(argument_name.to_owned()))?;
     Ok(argument.clone())
 }
 
