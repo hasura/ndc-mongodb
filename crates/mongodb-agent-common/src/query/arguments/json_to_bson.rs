@@ -58,7 +58,7 @@ pub fn json_to_bson(
             let object_type = object_types
                 .get(object_type_name)
                 .ok_or_else(|| JsonToBsonError::UnknownObjectType(object_type_name.to_owned()))?;
-            convert_object(object_type, object_types, value)
+            convert_object(object_type_name, object_type, object_types, value)
         }
         Type::ArrayOf(element_type) => convert_array(element_type, object_types, value),
         Type::Nullable(t) => convert_nullable(t, object_types, value),
@@ -200,24 +200,24 @@ fn convert_array(
 }
 
 fn convert_object(
+    object_type_name: &str,
     object_type: &ObjectType,
     object_types: &BTreeMap<String, ObjectType>,
     value: Value,
 ) -> Result<Bson> {
     let input_fields: BTreeMap<String, Value> = serde_json::from_value(value)?;
     let bson_doc: bson::Document = object_type
-        .fields
-        .iter()
+        .named_fields()
         .map(|field| {
-            let input_field_value = input_fields.get(&field.name).ok_or_else(|| {
+            let input_field_value = input_fields.get(field.name).ok_or_else(|| {
                 JsonToBsonError::MissingObjectField(
-                    Type::Object(object_type.name.clone()),
-                    field.name.clone(),
+                    Type::Object(object_type_name.to_owned()),
+                    field.name.to_owned(),
                 )
             })?;
             Ok((
-                field.name.clone(),
-                json_to_bson(&field.r#type, object_types, input_field_value.clone())?,
+                field.name.to_owned(),
+                json_to_bson(&field.value.r#type, object_types, input_field_value.clone())?,
             ))
         })
         .try_collect::<_, _, JsonToBsonError>()?;
@@ -277,7 +277,7 @@ fn incompatible_scalar_type<T>(expected_type: BsonScalarType, value: Value) -> R
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::{collections::BTreeMap, str::FromStr};
 
     use configuration::schema::{ObjectField, ObjectType, Type};
     use mongodb::bson::{self, datetime::DateTimeBuilder, Bson};
@@ -291,7 +291,7 @@ mod tests {
     fn deserializes_specialized_scalar_types() -> anyhow::Result<()> {
         let object_type = ObjectType {
             name: "scalar_test".to_owned(),
-            fields: vec![
+            fields: BTreeMap::from([
                 ObjectField::new("double", Type::Scalar(BsonScalarType::Double)),
                 ObjectField::new("int", Type::Scalar(BsonScalarType::Int)),
                 ObjectField::new("long", Type::Scalar(BsonScalarType::Long)),
@@ -313,7 +313,7 @@ mod tests {
                 ObjectField::new("minKey", Type::Scalar(BsonScalarType::MinKey)),
                 ObjectField::new("maxKey", Type::Scalar(BsonScalarType::MaxKey)),
                 ObjectField::new("symbol", Type::Scalar(BsonScalarType::Symbol)),
-            ],
+            ]),
             description: Default::default(),
         };
 

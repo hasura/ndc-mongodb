@@ -65,7 +65,7 @@ fn look_up_procedures(
                     .get(&name);
                 native_query
                     .ok_or(name)
-                    .map(|(_, nq)| Job::new(nq, arguments))
+                    .map(|native_query| Job::new(native_query, arguments))
             }
         })
         .partition_result();
