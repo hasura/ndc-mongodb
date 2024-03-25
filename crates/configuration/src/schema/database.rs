@@ -1,12 +1,15 @@
+use std::collections::BTreeMap;
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use mongodb_support::BsonScalarType;
 
+use crate::{WithName, WithNameRef};
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Collection {
-    pub name: String,
     /// The name of a type declared in `objectTypes` that describes the fields of this collection.
     /// The type name may be the same as the collection name.
     pub r#type: String,
@@ -30,17 +33,29 @@ pub enum Type {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ObjectType {
-    pub name: String,
-    pub fields: Vec<ObjectField>,
+    pub fields: BTreeMap<String, ObjectField>,
     #[serde(default)]
     pub description: Option<String>,
+}
+
+impl ObjectType {
+    pub fn named_fields(&self) -> impl Iterator<Item = WithNameRef<'_, ObjectField>> {
+        self.fields
+            .iter()
+            .map(|(name, field)| WithNameRef::named(name, field))
+    }
+
+    pub fn into_named_fields(self) -> impl Iterator<Item = WithName<ObjectField>> {
+        self.fields
+            .into_iter()
+            .map(|(name, field)| WithName::named(name, field))
+    }
 }
 
 /// Information about an object type field.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ObjectField {
-    pub name: String,
     pub r#type: Type,
     #[serde(default)]
     pub description: Option<String>,

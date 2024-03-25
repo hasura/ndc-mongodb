@@ -1,11 +1,11 @@
 name: insertArtist
 description: Example of a database update using a native query
 objectTypes:
-  - name: InsertArtist
+  InsertArtist:
     fields:
-      - name: ok
+      ok:
         type: !scalar int
-      - name: n
+      n:
         type: !scalar int
 resultType: !object InsertArtist
 # TODO: implement arguments instead of hard-coding inputs

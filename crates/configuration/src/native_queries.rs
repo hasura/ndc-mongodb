@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use mongodb::{bson, options::SelectionCriteria};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -9,14 +11,11 @@ use crate::schema::{ObjectField, ObjectType, Type};
 #[derive(Clone, Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct NativeQuery {
-    /// Name that will be used to identify the query in your data graph
-    pub name: String,
-
     /// You may define object types here to reference in `result_type`. Any types defined here will
     /// be merged with the definitions in `schema.json`. This allows you to maintain hand-written
     /// types for native queries without having to edit a generated `schema.json` file.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub object_types: Vec<ObjectType>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub object_types: BTreeMap<String, ObjectType>,
 
     /// Type of data returned by the query. You may reference object types defined in the
     /// `object_types` list in this definition, or you may reference object types from
@@ -25,7 +24,7 @@ pub struct NativeQuery {
 
     /// Arguments for per-query customization
     #[serde(default)]
-    pub arguments: Vec<ObjectField>,
+    pub arguments: BTreeMap<String, ObjectField>,
 
     /// Command to run expressed as a BSON document
     #[schemars(with = "Object")]
