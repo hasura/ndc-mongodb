@@ -1531,16 +1531,18 @@ dependencies = [
 
 [[package]]
 name = "mongodb-cli-plugin"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "clap",
  "configuration",
  "futures-util",
  "indexmap 1.9.3",
+ "itertools 0.12.1",
  "mongodb",
  "mongodb-agent-common",
  "mongodb-support",
+ "proptest",
  "serde",
  "serde_json",
  "these",

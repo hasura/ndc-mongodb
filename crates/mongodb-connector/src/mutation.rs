@@ -56,13 +56,16 @@ fn look_up_procedures(
         .into_iter()
         .map(|operation| match operation {
             MutationOperation::Procedure {
-                name, arguments, ..
+                name,
+                arguments,
+                ..
             } => {
                 let native_query = config
                     .native_queries
-                    .iter()
-                    .find(|native_query| native_query.name == name);
-                native_query.ok_or(name).map(|nq| Job::new(nq, arguments))
+                    .get(&name);
+                native_query
+                    .ok_or(name)
+                    .map(|(_, nq)| Job::new(nq, arguments))
             }
         })
         .partition_result();

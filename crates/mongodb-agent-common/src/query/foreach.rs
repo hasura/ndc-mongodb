@@ -176,11 +176,17 @@ mod tests {
                 "$facet": {
                     "__FACET___0": [
                         { "$match": { "$and": [{ "artistId": {"$eq":1 }}]}},
-                        { "$replaceWith": { "albumId":"$albumId","title":"$title" }},
+                        { "$replaceWith": { 
+                            "albumId": { "$ifNull": ["$albumId", null] },
+                            "title": { "$ifNull": ["$title", null] }
+                        } },
                     ],
                     "__FACET___1": [
                         { "$match": { "$and": [{ "artistId": {"$eq":2}}]}},
-                        { "$replaceWith": { "albumId":"$albumId","title":"$title" }},
+                        { "$replaceWith": { 
+                            "albumId": { "$ifNull": ["$albumId", null] },
+                            "title": { "$ifNull": ["$title", null] }
+                        } },
                     ]
                 },
             },
@@ -284,7 +290,10 @@ mod tests {
                     "__FACET___0": [
                         { "$match": { "$and": [{ "artistId": {"$eq": 1 }}]}},
                         { "$facet": {
-                            "__ROWS__": [{ "$replaceWith": { "albumId": "$albumId", "title": "$title" }}],
+                            "__ROWS__": [{ "$replaceWith": {
+                                "albumId": { "$ifNull": ["$albumId", null] },
+                                "title": { "$ifNull": ["$title", null] }
+                            }}],
                             "count": [{ "$count": "result" }],
                         } },
                         { "$replaceWith": {
@@ -300,7 +309,10 @@ mod tests {
                     "__FACET___1": [
                         { "$match": { "$and": [{ "artistId": {"$eq": 2 }}]}},
                         { "$facet": {
-                            "__ROWS__": [{ "$replaceWith": { "albumId": "$albumId", "title": "$title" }}],
+                            "__ROWS__": [{ "$replaceWith": {
+                                "albumId": { "$ifNull": ["$albumId", null] },
+                                "title": { "$ifNull": ["$title", null] }
+                            }}],
                             "count": [{ "$count": "result" }],
                         } },
                         { "$replaceWith": {

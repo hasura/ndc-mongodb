@@ -36,10 +36,15 @@ pub async fn handle_query_request(
     let database = config.client.database(&config.database);
 
     let target = &query_request.target;
-    if let Some(native_query) = config.native_queries.iter().find(|query| {
-        let target_name = target.name();
-        target_name.len() == 1 && target_name[0] == query.name
-    }) {
+    let target_name = {
+        let name = target.name();
+        if name.len() == 1 {
+            Some(&name[0])
+        } else {
+            None
+        }
+    };
+    if let Some(native_query) = target_name.and_then(|name| config.native_queries.get(name)) {
         return handle_native_query_request(native_query.clone(), database).await;
     }
 
@@ -88,7 +93,7 @@ mod tests {
 
         let expected_pipeline = json!([
             { "$match": { "gpa": { "$lt": 4.0 } } },
-            { "$replaceWith": { "student_gpa": "$gpa" } },
+            { "$replaceWith": { "student_gpa": { "$ifNull": ["$gpa", null] } } },
         ]);
 
         let mut collection = MockCollectionTrait::new();
@@ -233,7 +238,7 @@ mod tests {
                     ],
                     "__ROWS__": [{
                         "$replaceWith": {
-                            "student_gpa": "$gpa",
+                            "student_gpa": { "$ifNull": ["$gpa", null] },
                         },
                     }],
                 },
@@ -311,7 +316,7 @@ mod tests {
                 "$replaceWith": {
                     "date": {
                         "$dateToString": {
-                            "date": "$date",
+                            "date": { "$ifNull": ["$date", null] },
                         },
                     },
                 }

@@ -2,11 +2,14 @@ use anyhow::{anyhow, Context as _};
 use futures::stream::TryStreamExt as _;
 use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::{
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+};
 use tokio::fs;
 use tokio_stream::wrappers::ReadDirStream;
 
-use crate::{native_queries::NativeQuery, Configuration};
+use crate::{with_name::WithName, Configuration};
 
 pub const SCHEMA_FILENAME: &str = "schema";
 pub const NATIVE_QUERIES_DIRNAME: &str = "native_queries";
@@ -32,7 +35,7 @@ pub async fn read_directory(
 
     let schema = parse_json_or_yaml(dir, SCHEMA_FILENAME).await?;
 
-    let native_queries: Vec<NativeQuery> = read_subdir_configs(&dir.join(NATIVE_QUERIES_DIRNAME))
+    let native_queries = read_subdir_configs(&dir.join(NATIVE_QUERIES_DIRNAME))
         .await?
         .unwrap_or_default();
 
@@ -42,7 +45,9 @@ pub async fn read_directory(
 /// Parse all files in a directory with one of the allowed configuration extensions according to
 /// the given type argument. For example if `T` is `NativeQuery` this function assumes that all
 /// json and yaml files in the given directory should be parsed as native query configurations.
-async fn read_subdir_configs<T>(subdir: &Path) -> anyhow::Result<Option<Vec<T>>>
+///
+/// Assumes that every configuration file has a `name` field.
+async fn read_subdir_configs<T>(subdir: &Path) -> anyhow::Result<Option<BTreeMap<String, T>>>
 where
     for<'a> T: Deserialize<'a>,
 {
@@ -51,7 +56,7 @@ where
     }
 
     let dir_stream = ReadDirStream::new(fs::read_dir(subdir).await?);
-    let configs = dir_stream
+    let configs: Vec<WithName<T>> = dir_stream
         .map_err(|err| err.into())
         .try_filter_map(|dir_entry| async move {
             // Permits regular files and symlinks, does not filter out symlinks to directories.
@@ -73,11 +78,26 @@ where
 
             Ok(format_option.map(|format| (path, format)))
         })
-        .and_then(|(path, format)| async move { parse_config_file::<T>(path, format).await })
-        .try_collect::<Vec<T>>()
+        .and_then(
+            |(path, format)| async move { parse_config_file::<WithName<T>>(path, format).await },
+        )
+        .try_collect()
         .await?;
 
-    Ok(Some(configs))
+    let duplicate_names = configs
+        .iter()
+        .map(|c| c.name.as_ref())
+        .duplicates()
+        .collect::<Vec<_>>();
+
+    if duplicate_names.is_empty() {
+        Ok(Some(WithName::into_map(configs)))
+    } else {
+        Err(anyhow!(
+            "found duplicate names in configuration: {}",
+            duplicate_names.join(", ")
+        ))
+    }
 }
 
 /// Given a base name, like "connection", looks for files of the form "connection.json",

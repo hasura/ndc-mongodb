@@ -1,40 +1,41 @@
-name: mongodb
+name: ndc-mongodb
 version: "${VERSION}"
 shortDescription: "CLI plugin for Hasura ndc-mongodb"
 homepage: https://hasura.io/connectors/mongodb
+hidden: true
 platforms:
   - selector: darwin-arm64
     uri: "https://github.com/hasura/ndc-mongodb/releases/download/${VERSION}/mongodb-cli-plugin-aarch64-apple-darwin"
     sha256: "${MACOS_ARM64_SHA256}"
-    bin: "hasura-mongodb"
+    bin: "hasura-ndc-mongodb"
     files:
       - from: "./mongodb-cli-plugin-aarch64-apple-darwin"
-        to: "hasura-mongodb"
+        to: "hasura-ndc-mongodb"
   - selector: linux-arm64
     uri: "https://github.com/hasura/ndc-mongodb/releases/download/${VERSION}/mongodb-cli-plugin-aarch64-unknown-linux-musl"
     sha256: "${LINUX_ARM64_SHA256}"
-    bin: "hasura-mongodb"
+    bin: "hasura-ndc-mongodb"
     files:
       - from: "./mongodb-cli-plugin-aarch64-unknown-linux-musl"
-        to: "hasura-mongodb"
+        to: "hasura-ndc-mongodb"
   - selector: darwin-amd64
     uri: "https://github.com/hasura/ndc-mongodb/releases/download/${VERSION}/mongodb-cli-plugin-x86_64-apple-darwin"
     sha256: "${MACOS_AMD64_SHA256}"
-    bin: "hasura-mongodb"
+    bin: "hasura-ndc-mongodb"
     files:
       - from: "./mongodb-cli-plugin-x86_64-apple-darwin"
-        to: "hasura-mongodb"
+        to: "hasura-ndc-mongodb"
   - selector: windows-amd64
     uri: "https://github.com/hasura/ndc-mongodb/releases/download/${VERSION}/mongodb-cli-plugin-x86_64-pc-windows-msvc.exe"
     sha256: "${WINDOWS_AMD64_SHA256}"
-    bin: "hasura-mongodb.exe"
+    bin: "hasura-ndc-mongodb.exe"
     files:
       - from: "./mongodb-cli-plugin-x86_64-pc-windows-msvc.exe"
-        to: "hasura-mongodb.exe"
+        to: "hasura-ndc-mongodb.exe"
   - selector: linux-amd64
     uri: "https://github.com/hasura/ndc-mongodb/releases/download/${VERSION}/mongodb-cli-plugin-x86_64-unknown-linux-musl"
     sha256: "${LINUX_AMD64_SHA256}"
-    bin: "hasura-mongodb"
+    bin: "hasura-ndc-mongodb"
     files:
       - from: "./mongodb-cli-plugin-x86_64-unknown-linux-musl"
-        to: "hasura-mongodb"
+        to: "hasura-ndc-mongodb"
