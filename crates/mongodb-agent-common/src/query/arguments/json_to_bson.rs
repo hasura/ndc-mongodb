@@ -60,8 +60,8 @@ pub fn json_to_bson(
                 .ok_or_else(|| JsonToBsonError::UnknownObjectType(object_type_name.to_owned()))?;
             convert_object(object_type, object_types, value)
         }
-        Type::ArrayOf(element_type) => convert_array(&*element_type, object_types, value),
-        Type::Nullable(t) => convert_nullable(&*t, object_types, value),
+        Type::ArrayOf(element_type) => convert_array(element_type, object_types, value),
+        Type::Nullable(t) => convert_nullable(t, object_types, value),
     }
 }
 

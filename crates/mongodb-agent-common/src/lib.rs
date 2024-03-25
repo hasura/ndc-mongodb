@@ -1,4 +1,5 @@
 pub mod aggregation_function;
+pub mod command;
 pub mod comparison_function;
 pub mod explain;
 pub mod health;

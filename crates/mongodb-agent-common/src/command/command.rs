@@ -1,72 +1,47 @@
 use std::collections::BTreeMap;
 
-use configuration::schema::{ObjectField, Type};
-use itertools::Itertools;
+use itertools::Itertools as _;
 use mongodb::bson::{self, Bson};
-use mongodb_support::BsonScalarType;
-use serde_json::Value;
 
 use super::CommandError;
 
-// type JsonObject = serde_json::Map<String, serde_json::Value>;
+type Result<T> = std::result::Result<T, CommandError>;
 
-/// Parse native query commands, and interpolate variables. Input is serde_json::Value because our
-/// configuration format is JSON. Output is BSON because that is the format that MongoDB commands
-/// use.
-pub fn interpolate(
+/// Parse native query commands, and interpolate arguments.
+pub fn interpolated_command(
     command: &bson::Document,
-    parameters: &[ObjectField],
-    arguments: &BTreeMap<String, Value>,
-) -> Result<Bson, CommandError> {
-    // let arguments_bson: BTreeMap<String, Bson> = arguments
-    //     .iter()
-    //     .map(|(key, value)| -> Result<(String, Bson), CommandError> {
-    //         Ok((key.to_owned(), value.clone().try_into()?))
-    //     })
-    //     .try_collect()?;
-    interpolate_helper(&command.into(), parameters, arguments)
+    arguments: &BTreeMap<String, Bson>,
+) -> Result<Bson> {
+    interpolate_helper(&command.into(), arguments)
 }
 
-fn interpolate_helper(
-    command: &Bson,
-    parameters: &[ObjectField],
-    arguments: &BTreeMap<String, Value>,
-) -> Result<Bson, CommandError> {
-    // let result = match command {
-    //     exp @ Value::Null => exp.clone(),
-    //     exp @ Value::Bool(_) => exp.clone(),
-    //     exp @ Value::Number(_) => exp.clone(),
-    //     Value::String(string) => interpolate_string(string, parameters, arguments)?,
-    //     Value::Array(_) => todo!(),
-    //     Value::Object(_) => todo!(),
-    // };
-
-    let result = match command {
-        Bson::Array(values) => values
-            .iter()
-            .map(|value| interpolate_helper(value, parameters, arguments))
-            .try_collect()?,
-        Bson::Document(doc) => interpolate_document(doc.clone(), parameters, arguments)?.into(),
-        Bson::String(string) => interpolate_string(string, parameters, arguments)?,
-        Bson::RegularExpression(_) => todo!(),
-        Bson::JavaScriptCode(_) => todo!(),
-        Bson::JavaScriptCodeWithScope(_) => todo!(),
+fn interpolate_helper(command_node: &Bson, arguments: &BTreeMap<String, Bson>) -> Result<Bson> {
+    let result = match command_node {
+        Bson::Array(values) => interpolate_array(values.to_vec(), arguments)?.into(),
+        Bson::Document(doc) => interpolate_document(doc.clone(), arguments)?.into(),
+        Bson::String(string) => interpolate_string(string, arguments)?,
+        // TODO: Support interpolation within other scalar types
         value => value.clone(),
     };
-
     Ok(result)
+}
+
+fn interpolate_array(values: Vec<Bson>, arguments: &BTreeMap<String, Bson>) -> Result<Vec<Bson>> {
+    values
+        .iter()
+        .map(|value| interpolate_helper(value, arguments))
+        .try_collect()
 }
 
 fn interpolate_document(
     document: bson::Document,
-    parameters: &[ObjectField],
-    arguments: &BTreeMap<String, Value>,
-) -> Result<bson::Document, CommandError> {
+    arguments: &BTreeMap<String, Bson>,
+) -> Result<bson::Document> {
     document
         .into_iter()
         .map(|(key, value)| {
-            let interpolated_value = interpolate_helper(&value, parameters, arguments)?;
-            let interpolated_key = interpolate_string(&key, parameters, arguments)?;
+            let interpolated_value = interpolate_helper(&value, arguments)?;
+            let interpolated_key = interpolate_string(&key, arguments)?;
             match interpolated_key {
                 Bson::String(string_key) => Ok((string_key, interpolated_value)),
                 _ => Err(CommandError::NonStringKey(interpolated_key)),
@@ -85,56 +60,37 @@ fn interpolate_document(
 ///     { "key": 42 }
 ///
 /// if the type of the variable `recordId` is `int`.
-fn interpolate_string(
-    string: &str,
-    parameters: &[ObjectField],
-    arguments: &BTreeMap<String, Value>,
-) -> Result<Bson, CommandError> {
+fn interpolate_string(string: &str, arguments: &BTreeMap<String, Bson>) -> Result<Bson> {
     let parts = parse_native_query(string);
     if parts.len() == 1 {
         let mut parts = parts;
         match parts.remove(0) {
             NativeQueryPart::Text(string) => Ok(Bson::String(string)),
-            NativeQueryPart::Parameter(param) => resolve_argument(&param, parameters, arguments),
+            NativeQueryPart::Parameter(param) => resolve_argument(&param, arguments),
         }
     } else {
-        todo!()
+        let interpolated_parts: Vec<String> = parts
+            .into_iter()
+            .map(|part| match part {
+                NativeQueryPart::Text(string) => Ok(string),
+                NativeQueryPart::Parameter(param) => {
+                    let argument_value = resolve_argument(&param, arguments)?;
+                    match argument_value {
+                        Bson::String(string) => Ok(string),
+                        _ => Err(CommandError::NonStringInStringContext(param)),
+                    }
+                }
+            })
+            .try_collect()?;
+        Ok(Bson::String(interpolated_parts.join("")))
     }
 }
 
-/// Looks up an argument value for a given parameter, and produces a BSON value that matches the
-/// declared parameter type.
-fn resolve_argument(
-    param_name: &str,
-    parameters: &[ObjectField],
-    arguments: &BTreeMap<String, Value>,
-) -> Result<Bson, CommandError> {
-    let parameter = parameters
-        .iter()
-        .find(|arg| arg.name == param_name)
-        .ok_or_else(|| CommandError::UnknownParameter(param_name.to_owned()))?;
-    let argument_json = arguments
-        .get(param_name)
-        .ok_or_else(|| CommandError::MissingArgument(param_name.to_owned()))?;
-    let argument: Bson = argument_json.clone().try_into()?;
-    match parameter.r#type {
-        Type::Scalar(t) => resolve_scalar_argument(t, argument),
-        Type::Object(_) => todo!(),
-        Type::ArrayOf(_) => todo!(),
-        Type::Nullable(_) => todo!(),
-    }
-}
-
-fn resolve_scalar_argument(
-    parameter_type: BsonScalarType,
-    argument: Bson,
-) -> Result<Bson, CommandError> {
-    let argument_type: BsonScalarType = (&argument).try_into()?;
-    if argument_type == parameter_type {
-        Ok(argument)
-    } else {
-        Err(CommandError::TypeMismatch(argument_type, parameter_type))
-    }
+fn resolve_argument(argument_name: &str, arguments: &BTreeMap<String, Bson>) -> Result<Bson> {
+    let argument = arguments
+        .get(argument_name)
+        .ok_or_else(|| CommandError::MissingArgument(argument_name.to_owned()))?;
+    Ok(argument.clone())
 }
 
 /// A part of a Native Query text, either raw text or a parameter.
@@ -175,11 +131,13 @@ mod tests {
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
+    use crate::query::arguments::resolve_arguments;
+
     use super::*;
 
-    // TODO: extjson
-    // TODO: nullable
-    // TODO: optional
+    // TODO: key
+    // TODO: value with multiple placeholders
+    // TODO: key with multiple placeholders
 
     #[test]
     fn interpolates_non_string_type() -> anyhow::Result<()> {
@@ -198,7 +156,7 @@ mod tests {
                 }],
             },
         });
-        let arguments = [
+        let input_arguments = [
             ("id".to_owned(), json!(1001)),
             ("name".to_owned(), json!("Regina Spektor")),
         ]
@@ -206,14 +164,15 @@ mod tests {
         .collect();
 
         let native_query: NativeQuery = serde_json::from_value(native_query_input)?;
-        let interpolated_command = interpolate(
-            &native_query.command.into(),
+        let arguments = resolve_arguments(
+            &native_query.object_types,
             &native_query.arguments,
-            &arguments,
+            input_arguments,
         )?;
+        let command = interpolated_command(&native_query.command, &arguments)?;
 
         assert_eq!(
-            interpolated_command,
+            command,
             bson::doc! {
                 "insert": "Artist",
                 "documents": [{
@@ -246,32 +205,88 @@ mod tests {
                 "documents": "{{ documents }}",
             },
         });
-        let arguments = [
-            ("id".to_owned(), json!(1001)),
-            ("name".to_owned(), json!("Regina Spektor")),
-        ]
+        let input_arguments = [(
+            "documents".to_owned(),
+            json!([
+                { "ArtistId": 1001, "Name": "Regina Spektor" } ,
+                { "ArtistId": 1002, "Name": "Ok Go" } ,
+            ]),
+        )]
         .into_iter()
         .collect();
 
         let native_query: NativeQuery = serde_json::from_value(native_query_input)?;
-        let interpolated_command = interpolate(
-            &native_query.command.into(),
+        let arguments = resolve_arguments(
+            &native_query.object_types,
             &native_query.arguments,
-            &arguments,
+            input_arguments,
         )?;
+        let command = interpolated_command(&native_query.command, &arguments)?;
 
         assert_eq!(
-            interpolated_command,
+            command,
             bson::doc! {
                 "insert": "Artist",
                 "documents": [
                     {
-                        "ArtistId": "{{ id }}",
-                        "Name": "{{name }}",
+                        "ArtistId": 1001,
+                        "Name": "Regina Spektor",
                     },
                     {
-                        "ArtistId": "{{ id }}",
-                        "Name": "{{name }}",
+                        "ArtistId": 1002,
+                        "Name": "Ok Go",
+                    }
+                ],
+            }
+            .into()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn interpolates_arguments_within_string() -> anyhow::Result<()> {
+        let native_query_input = json!({
+            "name": "insert",
+            "resultType": { "object": "Insert" },
+            "arguments": [
+                { "name": "prefix", "type": { "scalar": "string" } },
+                { "name": "basename", "type": { "scalar": "string" } },
+            ],
+            "command": {
+                "insert": "{{prefix}}-{{basename}}",
+                "empty": "",
+            },
+        });
+        let input_arguments = [(
+            "documents".to_owned(),
+            json!([
+                { "prefix": "current" } ,
+                { "basename": "some-coll" } ,
+            ]),
+        )]
+        .into_iter()
+        .collect();
+
+        let native_query: NativeQuery = serde_json::from_value(native_query_input)?;
+        let arguments = resolve_arguments(
+            &native_query.object_types,
+            &native_query.arguments,
+            input_arguments,
+        )?;
+        let command = interpolated_command(&native_query.command, &arguments)?;
+
+        assert_eq!(
+            command,
+            bson::doc! {
+                "insert": "Artist",
+                "documents": [
+                    {
+                        "ArtistId": 1001,
+                        "Name": "Regina Spektor",
+                    },
+                    {
+                        "ArtistId": 1002,
+                        "Name": "Ok Go",
                     }
                 ],
             }
