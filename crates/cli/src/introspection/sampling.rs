@@ -29,7 +29,7 @@ pub async fn sample_schema_from_db(
         let collection_name = collection_spec.name;
         let collection_schema =
             sample_schema_from_collection(&collection_name, sample_size, config).await?;
-        schema = unify_schema(schema, collection_schema)?;
+        schema = unify_schema(schema, collection_schema);
     }
     Ok(schema)
 }
@@ -159,5 +159,104 @@ fn make_field_type(
         Bson::MaxKey => scalar(MaxKey),
         Bson::MinKey => scalar(MinKey),
         Bson::DbPointer(_) => scalar(DbPointer),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use configuration::schema::{ObjectField, ObjectType, Type};
+    use mongodb::bson::doc;
+    use mongodb_support::BsonScalarType;
+
+    use crate::introspection::type_unification::{TypeUnificationContext, TypeUnificationError};
+
+    use super::make_object_type;
+
+    #[test]
+    fn simple_doc() -> Result<(), anyhow::Error> {
+        let object_name = "foo";
+        let doc = doc! {"my_int": 1, "my_string": "two"};
+        let result = make_object_type(object_name, &doc);
+
+        let expected = Ok(vec![ObjectType {
+            name: object_name.to_owned(),
+            fields: vec![
+                ObjectField {
+                    name: "my_int".to_owned(),
+                    r#type: Type::Scalar(BsonScalarType::Int),
+                    description: None,
+                },
+                ObjectField {
+                    name: "my_string".to_owned(),
+                    r#type: Type::Scalar(BsonScalarType::String),
+                    description: None,
+                },
+            ],
+            description: None,
+        }]);
+
+        assert_eq!(expected, result);
+
+        Ok(())
+    }
+
+    #[test]
+    fn array_of_objects() -> Result<(), anyhow::Error> {
+        let object_name = "foo";
+        let doc = doc! {"my_array": [{"foo": 42, "bar": ""}, {"bar": "wut", "baz": 3.77}]};
+        let result = make_object_type(object_name, &doc);
+
+        let expected = Ok(vec![
+            ObjectType {
+                name: "foo_my_array".to_owned(),
+                fields: vec![
+                    ObjectField {
+                        name: "foo".to_owned(),
+                        r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::Int))),
+                        description: None,
+                    },
+                    ObjectField {
+                        name: "bar".to_owned(),
+                        r#type: Type::Scalar(BsonScalarType::String),
+                        description: None,
+                    },
+                    ObjectField {
+                        name: "baz".to_owned(),
+                        r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::Double))),
+                        description: None,
+                    },
+                ],
+                description: None,
+            },
+            ObjectType {
+                name: object_name.to_owned(),
+                fields: vec![ObjectField {
+                    name: "my_array".to_owned(),
+                    r#type: Type::ArrayOf(Box::new(Type::Object("foo_my_array".to_owned()))),
+                    description: None,
+                }],
+                description: None,
+            },
+        ]);
+
+        assert_eq!(expected, result);
+
+        Ok(())
+    }
+
+    #[test]
+    fn non_unifiable_array_of_objects() -> Result<(), anyhow::Error> {
+        let object_name = "foo";
+        let doc = doc! {"my_array": [{"foo": 42, "bar": ""}, {"bar": 17, "baz": 3.77}]};
+        let result = make_object_type(object_name, &doc);
+
+        let expected = Err(TypeUnificationError::ScalarType(
+            TypeUnificationContext::new("foo_my_array", "bar"),
+            BsonScalarType::String,
+            BsonScalarType::Int,
+        ));
+        assert_eq!(expected, result);
+
+        Ok(())
     }
 }
