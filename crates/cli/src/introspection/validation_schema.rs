@@ -1,6 +1,6 @@
 use configuration::{
-    schema::{Collection, ObjectField, ObjectType, Type},
-    Schema,
+    schema::{self, Type},
+    Schema, WithName,
 };
 use futures_util::{StreamExt, TryStreamExt};
 use indexmap::IndexMap;
@@ -9,6 +9,10 @@ use mongodb_agent_common::schema::{get_property_description, Property, Validator
 use mongodb_support::{BsonScalarType, BsonType};
 
 use mongodb_agent_common::interface_types::{MongoAgentError, MongoConfig};
+
+type Collection = WithName<schema::Collection>;
+type ObjectType = WithName<schema::ObjectType>;
+type ObjectField = WithName<schema::ObjectField>;
 
 pub async fn get_metadata_from_validation_schema(
     config: &MongoConfig,
@@ -52,8 +56,8 @@ pub async fn get_metadata_from_validation_schema(
         .await?;
 
     Ok(Schema {
-        collections,
-        object_types: object_types.concat(),
+        collections: WithName::into_map(collections),
+        object_types: WithName::into_map(object_types.concat()),
     })
 }
 
@@ -66,11 +70,13 @@ fn make_collection(
 
     let (mut object_type_defs, object_fields) = {
         let type_prefix = format!("{collection_name}_");
-        let id_field = ObjectField {
-            name: "_id".to_string(),
-            description: Some("primary key _id".to_string()),
-            r#type: Type::Scalar(BsonScalarType::ObjectId),
-        };
+        let id_field = WithName::named(
+            "_id",
+            schema::ObjectField {
+                description: Some("primary key _id".to_string()),
+                r#type: Type::Scalar(BsonScalarType::ObjectId),
+            },
+        );
         let (object_type_defs, mut object_fields): (Vec<Vec<ObjectType>>, Vec<ObjectField>) =
             properties
                 .iter()
@@ -84,19 +90,20 @@ fn make_collection(
         (object_type_defs.concat(), object_fields)
     };
 
-    let collection_type = ObjectType {
-        name: collection_name.to_string(),
-        description: Some(format!("Object type for collection {collection_name}")),
-        fields: object_fields,
-    };
+    let collection_type = WithName::named(
+        collection_name,
+        schema::ObjectType {
+            description: Some(format!("Object type for collection {collection_name}")),
+            fields: WithName::into_map(object_fields),
+        },
+    );
 
     object_type_defs.push(collection_type);
 
-    let collection_info = Collection {
-        name: collection_name.to_string(),
+    let collection_info = WithName::named(collection_name, schema::Collection {
         description: validator_schema.description.clone(),
         r#type: collection_name.to_string(),
-    };
+    });
 
     (object_type_defs, collection_info)
 }
@@ -111,11 +118,13 @@ fn make_object_field(
     let object_type_name = format!("{type_prefix}{prop_name}");
     let (collected_otds, field_type) = make_field_type(&object_type_name, prop_schema);
 
-    let object_field = ObjectField {
-        name: prop_name.clone(),
-        description,
-        r#type: maybe_nullable(field_type, !required_labels.contains(prop_name)),
-    };
+    let object_field = WithName::named(
+        prop_name.clone(),
+        schema::ObjectField {
+            description,
+            r#type: maybe_nullable(field_type, !required_labels.contains(prop_name)),
+        },
+    );
 
     (collected_otds, object_field)
 }
@@ -147,11 +156,13 @@ fn make_field_type(object_type_name: &str, prop_schema: &Property) -> (Vec<Objec
                 .map(|prop| make_object_field(&type_prefix, required, prop))
                 .unzip();
 
-            let object_type_definition = ObjectType {
-                name: object_type_name.to_string(),
-                description: Some("generated from MongoDB validation schema".to_string()),
-                fields: otd_fields,
-            };
+            let object_type_definition = WithName::named(
+                object_type_name.to_string(),
+                schema::ObjectType {
+                    description: Some("generated from MongoDB validation schema".to_string()),
+                    fields: WithName::into_map(otd_fields),
+                },
+            );
 
             collected_otds.append(&mut otds.concat());
             collected_otds.push(object_type_definition);

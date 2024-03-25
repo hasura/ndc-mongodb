@@ -3,10 +3,11 @@
 /// It allows the information in the schemas derived from several documents to be combined into one schema.
 ///
 use configuration::{
-    schema::{ObjectField, ObjectType, Type},
-    Schema,
+    schema::{self, Type},
+    Schema, WithName,
 };
 use indexmap::IndexMap;
+use itertools::Itertools as _;
 use mongodb_support::{
     align::align_with_result,
     BsonScalarType::{self, *},
@@ -16,6 +17,9 @@ use std::{
     string::String,
 };
 use thiserror::Error;
+
+type ObjectField = WithName<schema::ObjectField>;
+type ObjectType = WithName<schema::ObjectType>;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct TypeUnificationContext {
@@ -153,11 +157,13 @@ fn make_nullable(t: Type) -> Type {
 }
 
 fn make_nullable_field<E>(field: ObjectField) -> Result<ObjectField, E> {
-    Ok(ObjectField {
-        name: field.name,
-        r#type: make_nullable(field.r#type),
-        description: field.description,
-    })
+    Ok(WithName::named(
+        field.name,
+        schema::ObjectField {
+            r#type: make_nullable(field.value.r#type),
+            description: field.value.description,
+        },
+    ))
 }
 
 /// Unify two `ObjectType`s.
@@ -167,13 +173,17 @@ fn unify_object_type(
     object_type_b: ObjectType,
 ) -> TypeUnificationResult<ObjectType> {
     let field_map_a: IndexMap<String, ObjectField> = object_type_a
+        .value
         .fields
         .into_iter()
+        .map_into::<ObjectField>()
         .map(|o| (o.name.to_owned(), o))
         .collect();
     let field_map_b: IndexMap<String, ObjectField> = object_type_b
+        .value
         .fields
         .into_iter()
+        .map_into::<ObjectField>()
         .map(|o| (o.name.to_owned(), o))
         .collect();
 
@@ -185,11 +195,19 @@ fn unify_object_type(
         |field_a, field_b| unify_object_field(&object_type_a.name, field_a, field_b),
     )?;
 
-    Ok(ObjectType {
-        name: object_type_a.name,
-        fields: merged_field_map.into_values().collect(),
-        description: object_type_a.description.or(object_type_b.description),
-    })
+    Ok(WithName::named(
+        object_type_a.name,
+        schema::ObjectType {
+            fields: merged_field_map
+                .into_values()
+                .map(WithName::into_name_value_pair)
+                .collect(),
+            description: object_type_a
+                .value
+                .description
+                .or(object_type_b.value.description),
+        },
+    ))
 }
 
 /// Unify the types of two `ObjectField`s.
@@ -200,11 +218,20 @@ fn unify_object_field(
     object_field_b: ObjectField,
 ) -> TypeUnificationResult<ObjectField> {
     let context = TypeUnificationContext::new(object_type_name, &object_field_a.name);
-    Ok(ObjectField {
-        name: object_field_a.name,
-        r#type: unify_type(context, object_field_a.r#type, object_field_b.r#type)?,
-        description: object_field_a.description.or(object_field_b.description),
-    })
+    Ok(WithName::named(
+        object_field_a.name,
+        schema::ObjectField {
+            r#type: unify_type(
+                context,
+                object_field_a.value.r#type,
+                object_field_b.value.r#type,
+            )?,
+            description: object_field_a
+                .value
+                .description
+                .or(object_field_b.value.description),
+        },
+    ))
 }
 
 /// Unify two sets of `ObjectType`s.
@@ -251,10 +278,12 @@ mod tests {
     use std::collections::{HashMap, HashSet};
 
     use super::{
-        normalize_type, unify_object_type, unify_type, ObjectField, ObjectType,
-        TypeUnificationContext, TypeUnificationError,
+        normalize_type, unify_object_type, unify_type, TypeUnificationContext, TypeUnificationError,
     };
-    use configuration::schema::Type;
+    use configuration::{
+        schema::{self, Type},
+        WithName,
+    };
     use mongodb_support::BsonScalarType;
     use proptest::{collection::hash_map, prelude::*};
 
@@ -409,29 +438,27 @@ mod tests {
             }
 
             let name = "foo";
-            let left_object = ObjectType {
-                name: name.to_owned(),
-                fields: left_fields.into_iter().map(|(k, v)| ObjectField{name: k, r#type: v, description: None}).collect(),
+            let left_object = WithName::named(name.to_owned(), schema::ObjectType {
+                fields: left_fields.into_iter().map(|(k, v)| (k, schema::ObjectField{r#type: v, description: None})).collect(),
                 description: None
-            };
-            let right_object = ObjectType {
-                name: name.to_owned(),
-                fields: right_fields.into_iter().map(|(k, v)| ObjectField{name: k, r#type: v, description: None}).collect(),
+            });
+            let right_object = WithName::named(name.to_owned(), schema::ObjectType {
+                fields: right_fields.into_iter().map(|(k, v)| (k, schema::ObjectField{r#type: v, description: None})).collect(),
                 description: None
-            };
+            });
             let result = unify_object_type(left_object, right_object);
             match result {
                 Err(err) => panic!("Got error result {err}"),
                 Ok(ot) => {
-                    for field in &ot.fields {
+                    for field in ot.value.named_fields() {
                         // Any fields not shared between the two input types should be nullable.
-                        if !shared.contains_key(&field.name) {
-                            assert!(is_nullable(&field.r#type), "Found a non-shared field that is not nullable")
+                        if !shared.contains_key(field.name) {
+                            assert!(is_nullable(&field.value.r#type), "Found a non-shared field that is not nullable")
                         }
                     }
 
                     // All input fields must appear in the result.
-                    let fields: HashSet<String> = ot.fields.into_iter().map(|f| f.name).collect();
+                    let fields: HashSet<String> = ot.value.fields.into_keys().collect();
                     assert!(left.into_keys().chain(right.into_keys()).chain(shared.into_keys()).all(|k| fields.contains(&k)),
                       "Missing field in result type")
                 }

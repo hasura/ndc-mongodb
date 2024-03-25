@@ -1537,6 +1537,7 @@ dependencies = [
  "configuration",
  "futures-util",
  "indexmap 1.9.3",
+ "itertools 0.12.1",
  "mongodb",
  "mongodb-agent-common",
  "mongodb-support",

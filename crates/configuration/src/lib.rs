@@ -1,9 +1,11 @@
 mod configuration;
-pub mod schema;
-pub mod native_queries;
 mod directory;
+pub mod native_queries;
+pub mod schema;
+mod with_name;
 
 pub use crate::configuration::Configuration;
-pub use crate::schema::Schema;
 pub use crate::directory::read_directory;
 pub use crate::directory::write_directory;
+pub use crate::schema::Schema;
+pub use crate::with_name::{WithName, WithNameRef};
