@@ -1,5 +1,7 @@
 name: insertArtist
 description: Example of a database update using a native query
+mode: readWrite
+resultType: !object InsertArtist
 objectTypes:
   InsertArtist:
     fields:
@@ -7,7 +9,6 @@ objectTypes:
         type: !scalar int
       n:
         type: !scalar int
-resultType: !object InsertArtist
 # TODO: implement arguments instead of hard-coding inputs
 command:
   insert: "Artist"

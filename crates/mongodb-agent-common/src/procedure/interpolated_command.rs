@@ -11,8 +11,12 @@ type Result<T> = std::result::Result<T, ProcedureError>;
 pub fn interpolated_command(
     command: &bson::Document,
     arguments: &BTreeMap<String, Bson>,
-) -> Result<Bson> {
-    interpolate_helper(&command.into(), arguments)
+) -> Result<bson::Document> {
+    let bson = interpolate_helper(&command.into(), arguments)?;
+    match bson {
+        Bson::Document(doc) => Ok(doc),
+        _ => unreachable!("interpolated_command is guaranteed to produce a document"),
+    }
 }
 
 fn interpolate_helper(command_node: &Bson, arguments: &BTreeMap<String, Bson>) -> Result<Bson> {
@@ -136,7 +140,6 @@ mod tests {
     use super::*;
 
     // TODO: key
-    // TODO: value with multiple placeholders
     // TODO: key with multiple placeholders
 
     #[test]

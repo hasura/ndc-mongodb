@@ -1,14 +1,12 @@
-use configuration::schema::Type;
-use mongodb::bson::{self, Bson};
+use mongodb::bson::Bson;
 use thiserror::Error;
 
-#[derive(Clone, Debug, Error)]
-pub enum ProcedureError {
-    #[error("error converting parsing argument as extjson: {0}")]
-    ExtJsonConversionError(#[from] bson::extjson::de::Error),
+use crate::query::arguments::ArgumentError;
 
-    #[error("invalid argument type: {0}")]
-    InvalidArgumentType(#[from] mongodb_support::error::Error),
+#[derive(Debug, Error)]
+pub enum ProcedureError {
+    #[error("error executing mongodb command: {0}")]
+    ExecutionError(#[from] mongodb::error::Error),
 
     #[error("a required argument was not provided, \"{0}\"")]
     MissingArgument(String),
@@ -19,9 +17,6 @@ pub enum ProcedureError {
     #[error("object keys must be strings, but got: \"{0}\"")]
     NonStringKey(Bson),
 
-    #[error("argument type, \"{0:?}\", does not match parameter type, \"{1:?}\"")]
-    TypeMismatch(Type, Type),
-
-    #[error("an argument was provided for an undefined paremeter, \"{0}\"")]
-    UnknownParameter(String),
+    #[error("could not resolve arguments: {0}")]
+    UnresolvableArguments(#[from] ArgumentError),
 }

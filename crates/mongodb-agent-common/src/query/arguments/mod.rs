@@ -2,16 +2,28 @@ mod json_to_bson;
 
 use std::collections::BTreeMap;
 
-use configuration::schema::{ObjectField, ObjectType};
+use configuration::schema::{ObjectField, ObjectType, Type};
+use indent::indent_all_by;
 use itertools::Itertools as _;
 use mongodb::bson::Bson;
 use serde_json::Value;
-
-use crate::interface_types::MongoAgentError;
+use thiserror::Error;
 
 use self::json_to_bson::json_to_bson;
 
-pub use self::json_to_bson::{JsonToBsonError, json_to_bson_scalar};
+pub use self::json_to_bson::{json_to_bson_scalar, JsonToBsonError};
+
+#[derive(Debug, Error)]
+pub enum ArgumentError {
+    #[error("unknown variables or arguments: {}", .0.join(", "))]
+    Excess(Vec<String>),
+
+    #[error("some variables or arguments are invalid:\n{}", format_errors(.0))]
+    Invalid(BTreeMap<String, JsonToBsonError>),
+
+    #[error("missing variables or arguments: {}", .0.join(", "))]
+    Missing(Vec<String>),
+}
 
 /// Translate arguments to queries or native queries to BSON according to declared parameter types.
 ///
@@ -20,27 +32,44 @@ pub use self::json_to_bson::{JsonToBsonError, json_to_bson_scalar};
 pub fn resolve_arguments(
     object_types: &BTreeMap<String, ObjectType>,
     parameters: &BTreeMap<String, ObjectField>,
-    arguments: BTreeMap<String, Value>,
-) -> Result<BTreeMap<String, Bson>, MongoAgentError> {
+    mut arguments: BTreeMap<String, Value>,
+) -> Result<BTreeMap<String, Bson>, ArgumentError> {
     validate_no_excess_arguments(parameters, &arguments)?;
-    parameters
+
+    let (arguments, missing): (Vec<(String, Value, &Type)>, Vec<String>) = parameters
         .iter()
-        .map(|(key, parameter)| {
-            let argument = arguments
-                .get(key)
-                .ok_or_else(|| MongoAgentError::VariableNotDefined(key.to_owned()))?;
-            Ok((
-                key.clone(),
-                json_to_bson(&parameter.r#type, object_types, argument.clone())?,
-            ))
+        .map(|(name, parameter)| {
+            if let Some((name, argument)) = arguments.remove_entry(name) {
+                Ok((name, argument, &parameter.r#type))
+            } else {
+                Err(name.clone())
+            }
         })
-        .try_collect()
+        .partition_result();
+    if !missing.is_empty() {
+        return Err(ArgumentError::Missing(missing));
+    }
+
+    let (resolved, errors): (BTreeMap<String, Bson>, BTreeMap<String, JsonToBsonError>) = arguments
+        .into_iter()
+        .map(|(name, argument, parameter_type)| {
+            match json_to_bson(parameter_type, object_types, argument) {
+                Ok(bson) => Ok((name, bson)),
+                Err(err) => Err((name, err)),
+            }
+        })
+        .partition_result();
+    if !errors.is_empty() {
+        return Err(ArgumentError::Invalid(errors));
+    }
+
+    Ok(resolved)
 }
 
 pub fn validate_no_excess_arguments(
     parameters: &BTreeMap<String, ObjectField>,
     arguments: &BTreeMap<String, Value>,
-) -> Result<(), MongoAgentError> {
+) -> Result<(), ArgumentError> {
     let excess: Vec<String> = arguments
         .iter()
         .filter_map(|(name, _)| {
@@ -52,8 +81,16 @@ pub fn validate_no_excess_arguments(
         })
         .collect();
     if !excess.is_empty() {
-        Err(MongoAgentError::UnknownVariables(excess))
+        Err(ArgumentError::Excess(excess))
     } else {
         Ok(())
     }
+}
+
+fn format_errors(errors: &BTreeMap<String, JsonToBsonError>) -> String {
+    errors
+        .iter()
+        .map(|(name, error)| format!("  {name}:\n{}", indent_all_by(4, error.to_string())))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
