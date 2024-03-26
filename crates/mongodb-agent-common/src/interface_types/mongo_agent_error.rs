@@ -12,9 +12,7 @@ use thiserror::Error;
 pub enum MongoAgentError {
     BadCollectionSchema(String, bson::Bson, bson::de::Error),
     BadQuery(anyhow::Error),
-    CommandError(#[from] crate::procedure::ProcedureError),
     InvalidVariableName(String),
-    JsonToBson(#[from] JsonToBsonError),
     MongoDB(#[from] mongodb::error::Error),
     MongoDBDeserialization(#[from] mongodb::bson::de::Error),
     MongoDBSerialization(#[from] mongodb::bson::ser::Error),
@@ -22,7 +20,6 @@ pub enum MongoAgentError {
     NotImplemented(&'static str),
     Serialization(serde_json::Error),
     UnknownAggregationFunction(String),
-    UnknownVariables(Vec<String>),
     UnspecifiedRelation(String),
     VariableNotDefined(String),
     AdHoc(#[from] anyhow::Error),
@@ -30,8 +27,6 @@ pub enum MongoAgentError {
 }
 
 use MongoAgentError::*;
-
-use crate::query::arguments::JsonToBsonError;
 
 impl MongoAgentError {
     pub fn status_and_error_response(&self) -> (StatusCode, ErrorResponse) {
@@ -62,12 +57,10 @@ impl MongoAgentError {
                 },
             ),
             BadQuery(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(&err)),
-            CommandError(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(&err)),
             InvalidVariableName(name) => (
                 StatusCode::BAD_REQUEST,
                 ErrorResponse::new(&format!("Column identifier includes characters that are not permitted in a MongoDB variable name: {name}"))
             ),
-            JsonToBson(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(&err)),
             MongoDB(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(&err)),
             MongoDBDeserialization(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(&err)),
             MongoDBSerialization(err) => {
@@ -79,10 +72,6 @@ impl MongoAgentError {
             UnknownAggregationFunction(function) => (
                 StatusCode::BAD_REQUEST,
                 ErrorResponse::new(&format!("Unknown aggregation function, {function}")),
-            ),
-            UnknownVariables(variable_names) => (
-                StatusCode::BAD_REQUEST,
-                ErrorResponse::new(&format!("Query included unrecognized variables: {}", variable_names.join(", ")))
             ),
             UnspecifiedRelation(relation) => (
                 StatusCode::BAD_REQUEST,
