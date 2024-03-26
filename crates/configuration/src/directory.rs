@@ -9,9 +9,9 @@ use std::{
 use tokio::fs;
 use tokio_stream::wrappers::ReadDirStream;
 
-use crate::{with_name::WithName, Configuration};
+use crate::{with_name::WithName, Configuration, Schema};
 
-pub const SCHEMA_FILENAME: &str = "schema";
+pub const SCHEMA_DIRNAME: &str = "schema";
 pub const NATIVE_QUERIES_DIRNAME: &str = "native_queries";
 
 pub const CONFIGURATION_EXTENSIONS: [(&str, FileFormat); 3] =
@@ -149,13 +149,32 @@ where
     Ok(value)
 }
 
-/// Currently only writes `schema.json`
-pub async fn write_directory(
+pub async fn write_schema_directory(
     configuration_dir: impl AsRef<Path>,
-    configuration: &Configuration,
+    schemas: impl IntoIterator<Item = (String, Schema)>,
 ) -> anyhow::Result<()> {
-    write_file(configuration_dir, SCHEMA_FILENAME, &configuration.schema).await
+    let dir_path = configuration_dir.as_ref().join(SCHEMA_DIRNAME);
+    ensure_directory_exists(&dir_path).await?;
+    for (filename, schema) in schemas {
+        write_file(&dir_path, &filename, &schema).await?;
+    }
+    Ok(())
 }
+
+async fn ensure_directory_exists(dir_path: impl AsRef<Path>) -> anyhow::Result<()> {
+    if !dir_path.as_ref().is_dir() {
+        fs::create_dir(dir_path).await?;
+    }
+    Ok(())
+}
+
+// /// Currently only writes `schema.json`
+// pub async fn write_directory(
+//     configuration_dir: impl AsRef<Path>,
+//     configuration: &Configuration,
+// ) -> anyhow::Result<()> {
+//     write_file(configuration_dir, SCHEMA_FILENAME, &configuration.schema).await
+// }
 
 fn default_file_path(configuration_dir: impl AsRef<Path>, basename: &str) -> PathBuf {
     let dir = configuration_dir.as_ref();
