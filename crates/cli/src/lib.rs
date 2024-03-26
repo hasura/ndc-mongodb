@@ -6,7 +6,6 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
-use configuration::Configuration;
 use mongodb_agent_common::interface_types::MongoConfig;
 
 #[derive(Debug, Clone, Parser)]
@@ -37,15 +36,13 @@ pub async fn run(command: Command, context: &Context) -> anyhow::Result<()> {
 
 /// Update the configuration in the current directory by introspecting the database.
 async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
-    let schema = match args.sample_size {
+    let schemas = match args.sample_size {
         None => introspection::get_metadata_from_validation_schema(&context.mongo_config).await?,
         Some(sample_size) => {
             introspection::sample_schema_from_db(sample_size, &context.mongo_config).await?
         }
     };
-    let configuration = Configuration::from_schema(schema)?;
-
-    configuration::write_directory(&context.path, &configuration).await?;
+    configuration::write_schema_directory(&context.path, schemas).await?;
 
     Ok(())
 }

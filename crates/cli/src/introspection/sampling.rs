@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use super::type_unification::{
-    unify_object_types, unify_schema, unify_type, TypeUnificationContext, TypeUnificationResult,
+    unify_object_types, unify_type, TypeUnificationContext, TypeUnificationResult,
 };
 use configuration::{
     schema::{self, Type},
@@ -22,11 +22,8 @@ type ObjectType = WithName<schema::ObjectType>;
 pub async fn sample_schema_from_db(
     sample_size: u32,
     config: &MongoConfig,
-) -> anyhow::Result<Schema> {
-    let mut schema = Schema {
-        collections: BTreeMap::new(),
-        object_types: BTreeMap::new(),
-    };
+) -> anyhow::Result<BTreeMap<std::string::String, Schema>> {
+    let mut schemas = BTreeMap::new();
     let db = config.client.database(&config.database);
     let mut collections_cursor = db.list_collections(None, None).await?;
 
@@ -34,9 +31,9 @@ pub async fn sample_schema_from_db(
         let collection_name = collection_spec.name;
         let collection_schema =
             sample_schema_from_collection(&collection_name, sample_size, config).await?;
-        schema = unify_schema(schema, collection_schema);
+        schemas.insert(collection_name, collection_schema);
     }
-    Ok(schema)
+    Ok(schemas)
 }
 
 async fn sample_schema_from_collection(

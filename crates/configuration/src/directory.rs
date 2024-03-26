@@ -33,7 +33,8 @@ pub async fn read_directory(
 ) -> anyhow::Result<Configuration> {
     let dir = configuration_dir.as_ref();
 
-    let schema = parse_json_or_yaml(dir, SCHEMA_FILENAME).await?;
+    let schemas = read_subdir_configs(&dir.join(SCHEMA_DIRNAME)).await?.unwrap_or_default();
+    let schema = schemas.into_values().fold(Schema::default(), Schema::merge);
 
     let native_queries = read_subdir_configs(&dir.join(NATIVE_QUERIES_DIRNAME))
         .await?
@@ -149,23 +150,28 @@ where
     Ok(value)
 }
 
+async fn write_subdir_configs<T>(subdir: &Path, configs: impl IntoIterator<Item = (String, T)>) -> anyhow::Result<()>
+where
+    T: Serialize,
+{
+    if !(fs::try_exists(subdir).await?) {
+        fs::create_dir(subdir).await?;
+    }
+
+    for (name, config) in configs {
+        let with_name: WithName<T> = (name.clone(), config).into();
+        write_file(subdir, &name, &with_name).await?;
+    }
+
+    Ok(())
+}
+
 pub async fn write_schema_directory(
     configuration_dir: impl AsRef<Path>,
     schemas: impl IntoIterator<Item = (String, Schema)>,
 ) -> anyhow::Result<()> {
-    let dir_path = configuration_dir.as_ref().join(SCHEMA_DIRNAME);
-    ensure_directory_exists(&dir_path).await?;
-    for (filename, schema) in schemas {
-        write_file(&dir_path, &filename, &schema).await?;
-    }
-    Ok(())
-}
-
-async fn ensure_directory_exists(dir_path: impl AsRef<Path>) -> anyhow::Result<()> {
-    if !dir_path.as_ref().is_dir() {
-        fs::create_dir(dir_path).await?;
-    }
-    Ok(())
+    let subdir = configuration_dir.as_ref().join(SCHEMA_DIRNAME);
+    write_subdir_configs(&subdir, schemas).await
 }
 
 // /// Currently only writes `schema.json`
