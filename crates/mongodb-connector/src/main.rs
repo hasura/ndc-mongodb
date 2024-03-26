@@ -9,6 +9,9 @@ use std::error::Error;
 
 use mongo_connector::MongoConnector;
 
+#[macro_use]
+extern crate lazy_static;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     ndc_sdk::default_main::default_main::<MongoConnector>().await

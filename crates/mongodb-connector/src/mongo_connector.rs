@@ -23,8 +23,7 @@ use crate::{
     api_type_conversions::{
         v2_to_v3_explain_response, v2_to_v3_query_response, v3_to_v2_query_request, QueryContext,
     },
-    capabilities::scalar_types,
-    error_mapping::{mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error},
+    error_mapping::{mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error}, schema,
 };
 use crate::{capabilities::mongo_capabilities_response, mutation::handle_mutation_request};
 
@@ -86,14 +85,15 @@ impl Connector for MongoConnector {
     }
 
     async fn query_explain(
-        _configuration: &Self::Configuration,
+        configuration: &Self::Configuration,
         state: &Self::State,
         request: QueryRequest,
     ) -> Result<JsonResponse<ExplainResponse>, ExplainError> {
         let v2_request = v3_to_v2_query_request(
             &QueryContext {
                 functions: vec![],
-                scalar_types: scalar_types(),
+                scalar_types: &schema::SCALAR_TYPES,
+                schema: &configuration.schema,
             },
             request,
         )?;
@@ -122,14 +122,15 @@ impl Connector for MongoConnector {
     }
 
     async fn query(
-        _configuration: &Self::Configuration,
+        configuration: &Self::Configuration,
         state: &Self::State,
         request: QueryRequest,
     ) -> Result<JsonResponse<QueryResponse>, QueryError> {
         let v2_request = v3_to_v2_query_request(
             &QueryContext {
                 functions: vec![],
-                scalar_types: scalar_types(),
+                scalar_types: &schema::SCALAR_TYPES,
+                schema: &configuration.schema,
             },
             request,
         )?;

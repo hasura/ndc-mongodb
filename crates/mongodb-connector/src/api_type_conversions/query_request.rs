@@ -1,37 +1,89 @@
-use std::{
-    collections::{BTreeMap, HashMap},
-    ops::Deref,
-};
+use std::collections::{BTreeMap, HashMap};
 
+use configuration::{schema, Schema, WithNameRef};
 use dc_api_types::{self as v2, ColumnSelector, Target};
 use indexmap::IndexMap;
 use itertools::Itertools;
-use ndc_sdk::models::{self as v3, FunctionInfo, ScalarType};
+use ndc_sdk::models::{self as v3};
 
 use super::{
-    helpers::{lookup_operator_definition, lookup_relationship},
+    helpers::lookup_relationship,
     query_traversal::{query_traversal, Node, TraversalStep},
     ConversionError,
 };
 
-const UNKNOWN_TYPE: &str = "unknown";
-
 #[derive(Clone, Debug)]
-pub struct QueryContext {
-    pub functions: Vec<FunctionInfo>,
-    pub scalar_types: BTreeMap<String, ScalarType>,
+pub struct QueryContext<'a> {
+    pub functions: Vec<v3::FunctionInfo>,
+    pub scalar_types: &'a BTreeMap<String, v3::ScalarType>,
+    pub schema: &'a Schema,
+}
+
+impl QueryContext<'_> {
+    fn find_collection(self: &Self, collection_name: &str) -> Result<&schema::Collection, ConversionError> {
+        self
+            .schema
+            .collections
+            .get(collection_name)
+            .ok_or_else(|| ConversionError::UnknownCollection(collection_name.to_string()))
+    }
+
+    fn find_object_type<'a>(self: &'a Self, object_type_name: &'a str) -> Result<WithNameRef<schema::ObjectType>, ConversionError> {
+        let object_type = self
+            .schema
+            .object_types
+            .get(object_type_name)
+            .ok_or_else(|| ConversionError::UnknownObjectType(object_type_name.to_string()))?;
+    
+        Ok(WithNameRef { name: object_type_name, value: object_type })
+    }
+
+    fn find_scalar_type(self: &Self, scalar_type_name: &str) -> Result<&v3::ScalarType, ConversionError> {
+        self.scalar_types
+            .get(scalar_type_name)
+            .ok_or_else(|| ConversionError::UnknownScalarType(scalar_type_name.to_owned()))
+    }
+
+    fn find_comparison_operator_definition(self: &Self, scalar_type_name: &str, operator: &str) -> Result<&v3::ComparisonOperatorDefinition, ConversionError> {
+        let scalar_type = self.find_scalar_type(scalar_type_name)?;
+        let operator = scalar_type
+            .comparison_operators
+            .get(operator)
+            .ok_or_else(|| ConversionError::UnknownComparisonOperator(operator.to_owned()))?;
+        Ok(operator)
+    }
+}
+
+fn find_object_field<'a>(object_type: &'a WithNameRef<schema::ObjectType>, field_name: &str) -> Result<&'a schema::ObjectField, ConversionError> {
+    object_type
+        .value
+        .fields
+        .get(field_name)
+        .ok_or_else(|| ConversionError::UnknownObjectTypeField {
+            object_type: object_type.name.to_string(),
+            field_name: field_name.to_string(),
+        })
 }
 
 pub fn v3_to_v2_query_request(
     context: &QueryContext,
     request: v3::QueryRequest,
 ) -> Result<v2::QueryRequest, ConversionError> {
+    let collection = context.find_collection(&request.collection)?;
+    let collection_object_type = context.find_object_type(&collection.r#type)?;
+        
     Ok(v2::QueryRequest {
         relationships: v3_to_v2_relationships(&request)?,
         target: Target::TTable {
             name: vec![request.collection],
         },
-        query: Box::new(v3_to_v2_query(context, request.query)?),
+        query: Box::new(v3_to_v2_query(
+            context,
+            &request.collection_relationships,
+            &collection_object_type,
+            request.query,
+            &collection_object_type,
+        )?),
 
         // We are using v2 types that have been augmented with a `variables` field (even though
         // that is not part of the v2 API). For queries translated from v3 we use `variables`
@@ -41,7 +93,13 @@ pub fn v3_to_v2_query_request(
     })
 }
 
-fn v3_to_v2_query(context: &QueryContext, query: v3::Query) -> Result<v2::Query, ConversionError> {
+fn v3_to_v2_query(
+    context: &QueryContext,
+    collection_relationships: &BTreeMap<String, v3::Relationship>,
+    root_collection_object_type: &WithNameRef<schema::ObjectType>,
+    query: v3::Query,
+    collection_object_type: &WithNameRef<schema::ObjectType>,
+) -> Result<v2::Query, ConversionError> {
     let aggregates: Option<Option<HashMap<String, v2::Aggregate>>> = query
         .aggregates
         .map(|aggregates| -> Result<_, ConversionError> {
@@ -55,7 +113,13 @@ fn v3_to_v2_query(context: &QueryContext, query: v3::Query) -> Result<v2::Query,
         .transpose()?
         .map(Some);
 
-    let fields = v3_to_v2_fields(context, query.fields)?;
+    let fields = v3_to_v2_fields(
+        context,
+        collection_relationships,
+        root_collection_object_type,
+        collection_object_type,
+        query.fields,
+    )?;
 
     let order_by: Option<Option<v2::OrderBy>> = query
         .order_by
@@ -64,7 +128,7 @@ fn v3_to_v2_query(context: &QueryContext, query: v3::Query) -> Result<v2::Query,
                 elements: order_by
                     .elements
                     .into_iter()
-                    .map(v3_to_v2_order_by_element)
+                    .map(|order_by_element| v3_to_v2_order_by_element(context, collection_object_type, order_by_element))
                     .collect::<Result<_, ConversionError>>()?,
                 relations: Default::default(),
             })
@@ -84,13 +148,13 @@ fn v3_to_v2_query(context: &QueryContext, query: v3::Query) -> Result<v2::Query,
         offset,
         r#where: query
             .predicate
-            .map(|expr| v3_to_v2_expression(&context.scalar_types, expr))
+            .map(|expr| v3_to_v2_expression(&context, collection_relationships, root_collection_object_type, collection_object_type, expr))
             .transpose()?,
     })
 }
 
 fn v3_to_v2_aggregate(
-    functions: &[FunctionInfo],
+    functions: &[v3::FunctionInfo],
     aggregate: v3::Aggregate,
 ) -> Result<v2::Aggregate, ConversionError> {
     match aggregate {
@@ -128,13 +192,21 @@ fn type_to_type_name(t: &v3::Type) -> Result<String, ConversionError> {
 
 fn v3_to_v2_fields(
     context: &QueryContext,
+    collection_relationships: &BTreeMap<String, v3::Relationship>,
+    root_collection_object_type: &WithNameRef<schema::ObjectType>,
+    object_type: &WithNameRef<schema::ObjectType>,
     v3_fields: Option<IndexMap<String, v3::Field>>,
 ) -> Result<Option<Option<HashMap<String, v2::Field>>>, ConversionError> {
     let v2_fields: Option<Option<HashMap<String, v2::Field>>> = v3_fields
         .map(|fields| {
             fields
                 .into_iter()
-                .map(|(name, field)| Ok((name, v3_to_v2_field(context, field)?)))
+                .map(|(name, field)| {
+                    Ok((
+                        name,
+                        v3_to_v2_field(context, collection_relationships, root_collection_object_type, object_type, field)?,
+                    ))
+                })
                 .collect::<Result<_, ConversionError>>()
         })
         .transpose()?
@@ -142,54 +214,110 @@ fn v3_to_v2_fields(
     Ok(v2_fields)
 }
 
-fn v3_to_v2_field(context: &QueryContext, field: v3::Field) -> Result<v2::Field, ConversionError> {
+fn v3_to_v2_field(
+    context: &QueryContext,
+    collection_relationships: &BTreeMap<String, v3::Relationship>,
+    root_collection_object_type: &WithNameRef<schema::ObjectType>,
+    object_type: &WithNameRef<schema::ObjectType>,
+    field: v3::Field,
+) -> Result<v2::Field, ConversionError> {
     match field {
-        v3::Field::Column { column, fields } => match fields {
-            None => Ok(v2::Field::Column {
+        v3::Field::Column { column, fields } => {
+            let object_type_field = find_object_field(object_type, column.as_ref())?;
+            v3_to_v2_nested_field(
+                context,
+                collection_relationships,
+                root_collection_object_type,
                 column,
-                column_type: UNKNOWN_TYPE.to_owned(), // TODO: is there a better option?
-            }),
-            Some(nested_field) => v3_to_v2_nested_field(context, column, nested_field),
-        },
+                &object_type_field.r#type,
+                fields,
+            )
+        }
         v3::Field::Relationship {
             query,
             relationship,
             arguments: _,
-        } => Ok(v2::Field::Relationship {
-            query: Box::new(v3_to_v2_query(context, *query)?),
-            relationship,
-        }),
+        } => {
+            let v3_relationship = lookup_relationship(collection_relationships, &relationship)?;
+            let collection = context.find_collection(&v3_relationship.target_collection)?;
+            let collection_object_type = context.find_object_type(&collection.r#type)?;
+            Ok(v2::Field::Relationship {
+                query: Box::new(v3_to_v2_query(
+                    context,
+                    collection_relationships,
+                    root_collection_object_type,
+                    *query,
+                    &collection_object_type,
+                )?),
+                relationship,
+            })
+        }
     }
 }
 
 fn v3_to_v2_nested_field(
     context: &QueryContext,
+    collection_relationships: &BTreeMap<String, v3::Relationship>,
+    root_collection_object_type: &WithNameRef<schema::ObjectType>,
     column: String,
-    nested_field: v3::NestedField,
+    schema_type: &schema::Type,
+    nested_field: Option<v3::NestedField>,
 ) -> Result<v2::Field, ConversionError> {
-    match nested_field {
-        v3::NestedField::Object(nested_object) => {
-            let mut query = v2::Query::new();
-            query.fields = v3_to_v2_fields(context, Some(nested_object.fields))?;
-            Ok(v2::Field::NestedObject {
+    match schema_type {
+        schema::Type::Any => {
+            Ok(v2::Field::Column {
                 column,
-                query: Box::new(query),
+                column_type: mongodb_support::ANY_TYPE_NAME.to_string(),
             })
         }
-        v3::NestedField::Array(nested_array) => {
-            let field =
-                v3_to_v2_nested_field(context, column, nested_array.fields.deref().to_owned())?;
+        schema::Type::Scalar(bson_scalar_type) => {
+            Ok(v2::Field::Column {
+                column,
+                column_type: bson_scalar_type.graphql_name(),
+            })
+        },
+        schema::Type::Nullable(underlying_type) => v3_to_v2_nested_field(context, collection_relationships, root_collection_object_type, column, underlying_type, nested_field),
+        schema::Type::ArrayOf(element_type) => {
+            let inner_nested_field = match nested_field {
+                None => Ok(None),
+                Some(v3::NestedField::Object(_nested_object)) => Err(ConversionError::TypeMismatch(format!("Expected an array nested field selection, but got an object nested field selection instead"))),
+                Some(v3::NestedField::Array(nested_array)) => Ok(Some(*nested_array.fields)),
+            }?;
+            let nested_v2_field = v3_to_v2_nested_field(context, collection_relationships, root_collection_object_type, column, element_type, inner_nested_field)?;
             Ok(v2::Field::NestedArray {
-                field: Box::new(field),
+                field: Box::new(nested_v2_field),
                 limit: None,
                 offset: None,
                 r#where: None,
             })
-        }
+        },
+        schema::Type::Object(object_type_name) => {
+            match nested_field {
+                None => {
+                    Ok(v2::Field::Column {
+                        column,
+                        column_type: object_type_name.clone(),
+                    })
+                },
+                Some(v3::NestedField::Object(nested_object)) => {
+                    let object_type = context.find_object_type(object_type_name.as_ref())?;
+                    let mut query = v2::Query::new();
+                    query.fields = v3_to_v2_fields(context, collection_relationships, root_collection_object_type, &object_type, Some(nested_object.fields))?;
+                    Ok(v2::Field::NestedObject {
+                        column,
+                        query: Box::new(query),
+                    })
+                },
+                Some(v3::NestedField::Array(_nested_array)) => 
+                    Err(ConversionError::TypeMismatch(format!("Expected an array nested field selection, but got an object nested field selection instead"))),
+            }
+        },
     }
 }
 
 fn v3_to_v2_order_by_element(
+    context: &QueryContext,
+    object_type: &WithNameRef<schema::ObjectType>,
     elem: v3::OrderByElement,
 ) -> Result<v2::OrderByElement, ConversionError> {
     let (target, target_path) = match elem.target {
@@ -203,14 +331,19 @@ fn v3_to_v2_order_by_element(
             column,
             function,
             path,
-        } => (
-            v2::OrderByTarget::SingleColumnAggregate {
+        } => {
+            let object_field = find_object_field(object_type, &column)?;
+            let scalar_type_name = get_scalar_type_name(&object_field.r#type)?;
+            let scalar_type = context.find_scalar_type(&scalar_type_name)?;
+            let aggregate_function = scalar_type.aggregate_functions.get(&function).ok_or_else(|| ConversionError::UnknownAggregateFunction { scalar_type: scalar_type_name, aggregate_function: function.clone() })?;
+            let result_type = type_to_type_name(&aggregate_function.result_type)?;
+            let target = v2::OrderByTarget::SingleColumnAggregate {
                 column,
                 function,
-                result_type: UNKNOWN_TYPE.to_owned(), // TODO: is there a better option?
-            },
-            path,
-        ),
+                result_type,
+            };
+            (target, path)
+        },
         v3::OrderByTarget::StarCountAggregate { path } => {
             (v2::OrderByTarget::StarCountAggregate {}, path)
         }
@@ -350,28 +483,31 @@ fn v3_to_v2_relationships(
 }
 
 fn v3_to_v2_expression(
-    scalar_types: &BTreeMap<String, ScalarType>,
+    context: &QueryContext,
+    collection_relationships: &BTreeMap<String, v3::Relationship>,
+    root_collection_object_type: &WithNameRef<schema::ObjectType>,
+    object_type: &WithNameRef<schema::ObjectType>,
     expression: v3::Expression,
 ) -> Result<v2::Expression, ConversionError> {
     match expression {
         v3::Expression::And { expressions } => Ok(v2::Expression::And {
             expressions: expressions
                 .into_iter()
-                .map(|expr| v3_to_v2_expression(scalar_types, expr))
+                .map(|expr| v3_to_v2_expression(context, collection_relationships, root_collection_object_type, object_type, expr))
                 .collect::<Result<_, _>>()?,
         }),
         v3::Expression::Or { expressions } => Ok(v2::Expression::Or {
             expressions: expressions
                 .into_iter()
-                .map(|expr| v3_to_v2_expression(scalar_types, expr))
+                .map(|expr| v3_to_v2_expression(context, collection_relationships, root_collection_object_type, object_type, expr))
                 .collect::<Result<_, _>>()?,
         }),
         v3::Expression::Not { expression } => Ok(v2::Expression::Not {
-            expression: Box::new(v3_to_v2_expression(scalar_types, *expression)?),
+            expression: Box::new(v3_to_v2_expression(context, collection_relationships, root_collection_object_type, object_type, *expression)?),
         }),
         v3::Expression::UnaryComparisonOperator { column, operator } => {
             Ok(v2::Expression::ApplyUnaryComparison {
-                column: v3_to_v2_comparison_target(column)?,
+                column: v3_to_v2_comparison_target(root_collection_object_type, object_type, column)?,
                 operator: match operator {
                     v3::UnaryComparisonOperator::IsNull => v2::UnaryComparisonOperator::IsNull,
                 },
@@ -381,89 +517,113 @@ fn v3_to_v2_expression(
             column,
             operator,
             value,
-        } => v3_to_v2_binary_comparison(scalar_types, column, operator, value),
-        v3::Expression::Exists {
-            in_collection,
-            predicate,
-        } => Ok(v2::Expression::Exists {
-            in_table: match in_collection {
-                v3::ExistsInCollection::Related {
-                    relationship,
-                    arguments: _,
-                } => v2::ExistsInTable::RelatedTable { relationship },
-                v3::ExistsInCollection::Unrelated {
-                    collection,
-                    arguments: _,
-                } => v2::ExistsInTable::UnrelatedTable {
-                    table: vec![collection],
+        } => v3_to_v2_binary_comparison(context, root_collection_object_type, object_type, column, operator, value),
+        v3::Expression::Exists { in_collection, predicate, } => {
+            let (in_table, collection_object_type) = match in_collection {
+                v3::ExistsInCollection::Related { relationship, arguments: _ } => {
+                    let v3_relationship = lookup_relationship(collection_relationships, &relationship)?;
+                    let collection_object_type = context.find_object_type(&v3_relationship.target_collection)?;
+                    let in_table = v2::ExistsInTable::RelatedTable { relationship };
+                    Ok((in_table, collection_object_type))
                 },
-            },
-            r#where: Box::new(if let Some(predicate) = predicate {
-                v3_to_v2_expression(scalar_types, *predicate)?
-            } else {
-                // empty expression
-                v2::Expression::Or {
-                    expressions: vec![],
-                }
-            }),
-        }),
+                v3::ExistsInCollection::Unrelated { collection, arguments: _ } => {
+                    let v3_collection = context.find_collection(&collection)?;
+                    let collection_object_type = context.find_object_type(&v3_collection.r#type)?;
+                    let in_table = v2::ExistsInTable::UnrelatedTable { table: vec![collection] };
+                    Ok((in_table, collection_object_type))
+                },
+            }?;
+            Ok(v2::Expression::Exists {
+                in_table,
+                r#where: Box::new(if let Some(predicate) = predicate {
+                    v3_to_v2_expression(context, collection_relationships, root_collection_object_type, &collection_object_type, *predicate)?
+                } else {
+                    // empty expression
+                    v2::Expression::Or {
+                        expressions: vec![],
+                    }
+                }),
+            })
+        },
     }
 }
 
 // TODO: NDC-393 - What do we need to do to handle array comparisons like `in`?. v3 now combines
 // scalar and array comparisons, v2 separates them
 fn v3_to_v2_binary_comparison(
-    scalar_types: &BTreeMap<String, ScalarType>,
+    context: &QueryContext,
+    root_collection_object_type: &WithNameRef<schema::ObjectType>,
+    object_type: &WithNameRef<schema::ObjectType>,
     column: v3::ComparisonTarget,
     operator: String,
     value: v3::ComparisonValue,
 ) -> Result<v2::Expression, ConversionError> {
-    // TODO: NDC-310 look up real type here
-    let fake_type = "String";
-    let operator_definition = lookup_operator_definition(scalar_types, fake_type, &operator)?;
+    let comparison_column = v3_to_v2_comparison_target(root_collection_object_type, object_type, column)?;
+    let operator_definition = context.find_comparison_operator_definition(&comparison_column.column_type, &operator)?;
     let operator = match operator_definition {
         v3::ComparisonOperatorDefinition::Equal => v2::BinaryComparisonOperator::Equal,
         _ => v2::BinaryComparisonOperator::CustomBinaryComparisonOperator(operator),
     };
     Ok(v2::Expression::ApplyBinaryComparison {
-        column: v3_to_v2_comparison_target(column)?,
+        value: v3_to_v2_comparison_value(root_collection_object_type, object_type, comparison_column.column_type.clone(), value)?,
+        column: comparison_column,
         operator,
-        value: v3_to_v2_comparison_value(value)?,
     })
 }
 
+fn get_scalar_type_name(schema_type: &schema::Type) -> Result<String, ConversionError> {
+    match schema_type {
+        schema::Type::Any => Ok(mongodb_support::ANY_TYPE_NAME.to_string()),
+        schema::Type::Scalar(scalar_type_name) => Ok(scalar_type_name.graphql_name()),
+        schema::Type::Object(object_name_name) => Err(ConversionError::TypeMismatch(format!("Expected a scalar type, got the object type {object_name_name}"))),
+        schema::Type::ArrayOf(element_type) => Err(ConversionError::TypeMismatch(format!("Expected a scalar type, got an array of {element_type:?}"))),
+        schema::Type::Nullable(underlying_type) => get_scalar_type_name(&underlying_type),
+    }
+}
+
 fn v3_to_v2_comparison_target(
+    root_collection_object_type: &WithNameRef<schema::ObjectType>,
+    object_type: &WithNameRef<schema::ObjectType>,
     target: v3::ComparisonTarget,
 ) -> Result<v2::ComparisonColumn, ConversionError> {
     match target {
         v3::ComparisonTarget::Column { name, path } => {
+            let object_field = find_object_field(object_type, &name)?;
+            let scalar_type_name = get_scalar_type_name(&object_field.r#type)?;
             let path = v3_to_v2_target_path(path)?;
             Ok(v2::ComparisonColumn {
-                column_type: UNKNOWN_TYPE.to_owned(),
+                column_type: scalar_type_name,
                 name: ColumnSelector::Column(name),
                 path: if path.is_empty() { None } else { Some(path) },
             })
         }
-        v3::ComparisonTarget::RootCollectionColumn { name } => Ok(v2::ComparisonColumn {
-            column_type: UNKNOWN_TYPE.to_owned(),
-            name: ColumnSelector::Column(name),
-            path: Some(vec!["$".to_owned()]),
-        }),
+        v3::ComparisonTarget::RootCollectionColumn { name } => {
+            let object_field = find_object_field(root_collection_object_type, &name)?;
+            let scalar_type_name = get_scalar_type_name(&object_field.r#type)?;
+            Ok(v2::ComparisonColumn {
+                column_type: scalar_type_name,
+                name: ColumnSelector::Column(name),
+                path: Some(vec!["$".to_owned()]),
+            })
+        },
     }
 }
 
 fn v3_to_v2_comparison_value(
+    root_collection_object_type: &WithNameRef<schema::ObjectType>,
+    object_type: &WithNameRef<schema::ObjectType>,
+    comparison_column_scalar_type: String,
     value: v3::ComparisonValue,
 ) -> Result<v2::ComparisonValue, ConversionError> {
     match value {
         v3::ComparisonValue::Column { column } => {
             Ok(v2::ComparisonValue::AnotherColumnComparison {
-                column: v3_to_v2_comparison_target(column)?,
+                column: v3_to_v2_comparison_target(root_collection_object_type, object_type, column)?,
             })
         }
         v3::ComparisonValue::Scalar { value } => Ok(v2::ComparisonValue::ScalarValueComparison {
             value,
-            value_type: UNKNOWN_TYPE.to_owned(),
+            value_type: comparison_column_scalar_type,
         }),
         v3::ComparisonValue::Variable { name } => Ok(v2::ComparisonValue::Variable { name }),
     }
@@ -481,6 +641,7 @@ where
 mod tests {
     use std::collections::BTreeMap;
 
+    use configuration::Schema;
     use dc_api_test_helpers::{self as v2, source, table_relationships, target};
     use ndc_sdk::models::{
         ComparisonOperatorDefinition, OrderByElement, OrderByTarget, OrderDirection, ScalarType,
@@ -634,6 +795,13 @@ mod tests {
 
     #[test]
     fn translates_root_column_references() -> Result<(), anyhow::Error> {
+        let scalar_types = make_scalar_types();
+        let schema = make_schema();
+        let query_context = QueryContext {
+            functions: vec![],
+            scalar_types: &scalar_types,
+            schema: &schema,
+        };
         let query = query_request()
             .collection("authors")
             .query(query().fields([field!("last_name")]).predicate(exists(
@@ -648,7 +816,7 @@ mod tests {
                 relationship("articles", [("id", "author_id")]),
             )])
             .into();
-        let v2_request = v3_to_v2_query_request(&query_context(), query)?;
+        let v2_request = v3_to_v2_query_request(&query_context, query)?;
 
         let expected = v2::query_request()
             .target(["authors"])
@@ -678,6 +846,13 @@ mod tests {
 
     #[test]
     fn translates_nested_fields() -> Result<(), anyhow::Error> {
+        let scalar_types = make_scalar_types();
+        let schema = make_schema();
+        let query_context = QueryContext {
+            functions: vec![],
+            scalar_types: &scalar_types,
+            schema: &schema,
+        };
         let query_request = query_request()
             .collection("authors")
             .query(query().fields([
@@ -686,7 +861,7 @@ mod tests {
                 field!("author_array_of_arrays" => "array_of_arrays", array!(array!(object!([field!("article_title" => "title")]))))
             ]))
             .into();
-        let v2_request = v3_to_v2_query_request(&query_context(), query_request)?;
+        let v2_request = v3_to_v2_query_request(&query_context, query_request)?;
 
         let expected = v2::query_request()
             .target(["authors"])
@@ -701,26 +876,30 @@ mod tests {
         Ok(())
     }
 
-    fn query_context() -> QueryContext {
-        QueryContext {
-            functions: vec![],
-            scalar_types: BTreeMap::from([(
-                "String".to_owned(),
-                ScalarType {
-                    aggregate_functions: Default::default(),
-                    comparison_operators: BTreeMap::from([
-                        ("_eq".to_owned(), ComparisonOperatorDefinition::Equal),
-                        (
-                            "_regex".to_owned(),
-                            ComparisonOperatorDefinition::Custom {
-                                argument_type: Type::Named {
-                                    name: "String".to_owned(),
-                                },
+    fn make_scalar_types() -> BTreeMap<String, ScalarType> {
+        BTreeMap::from([(
+            "String".to_owned(),
+            ScalarType {
+                aggregate_functions: Default::default(),
+                comparison_operators: BTreeMap::from([
+                    ("_eq".to_owned(), ComparisonOperatorDefinition::Equal),
+                    (
+                        "_regex".to_owned(),
+                        ComparisonOperatorDefinition::Custom {
+                            argument_type: Type::Named {
+                                name: "String".to_owned(),
                             },
-                        ),
-                    ]),
-                },
-            )]),
+                        },
+                    ),
+                ]),
+            },
+        )])
+    }
+
+    fn make_schema() -> Schema {
+        Schema {
+            collections: BTreeMap::new(),
+            object_types: BTreeMap::new(),
         }
     }
 }
