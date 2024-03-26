@@ -15,7 +15,9 @@ pub use self::error::ProcedureError;
 pub use self::interpolated_command::interpolated_command;
 
 /// Encapsulates running arbitrary mongodb commands with interpolated arguments
+#[derive(Clone, Debug)]
 pub struct Procedure<'a> {
+    arguments: BTreeMap<String, serde_json::Value>,
     command: Cow<'a, bson::Document>,
     object_types: Cow<'a, BTreeMap<String, ObjectType>>,
     parameters: Cow<'a, BTreeMap<String, ObjectField>>,
@@ -28,8 +30,10 @@ impl<'a> Procedure<'a> {
     pub fn from_native_query(
         native_query: &'a NativeQuery,
         object_types: &'a BTreeMap<String, ObjectType>,
+        arguments: BTreeMap<String, serde_json::Value>,
     ) -> Self {
         Procedure {
+            arguments,
             command: Cow::Borrowed(&native_query.command),
             object_types: Cow::Borrowed(object_types),
             parameters: Cow::Borrowed(&native_query.arguments),
@@ -37,22 +41,34 @@ impl<'a> Procedure<'a> {
         }
     }
 
-    pub async fn execute(
-        self,
-        arguments: BTreeMap<String, serde_json::Value>,
-        database: Database,
-    ) -> Result<bson::Document, ProcedureError> {
-        let command = self.interpolated_command(arguments)?;
+    pub async fn execute(self, database: Database) -> Result<bson::Document, ProcedureError> {
         let selection_criteria = self.selection_criteria.map(Cow::into_owned);
+        let command = interpolate(
+            &self.object_types,
+            &self.parameters,
+            self.arguments,
+            &self.command,
+        )?;
         let result = database.run_command(command, selection_criteria).await?;
         Ok(result)
     }
 
-    pub fn interpolated_command(
-        &self,
-        arguments: BTreeMap<String, serde_json::Value>,
-    ) -> Result<bson::Document, ProcedureError> {
-        let bson_arguments = resolve_arguments(&self.object_types, &self.parameters, arguments)?;
-        interpolated_command(&self.command, &bson_arguments)
+    pub fn interpolated_command(self) -> Result<bson::Document, ProcedureError> {
+        interpolate(
+            &self.object_types,
+            &self.parameters,
+            self.arguments,
+            &self.command,
+        )
     }
+}
+
+fn interpolate(
+    object_types: &BTreeMap<String, ObjectType>,
+    parameters: &BTreeMap<String, ObjectField>,
+    arguments: BTreeMap<String, serde_json::Value>,
+    command: &bson::Document,
+) -> Result<bson::Document, ProcedureError> {
+    let bson_arguments = resolve_arguments(object_types, parameters, arguments)?;
+    interpolated_command(command, &bson_arguments)
 }

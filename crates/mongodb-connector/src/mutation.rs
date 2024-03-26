@@ -1,34 +1,12 @@
-use std::collections::BTreeMap;
-
-use configuration::native_queries::NativeQuery;
 use futures::future::try_join_all;
 use itertools::Itertools;
 use mongodb::Database;
-use mongodb_agent_common::interface_types::MongoConfig;
+use mongodb_agent_common::{interface_types::MongoConfig, procedure::Procedure};
 use ndc_sdk::{
     connector::MutationError,
     json_response::JsonResponse,
     models::{MutationOperation, MutationOperationResults, MutationRequest, MutationResponse},
 };
-use serde_json::Value;
-
-/// A procedure combined with inputs
-#[derive(Clone, Debug)]
-#[allow(dead_code)]
-struct Job<'a> {
-    // For the time being all procedures are native queries.
-    native_query: &'a NativeQuery,
-    arguments: BTreeMap<String, Value>,
-}
-
-impl<'a> Job<'a> {
-    pub fn new(native_query: &'a NativeQuery, arguments: BTreeMap<String, Value>) -> Self {
-        Job {
-            native_query,
-            arguments,
-        }
-    }
-}
 
 pub async fn handle_mutation_request(
     config: &MongoConfig,
@@ -39,7 +17,7 @@ pub async fn handle_mutation_request(
     let jobs = look_up_procedures(config, mutation_request)?;
     let operation_results = try_join_all(
         jobs.into_iter()
-            .map(|job| execute_job(database.clone(), job)),
+            .map(|procedure| execute_procedure(database.clone(), procedure)),
     )
     .await?;
     Ok(JsonResponse::Value(MutationResponse { operation_results }))
@@ -50,22 +28,18 @@ pub async fn handle_mutation_request(
 fn look_up_procedures(
     config: &MongoConfig,
     mutation_request: MutationRequest,
-) -> Result<Vec<Job<'_>>, MutationError> {
-    let (jobs, not_found): (Vec<Job>, Vec<String>) = mutation_request
+) -> Result<Vec<Procedure<'_>>, MutationError> {
+    let (procedures, not_found): (Vec<Procedure>, Vec<String>) = mutation_request
         .operations
         .into_iter()
         .map(|operation| match operation {
             MutationOperation::Procedure {
-                name,
-                arguments,
-                ..
+                name, arguments, ..
             } => {
-                let native_query = config
-                    .native_queries
-                    .get(&name);
-                native_query
-                    .ok_or(name)
-                    .map(|native_query| Job::new(native_query, arguments))
+                let native_query = config.native_queries.get(&name);
+                native_query.ok_or(name).map(|native_query| {
+                    Procedure::from_native_query(native_query, &config.object_types, arguments)
+                })
             }
         })
         .partition_result();
@@ -77,22 +51,20 @@ fn look_up_procedures(
         )));
     }
 
-    Ok(jobs)
+    Ok(procedures)
 }
 
-async fn execute_job(
+async fn execute_procedure(
     database: Database,
-    job: Job<'_>,
+    procedure: Procedure<'_>,
 ) -> Result<MutationOperationResults, MutationError> {
-    let result = database
-        .run_command(job.native_query.command.clone(), None)
+    let result = procedure
+        .execute(database.clone())
         .await
-        .map_err(|err| match *err.kind {
-            mongodb::error::ErrorKind::InvalidArgument { message, .. } => {
-                MutationError::UnprocessableContent(message)
-            }
-            err => MutationError::Other(Box::new(err)),
-        })?;
+        .map_err(|err| MutationError::InvalidRequest(err.to_string()))?;
+
+    // TODO: instead of outputting extended JSON, map to JSON using a reverse of `json_to_bson`
+    // according to the native query result type
     let json_result =
         serde_json::to_value(result).map_err(|err| MutationError::Other(Box::new(err)))?;
     Ok(MutationOperationResults::Procedure {
