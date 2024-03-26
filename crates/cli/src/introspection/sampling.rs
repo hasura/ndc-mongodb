@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 use super::type_unification::{
     unify_object_types, unify_type, TypeUnificationContext, TypeUnificationResult,
@@ -22,6 +22,7 @@ type ObjectType = WithName<schema::ObjectType>;
 pub async fn sample_schema_from_db(
     sample_size: u32,
     config: &MongoConfig,
+    existing_schemas: &HashSet<std::string::String>,
 ) -> anyhow::Result<BTreeMap<std::string::String, Schema>> {
     let mut schemas = BTreeMap::new();
     let db = config.client.database(&config.database);
@@ -29,9 +30,11 @@ pub async fn sample_schema_from_db(
 
     while let Some(collection_spec) = collections_cursor.try_next().await? {
         let collection_name = collection_spec.name;
-        let collection_schema =
-            sample_schema_from_collection(&collection_name, sample_size, config).await?;
-        schemas.insert(collection_name, collection_schema);
+        if !existing_schemas.contains(&collection_name) {
+            let collection_schema =
+                sample_schema_from_collection(&collection_name, sample_size, config).await?;
+            schemas.insert(collection_name, collection_schema);
+        }
     }
     Ok(schemas)
 }

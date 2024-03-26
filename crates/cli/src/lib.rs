@@ -39,7 +39,13 @@ async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
     let schemas = match args.sample_size {
         None => introspection::get_metadata_from_validation_schema(&context.mongo_config).await?,
         Some(sample_size) => {
-            introspection::sample_schema_from_db(sample_size, &context.mongo_config).await?
+            let existing_schemas = configuration::list_existing_schemas(&context.path).await?;
+            introspection::sample_schema_from_db(
+                sample_size,
+                &context.mongo_config,
+                &existing_schemas,
+            )
+            .await?
         }
     };
     configuration::write_schema_directory(&context.path, schemas).await?;
