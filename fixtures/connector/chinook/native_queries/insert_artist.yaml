@@ -2,6 +2,11 @@ name: insertArtist
 description: Example of a database update using a native query
 mode: readWrite
 resultType: !object InsertArtist
+arguments:
+  id:
+    type: !scalar int
+  name:
+    type: !scalar string
 objectTypes:
   InsertArtist:
     fields:
@@ -9,9 +14,8 @@ objectTypes:
         type: !scalar int
       n:
         type: !scalar int
-# TODO: implement arguments instead of hard-coding inputs
 command:
   insert: "Artist"
   documents:
-    - ArtistId: 1001
-      Name: Regina Spektor
+    - ArtistId: "{{ id }}"
+      Name: "{{ name }}"

@@ -4,7 +4,11 @@ definition:
   name: insertArtist
   description: Example of a database update using a native query
   outputType: InsertArtist
-  arguments: []
+  arguments:
+    - name: id
+      type: Int! 
+    - name: name
+      type: String!
   source:
     dataConnectorName: mongodb
     dataConnectorCommand:
