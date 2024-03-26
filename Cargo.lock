@@ -1531,7 +1531,7 @@ dependencies = [
 
 [[package]]
 name = "mongodb-cli-plugin"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "clap",
