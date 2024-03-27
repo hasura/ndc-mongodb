@@ -4,11 +4,10 @@ use configuration::{
     schema::{self, Type},
     Schema, WithName,
 };
-use futures_util::{StreamExt, TryStreamExt};
-use indexmap::IndexMap;
+use futures_util::TryStreamExt;
 use mongodb::bson::from_bson;
 use mongodb_agent_common::schema::{get_property_description, Property, ValidatorSchema};
-use mongodb_support::{BsonScalarType, BsonType};
+use mongodb_support::BsonScalarType;
 
 use mongodb_agent_common::interface_types::{MongoAgentError, MongoConfig};
 
@@ -20,42 +19,34 @@ pub async fn get_metadata_from_validation_schema(
     config: &MongoConfig,
 ) -> Result<BTreeMap<String, Schema>, MongoAgentError> {
     let db = config.client.database(&config.database);
-    let collections_cursor = db.list_collections(None, None).await?;
+    let mut collections_cursor = db.list_collections(None, None).await?;
 
-    let schemas: Vec<WithName<Schema>> = collections_cursor
-        .into_stream()
-        .map(
-            |collection_spec| -> Result<WithName<Schema>, MongoAgentError> {
-                let collection_spec_value = collection_spec?;
-                let name = &collection_spec_value.name;
-                let schema_bson_option = collection_spec_value
-                    .options
-                    .validator
-                    .as_ref()
-                    .and_then(|x| x.get("$jsonSchema"));
+    let mut schemas: Vec<WithName<Schema>> = vec![];
 
-                match schema_bson_option {
-                    Some(schema_bson) => {
-                        from_bson::<ValidatorSchema>(schema_bson.clone()).map_err(|err| {
-                            MongoAgentError::BadCollectionSchema(
-                                name.to_owned(),
-                                schema_bson.clone(),
-                                err,
-                            )
-                        })
-                    }
-                    None => Ok(ValidatorSchema {
-                        bson_type: BsonType::Object,
-                        description: None,
-                        required: Vec::new(),
-                        properties: IndexMap::new(),
-                    }),
-                }
-                .map(|validator_schema| make_collection_schema(name, &validator_schema))
-            },
-        )
-        .try_collect::<Vec<WithName<Schema>>>()
-        .await?;
+    while let Some(collection_spec) = collections_cursor.try_next().await? {
+        let name = &collection_spec.name;
+        let schema_bson_option = collection_spec
+            .options
+            .validator
+            .as_ref()
+            .and_then(|x| x.get("$jsonSchema"));
+
+        match schema_bson_option {
+            Some(schema_bson) => {
+                let validator_schema =
+                    from_bson::<ValidatorSchema>(schema_bson.clone()).map_err(|err| {
+                        MongoAgentError::BadCollectionSchema(
+                            name.to_owned(),
+                            schema_bson.clone(),
+                            err,
+                        )
+                    })?;
+                let collection_schema = make_collection_schema(name, &validator_schema);
+                schemas.push(collection_schema);
+            }
+            None => {}
+        }
+    }
 
     Ok(WithName::into_map(schemas))
 }
