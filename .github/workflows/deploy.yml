@@ -5,7 +5,6 @@ on:
       - main
     tags:
       - 'v*'
-  pull_request:
 
 jobs:
   binary:
@@ -65,7 +64,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Deploy 🚀
-      run: nix run .#publish-docker-image refs/heads/multiarch-docker-image
+      run: nix run .#publish-docker-image ${{ github.ref }}
 
   connector-definition:
     # For now, only run on tagged releases because main builds generate a Docker image tag name that
