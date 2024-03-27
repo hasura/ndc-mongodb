@@ -166,8 +166,8 @@ mod tests {
             "target": {"name": ["tracks"], "type": "table"},
             "relationships": [],
             "foreach": [
-                { "artistId": {"value": 1, "value_type": "number"} },
-                { "artistId": {"value": 2, "value_type": "number"} }
+                { "artistId": {"value": 1, "value_type": "int"} },
+                { "artistId": {"value": 2, "value_type": "int"} }
             ]
         }))?;
 
@@ -279,8 +279,8 @@ mod tests {
             "target": {"name": ["tracks"], "type": "table"},
             "relationships": [],
             "foreach": [
-                { "artistId": {"value": 1, "value_type": "number"} },
-                { "artistId": {"value": 2, "value_type": "number"} }
+                { "artistId": {"value": 1, "value_type": "int"} },
+                { "artistId": {"value": 2, "value_type": "int"} }
             ]
         }))?;
 

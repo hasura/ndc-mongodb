@@ -17,6 +17,7 @@ futures = "0.3.28"
 futures-util = "0.3.28"
 http = "^0.2"
 indexmap = { version = "1", features = ["serde"] } # must match the version that ndc-client uses
+indent = "^0.1"
 itertools = "^0.10"
 mongodb = "2.8"
 mongodb-support = { path = "../mongodb-support" }
@@ -25,6 +26,7 @@ regex = "1"
 schemars = { version = "^0.8.12", features = ["smol_str"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["preserve_order"] }
+serde_with = { version = "^3.7", features = ["base64", "hex"] }
 thiserror = "1"
 time = { version = "0.3.29", features = ["formatting", "parsing", "serde"] }
 tracing = "0.1"

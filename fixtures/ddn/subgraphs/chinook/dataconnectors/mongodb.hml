@@ -1016,8 +1016,10 @@ definition:
         - name: insertArtist
           description: Example of a database update using a native query
           result_type: { type: named, name: InsertArtist }
-          arguments: {}
-          command: { insert: Artist, documents: [{ ArtistId: 1001, Name: Regina Spektor }] }
+          arguments:
+            id: { type: { type: named, name: Int } }
+            name: { type: { type: named, name: String } }
+          command: { insert: Artist, documents: [{ ArtistId: "{{ id }}", Name: "{{ name }}" }] }
     capabilities:
       version: ^0.1.0
       capabilities:
