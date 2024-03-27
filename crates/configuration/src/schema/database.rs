@@ -60,3 +60,15 @@ pub struct ObjectField {
     #[serde(default)]
     pub description: Option<String>,
 }
+
+impl ObjectField {
+    pub fn new(name: impl ToString, r#type: Type) -> (String, Self) {
+        (
+            name.to_string(),
+            ObjectField {
+                r#type,
+                description: Default::default(),
+            },
+        )
+    }
+}
