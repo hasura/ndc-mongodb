@@ -11,9 +11,11 @@ use crate::comparison_function::{ComparisonFunction, ComparisonFunction as C};
 use BsonScalarType as S;
 
 pub fn scalar_types_capabilities() -> HashMap<String, ScalarTypeCapabilities> {
-    all::<BsonScalarType>()
+    let mut map = all::<BsonScalarType>()
         .map(|t| (t.graphql_name(), capabilities(t)))
-        .collect::<HashMap<_, _>>()
+        .collect::<HashMap<_, _>>();
+    map.insert(mongodb_support::ANY_TYPE_NAME.to_owned(), ScalarTypeCapabilities::new());
+    map
 }
 
 pub fn aggregate_functions(

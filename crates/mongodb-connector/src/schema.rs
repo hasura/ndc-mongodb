@@ -68,18 +68,27 @@ fn map_field_infos(
 }
 
 fn map_type(t: &schema::Type) -> models::Type {
-    match t {
-        schema::Type::Scalar(t) => models::Type::Named {
-            name: t.graphql_name(),
-        },
-        schema::Type::Object(t) => models::Type::Named { name: t.clone() },
-        schema::Type::ArrayOf(t) => models::Type::Array {
-            element_type: Box::new(map_type(t)),
-        },
-        schema::Type::Nullable(t) => models::Type::Nullable {
-            underlying_type: Box::new(map_type(t)),
-        },
+    fn map_normalized_type(t: &schema::Type) -> models::Type {
+        match t {
+            // Any can respresent any BSON value, including null, so it is always nullable
+            schema::Type::Any => models::Type::Nullable {
+                underlying_type: Box::new(models::Type::Named {
+                    name: mongodb_support::ANY_TYPE_NAME.to_owned(),
+                }),
+            },
+            schema::Type::Scalar(t) => models::Type::Named {
+                name: t.graphql_name(),
+            },
+            schema::Type::Object(t) => models::Type::Named { name: t.clone() },
+            schema::Type::ArrayOf(t) => models::Type::Array {
+                element_type: Box::new(map_normalized_type(t)),
+            },
+            schema::Type::Nullable(t) => models::Type::Nullable {
+                underlying_type: Box::new(map_normalized_type(t)),
+            },
+        }
     }
+    map_normalized_type(&t.clone().normalize_type())
 }
 
 fn map_collection((name, collection): (&String, &schema::Collection)) -> models::CollectionInfo {

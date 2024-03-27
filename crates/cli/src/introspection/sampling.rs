@@ -1,8 +1,6 @@
 use std::collections::{BTreeMap, HashSet};
 
-use super::type_unification::{
-    unify_object_types, unify_type, TypeUnificationContext, TypeUnificationResult,
-};
+use super::type_unification::{unify_object_types, unify_type};
 use configuration::{
     schema::{self, Type},
     Schema, WithName,
@@ -52,11 +50,11 @@ async fn sample_schema_from_collection(
         .await?;
     let mut collected_object_types = vec![];
     while let Some(document) = cursor.try_next().await? {
-        let object_types = make_object_type(collection_name, &document)?;
+        let object_types = make_object_type(collection_name, &document);
         collected_object_types = if collected_object_types.is_empty() {
             object_types
         } else {
-            unify_object_types(collected_object_types, object_types)?
+            unify_object_types(collected_object_types, object_types)
         };
     }
     let collection_info = WithName::named(
@@ -73,10 +71,7 @@ async fn sample_schema_from_collection(
     })
 }
 
-fn make_object_type(
-    object_type_name: &str,
-    document: &Document,
-) -> TypeUnificationResult<Vec<ObjectType>> {
+fn make_object_type(object_type_name: &str, document: &Document) -> Vec<ObjectType> {
     let (mut object_type_defs, object_fields) = {
         let type_prefix = format!("{object_type_name}_");
         let (object_type_defs, object_fields): (Vec<Vec<ObjectType>>, Vec<ObjectField>) = document
@@ -84,8 +79,6 @@ fn make_object_type(
             .map(|(field_name, field_value)| {
                 make_object_field(&type_prefix, field_name, field_value)
             })
-            .collect::<TypeUnificationResult<Vec<(Vec<ObjectType>, ObjectField)>>>()?
-            .into_iter()
             .unzip();
         (object_type_defs.concat(), object_fields)
     };
@@ -99,16 +92,16 @@ fn make_object_type(
     );
 
     object_type_defs.push(object_type);
-    Ok(object_type_defs)
+    object_type_defs
 }
 
 fn make_object_field(
     type_prefix: &str,
     field_name: &str,
     field_value: &Bson,
-) -> TypeUnificationResult<(Vec<ObjectType>, ObjectField)> {
+) -> (Vec<ObjectType>, ObjectField) {
     let object_type_name = format!("{type_prefix}{field_name}");
-    let (collected_otds, field_type) = make_field_type(&object_type_name, field_name, field_value)?;
+    let (collected_otds, field_type) = make_field_type(&object_type_name, field_value);
 
     let object_field = WithName::named(
         field_name.to_owned(),
@@ -118,16 +111,15 @@ fn make_object_field(
         },
     );
 
-    Ok((collected_otds, object_field))
+    (collected_otds, object_field)
 }
 
 fn make_field_type(
     object_type_name: &str,
-    field_name: &str,
     field_value: &Bson,
-) -> TypeUnificationResult<(Vec<ObjectType>, Type)> {
-    fn scalar(t: BsonScalarType) -> TypeUnificationResult<(Vec<ObjectType>, Type)> {
-        Ok((vec![], Type::Scalar(t)))
+) -> (Vec<ObjectType>, Type) {
+    fn scalar(t: BsonScalarType) -> (Vec<ObjectType>, Type) {
+        (vec![], Type::Scalar(t))
     }
     match field_value {
         Bson::Double(_) => scalar(Double),
@@ -138,20 +130,19 @@ fn make_field_type(
             let mut result_type = Type::Scalar(Undefined);
             for elem in arr {
                 let (elem_collected_otds, elem_type) =
-                    make_field_type(object_type_name, field_name, elem)?;
+                    make_field_type(object_type_name, elem);
                 collected_otds = if collected_otds.is_empty() {
                     elem_collected_otds
                 } else {
-                    unify_object_types(collected_otds, elem_collected_otds)?
+                    unify_object_types(collected_otds, elem_collected_otds)
                 };
-                let context = TypeUnificationContext::new(object_type_name, field_name);
-                result_type = unify_type(context, result_type, elem_type)?;
+                result_type = unify_type(result_type, elem_type);
             }
-            Ok((collected_otds, Type::ArrayOf(Box::new(result_type))))
+            (collected_otds, Type::ArrayOf(Box::new(result_type)))
         }
         Bson::Document(document) => {
-            let collected_otds = make_object_type(object_type_name, document)?;
-            Ok((collected_otds, Type::Object(object_type_name.to_owned())))
+            let collected_otds = make_object_type(object_type_name, document);
+            (collected_otds, Type::Object(object_type_name.to_owned()))
         }
         Bson::Boolean(_) => scalar(Bool),
         Bson::Null => scalar(Null),
@@ -184,17 +175,15 @@ mod tests {
     use mongodb::bson::doc;
     use mongodb_support::BsonScalarType;
 
-    use crate::introspection::type_unification::{TypeUnificationContext, TypeUnificationError};
-
     use super::make_object_type;
 
     #[test]
     fn simple_doc() -> Result<(), anyhow::Error> {
         let object_name = "foo";
         let doc = doc! {"my_int": 1, "my_string": "two"};
-        let result = make_object_type(object_name, &doc).map(WithName::into_map::<BTreeMap<_, _>>);
+        let result = WithName::into_map::<BTreeMap<_, _>>(make_object_type(object_name, &doc));
 
-        let expected = Ok(BTreeMap::from([(
+        let expected = BTreeMap::from([(
             object_name.to_owned(),
             ObjectType {
                 fields: BTreeMap::from([
@@ -215,7 +204,7 @@ mod tests {
                 ]),
                 description: None,
             },
-        )]));
+        )]);
 
         assert_eq!(expected, result);
 
@@ -226,9 +215,9 @@ mod tests {
     fn array_of_objects() -> Result<(), anyhow::Error> {
         let object_name = "foo";
         let doc = doc! {"my_array": [{"foo": 42, "bar": ""}, {"bar": "wut", "baz": 3.77}]};
-        let result = make_object_type(object_name, &doc).map(WithName::into_map::<BTreeMap<_, _>>);
+        let result = WithName::into_map::<BTreeMap<_, _>>(make_object_type(object_name, &doc));
 
-        let expected = Ok(BTreeMap::from([
+        let expected = BTreeMap::from([
             (
                 "foo_my_array".to_owned(),
                 ObjectType {
@@ -275,7 +264,7 @@ mod tests {
                     description: None,
                 },
             ),
-        ]));
+        ]);
 
         assert_eq!(expected, result);
 
@@ -286,13 +275,57 @@ mod tests {
     fn non_unifiable_array_of_objects() -> Result<(), anyhow::Error> {
         let object_name = "foo";
         let doc = doc! {"my_array": [{"foo": 42, "bar": ""}, {"bar": 17, "baz": 3.77}]};
-        let result = make_object_type(object_name, &doc);
+        let result = WithName::into_map::<BTreeMap<_, _>>(make_object_type(object_name, &doc));
 
-        let expected = Err(TypeUnificationError::ScalarType(
-            TypeUnificationContext::new("foo_my_array", "bar"),
-            BsonScalarType::String,
-            BsonScalarType::Int,
-        ));
+        let expected = BTreeMap::from([
+            (
+                "foo_my_array".to_owned(),
+                ObjectType {
+                    fields: BTreeMap::from([
+                        (
+                            "foo".to_owned(),
+                            ObjectField {
+                                r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::Int))),
+                                description: None,
+                            },
+                        ),
+                        (
+                            "bar".to_owned(),
+                            ObjectField {
+                                r#type: Type::Any,
+                                description: None,
+                            },
+                        ),
+                        (
+                            "baz".to_owned(),
+                            ObjectField {
+                                r#type: Type::Nullable(Box::new(Type::Scalar(
+                                    BsonScalarType::Double,
+                                ))),
+                                description: None,
+                            },
+                        ),
+                    ]),
+                    description: None,
+                },
+            ),
+            (
+                object_name.to_owned(),
+                ObjectType {
+                    fields: BTreeMap::from([(
+                        "my_array".to_owned(),
+                        ObjectField {
+                            r#type: Type::ArrayOf(Box::new(Type::Object(
+                                "foo_my_array".to_owned(),
+                            ))),
+                            description: None,
+                        },
+                    )]),
+                    description: None,
+                },
+            ),
+        ]);
+
         assert_eq!(expected, result);
 
         Ok(())
