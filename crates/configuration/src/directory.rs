@@ -144,14 +144,6 @@ pub async fn write_schema_directory(
     write_subdir_configs(&subdir, schemas).await
 }
 
-// /// Currently only writes `schema.json`
-// pub async fn write_directory(
-//     configuration_dir: impl AsRef<Path>,
-//     configuration: &Configuration,
-// ) -> anyhow::Result<()> {
-//     write_file(configuration_dir, SCHEMA_FILENAME, &configuration.schema).await
-// }
-
 fn default_file_path(configuration_dir: impl AsRef<Path>, basename: &str) -> PathBuf {
     let dir = configuration_dir.as_ref();
     dir.join(format!("{basename}.{DEFAULT_EXTENSION}"))
