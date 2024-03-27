@@ -4,7 +4,7 @@
 ///
 use configuration::{
     schema::{self, Type},
-    Schema, WithName,
+    WithName,
 };
 use indexmap::IndexMap;
 use itertools::Itertools as _;
@@ -253,24 +253,6 @@ pub fn unify_object_types(
     let merged_type_map = align_with_result(type_map_a, type_map_b, Ok, Ok, unify_object_type)?;
 
     Ok(merged_type_map.into_values().collect())
-}
-
-/// Unify two schemas. Assumes that the schemas describe mutually exclusive sets of collections.
-pub fn unify_schema(schema_a: Schema, schema_b: Schema) -> Schema {
-    let collections = schema_a
-        .collections
-        .into_iter()
-        .chain(schema_b.collections)
-        .collect();
-    let object_types = schema_a
-        .object_types
-        .into_iter()
-        .chain(schema_b.object_types)
-        .collect();
-    Schema {
-        collections,
-        object_types,
-    }
 }
 
 #[cfg(test)]
