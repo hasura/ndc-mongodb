@@ -161,17 +161,11 @@
 
         # Builds a docker image for the MongoDB connector for amd64 Linux. To
         # get a multi-arch image run `publish-docker-image`.
-        docker-image-x86_64-linux = pkgs.callPackage ./nix/docker.nix {
-          mongodb-connector = pkgs.pkgsCross.x86_64-linux.mongodb-connector; # Note: dynamically-linked
-          architecture = "amd64";
-        };
+        docker-image-x86_64-linux = pkgs.pkgsCross.x86_64-linux.callPackage ./nix/docker-connector.nix { };
 
         # Builds a docker image for the MongoDB connector for arm64 Linux. To
         # get a multi-arch image run `publish-docker-image`.
-        docker-image-aarch64-linux = pkgs.callPackage ./nix/docker.nix {
-          mongodb-connector = pkgs.pkgsCross.aarch64-linux.mongodb-connector; # Note: dynamically-linked
-          architecture = "arm64";
-        };
+        docker-image-aarch64-linux = pkgs.pkgsCross.aarch64-linux.callPackage ./nix/docker-connector.nix { };
 
         # Publish multi-arch docker image for the MongoDB connector to Github
         # registry. This must be run with a get-ref argument to calculate image
