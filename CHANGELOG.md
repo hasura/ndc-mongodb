@@ -10,6 +10,7 @@ This changelog documents the changes between release versions.
   - don't sample from collections that already have a schema
   - if no --sample-size given on command line, default sample size is 10
   - new option --no-validator-schema to disable attempting to use validator schema
+- Add `any` type and use it to represent mismatched types in sample documents ([PR #18](https://github.com/hasura/ndc-mongodb/pull/18))
 
 ## [0.0.2] - 2024-03-26
 - Rename CLI plugin to ndc-mongodb ([PR #13](https://github.com/hasura/ndc-mongodb/pull/13))
