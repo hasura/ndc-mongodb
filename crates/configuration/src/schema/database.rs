@@ -62,10 +62,9 @@ pub struct ObjectField {
 }
 
 impl ObjectField {
-    #[cfg(test)]
-    pub fn new(name: impl ToOwned<Owned = String>, r#type: Type) -> (String, Self) {
+    pub fn new(name: impl ToString, r#type: Type) -> (String, Self) {
         (
-            name.to_owned(),
+            name.to_string(),
             ObjectField {
                 r#type,
                 description: Default::default(),

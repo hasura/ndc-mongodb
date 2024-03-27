@@ -289,8 +289,8 @@ mod tests {
 
     #[test]
     fn deserializes_specialized_scalar_types() -> anyhow::Result<()> {
+        let object_type_name = "scalar_test".to_owned();
         let object_type = ObjectType {
-            name: "scalar_test".to_owned(),
             fields: BTreeMap::from([
                 ObjectField::new("double", Type::Scalar(BsonScalarType::Double)),
                 ObjectField::new("int", Type::Scalar(BsonScalarType::Int)),
@@ -372,8 +372,8 @@ mod tests {
         };
 
         let actual = json_to_bson(
-            &Type::Object(object_type.name.clone()),
-            &[(object_type.name.clone(), object_type)]
+            &Type::Object(object_type_name.clone()),
+            &[(object_type_name.clone(), object_type)]
                 .into_iter()
                 .collect(),
             input,

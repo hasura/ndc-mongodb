@@ -46,18 +46,22 @@ pub struct NativeQuery {
     /// substituted the string will be replaced by the type of the variable. For example in this
     /// command,
     ///
-    ///     {
-    ///       "insert": "posts",
-    ///       "documents": "{{ documents }}"
-    ///     }
+    /// ```json
+    /// json!({
+    ///   "insert": "posts",
+    ///   "documents": "{{ documents }}"
+    /// })
+    /// ```
     ///
     /// If the type of the `documents` argument is an array then after variable substitution the
     /// command will expand to:
     ///
-    ///     {
-    ///       "insert": "posts",
-    ///       "documents": [/* array of documents */]
-    ///     }
+    /// ```json
+    /// json!({
+    ///   "insert": "posts",
+    ///   "documents": [/* array of documents */]
+    /// })
+    /// ```
     ///
     #[schemars(with = "Object")]
     pub command: bson::Document,

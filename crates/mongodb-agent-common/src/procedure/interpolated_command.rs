@@ -57,11 +57,15 @@ fn interpolate_document(
 /// Substitute placeholders within a string in the input template. This may produce an output that
 /// is not a string if the entire content of the string is a placeholder. For example,
 ///
-///     { "key": "{{recordId}}" }
+/// ```json
+/// { "key": "{{recordId}}" }
+/// ```
 ///
 /// might expand to,
 ///
-///     { "key": 42 }
+/// ```json
+/// { "key": 42 }
+/// ```
 ///
 /// if the type of the variable `recordId` is `int`.
 fn interpolate_string(string: &str, arguments: &BTreeMap<String, Bson>) -> Result<Bson> {
@@ -145,12 +149,11 @@ mod tests {
     #[test]
     fn interpolates_non_string_type() -> anyhow::Result<()> {
         let native_query_input = json!({
-            "name": "insertArtist",
             "resultType": { "object": "InsertArtist" },
-            "arguments": [
-                { "name": "id", "type": { "scalar": "int" } },
-                { "name": "name", "type": { "scalar": "string" } },
-            ],
+            "arguments": {
+                "id": { "type": { "scalar": "int" } },
+                "name": { "type": { "scalar": "string" } },
+            },
             "command": {
                 "insert": "Artist",
                 "documents": [{
@@ -193,16 +196,17 @@ mod tests {
         let native_query_input = json!({
             "name": "insertArtist",
             "resultType": { "object": "InsertArtist" },
-            "objectTypes": [{
-                "name": "ArtistInput",
-                "fields": [
-                    { "name": "ArtistId", "type": { "scalar": "int" } },
-                    { "name": "Name", "type": { "scalar": "string" } },
-                ],
-            }],
-            "arguments": [
-                { "name": "documents", "type": { "arrayOf": { "object": "ArtistInput" } } },
-            ],
+            "objectTypes": {
+                "ArtistInput": {
+                    "fields": {
+                        "ArtistId": { "type": { "scalar": "int" } },
+                        "Name": { "type": { "scalar": "string" } },
+                    },
+                }
+            },
+            "arguments": {
+                "documents": { "type": { "arrayOf": { "object": "ArtistInput" } } },
+            },
             "command": {
                 "insert": "Artist",
                 "documents": "{{ documents }}",
@@ -251,22 +255,19 @@ mod tests {
         let native_query_input = json!({
             "name": "insert",
             "resultType": { "object": "Insert" },
-            "arguments": [
-                { "name": "prefix", "type": { "scalar": "string" } },
-                { "name": "basename", "type": { "scalar": "string" } },
-            ],
+            "arguments": {
+                "prefix": { "type": { "scalar": "string" } },
+                "basename": { "type": { "scalar": "string" } },
+            },
             "command": {
                 "insert": "{{prefix}}-{{basename}}",
                 "empty": "",
             },
         });
-        let input_arguments = [(
-            "documents".to_owned(),
-            json!([
-                { "prefix": "current" } ,
-                { "basename": "some-coll" } ,
-            ]),
-        )]
+        let input_arguments = [
+            ("prefix".to_owned(), json!("current")),
+            ("basename".to_owned(), json!("some-coll")),
+        ]
         .into_iter()
         .collect();
 
@@ -281,17 +282,8 @@ mod tests {
         assert_eq!(
             command,
             bson::doc! {
-                "insert": "Artist",
-                "documents": [
-                    {
-                        "ArtistId": 1001,
-                        "Name": "Regina Spektor",
-                    },
-                    {
-                        "ArtistId": 1002,
-                        "Name": "Ok Go",
-                    }
-                ],
+                "insert": "current-some-coll",
+                "empty": "",
             }
             .into()
         );
