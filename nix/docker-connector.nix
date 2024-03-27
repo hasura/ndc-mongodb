@@ -1,8 +1,6 @@
 # This is a function that returns a derivation for a docker image.
 { mongodb-connector
 , dockerTools
-, lib
-, architecture ? null
 , name ? "ghcr.io/hasura/ndc-mongodb"
 
   # See config options at https://github.com/moby/docker-image-spec/blob/main/spec.md
@@ -35,9 +33,6 @@ let
         "${config-directory}" = { };
       };
     } // extraConfig;
-  }
-  // lib.optionalAttrs (architecture != null) {
-    inherit architecture;
   };
 in
 dockerTools.buildLayeredImage args
