@@ -67,17 +67,25 @@ fn map_field_infos(
         .collect()
 }
 
+const ANY_TYPE_NAME: &str = "any";
+
 fn map_type(t: &schema::Type) -> models::Type {
-    match t {
+    match t.to_owned().normalize_type() {
+        // Any can respresent any BSON value, including null, so it is always nullable
+        schema::Type::Any => models::Type::Nullable {
+            underlying_type: Box::new(models::Type::Named {
+                name: ANY_TYPE_NAME.to_owned(),
+            }),
+        },
         schema::Type::Scalar(t) => models::Type::Named {
             name: t.graphql_name(),
         },
         schema::Type::Object(t) => models::Type::Named { name: t.clone() },
         schema::Type::ArrayOf(t) => models::Type::Array {
-            element_type: Box::new(map_type(t)),
+            element_type: Box::new(map_type(&t)),
         },
         schema::Type::Nullable(t) => models::Type::Nullable {
-            underlying_type: Box::new(map_type(t)),
+            underlying_type: Box::new(map_type(&t)),
         },
     }
 }
