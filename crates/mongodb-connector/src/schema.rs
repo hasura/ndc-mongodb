@@ -81,10 +81,10 @@ fn map_type(t: &schema::Type) -> models::Type {
             },
             schema::Type::Object(t) => models::Type::Named { name: t.clone() },
             schema::Type::ArrayOf(t) => models::Type::Array {
-                element_type: Box::new(map_normalized_type(&t)),
+                element_type: Box::new(map_normalized_type(t)),
             },
             schema::Type::Nullable(t) => models::Type::Nullable {
-                underlying_type: Box::new(map_normalized_type(&t)),
+                underlying_type: Box::new(map_normalized_type(t)),
             },
         }
     }

@@ -20,14 +20,6 @@ type ObjectType = WithName<schema::ObjectType>;
 /// Unify two types.
 /// This is computing the join (or least upper bound) of the two types in a lattice
 /// where `Any` is the Top element, Scalar(Undefined) is the Bottom element, and Nullable(T) >= T for all T.
-/// 
-///                                Any
-///                              /     \
-///                   ...Nullable types Nullable(T)...
-///                             |       |
-///                    ... Non-nullabe types T...
-///                              \      /
-///                          Scalar(Undefined)
 pub fn unify_type(type_a: Type, type_b: Type) -> Type {
     let result_type = match (type_a, type_b) {
         // Union of any type with Any is Any
@@ -119,7 +111,7 @@ fn unify_object_type(object_type_a: ObjectType, object_type_b: ObjectType) -> Ob
         field_map_b,
         make_nullable_field,
         make_nullable_field,
-        |field_a, field_b| unify_object_field(field_a, field_b),
+        unify_object_field,
     );
 
     WithName::named(

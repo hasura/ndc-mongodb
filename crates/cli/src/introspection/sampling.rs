@@ -101,7 +101,7 @@ fn make_object_field(
     field_value: &Bson,
 ) -> (Vec<ObjectType>, ObjectField) {
     let object_type_name = format!("{type_prefix}{field_name}");
-    let (collected_otds, field_type) = make_field_type(&object_type_name, field_name, field_value);
+    let (collected_otds, field_type) = make_field_type(&object_type_name, field_value);
 
     let object_field = WithName::named(
         field_name.to_owned(),
@@ -116,7 +116,6 @@ fn make_object_field(
 
 fn make_field_type(
     object_type_name: &str,
-    field_name: &str,
     field_value: &Bson,
 ) -> (Vec<ObjectType>, Type) {
     fn scalar(t: BsonScalarType) -> (Vec<ObjectType>, Type) {
@@ -131,7 +130,7 @@ fn make_field_type(
             let mut result_type = Type::Scalar(Undefined);
             for elem in arr {
                 let (elem_collected_otds, elem_type) =
-                    make_field_type(object_type_name, field_name, elem);
+                    make_field_type(object_type_name, elem);
                 collected_otds = if collected_otds.is_empty() {
                     elem_collected_otds
                 } else {
