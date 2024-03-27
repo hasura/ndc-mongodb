@@ -152,23 +152,40 @@
         };
       });
 
-      packages = eachSystem (pkgs: {
+      packages = eachSystem (pkgs: rec {
         default = pkgs.mongodb-connector;
 
         # Note: these outputs are overridden to build statically-linked
         mongodb-connector-x86_64-linux = pkgs.pkgsCross.x86_64-linux.mongodb-connector.override { staticallyLinked = true; };
         mongodb-connector-aarch64-linux = pkgs.pkgsCross.aarch64-linux.mongodb-connector.override { staticallyLinked = true; };
 
-        docker = pkgs.callPackage ./nix/docker.nix { inherit (pkgs) mongodb-connector; };
-
-        docker-x86_64-linux = pkgs.callPackage ./nix/docker.nix {
+        # Builds a docker image for the MongoDB connector for amd64 Linux. To
+        # get a multi-arch image run `publish-docker-image`.
+        docker-image-x86_64-linux = pkgs.callPackage ./nix/docker.nix {
           mongodb-connector = pkgs.pkgsCross.x86_64-linux.mongodb-connector; # Note: dynamically-linked
           architecture = "amd64";
         };
 
-        docker-aarch64-linux = pkgs.callPackage ./nix/docker.nix {
+        # Builds a docker image for the MongoDB connector for arm64 Linux. To
+        # get a multi-arch image run `publish-docker-image`.
+        docker-image-aarch64-linux = pkgs.callPackage ./nix/docker.nix {
           mongodb-connector = pkgs.pkgsCross.aarch64-linux.mongodb-connector; # Note: dynamically-linked
           architecture = "arm64";
+        };
+
+        # Publish multi-arch docker image for the MongoDB connector to Github
+        # registry. This must be run with a get-ref argument to calculate image
+        # tags:
+        #
+        #     $ nix run .#publish-docker-image <git-ref>
+        #
+        # You must be logged in to the docker registry. See the CI configuration
+        # in `.github/workflows/deploy.yml` where this command is run.
+        publish-docker-image = pkgs.callPackage ./scripts/publish-docker-image.nix {
+          docker-images = [
+            docker-image-aarch64-linux
+            docker-image-x86_64-linux
+          ];
         };
 
         # CLI plugin packages with cross-compilation options
@@ -180,12 +197,6 @@
         mongodb-cli-plugin-docker = pkgs.callPackage ./nix/docker-cli-plugin.nix { };
         mongodb-cli-plugin-docker-x86_64-linux = pkgs.pkgsCross.x86_64-linux.callPackage ./nix/docker-cli-plugin.nix { };
         mongodb-cli-plugin-docker-aarch64-linux = pkgs.pkgsCross.aarch64-linux.callPackage ./nix/docker-cli-plugin.nix { };
-
-        publish-docker-image = pkgs.writeShellApplication {
-          name = "publish-docker-image";
-          runtimeInputs = with pkgs; [ coreutils skopeo ];
-          text = builtins.readFile ./deploy.sh;
-        };
       });
 
       # Export our nixpkgs package set, which has been extended with the
