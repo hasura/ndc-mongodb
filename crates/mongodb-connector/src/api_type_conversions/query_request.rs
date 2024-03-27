@@ -641,8 +641,9 @@ where
 mod tests {
     use std::collections::BTreeMap;
 
-    use configuration::Schema;
+    use configuration::{schema, Schema};
     use dc_api_test_helpers::{self as v2, source, table_relationships, target};
+    use mongodb_support::BsonScalarType;
     use ndc_sdk::models::{
         ComparisonOperatorDefinition, OrderByElement, OrderByTarget, OrderDirection, ScalarType,
         Type,
@@ -796,7 +797,7 @@ mod tests {
     #[test]
     fn translates_root_column_references() -> Result<(), anyhow::Error> {
         let scalar_types = make_scalar_types();
-        let schema = make_schema();
+        let schema = make_flat_schema();
         let query_context = QueryContext {
             functions: vec![],
             scalar_types: &scalar_types,
@@ -811,10 +812,6 @@ mod tests {
                     binop("_regex", target!("title"), value!("Functional.*")),
                 ]),
             )))
-            .relationships([(
-                "author_articles",
-                relationship("articles", [("id", "author_id")]),
-            )])
             .into();
         let v2_request = v3_to_v2_query_request(&query_context, query)?;
 
@@ -822,18 +819,18 @@ mod tests {
             .target(["authors"])
             .query(
                 v2::query()
-                    .fields([v2::column!("last_name": "unknown")])
+                    .fields([v2::column!("last_name": "String")])
                     .predicate(v2::exists_unrelated(
                         ["articles"],
                         v2::and([
                             v2::equal(
-                                v2::compare!("author_id": "unknown"),
-                                v2::column_value!(["$"], "id": "unknown"),
+                                v2::compare!("author_id": "Int"),
+                                v2::column_value!(["$"], "id": "Int"),
                             ),
                             v2::binop(
                                 "_regex",
-                                v2::compare!("title": "unknown"),
-                                v2::value!(json!("Functional.*"), "unknown"),
+                                v2::compare!("title": "String"),
+                                v2::value!(json!("Functional.*"), "String"),
                             ),
                         ]),
                     )),
@@ -847,7 +844,7 @@ mod tests {
     #[test]
     fn translates_nested_fields() -> Result<(), anyhow::Error> {
         let scalar_types = make_scalar_types();
-        let schema = make_schema();
+        let schema = make_nested_schema();
         let query_context = QueryContext {
             functions: vec![],
             scalar_types: &scalar_types,
@@ -866,9 +863,9 @@ mod tests {
         let expected = v2::query_request()
             .target(["authors"])
             .query(v2::query().fields([
-                v2::nested_object!("author_address" => "address", v2::query().fields([v2::column!("address_country" => "country": "unknown")])),
-                v2::nested_array!("author_articles", v2::nested_object_field!("articles", v2::query().fields([v2::column!("article_title" => "title": "unknown")]))),
-                v2::nested_array!("author_array_of_arrays", v2::nested_array_field!(v2::nested_object_field!("array_of_arrays", v2::query().fields([v2::column!("article_title" => "title": "unknown")]))))
+                v2::nested_object!("author_address" => "address", v2::query().fields([v2::column!("address_country" => "country": "String")])),
+                v2::nested_array!("author_articles", v2::nested_object_field!("articles", v2::query().fields([v2::column!("article_title" => "title": "String")]))),
+                v2::nested_array!("author_array_of_arrays", v2::nested_array_field!(v2::nested_object_field!("array_of_arrays", v2::query().fields([v2::column!("article_title" => "title": "String")]))))
             ]))
             .into();
 
@@ -877,29 +874,175 @@ mod tests {
     }
 
     fn make_scalar_types() -> BTreeMap<String, ScalarType> {
-        BTreeMap::from([(
-            "String".to_owned(),
-            ScalarType {
-                aggregate_functions: Default::default(),
-                comparison_operators: BTreeMap::from([
-                    ("_eq".to_owned(), ComparisonOperatorDefinition::Equal),
-                    (
-                        "_regex".to_owned(),
-                        ComparisonOperatorDefinition::Custom {
-                            argument_type: Type::Named {
-                                name: "String".to_owned(),
+        BTreeMap::from([
+            (
+                "String".to_owned(),
+                ScalarType {
+                    aggregate_functions: Default::default(),
+                    comparison_operators: BTreeMap::from([
+                        ("_eq".to_owned(), ComparisonOperatorDefinition::Equal),
+                        (
+                            "_regex".to_owned(),
+                            ComparisonOperatorDefinition::Custom {
+                                argument_type: Type::Named {
+                                    name: "String".to_owned(),
+                                },
                             },
-                        },
-                    ),
-                ]),
-            },
-        )])
+                        ),
+                    ]),
+                },
+            ),
+            (
+                "Int".to_owned(),
+                ScalarType {
+                    aggregate_functions: Default::default(),
+                    comparison_operators: BTreeMap::from([
+                        ("_eq".to_owned(), ComparisonOperatorDefinition::Equal),
+                    ]),
+                },
+            )
+        ])
     }
 
-    fn make_schema() -> Schema {
+    fn make_flat_schema() -> Schema {
         Schema {
-            collections: BTreeMap::new(),
-            object_types: BTreeMap::new(),
+            collections: BTreeMap::from([
+                (
+                    "authors".into(),
+                    schema::Collection {
+                        description: None,
+                        r#type: "Author".into()
+                    }
+                ),
+                (
+                    "articles".into(),
+                    schema::Collection {
+                        description: None,
+                        r#type: "Article".into()
+                    }
+                ),
+            ]),
+            object_types: BTreeMap::from([
+                (
+                    "Author".into(),
+                    schema::ObjectType {
+                        description: None,
+                        fields: BTreeMap::from([
+                            (
+                                "id".into(),
+                                schema::ObjectField {
+                                    description: None,
+                                    r#type: schema::Type::Scalar(BsonScalarType::Int)
+                                }
+                            ),
+                            (
+                                "last_name".into(),
+                                schema::ObjectField {
+                                    description: None,
+                                    r#type: schema::Type::Scalar(BsonScalarType::String)
+                                }
+                            ),
+                        ]),
+                    }
+                ),
+                (
+                    "Article".into(),
+                    schema::ObjectType {
+                        description: None,
+                        fields: BTreeMap::from([
+                            (
+                                "author_id".into(),
+                                schema::ObjectField {
+                                    description: None,
+                                    r#type: schema::Type::Scalar(BsonScalarType::Int)
+                                }
+                            ),
+                            (
+                                "title".into(),
+                                schema::ObjectField {
+                                    description: None,
+                                    r#type: schema::Type::Scalar(BsonScalarType::String)
+                                }
+                            ),
+                        ]),
+                    }
+                ),
+            ]),
+        }
+    }
+
+    fn make_nested_schema() -> Schema {
+        Schema {
+            collections: BTreeMap::from([
+                (
+                    "authors".into(),
+                    schema::Collection {
+                        description: None,
+                        r#type: "Author".into()
+                    }
+                )
+            ]),
+            object_types: BTreeMap::from([
+                (
+                    "Author".into(),
+                    schema::ObjectType {
+                        description: None,
+                        fields: BTreeMap::from([
+                            (
+                                "address".into(),
+                                schema::ObjectField {
+                                    description: None,
+                                    r#type: schema::Type::Object("Address".into())
+                                }
+                            ),
+                            (
+                                "articles".into(),
+                                schema::ObjectField {
+                                    description: None,
+                                    r#type: schema::Type::ArrayOf(Box::new(schema::Type::Object("Article".into())))
+                                }
+                            ),
+                            (
+                                "array_of_arrays".into(),
+                                schema::ObjectField {
+                                    description: None,
+                                    r#type: schema::Type::ArrayOf(Box::new(schema::Type::ArrayOf(Box::new(schema::Type::Object("Article".into())))))
+                                }
+                            ),
+                        ]),
+                    }
+                ),
+                (
+                    "Address".into(),
+                    schema::ObjectType {
+                        description: None,
+                        fields: BTreeMap::from([
+                            (
+                                "country".into(),
+                                schema::ObjectField {
+                                    description: None,
+                                    r#type: schema::Type::Scalar(BsonScalarType::String)
+                                }
+                            ),
+                        ]),
+                    }
+                ),
+                (
+                    "Article".into(),
+                    schema::ObjectType {
+                        description: None,
+                        fields: BTreeMap::from([
+                            (
+                                "title".into(),
+                                schema::ObjectField {
+                                    description: None,
+                                    r#type: schema::Type::Scalar(BsonScalarType::String)
+                                }
+                            ),
+                        ]),
+                    }
+                ),
+            ]),
         }
     }
 }
