@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use configuration::{
     schema::{self, Type},
     Schema, WithName,
@@ -16,14 +18,14 @@ type ObjectField = WithName<schema::ObjectField>;
 
 pub async fn get_metadata_from_validation_schema(
     config: &MongoConfig,
-) -> Result<Schema, MongoAgentError> {
+) -> Result<BTreeMap<String, Schema>, MongoAgentError> {
     let db = config.client.database(&config.database);
     let collections_cursor = db.list_collections(None, None).await?;
 
-    let (object_types, collections) = collections_cursor
+    let schemas: Vec<WithName<Schema>> = collections_cursor
         .into_stream()
         .map(
-            |collection_spec| -> Result<(Vec<ObjectType>, Collection), MongoAgentError> {
+            |collection_spec| -> Result<WithName<Schema>, MongoAgentError> {
                 let collection_spec_value = collection_spec?;
                 let name = &collection_spec_value.name;
                 let schema_bson_option = collection_spec_value
@@ -49,16 +51,27 @@ pub async fn get_metadata_from_validation_schema(
                         properties: IndexMap::new(),
                     }),
                 }
-                .map(|validator_schema| make_collection(name, &validator_schema))
+                .map(|validator_schema| make_collection_schema(name, &validator_schema))
             },
         )
-        .try_collect::<(Vec<Vec<ObjectType>>, Vec<Collection>)>()
+        .try_collect::<Vec<WithName<Schema>>>()
         .await?;
 
-    Ok(Schema {
-        collections: WithName::into_map(collections),
-        object_types: WithName::into_map(object_types.concat()),
-    })
+    Ok(WithName::into_map(schemas))
+}
+
+fn make_collection_schema(
+    collection_name: &str,
+    validator_schema: &ValidatorSchema,
+) -> WithName<Schema> {
+    let (object_types, collection) = make_collection(collection_name, validator_schema);
+    WithName::named(
+        collection.name.clone(),
+        Schema {
+            collections: WithName::into_map(vec![collection]),
+            object_types: WithName::into_map(object_types),
+        },
+    )
 }
 
 fn make_collection(
@@ -100,10 +113,13 @@ fn make_collection(
 
     object_type_defs.push(collection_type);
 
-    let collection_info = WithName::named(collection_name, schema::Collection {
-        description: validator_schema.description.clone(),
-        r#type: collection_name.to_string(),
-    });
+    let collection_info = WithName::named(
+        collection_name,
+        schema::Collection {
+            description: validator_schema.description.clone(),
+            r#type: collection_name.to_string(),
+        },
+    );
 
     (object_type_defs, collection_info)
 }
