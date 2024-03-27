@@ -24,9 +24,9 @@ pub async fn get_metadata_from_validation_schema(
 
     let schemas: Vec<WithName<Schema>> = collections_cursor
         .into_stream()
-        .filter_map(
-            |collection_spec| -> Option<WithName<Schema>> {
-                let collection_spec_value = collection_spec.ok()?;
+        .map(
+            |collection_spec| -> Result<WithName<Schema>, MongoAgentError> {
+                let collection_spec_value = collection_spec?;
                 let name = &collection_spec_value.name;
                 let schema_bson_option = collection_spec_value
                     .options
@@ -34,11 +34,27 @@ pub async fn get_metadata_from_validation_schema(
                     .as_ref()
                     .and_then(|x| x.get("$jsonSchema"));
 
-                let validator_schema = schema_bson_option.map(|schema_bson| from_bson::<ValidatorSchema>(schema_bson.clone()).ok())??;
-                Some(make_collection_schema(name, &validator_schema))
+                match schema_bson_option {
+                    Some(schema_bson) => {
+                        from_bson::<ValidatorSchema>(schema_bson.clone()).map_err(|err| {
+                            MongoAgentError::BadCollectionSchema(
+                                name.to_owned(),
+                                schema_bson.clone(),
+                                err,
+                            )
+                        })
+                    }
+                    None => Ok(ValidatorSchema {
+                        bson_type: BsonType::Object,
+                        description: None,
+                        required: Vec::new(),
+                        properties: IndexMap::new(),
+                    }),
+                }
+                .map(|validator_schema| make_collection_schema(name, &validator_schema))
             },
         )
-        .collect::<Vec<WithName<Schema>>>()
+        .try_collect::<Vec<WithName<Schema>>>()
         .await?;
 
     Ok(WithName::into_map(schemas))
