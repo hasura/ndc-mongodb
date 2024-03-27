@@ -632,7 +632,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "serde_with 3.4.0",
+ "serde_with 3.7.0",
 ]
 
 [[package]]
@@ -929,7 +929,7 @@ dependencies = [
  "serde",
  "serde-enum-str",
  "serde_json",
- "serde_with 3.4.0",
+ "serde_with 3.7.0",
 ]
 
 [[package]]
@@ -1190,6 +1190,12 @@ dependencies = [
  "unicode-bidi",
  "unicode-normalization",
 ]
+
+[[package]]
+name = "indent"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9f1a0777d972970f204fdf8ef319f1f4f8459131636d7e3c96c5d59570d0fa6"
 
 [[package]]
 name = "indexmap"
@@ -1511,6 +1517,7 @@ dependencies = [
  "futures",
  "futures-util",
  "http",
+ "indent",
  "indexmap 1.9.3",
  "itertools 0.10.5",
  "mockall",
@@ -1522,6 +1529,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "serde_with 3.7.0",
  "thiserror",
  "time",
  "tokio",
@@ -1586,6 +1594,7 @@ dependencies = [
  "dc-api-types",
  "enum-iterator",
  "indexmap 1.9.3",
+ "mongodb",
  "schemars",
  "serde",
  "serde_json",
@@ -2679,9 +2688,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with"
-version = "3.4.0"
+version = "3.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64cd236ccc1b7a29e7e2739f27c0b2dd199804abc4290e32f59f3b68d6405c23"
+checksum = "ee80b0e361bbf88fd2f6e242ccd19cfda072cb0faa6ae694ecee08199938569a"
 dependencies = [
  "base64 0.21.5",
  "chrono",
@@ -2689,8 +2698,9 @@ dependencies = [
  "indexmap 1.9.3",
  "indexmap 2.2.5",
  "serde",
+ "serde_derive",
  "serde_json",
- "serde_with_macros 3.4.0",
+ "serde_with_macros 3.7.0",
  "time",
 ]
 
@@ -2720,9 +2730,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with_macros"
-version = "3.4.0"
+version = "3.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93634eb5f75a2323b16de4748022ac4297f9e76b6dced2be287a099f41b5e788"
+checksum = "6561dc161a9224638a31d876ccdfefbc1df91d3f3a8342eddb35f055d48c7655"
 dependencies = [
  "darling 0.20.3",
  "proc-macro2",

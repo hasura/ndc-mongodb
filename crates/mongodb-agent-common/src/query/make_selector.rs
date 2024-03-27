@@ -5,12 +5,12 @@ use dc_api_types::{
     ArrayComparisonValue, BinaryArrayComparisonOperator, ComparisonValue, ExistsInTable,
     Expression, UnaryComparisonOperator,
 };
-use mongodb::bson::{self, doc, Bson, Document};
-use time::{format_description::well_known::Iso8601, OffsetDateTime};
+use mongodb::bson::{self, doc, Document};
+use mongodb_support::BsonScalarType;
 
 use crate::{
     comparison_function::ComparisonFunction, interface_types::MongoAgentError,
-    query::column_ref::column_ref,
+    query::arguments::json_to_bson_scalar, query::column_ref::column_ref,
 };
 
 use BinaryArrayComparisonOperator as ArrOp;
@@ -21,21 +21,13 @@ fn bson_from_scalar_value(
     value: &serde_json::Value,
     value_type: &str,
 ) -> Result<bson::Bson, MongoAgentError> {
-    match value_type {
-        "date" | "Date" => {
-            let parsed_date = value
-                .as_str()
-                .and_then(|s| OffsetDateTime::parse(s, &Iso8601::DEFAULT).ok())
-                .ok_or_else(|| {
-                    MongoAgentError::BadQuery(anyhow!(
-                        "unrecognized date value: {value} - date values should be strings in ISO 8601 format including a time and a time zone specifier"
-                    ))
-                })?;
-            Ok(Bson::DateTime(bson::DateTime::from_system_time(
-                parsed_date.into(),
-            )))
+    // TODO: fail on unrecognized types
+    let bson_type = BsonScalarType::from_bson_name(value_type).ok();
+    match bson_type {
+        Some(t) => {
+            json_to_bson_scalar(t, value.clone()).map_err(|e| MongoAgentError::BadQuery(anyhow!(e)))
         }
-        _ => bson::to_bson(value).map_err(|e| MongoAgentError::BadQuery(anyhow!(e))),
+        None => bson::to_bson(value).map_err(|e| MongoAgentError::BadQuery(anyhow!(e))),
     }
 }
 
