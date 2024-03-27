@@ -186,7 +186,6 @@ mod tests {
                     "Name": "Regina Spektor",
                 }],
             }
-            .into()
         );
         Ok(())
     }
@@ -245,7 +244,6 @@ mod tests {
                     }
                 ],
             }
-            .into()
         );
         Ok(())
     }
@@ -285,7 +283,6 @@ mod tests {
                 "insert": "current-some-coll",
                 "empty": "",
             }
-            .into()
         );
         Ok(())
     }

@@ -288,6 +288,7 @@ mod tests {
     use super::json_to_bson;
 
     #[test]
+    #[allow(clippy::approx_constant)]
     fn deserializes_specialized_scalar_types() -> anyhow::Result<()> {
         let object_type_name = "scalar_test".to_owned();
         let object_type = ObjectType {
