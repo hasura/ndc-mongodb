@@ -20,7 +20,7 @@ pub struct QueryContext<'a> {
 }
 
 impl QueryContext<'_> {
-    fn find_collection(self: &Self, collection_name: &str) -> Result<&schema::Collection, ConversionError> {
+    fn find_collection(&self, collection_name: &str) -> Result<&schema::Collection, ConversionError> {
         self
             .schema
             .collections
@@ -28,7 +28,7 @@ impl QueryContext<'_> {
             .ok_or_else(|| ConversionError::UnknownCollection(collection_name.to_string()))
     }
 
-    fn find_object_type<'a>(self: &'a Self, object_type_name: &'a str) -> Result<WithNameRef<schema::ObjectType>, ConversionError> {
+    fn find_object_type<'a>(&'a self, object_type_name: &'a str) -> Result<WithNameRef<schema::ObjectType>, ConversionError> {
         let object_type = self
             .schema
             .object_types
@@ -38,13 +38,13 @@ impl QueryContext<'_> {
         Ok(WithNameRef { name: object_type_name, value: object_type })
     }
 
-    fn find_scalar_type(self: &Self, scalar_type_name: &str) -> Result<&v3::ScalarType, ConversionError> {
+    fn find_scalar_type(&self, scalar_type_name: &str) -> Result<&v3::ScalarType, ConversionError> {
         self.scalar_types
             .get(scalar_type_name)
             .ok_or_else(|| ConversionError::UnknownScalarType(scalar_type_name.to_owned()))
     }
 
-    fn find_comparison_operator_definition(self: &Self, scalar_type_name: &str, operator: &str) -> Result<&v3::ComparisonOperatorDefinition, ConversionError> {
+    fn find_comparison_operator_definition(&self, scalar_type_name: &str, operator: &str) -> Result<&v3::ComparisonOperatorDefinition, ConversionError> {
         let scalar_type = self.find_scalar_type(scalar_type_name)?;
         let operator = scalar_type
             .comparison_operators
@@ -131,14 +131,12 @@ fn v3_to_v2_query(
                     .map(|order_by_element| v3_to_v2_order_by_element(context, collection_relationships, root_collection_object_type, collection_object_type, order_by_element))
                     .collect::<Result<Vec::<(_,_)>, ConversionError>>()?
                     .into_iter()
-                    .fold(
-                        Ok((Vec::<v2::OrderByElement>::new(), HashMap::<String, v2::OrderByRelation>::new())), 
-                        |acc, (elem, rels)| {
-                            acc.and_then(|(mut acc_elems, mut acc_rels)| {
-                                acc_elems.push(elem);
-                                 merge_order_by_relations(&mut acc_rels, rels)?;
-                                Ok((acc_elems, acc_rels))
-                            })
+                    .try_fold(
+                        (Vec::<v2::OrderByElement>::new(), HashMap::<String, v2::OrderByRelation>::new()), 
+                        |(mut acc_elems, mut acc_rels), (elem, rels)| {
+                            acc_elems.push(elem);
+                            merge_order_by_relations(&mut acc_rels, rels)?;
+                            Ok((acc_elems, acc_rels))
                         }
                     )?;
             Ok(v2::OrderBy { elements, relations })
@@ -158,7 +156,7 @@ fn v3_to_v2_query(
         offset,
         r#where: query
             .predicate
-            .map(|expr| v3_to_v2_expression(&context, collection_relationships, root_collection_object_type, collection_object_type, expr))
+            .map(|expr| v3_to_v2_expression(context, collection_relationships, root_collection_object_type, collection_object_type, expr))
             .transpose()?,
     })
 }
@@ -307,7 +305,7 @@ fn v3_to_v2_nested_field(
         schema::Type::ArrayOf(element_type) => {
             let inner_nested_field = match nested_field {
                 None => Ok(None),
-                Some(v3::NestedField::Object(_nested_object)) => Err(ConversionError::TypeMismatch(format!("Expected an array nested field selection, but got an object nested field selection instead"))),
+                Some(v3::NestedField::Object(_nested_object)) => Err(ConversionError::TypeMismatch("Expected an array nested field selection, but got an object nested field selection instead".into())),
                 Some(v3::NestedField::Array(nested_array)) => Ok(Some(*nested_array.fields)),
             }?;
             let nested_v2_field = v3_to_v2_nested_field(context, collection_relationships, root_collection_object_type, column, element_type, inner_nested_field)?;
@@ -336,7 +334,7 @@ fn v3_to_v2_nested_field(
                     })
                 },
                 Some(v3::NestedField::Array(_nested_array)) => 
-                    Err(ConversionError::TypeMismatch(format!("Expected an array nested field selection, but got an object nested field selection instead"))),
+                    Err(ConversionError::TypeMismatch("Expected an array nested field selection, but got an object nested field selection instead".into())),
             }
         },
     }
@@ -639,7 +637,7 @@ fn get_scalar_type_name(schema_type: &schema::Type) -> Result<String, Conversion
         schema::Type::Scalar(scalar_type_name) => Ok(scalar_type_name.graphql_name()),
         schema::Type::Object(object_name_name) => Err(ConversionError::TypeMismatch(format!("Expected a scalar type, got the object type {object_name_name}"))),
         schema::Type::ArrayOf(element_type) => Err(ConversionError::TypeMismatch(format!("Expected a scalar type, got an array of {element_type:?}"))),
-        schema::Type::Nullable(underlying_type) => get_scalar_type_name(&underlying_type),
+        schema::Type::Nullable(underlying_type) => get_scalar_type_name(underlying_type),
     }
 }
 
