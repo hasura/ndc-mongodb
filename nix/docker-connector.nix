@@ -8,8 +8,8 @@
 }:
 
 let
-  config-directory = "/var/configuration";
-  default-port = "7130";
+  config-directory = "/etc/connector";
+  default-port = "8080";
   default-database-uri = "mongodb://localhost/db";
   default-otlp-endpoint = "http://localhost:4317";
 
