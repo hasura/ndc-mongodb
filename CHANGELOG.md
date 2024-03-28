@@ -2,6 +2,8 @@
 This changelog documents the changes between release versions.
 
 ## [Unreleased]
+
+## [0.0.3] - 2024-03-28
 - Use separate schema files for each collection ([PR #14](https://github.com/hasura/ndc-mongodb/pull/14))
 - Changes to `update` CLI command ([PR #17](https://github.com/hasura/ndc-mongodb/pull/17)):
   - new default behaviour:
