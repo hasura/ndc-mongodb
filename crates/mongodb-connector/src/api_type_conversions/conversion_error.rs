@@ -15,6 +15,21 @@ pub enum ConversionError {
     #[error("Unknown scalar type, \"{0}\"")]
     UnknownScalarType(String),
 
+    #[error("Unknown object type, \"{0}\"")]
+    UnknownObjectType(String),
+
+    #[error("Unknown field \"{field_name}\" in object type \"{object_type}\"")]
+    UnknownObjectTypeField { object_type: String, field_name: String },
+
+    #[error("Unknown collection, \"{0}\"")]
+    UnknownCollection(String),
+
+    #[error("Unknown relationship, \"{0}\"")]
+    UnknownRelationship(String),
+
+    #[error("Unknown aggregate function, \"{aggregate_function}\" in scalar type \"{scalar_type}\"")]
+    UnknownAggregateFunction { scalar_type: String, aggregate_function: String },
+
     #[error("Query referenced a function, \"{0}\", but it has not been defined")]
     UnspecifiedFunction(String),
 

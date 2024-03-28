@@ -8,6 +8,10 @@ use ndc_sdk::{connector, models};
 
 use crate::capabilities;
 
+lazy_static! {
+    pub static ref SCALAR_TYPES: BTreeMap<String, models::ScalarType> = capabilities::scalar_types();
+}
+
 pub async fn get_schema(
     config: &Configuration,
 ) -> Result<models::SchemaResponse, connector::SchemaError> {
@@ -32,7 +36,7 @@ pub async fn get_schema(
     Ok(models::SchemaResponse {
         collections,
         object_types,
-        scalar_types: capabilities::scalar_types(),
+        scalar_types: SCALAR_TYPES.clone(),
         functions,
         procedures,
     })

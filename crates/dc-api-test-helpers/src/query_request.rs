@@ -31,6 +31,11 @@ impl QueryRequestBuilder {
         self.query = Some(query.into());
         self
     }
+
+    pub fn relationships(mut self, relationships: impl Into<Vec<TableRelationships>>) -> Self {
+        self.relationships = Some(relationships.into());
+        self
+    }
 }
 
 impl From<QueryRequestBuilder> for QueryRequest {
