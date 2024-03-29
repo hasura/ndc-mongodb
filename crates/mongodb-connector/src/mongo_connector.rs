@@ -33,6 +33,7 @@ use crate::{capabilities::mongo_capabilities_response, mutation::handle_mutation
 pub struct MongoConnector;
 
 #[async_trait]
+#[allow(clippy::blocks_in_conditions)]
 impl Connector for MongoConnector {
     type Configuration = Configuration;
     type State = MongoConfig;
