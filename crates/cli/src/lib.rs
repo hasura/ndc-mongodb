@@ -1,7 +1,5 @@
 //! The interpretation of the commands that the CLI can handle.
 
-mod introspection;
-
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};

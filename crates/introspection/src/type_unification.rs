@@ -179,6 +179,7 @@ mod tests {
     use std::collections::{HashMap, HashSet};
 
     use super::{unify_object_type, unify_type};
+    use crate::test_helpers::arb_bson_scalar_type;
     use configuration::{
         schema::{self, Type},
         WithName,
@@ -206,30 +207,6 @@ mod tests {
         );
         assert_eq!(expected, actual);
         Ok(())
-    }
-
-    fn arb_bson_scalar_type() -> impl Strategy<Value = BsonScalarType> {
-        prop_oneof![
-            Just(BsonScalarType::Double),
-            Just(BsonScalarType::Decimal),
-            Just(BsonScalarType::Int),
-            Just(BsonScalarType::Long),
-            Just(BsonScalarType::String),
-            Just(BsonScalarType::Date),
-            Just(BsonScalarType::Timestamp),
-            Just(BsonScalarType::BinData),
-            Just(BsonScalarType::ObjectId),
-            Just(BsonScalarType::Bool),
-            Just(BsonScalarType::Null),
-            Just(BsonScalarType::Regex),
-            Just(BsonScalarType::Javascript),
-            Just(BsonScalarType::JavascriptWithScope),
-            Just(BsonScalarType::MinKey),
-            Just(BsonScalarType::MaxKey),
-            Just(BsonScalarType::Undefined),
-            Just(BsonScalarType::DbPointer),
-            Just(BsonScalarType::Symbol),
-        ]
     }
 
     fn arb_type() -> impl Strategy<Value = Type> {

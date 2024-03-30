@@ -10,7 +10,7 @@ use mongodb_support::BsonScalarType;
 
 use crate::{
     comparison_function::ComparisonFunction, interface_types::MongoAgentError,
-    query::arguments::json_to_bson_scalar, query::column_ref::column_ref,
+    query::serialization::json_to_bson_scalar, query::column_ref::column_ref,
 };
 
 use BinaryArrayComparisonOperator as ArrOp;

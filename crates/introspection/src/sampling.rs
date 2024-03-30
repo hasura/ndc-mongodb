@@ -114,10 +114,16 @@ fn make_object_field(
     (collected_otds, object_field)
 }
 
-fn make_field_type(
+#[cfg(any(test, test_helpers))]
+pub fn type_from_bson(
     object_type_name: &str,
-    field_value: &Bson,
-) -> (Vec<ObjectType>, Type) {
+    value: &Bson,
+) -> (BTreeMap<std::string::String, schema::ObjectType>, Type) {
+    let (object_types, t) = make_field_type(object_type_name, value);
+    (WithName::into_map(object_types), t)
+}
+
+fn make_field_type(object_type_name: &str, field_value: &Bson) -> (Vec<ObjectType>, Type) {
     fn scalar(t: BsonScalarType) -> (Vec<ObjectType>, Type) {
         (vec![], Type::Scalar(t))
     }
@@ -129,8 +135,7 @@ fn make_field_type(
             let mut collected_otds = vec![];
             let mut result_type = Type::Scalar(Undefined);
             for elem in arr {
-                let (elem_collected_otds, elem_type) =
-                    make_field_type(object_type_name, elem);
+                let (elem_collected_otds, elem_type) = make_field_type(object_type_name, elem);
                 collected_otds = if collected_otds.is_empty() {
                     elem_collected_otds
                 } else {

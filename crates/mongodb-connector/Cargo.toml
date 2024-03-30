@@ -9,7 +9,7 @@ async-trait = "0.1"
 configuration = { path = "../configuration" }
 dc-api = { path = "../dc-api" }
 dc-api-types = { path = "../dc-api-types" }
-enum-iterator = "1.4.1"
+enum-iterator = "^2.0.0"
 futures = "^0.3"
 http = "^0.2"
 indexmap = { version = "2.1.0", features = ["serde"] }
