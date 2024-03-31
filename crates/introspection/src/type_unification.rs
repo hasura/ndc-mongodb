@@ -179,13 +179,13 @@ mod tests {
     use std::collections::{HashMap, HashSet};
 
     use super::{unify_object_type, unify_type};
-    use crate::test_helpers::arb_bson_scalar_type;
     use configuration::{
         schema::{self, Type},
         WithName,
     };
     use mongodb_support::BsonScalarType;
     use proptest::{collection::hash_map, prelude::*};
+    use test_helpers::arb_bson_scalar_type;
 
     #[test]
     fn test_unify_scalar() -> Result<(), anyhow::Error> {

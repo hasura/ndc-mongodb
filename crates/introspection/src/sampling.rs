@@ -114,7 +114,7 @@ fn make_object_field(
     (collected_otds, object_field)
 }
 
-#[cfg(any(test, test_helpers))]
+// Exported for use in tests
 pub fn type_from_bson(
     object_type_name: &str,
     value: &Bson,

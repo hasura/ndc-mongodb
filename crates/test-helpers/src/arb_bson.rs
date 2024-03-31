@@ -1,16 +1,7 @@
 use std::time::SystemTime;
 
-use enum_iterator::Sequence as _;
 use mongodb::bson::{self, oid::ObjectId, Bson};
-use mongodb_support::BsonScalarType;
 use proptest::{collection, prelude::*, sample::SizeRange};
-
-pub use crate::sampling::type_from_bson;
-
-pub fn arb_bson_scalar_type() -> impl Strategy<Value = BsonScalarType> {
-    (0..BsonScalarType::CARDINALITY)
-        .prop_map(|n| enum_iterator::all::<BsonScalarType>().nth(n).unwrap())
-}
 
 pub fn arb_bson() -> impl Strategy<Value = Bson> {
     let leaf = prop_oneof![
@@ -74,3 +65,4 @@ fn arb_binary() -> impl Strategy<Value = bson::Binary> {
 fn arb_object_id() -> impl Strategy<Value = ObjectId> {
     any::<[u8; 12]>().prop_map(Into::into)
 }
+

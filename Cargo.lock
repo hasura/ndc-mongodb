@@ -1225,7 +1225,6 @@ version = "0.0.3"
 dependencies = [
  "anyhow",
  "configuration",
- "enum-iterator",
  "futures-util",
  "indexmap 1.9.3",
  "itertools 0.12.1",
@@ -1235,7 +1234,7 @@ dependencies = [
  "proptest",
  "serde",
  "serde_json",
- "these",
+ "test-helpers",
  "thiserror",
 ]
 
@@ -1544,7 +1543,6 @@ dependencies = [
  "mockall",
  "mongodb",
  "mongodb-support",
- "names",
  "once_cell",
  "pretty_assertions",
  "proptest",
@@ -1553,6 +1551,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 3.7.0",
+ "test-helpers",
  "thiserror",
  "time",
  "tokio",
@@ -1613,15 +1612,6 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
-]
-
-[[package]]
-name = "names"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7bddcd3bf5144b6392de80e04c347cd7fab2508f6df16a85fc496ecd5cec39bc"
-dependencies = [
- "rand",
 ]
 
 [[package]]
@@ -1718,7 +1708,6 @@ name = "ndc-test-helpers"
 version = "0.1.0"
 dependencies = [
  "indexmap 2.2.5",
- "itertools 0.10.5",
  "ndc-sdk",
  "serde_json",
 ]
@@ -2999,10 +2988,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 
 [[package]]
-name = "these"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7162adbff4f8c44e938e0e51f6d3d829818c2ffefd793702a3a6f6ef0551de43"
+name = "test-helpers"
+version = "0.0.3"
+dependencies = [
+ "enum-iterator",
+ "mongodb",
+ "mongodb-support",
+ "proptest",
+]
 
 [[package]]
 name = "thiserror"

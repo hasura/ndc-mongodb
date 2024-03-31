@@ -1,0 +1,12 @@
+[package]
+name = "test-helpers"
+edition = "2021"
+version.workspace = true
+
+[dependencies]
+mongodb-support = { path = "../mongodb-support" }
+
+enum-iterator = "^2.0.0"
+mongodb = "2.8"
+proptest = "1"
+
