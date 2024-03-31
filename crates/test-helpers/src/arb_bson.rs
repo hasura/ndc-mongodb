@@ -4,6 +4,38 @@ use mongodb::bson::{self, oid::ObjectId, Bson};
 use proptest::{collection, prelude::*, sample::SizeRange};
 
 pub fn arb_bson() -> impl Strategy<Value = Bson> {
+    arb_bson_with_options(Default::default())
+}
+
+#[derive(Clone, Debug)]
+pub struct ArbBsonOptions {
+    /// max AST depth of generated values
+    pub depth: u32,
+
+    /// number of AST nodes to target
+    pub desired_size: u32,
+
+    /// minimum and maximum number of elements per array, or fields per document
+    pub branch_range: SizeRange,
+
+    /// If set to false arrays are generated such that all elements have a uniform type according
+    /// to `type_unification` in the introspection crate. Note that we consider "nullable" a valid
+    /// type, so array elements will sometimes be null even if this is set to true.
+    pub heterogeneous_arrays: bool,
+}
+
+impl Default for ArbBsonOptions {
+    fn default() -> Self {
+        Self {
+            depth: 8,
+            desired_size: 256,
+            branch_range: (0, 10).into(),
+            heterogeneous_arrays: true,
+        }
+    }
+}
+
+pub fn arb_bson_with_options(options: ArbBsonOptions) -> impl Strategy<Value = Bson> {
     let leaf = prop_oneof![
         Just(Bson::Null),
         Just(Bson::Undefined),
@@ -28,21 +60,49 @@ pub fn arb_bson() -> impl Strategy<Value = Bson> {
         // skipped DbPointer because it is deprecated, and does not have a public constructor
     ];
     leaf.prop_recursive(
-        8,   // 8 levels deep
-        256, // aim for maximum of 256 nodes
-        10,  // branch factor: we have up to this many elements per array, or fields per document
-        |inner| {
+        options.depth,
+        options.desired_size,
+        options.branch_range.end_incl().try_into().unwrap(),
+        move |inner| {
             prop_oneof![
-                collection::vec(inner.clone(), 0..10).prop_map(Bson::Array),
-                arb_bson_document_recursive(inner.clone(), 0..10).prop_map(Bson::Document),
-                (any::<String>(), arb_bson_document_recursive(inner, 0..10)).prop_map(
-                    |(code, scope)| {
+                arb_bson_array_recursive(inner.clone(), options.clone()).prop_map(Bson::Array),
+                arb_bson_document_recursive(inner.clone(), options.branch_range.clone())
+                    .prop_map(Bson::Document),
+                (
+                    any::<String>(),
+                    arb_bson_document_recursive(inner, options.branch_range.clone())
+                )
+                    .prop_map(|(code, scope)| {
                         Bson::JavaScriptCodeWithScope(bson::JavaScriptCodeWithScope { code, scope })
-                    }
-                ),
+                    }),
             ]
         },
     )
+}
+
+fn arb_bson_array_recursive(
+    value: impl Strategy<Value = Bson> + 'static,
+    options: ArbBsonOptions,
+) -> impl Strategy<Value = Vec<Bson>> {
+    if options.heterogeneous_arrays {
+        collection::vec(value, options.branch_range).boxed()
+    } else {
+        // To make sure the array is homogeneously-typed generate one arbitrary BSON value and
+        // replicate it. But we still want a chance to include null values because we can unify
+        // those into a non-Any type. So each array element has a 10% chance to be null instead of
+        // the generated value.
+        (
+            value,
+            collection::vec(proptest::bool::weighted(0.9), options.branch_range),
+        )
+            .prop_map(|(value, non_nulls)| {
+                non_nulls
+                    .into_iter()
+                    .map(|non_null| if non_null { value.clone() } else { Bson::Null })
+                    .collect()
+            })
+            .boxed()
+    }
 }
 
 pub fn arb_bson_document(size: impl Into<SizeRange>) -> impl Strategy<Value = bson::Document> {
@@ -53,7 +113,7 @@ fn arb_bson_document_recursive(
     value: impl Strategy<Value = Bson>,
     size: impl Into<SizeRange>,
 ) -> impl Strategy<Value = bson::Document> {
-    collection::btree_map(".*", value, size).prop_map(|fields| fields.into_iter().collect())
+    collection::btree_map(".+", value, size).prop_map(|fields| fields.into_iter().collect())
 }
 
 fn arb_binary() -> impl Strategy<Value = bson::Binary> {
@@ -65,4 +125,3 @@ fn arb_binary() -> impl Strategy<Value = bson::Binary> {
 fn arb_object_id() -> impl Strategy<Value = ObjectId> {
     any::<[u8; 12]>().prop_map(Into::into)
 }
-
