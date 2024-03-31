@@ -9,6 +9,8 @@ use serde_json::Value;
 use thiserror::Error;
 use time::{format_description::well_known::Iso8601, OffsetDateTime};
 
+use super::json_formats;
+
 #[derive(Debug, Error)]
 pub enum JsonToBsonError {
     #[error("error converting \"{1}\" to type, \"{0:?}\"")]
@@ -83,8 +85,8 @@ pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Resul
         ),
         BsonScalarType::String => Bson::String(deserialize(expected_type, value)?),
         BsonScalarType::Date => convert_date(&from_string(expected_type, value)?)?,
-        BsonScalarType::Timestamp => deserialize::<de::Timestamp>(expected_type, value)?.into(),
-        BsonScalarType::BinData => deserialize::<de::BinData>(expected_type, value)?.into(),
+        BsonScalarType::Timestamp => deserialize::<json_formats::Timestamp>(expected_type, value)?.into(),
+        BsonScalarType::BinData => deserialize::<json_formats::BinData>(expected_type, value)?.into(),
         BsonScalarType::ObjectId => Bson::ObjectId(deserialize(expected_type, value)?),
         BsonScalarType::Bool => match value {
             Value::Bool(b) => Bson::Boolean(b),
@@ -98,10 +100,10 @@ pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Resul
             Value::Null => Bson::Undefined,
             _ => incompatible_scalar_type(BsonScalarType::Undefined, value)?,
         },
-        BsonScalarType::Regex => deserialize::<de::Regex>(expected_type, value)?.into(),
+        BsonScalarType::Regex => deserialize::<json_formats::Regex>(expected_type, value)?.into(),
         BsonScalarType::Javascript => Bson::JavaScriptCode(deserialize(expected_type, value)?),
         BsonScalarType::JavascriptWithScope => {
-            deserialize::<de::JavaScripCodetWithScope>(expected_type, value)?.into()
+            deserialize::<json_formats::JavaScriptCodeWithScope>(expected_type, value)?.into()
         }
         BsonScalarType::MinKey => Bson::MinKey,
         BsonScalarType::MaxKey => Bson::MaxKey,
@@ -110,81 +112,6 @@ pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Resul
         BsonScalarType::DbPointer => Err(JsonToBsonError::NotImplemented(expected_type))?,
     };
     Ok(result)
-}
-
-/// Types defined just to get deserialization logic for BSON "scalar" types that are represented in
-/// JSON as composite structures. The types here are designed to match the representations of BSON
-/// types in extjson.
-mod de {
-    use mongodb::bson::{self, Bson};
-    use serde::Deserialize;
-    use serde_with::{base64::Base64, hex::Hex, serde_as};
-
-    #[serde_as]
-    #[derive(Deserialize)]
-    #[serde(rename_all = "camelCase")]
-    pub struct BinData {
-        #[serde_as(as = "Base64")]
-        base64: Vec<u8>,
-        #[serde_as(as = "Hex")]
-        sub_type: [u8; 1],
-    }
-
-    impl From<BinData> for Bson {
-        fn from(value: BinData) -> Self {
-            Bson::Binary(bson::Binary {
-                bytes: value.base64,
-                subtype: value.sub_type[0].into(),
-            })
-        }
-    }
-
-    #[derive(Deserialize)]
-    pub struct JavaScripCodetWithScope {
-        #[serde(rename = "$code")]
-        code: String,
-        #[serde(rename = "$scope")]
-        scope: bson::Document,
-    }
-
-    impl From<JavaScripCodetWithScope> for Bson {
-        fn from(value: JavaScripCodetWithScope) -> Self {
-            Bson::JavaScriptCodeWithScope(bson::JavaScriptCodeWithScope {
-                code: value.code,
-                scope: value.scope,
-            })
-        }
-    }
-
-    #[derive(Deserialize)]
-    pub struct Regex {
-        pattern: String,
-        options: String,
-    }
-
-    impl From<Regex> for Bson {
-        fn from(value: Regex) -> Self {
-            Bson::RegularExpression(bson::Regex {
-                pattern: value.pattern,
-                options: value.options,
-            })
-        }
-    }
-
-    #[derive(Deserialize)]
-    pub struct Timestamp {
-        t: u32,
-        i: u32,
-    }
-
-    impl From<Timestamp> for Bson {
-        fn from(value: Timestamp) -> Self {
-            Bson::Timestamp(bson::Timestamp {
-                time: value.t,
-                increment: value.i,
-            })
-        }
-    }
 }
 
 fn convert_array(

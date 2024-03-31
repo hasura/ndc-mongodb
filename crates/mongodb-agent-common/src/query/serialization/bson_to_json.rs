@@ -1,8 +1,10 @@
 use itertools::Itertools as _;
 use mongodb::bson::{self, Bson};
-use serde_json::{Number, Value};
+use serde_json::{to_value, Number, Value};
 use thiserror::Error;
 use time::{format_description::well_known::Iso8601, OffsetDateTime};
+
+use super::json_formats;
 
 #[derive(Debug, Error)]
 pub enum BsonToJsonError {
@@ -11,6 +13,9 @@ pub enum BsonToJsonError {
 
     #[error("error converting 64-bit floating point number from BSON to JSON: {0}")]
     DoubleConversion(f64),
+
+    #[error("error converting value to JSON: {0}")]
+    Serde(#[from] serde_json::Error),
 }
 
 type Result<T> = std::result::Result<T, BsonToJsonError>;
@@ -39,25 +44,31 @@ pub fn bson_to_json(value: Bson) -> Result<Value> {
         Bson::DateTime(date) => convert_date(date),
         Bson::JavaScriptCode(s) => Ok(Value::String(s)),
         Bson::JavaScriptCodeWithScope(v) => convert_code(v),
-        Bson::RegularExpression(regex) => convert_regex(regex),
-        Bson::Timestamp(v) => convert_timestamp(v),
-        Bson::Binary(_) => todo!(),
-        Bson::ObjectId(_) => todo!(),
-        Bson::DbPointer(_) => todo!(),
+        Bson::RegularExpression(regex) => Ok(to_value::<json_formats::Regex>(regex.into())?),
+        Bson::Timestamp(v) => Ok(to_value::<json_formats::Timestamp>(v.into())?),
+        Bson::Binary(b) => Ok(to_value::<json_formats::BinData>(b.into())?),
+        Bson::ObjectId(oid) => Ok(to_value(oid)?),
+        Bson::DbPointer(v) => Ok(to_value(v)?),
         Bson::Array(vs) => Ok(Value::Array(
             vs.into_iter().map(bson_to_json).try_collect()?,
         )),
-        Bson::Document(_) => todo!(),
+        Bson::Document(fields) => Ok(Value::Object(
+            fields
+                .into_iter()
+                .map(|(name, value)| bson_to_json(value).map(|bson| (name, bson)))
+                .try_collect()?,
+        )),
     }
 }
 
+// Use custom conversion instead of type in json_formats to get canonical extjson output
 fn convert_code(v: bson::JavaScriptCodeWithScope) -> Result<Value> {
     Ok(Value::Object(
         [
             ("$code".to_owned(), Value::String(v.code)),
             (
                 "$scope".to_owned(),
-                serde_json::to_value(v.scope).expect("serializing JavaScriptCodeWithScope.scope"),
+                Into::<Bson>::into(v.scope).into_canonical_extjson(),
             ),
         ]
         .into_iter()
@@ -72,33 +83,5 @@ fn convert_date(date: bson::DateTime) -> Result<Value> {
         offset_date
             .format(&Iso8601::DEFAULT)
             .map_err(|err| BsonToJsonError::DateConversion(err.to_string()))?,
-    ))
-}
-
-fn convert_regex(regex: bson::Regex) -> Result<Value> {
-    Ok(Value::Object(
-        [
-            ("pattern".to_owned(), Value::String(regex.pattern)),
-            ("options".to_owned(), Value::String(regex.options)),
-        ]
-        .into_iter()
-        .collect(),
-    ))
-}
-
-fn convert_timestamp(timestamp: bson::Timestamp) -> Result<Value> {
-    Ok(Value::Object(
-        [
-            (
-                "t".to_owned(),
-                Value::Number(<u32 as Into<_>>::into(timestamp.time)),
-            ),
-            (
-                "i".to_owned(),
-                Value::Number(<u32 as Into<_>>::into(timestamp.increment)),
-            ),
-        ]
-        .into_iter()
-        .collect(),
     ))
 }

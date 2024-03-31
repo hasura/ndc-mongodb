@@ -1,4 +1,5 @@
 mod bson_to_json;
+mod json_formats;
 mod json_to_bson;
 
 #[cfg(test)]
