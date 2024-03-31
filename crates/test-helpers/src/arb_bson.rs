@@ -1,4 +1,4 @@
-use std::time::SystemTime;
+use std::{str::FromStr, time::SystemTime};
 
 use mongodb::bson::{self, oid::ObjectId, Bson};
 use proptest::{collection, prelude::*, sample::SizeRange};
@@ -49,7 +49,7 @@ pub fn arb_bson_with_options(options: ArbBsonOptions) -> impl Strategy<Value = B
         arb_object_id().prop_map(Bson::ObjectId),
         any::<String>().prop_map(Bson::String),
         any::<String>().prop_map(Bson::Symbol),
-        any::<[u8; 128 / 8]>().prop_map(|b| Bson::Decimal128(bson::Decimal128::from_bytes(b))),
+        arb_decimal().prop_map(Bson::Decimal128),
         any::<String>().prop_map(Bson::JavaScriptCode),
         (any::<u32>(), any::<u32>())
             .prop_map(|(time, increment)| Bson::Timestamp(bson::Timestamp { time, increment })),
@@ -120,6 +120,14 @@ fn arb_binary() -> impl Strategy<Value = bson::Binary> {
     let binary_subtype = any::<u8>().prop_map(Into::into);
     let bytes = collection::vec(any::<u8>(), 1..256);
     (binary_subtype, bytes).prop_map(|(subtype, bytes)| bson::Binary { subtype, bytes })
+}
+
+// Generate bytes for a 128-bit decimal, and convert to a string and back to normalize
+fn arb_decimal() -> impl Strategy<Value = bson::Decimal128> {
+    any::<[u8; 128 / 8]>().prop_map(|bytes| {
+        let raw_decimal = bson::Decimal128::from_bytes(bytes);
+        FromStr::from_str(&raw_decimal.to_string()).unwrap()
+    })
 }
 
 fn arb_object_id() -> impl Strategy<Value = ObjectId> {

@@ -6,3 +6,4 @@
 # everyone who runs the test benefits from these saved cases.
 cc b320e097a9fe8eb0fe54c7076a1922dd61fb4cc0f4bf37046b4fd5d56ddcdf9c # shrinks to bson = Boolean(false)
 cc a392107dfb8c630cda7bec6dc32c3e4b3aa0ab6e9e6480698cdc8fae713e1b6c # shrinks to bson = Document({"": Decimal128(...)})
+cc 615b5decceef64d94086d97796d389a621d02701910213486e865b8e86e892c2 # shrinks to bytes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 238, 65, 0]
