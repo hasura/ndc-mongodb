@@ -1,7 +1,9 @@
 use futures::future::try_join_all;
 use itertools::Itertools;
 use mongodb::Database;
-use mongodb_agent_common::{interface_types::MongoConfig, procedure::Procedure};
+use mongodb_agent_common::{
+    interface_types::MongoConfig, procedure::Procedure, query::serialization::bson_to_json,
+};
 use ndc_sdk::{
     connector::MutationError,
     json_response::JsonResponse,
@@ -62,11 +64,8 @@ async fn execute_procedure(
         .execute(database.clone())
         .await
         .map_err(|err| MutationError::InvalidRequest(err.to_string()))?;
-
-    // TODO: instead of outputting extended JSON, map to JSON using a reverse of `json_to_bson`
-    // according to the native query result type
     let json_result =
-        serde_json::to_value(result).map_err(|err| MutationError::Other(Box::new(err)))?;
+        bson_to_json(result.into()).map_err(|err| MutationError::Other(Box::new(err)))?;
     Ok(MutationOperationResults::Procedure {
         result: json_result,
     })
