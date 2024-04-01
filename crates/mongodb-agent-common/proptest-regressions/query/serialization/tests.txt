@@ -4,6 +4,5 @@
 #
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
-cc b320e097a9fe8eb0fe54c7076a1922dd61fb4cc0f4bf37046b4fd5d56ddcdf9c # shrinks to bson = Boolean(false)
-cc a392107dfb8c630cda7bec6dc32c3e4b3aa0ab6e9e6480698cdc8fae713e1b6c # shrinks to bson = Document({"": Decimal128(...)})
-cc 615b5decceef64d94086d97796d389a621d02701910213486e865b8e86e892c2 # shrinks to bytes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 238, 65, 0]
+cc 2efdea7f185f2f38ae643782b3523014ab7b8236e36a79cc6b7a7cac74b06f79 # shrinks to bytes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 238, 161, 0]
+cc 26e2543468ab6d4ffa34f9f8a2c920801ef38a35337557a8f4e74c92cf57e344 # shrinks to bson = Document({" ": Document({"¡": DateTime(1970-01-01 0:00:00.001 +00:00:00)})})

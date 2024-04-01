@@ -1,4 +1,4 @@
-use std::{str::FromStr, time::SystemTime};
+use std::time::SystemTime;
 
 use mongodb::bson::{self, oid::ObjectId, Bson};
 use proptest::{collection, prelude::*, sample::SizeRange};
@@ -126,7 +126,7 @@ fn arb_binary() -> impl Strategy<Value = bson::Binary> {
 fn arb_decimal() -> impl Strategy<Value = bson::Decimal128> {
     any::<[u8; 128 / 8]>().prop_map(|bytes| {
         let raw_decimal = bson::Decimal128::from_bytes(bytes);
-        FromStr::from_str(&raw_decimal.to_string()).unwrap()
+        raw_decimal.to_string().parse().unwrap()
     })
 }
 
