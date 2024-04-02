@@ -1220,25 +1220,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "introspection"
-version = "0.0.3"
-dependencies = [
- "anyhow",
- "configuration",
- "futures-util",
- "indexmap 1.9.3",
- "itertools 0.12.1",
- "mongodb",
- "mongodb-agent-common",
- "mongodb-support",
- "proptest",
- "serde",
- "serde_json",
- "test-helpers",
- "thiserror",
-]
-
-[[package]]
 name = "ipconfig"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1538,10 +1519,10 @@ dependencies = [
  "http",
  "indent",
  "indexmap 1.9.3",
- "introspection",
  "itertools 0.10.5",
  "mockall",
  "mongodb",
+ "mongodb-cli-plugin",
  "mongodb-support",
  "once_cell",
  "pretty_assertions",
@@ -1565,8 +1546,17 @@ dependencies = [
  "anyhow",
  "clap",
  "configuration",
- "introspection",
+ "futures-util",
+ "indexmap 1.9.3",
+ "itertools 0.12.1",
+ "mongodb",
  "mongodb-agent-common",
+ "mongodb-support",
+ "proptest",
+ "serde",
+ "serde_json",
+ "test-helpers",
+ "thiserror",
  "tokio",
 ]
 
@@ -2992,6 +2982,7 @@ checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 name = "test-helpers"
 version = "0.0.3"
 dependencies = [
+ "configuration",
  "enum-iterator",
  "mongodb",
  "mongodb-support",

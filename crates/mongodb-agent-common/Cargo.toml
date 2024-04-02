@@ -33,7 +33,7 @@ time = { version = "0.3.29", features = ["formatting", "parsing", "serde"] }
 tracing = "0.1"
 
 [dev-dependencies]
-introspection = { path = "../introspection" }
+mongodb-cli-plugin = { path = "../cli" }
 test-helpers = { path = "../test-helpers" }
 
 mockall = "0.11.4"

@@ -123,7 +123,10 @@ pub fn type_from_bson(
     (WithName::into_map(object_types), t)
 }
 
-fn make_field_type(object_type_name: &str, field_value: &Bson) -> (Vec<ObjectType>, Type) {
+fn make_field_type(
+    object_type_name: &str,
+    field_value: &Bson,
+) -> (Vec<ObjectType>, Type) {
     fn scalar(t: BsonScalarType) -> (Vec<ObjectType>, Type) {
         (vec![], Type::Scalar(t))
     }
@@ -135,7 +138,8 @@ fn make_field_type(object_type_name: &str, field_value: &Bson) -> (Vec<ObjectTyp
             let mut collected_otds = vec![];
             let mut result_type = Type::Scalar(Undefined);
             for elem in arr {
-                let (elem_collected_otds, elem_type) = make_field_type(object_type_name, elem);
+                let (elem_collected_otds, elem_type) =
+                    make_field_type(object_type_name, elem);
                 collected_otds = if collected_otds.is_empty() {
                     elem_collected_otds
                 } else {

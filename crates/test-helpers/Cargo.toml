@@ -4,6 +4,7 @@ edition = "2021"
 version.workspace = true
 
 [dependencies]
+configuration = { path = "../configuration" }
 mongodb-support = { path = "../mongodb-support" }
 
 enum-iterator = "^2.0.0"

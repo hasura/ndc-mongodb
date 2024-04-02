@@ -132,8 +132,7 @@ pub fn arb_datetime() -> impl Strategy<Value = bson::DateTime> {
 fn arb_decimal() -> impl Strategy<Value = bson::Decimal128> {
     any::<[u8; 128 / 8]>().prop_map(|bytes| {
         let raw_decimal = bson::Decimal128::from_bytes(bytes);
-        let normalized = raw_decimal.to_string().parse().unwrap();
-        normalized
+        raw_decimal.to_string().parse().unwrap()
     })
 }
 

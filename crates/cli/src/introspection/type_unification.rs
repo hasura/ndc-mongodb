@@ -8,10 +8,7 @@ use configuration::{
 };
 use indexmap::IndexMap;
 use itertools::Itertools as _;
-use mongodb_support::{
-    align::align,
-    BsonScalarType::*,
-};
+use mongodb_support::{align::align, BsonScalarType::*};
 use std::string::String;
 
 type ObjectField = WithName<schema::ObjectField>;
@@ -131,10 +128,7 @@ fn unify_object_type(object_type_a: ObjectType, object_type_b: ObjectType) -> Ob
 
 /// Unify the types of two `ObjectField`s.
 /// If the types are not unifiable then return an error.
-fn unify_object_field(
-    object_field_a: ObjectField,
-    object_field_b: ObjectField,
-) -> ObjectField {
+fn unify_object_field(object_field_a: ObjectField, object_field_b: ObjectField) -> ObjectField {
     WithName::named(
         object_field_a.name,
         schema::ObjectField {
@@ -185,7 +179,7 @@ mod tests {
     };
     use mongodb_support::BsonScalarType;
     use proptest::{collection::hash_map, prelude::*};
-    use test_helpers::arb_bson_scalar_type;
+    use test_helpers::arb_type;
 
     #[test]
     fn test_unify_scalar() -> Result<(), anyhow::Error> {
@@ -209,21 +203,11 @@ mod tests {
         Ok(())
     }
 
-    fn arb_type() -> impl Strategy<Value = Type> {
-        let leaf = prop_oneof![
-            arb_bson_scalar_type().prop_map(Type::Scalar),
-            any::<String>().prop_map(Type::Object)
-        ];
-        leaf.prop_recursive(3, 10, 10, |inner| {
-            prop_oneof![
-                inner.clone().prop_map(|t| Type::ArrayOf(Box::new(t))),
-                inner.prop_map(|t| Type::Nullable(Box::new(t)))
-            ]
-        })
-    }
-
     fn is_nullable(t: &Type) -> bool {
-        matches!(t, Type::Scalar(BsonScalarType::Null) | Type::Nullable(_) | Type::Any)
+        matches!(
+            t,
+            Type::Scalar(BsonScalarType::Null) | Type::Nullable(_) | Type::Any
+        )
     }
 
     proptest! {

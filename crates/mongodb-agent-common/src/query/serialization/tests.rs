@@ -1,6 +1,6 @@
 use configuration::schema::Type;
-use introspection::type_from_bson;
 use mongodb::bson::Bson;
+use mongodb_cli_plugin::type_from_bson;
 use mongodb_support::BsonScalarType;
 use proptest::prelude::*;
 use test_helpers::arb_bson::{arb_bson_with_options, arb_datetime, ArbBsonOptions};

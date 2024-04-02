@@ -1,10 +1,15 @@
 //! The interpretation of the commands that the CLI can handle.
 
+mod introspection;
+
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
 use mongodb_agent_common::interface_types::MongoConfig;
+
+// Exported for use in tests
+pub use introspection::type_from_bson;
 
 #[derive(Debug, Clone, Parser)]
 pub struct UpdateArgs {
