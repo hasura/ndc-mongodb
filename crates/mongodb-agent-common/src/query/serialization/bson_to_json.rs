@@ -76,12 +76,14 @@ fn convert_code(v: bson::JavaScriptCodeWithScope) -> Result<Value> {
     ))
 }
 
+// We could convert directly from bson::DateTime to OffsetDateTime if the bson feature `time-0_3`
+// were set. Unfortunately it is difficult for us to set that feature since we get bson via
+// mongodb.
 fn convert_date(date: bson::DateTime) -> Result<Value> {
-    let offset_date = OffsetDateTime::from_unix_timestamp(date.timestamp_millis())
+    let system_time = date.to_system_time();
+    let offset_date: OffsetDateTime = system_time.into();
+    let string = offset_date
+        .format(&Iso8601::DEFAULT)
         .map_err(|err| BsonToJsonError::DateConversion(err.to_string()))?;
-    Ok(Value::String(
-        offset_date
-            .format(&Iso8601::DEFAULT)
-            .map_err(|err| BsonToJsonError::DateConversion(err.to_string()))?,
-    ))
+    Ok(Value::String(string))
 }

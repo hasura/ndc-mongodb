@@ -85,8 +85,12 @@ pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Resul
         ),
         BsonScalarType::String => Bson::String(deserialize(expected_type, value)?),
         BsonScalarType::Date => convert_date(&from_string(expected_type, value)?)?,
-        BsonScalarType::Timestamp => deserialize::<json_formats::Timestamp>(expected_type, value)?.into(),
-        BsonScalarType::BinData => deserialize::<json_formats::BinData>(expected_type, value)?.into(),
+        BsonScalarType::Timestamp => {
+            deserialize::<json_formats::Timestamp>(expected_type, value)?.into()
+        }
+        BsonScalarType::BinData => {
+            deserialize::<json_formats::BinData>(expected_type, value)?.into()
+        }
         BsonScalarType::ObjectId => Bson::ObjectId(deserialize(expected_type, value)?),
         BsonScalarType::Bool => match value {
             Value::Bool(b) => Bson::Boolean(b),

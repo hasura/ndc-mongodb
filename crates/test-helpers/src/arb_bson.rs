@@ -45,7 +45,7 @@ pub fn arb_bson_with_options(options: ArbBsonOptions) -> impl Strategy<Value = B
         any::<i32>().prop_map(Bson::Int32),
         any::<i64>().prop_map(Bson::Int64),
         any::<f64>().prop_map(Bson::Double),
-        any::<SystemTime>().prop_map(|t| Bson::DateTime(bson::DateTime::from_system_time(t))),
+        arb_datetime().prop_map(Bson::DateTime),
         arb_object_id().prop_map(Bson::ObjectId),
         any::<String>().prop_map(Bson::String),
         any::<String>().prop_map(Bson::Symbol),
@@ -120,6 +120,10 @@ fn arb_binary() -> impl Strategy<Value = bson::Binary> {
     let binary_subtype = any::<u8>().prop_map(Into::into);
     let bytes = collection::vec(any::<u8>(), 1..256);
     (binary_subtype, bytes).prop_map(|(subtype, bytes)| bson::Binary { subtype, bytes })
+}
+
+pub fn arb_datetime() -> impl Strategy<Value = bson::DateTime> {
+    any::<SystemTime>().prop_map(bson::DateTime::from_system_time)
 }
 
 // Generate bytes for a 128-bit decimal, and convert to a string and back to normalize. This does
