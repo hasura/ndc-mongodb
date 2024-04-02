@@ -28,6 +28,6 @@ proptest! {
         let bson = Bson::DateTime(d);
         let json = bson_to_json(bson.clone())?;
         let actual = json_to_bson(&Type::Scalar(BsonScalarType::Date), &Default::default(), json.clone())?;
-        prop_assert_eq!(actual, bson, "json: {}", json)
+        prop_assert_eq!(actual, bson, "json representation: {}", json)
     }
 }
