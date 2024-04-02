@@ -13,7 +13,7 @@ pub struct Collection {
     /// The name of a type declared in `objectTypes` that describes the fields of this collection.
     /// The type name may be the same as the collection name.
     pub r#type: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 }
 
@@ -65,7 +65,7 @@ impl Type {
 #[serde(rename_all = "camelCase")]
 pub struct ObjectType {
     pub fields: BTreeMap<String, ObjectField>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 }
 
@@ -88,7 +88,7 @@ impl ObjectType {
 #[serde(rename_all = "camelCase")]
 pub struct ObjectField {
     pub r#type: Type,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 }
 

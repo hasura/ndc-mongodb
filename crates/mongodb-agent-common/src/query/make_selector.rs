@@ -77,7 +77,7 @@ fn make_selector_helper(
             value,
         } => {
             let mongo_op = ComparisonFunction::try_from(operator)?;
-            let col = column_ref(&column.name, in_table)?;
+            let col = column_ref(column, in_table)?;
             let comparison_value = match value {
                 ComparisonValue::AnotherColumnComparison { .. } => Err(
                     MongoAgentError::NotImplemented("comparisons between columns"),
@@ -117,7 +117,7 @@ fn make_selector_helper(
                 })
                 .collect::<Result<_, MongoAgentError>>()?;
             Ok(doc! {
-                column_ref(&column.name, in_table)?: {
+                column_ref(column, in_table)?: {
                     mongo_op: values
                 }
             })
@@ -129,11 +129,11 @@ fn make_selector_helper(
                 // value is null or is absent. Checking for type 10 returns true if the value is
                 // null, but false if it is absent.
                 Ok(doc! {
-                    column_ref(&column.name, in_table)?: { "$type": 10 }
+                    column_ref(column, in_table)?: { "$type": 10 }
                 })
             }
             UnaryComparisonOperator::CustomUnaryComparisonOperator(op) => {
-                let col = column_ref(&column.name, in_table)?;
+                let col = column_ref(column, in_table)?;
                 if op == "$exists" {
                     Ok(doc! { col: { "$exists": true } })
                 } else {
