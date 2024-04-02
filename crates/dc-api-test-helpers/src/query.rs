@@ -30,6 +30,11 @@ impl QueryBuilder {
         self.predicate = Some(predicate);
         self
     }
+
+    pub fn order_by(mut self, order_by: OrderBy) -> Self {
+        self.order_by = Some(Some(order_by));
+        self
+    }
 }
 
 impl From<QueryBuilder> for Query {

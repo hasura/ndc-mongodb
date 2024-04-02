@@ -1,0 +1,34 @@
+{
+  "name": "Genre",
+  "collections": {
+    "Genre": {
+      "type": "Genre"
+    }
+  },
+  "objectTypes": {
+    "Genre": {
+      "fields": {
+        "GenreId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "Name": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "_id": {
+          "type": {
+            "nullable": {
+              "scalar": "objectId"
+            }
+          }
+        }
+      },
+      "description": "Object type for collection Genre"
+    }
+  }
+}

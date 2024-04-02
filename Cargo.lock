@@ -1585,6 +1585,7 @@ dependencies = [
  "http",
  "indexmap 2.2.5",
  "itertools 0.10.5",
+ "lazy_static",
  "mongodb",
  "mongodb-agent-common",
  "mongodb-support",
