@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use lazy_static::lazy_static;
 
 use configuration::{
     native_queries::{self, NativeQuery},
