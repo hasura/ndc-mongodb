@@ -122,11 +122,14 @@ fn arb_binary() -> impl Strategy<Value = bson::Binary> {
     (binary_subtype, bytes).prop_map(|(subtype, bytes)| bson::Binary { subtype, bytes })
 }
 
-// Generate bytes for a 128-bit decimal, and convert to a string and back to normalize
+// Generate bytes for a 128-bit decimal, and convert to a string and back to normalize. This does
+// not produce a uniform probability distribution over decimal values so it would not make a good
+// random number generator. But it is useful for testing serialization.
 fn arb_decimal() -> impl Strategy<Value = bson::Decimal128> {
     any::<[u8; 128 / 8]>().prop_map(|bytes| {
         let raw_decimal = bson::Decimal128::from_bytes(bytes);
-        raw_decimal.to_string().parse().unwrap()
+        let normalized = raw_decimal.to_string().parse().unwrap();
+        normalized
     })
 }
 
