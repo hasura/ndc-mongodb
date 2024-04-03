@@ -11,9 +11,15 @@ proptest! {
     #[test]
     fn converts_bson_to_json_and_back(bson in arb_bson()) {
         let (object_types, inferred_type) = type_from_bson("test_object", &bson);
-        let json = bson_to_json(&inferred_type, &object_types, bson.clone())?;
-        let actual = json_to_bson(&inferred_type, &object_types, json)?;
-        prop_assert_eq!(actual, bson)
+        let error_context = |msg: &str, source: String| TestCaseError::fail(format!("{msg}: {source}\ninferred type: {inferred_type:?}\nobject types: {object_types:?}"));
+        let json = bson_to_json(&inferred_type, &object_types, bson.clone()).map_err(|e| error_context("error converting bson to json", e.to_string()))?;
+        let actual = json_to_bson(&inferred_type, &object_types, json.clone()).map_err(|e| error_context("error converting json to bson", e.to_string()))?;
+        prop_assert_eq!(actual, bson,
+            "\ninferred type: {:?}\nobject types: {:?}\njson_representation: {}",
+            inferred_type,
+            object_types,
+            serde_json::to_string_pretty(&json).unwrap()
+        )
     }
 }
 

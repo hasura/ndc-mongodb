@@ -7,3 +7,4 @@
 cc 2efdea7f185f2f38ae643782b3523014ab7b8236e36a79cc6b7a7cac74b06f79 # shrinks to bytes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 238, 161, 0]
 cc 26e2543468ab6d4ffa34f9f8a2c920801ef38a35337557a8f4e74c92cf57e344 # shrinks to bson = Document({" ": Document({"¡": DateTime(1970-01-01 0:00:00.001 +00:00:00)})})
 cc 7d760e540b56fedac7dd58e5bdb5bb9613b9b0bc6a88acfab3fc9c2de8bf026d # shrinks to bson = Document({"A": Array([Null, Undefined])})
+cc 21360610045c5a616b371fb8d5492eb0c22065d62e54d9c8a8761872e2e192f3 # shrinks to bson = Array([Document({}), Document({" ": Null})])
