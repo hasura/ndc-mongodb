@@ -1,3 +1,6 @@
+use std::collections::BTreeMap;
+
+use configuration::schema::ObjectType;
 use futures::future::try_join_all;
 use itertools::Itertools;
 use mongodb::Database;
@@ -19,7 +22,7 @@ pub async fn handle_mutation_request(
     let jobs = look_up_procedures(config, mutation_request)?;
     let operation_results = try_join_all(
         jobs.into_iter()
-            .map(|procedure| execute_procedure(database.clone(), procedure)),
+            .map(|procedure| execute_procedure(&config.object_types, database.clone(), procedure)),
     )
     .await?;
     Ok(JsonResponse::Value(MutationResponse { operation_results }))
@@ -39,9 +42,9 @@ fn look_up_procedures(
                 name, arguments, ..
             } => {
                 let native_query = config.native_queries.get(&name);
-                native_query.ok_or(name).map(|native_query| {
-                    Procedure::from_native_query(native_query, &config.object_types, arguments)
-                })
+                native_query
+                    .ok_or(name)
+                    .map(|native_query| Procedure::from_native_query(native_query, arguments))
             }
         })
         .partition_result();
@@ -57,15 +60,16 @@ fn look_up_procedures(
 }
 
 async fn execute_procedure(
+    object_types: &BTreeMap<String, ObjectType>,
     database: Database,
     procedure: Procedure<'_>,
 ) -> Result<MutationOperationResults, MutationError> {
-    let result = procedure
-        .execute(database.clone())
+    let (result, result_type) = procedure
+        .execute(object_types, database.clone())
         .await
         .map_err(|err| MutationError::InvalidRequest(err.to_string()))?;
-    let json_result =
-        bson_to_json(result.into()).map_err(|err| MutationError::Other(Box::new(err)))?;
+    let json_result = bson_to_json(&result_type, object_types, result.into())
+        .map_err(|err| MutationError::Other(Box::new(err)))?;
     Ok(MutationOperationResults::Procedure {
         result: json_result,
     })
