@@ -146,33 +146,40 @@ fn convert_object(
     let input_fields: BTreeMap<String, Value> = serde_json::from_value(value)?;
     let bson_doc: bson::Document = object_type
         .named_fields()
-        .map(|field| {
-            let input_field_value =
-                get_object_field_value(object_type_name, field.clone(), &input_fields)?;
+        .filter_map(|field| {
+            let field_value_result =
+                get_object_field_value(object_type_name, field.clone(), &input_fields)
+                    .transpose()?;
+            Some((field, field_value_result))
+        })
+        .map(|(field, field_value_result)| {
             Ok((
                 field.name.to_owned(),
-                json_to_bson(&field.value.r#type, object_types, input_field_value.clone())?,
+                json_to_bson(&field.value.r#type, object_types, field_value_result?)?,
             ))
         })
         .try_collect::<_, _, JsonToBsonError>()?;
     Ok(bson_doc.into())
 }
 
+// Gets value for the appropriate key from the input object. Returns `Ok(None)` if the value is
+// missing, and the field is nullable. Returns `Err` if the value is missing and the field is *not*
+// nullable.
 fn get_object_field_value(
     object_type_name: &str,
     field: WithNameRef<'_, ObjectField>,
     object: &BTreeMap<String, Value>,
-) -> Result<Value> {
+) -> Result<Option<Value>> {
     let value = object.get(field.name);
     if value.is_none() && field.value.r#type.is_nullable() {
-        return Ok(Value::Null);
+        return Ok(None);
     }
-    value.cloned().ok_or_else(|| {
+    Ok(Some(value.cloned().ok_or_else(|| {
         JsonToBsonError::MissingObjectField(
             Type::Object(object_type_name.to_owned()),
             field.name.to_owned(),
         )
-    })
+    })?))
 }
 
 fn convert_nullable(
@@ -401,7 +408,7 @@ mod tests {
         .into();
         let value = json!({});
         let actual = json_to_bson(&expected_type, &object_types, value)?;
-        assert_eq!(actual, bson!({ "field": null }));
+        assert_eq!(actual, bson!({}));
         Ok(())
     }
 }
