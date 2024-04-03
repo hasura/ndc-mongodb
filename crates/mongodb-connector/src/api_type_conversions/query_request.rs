@@ -712,7 +712,7 @@ mod tests {
     use dc_api_test_helpers::{self as v2, source, table_relationships, target};
     use mongodb_support::BsonScalarType;
     use ndc_sdk::models::{
-        AggregateFunctionDefinition, ComparisonOperatorDefinition, OrderByElement, OrderByTarget, OrderDirection, ScalarType, Type
+        AggregateFunctionDefinition, ComparisonOperatorDefinition, OrderByElement, OrderByTarget, OrderDirection, ScalarType, Type, TypeRepresentation
     };
     use ndc_test_helpers::*;
     use pretty_assertions::assert_eq;
@@ -1066,6 +1066,7 @@ mod tests {
             (
                 "String".to_owned(),
                 ScalarType {
+                    representation: Some(TypeRepresentation::String),
                     aggregate_functions: Default::default(),
                     comparison_operators: BTreeMap::from([
                         ("_eq".to_owned(), ComparisonOperatorDefinition::Equal),
@@ -1083,6 +1084,7 @@ mod tests {
             (
                 "Int".to_owned(),
                 ScalarType {
+                    representation: Some(TypeRepresentation::Integer),
                     aggregate_functions: BTreeMap::from([
                         (
                             "avg".into(),
