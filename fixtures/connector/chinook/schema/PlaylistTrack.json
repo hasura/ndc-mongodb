@@ -1,0 +1,32 @@
+{
+  "name": "PlaylistTrack",
+  "collections": {
+    "PlaylistTrack": {
+      "type": "PlaylistTrack"
+    }
+  },
+  "objectTypes": {
+    "PlaylistTrack": {
+      "fields": {
+        "PlaylistId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "TrackId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "_id": {
+          "type": {
+            "nullable": {
+              "scalar": "objectId"
+            }
+          }
+        }
+      },
+      "description": "Object type for collection PlaylistTrack"
+    }
+  }
+}

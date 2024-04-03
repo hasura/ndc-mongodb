@@ -10,7 +10,7 @@ use crate::api_type_conversions::v2_to_v3_scalar_type_capabilities;
 
 pub fn mongo_capabilities_response() -> CapabilitiesResponse {
     ndc_sdk::models::CapabilitiesResponse {
-        version: "^0.1.0".to_owned(),
+        version: "0.1.1".to_owned(),
         capabilities: Capabilities {
             query: QueryCapabilities {
                 aggregates: Some(LeafCapability {}),

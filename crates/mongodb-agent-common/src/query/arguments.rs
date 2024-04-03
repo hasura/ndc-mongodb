@@ -1,5 +1,3 @@
-mod json_to_bson;
-
 use std::collections::BTreeMap;
 
 use configuration::schema::{ObjectField, ObjectType, Type};
@@ -9,9 +7,7 @@ use mongodb::bson::Bson;
 use serde_json::Value;
 use thiserror::Error;
 
-use self::json_to_bson::json_to_bson;
-
-pub use self::json_to_bson::{json_to_bson_scalar, JsonToBsonError};
+use super::serialization::{json_to_bson, JsonToBsonError};
 
 #[derive(Debug, Error)]
 pub enum ArgumentError {

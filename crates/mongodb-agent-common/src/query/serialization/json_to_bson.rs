@@ -1,6 +1,9 @@
-use std::{collections::BTreeMap, str::FromStr};
+use std::{collections::BTreeMap, num::ParseIntError, str::FromStr};
 
-use configuration::schema::{ObjectType, Type};
+use configuration::{
+    schema::{ObjectField, ObjectType, Type},
+    WithNameRef,
+};
 use itertools::Itertools as _;
 use mongodb::bson::{self, Bson, Decimal128};
 use mongodb_support::BsonScalarType;
@@ -8,6 +11,8 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use thiserror::Error;
 use time::{format_description::well_known::Iso8601, OffsetDateTime};
+
+use super::json_formats;
 
 #[derive(Debug, Error)]
 pub enum JsonToBsonError {
@@ -33,6 +38,9 @@ pub enum JsonToBsonError {
     #[error("inputs of type {0} are not implemented")]
     NotImplemented(BsonScalarType),
 
+    #[error("could not parse 64-bit integer input, {0}: {1}")]
+    ParseInt(String, #[source] ParseIntError),
+
     #[error("error deserializing input: {0}")]
     SerdeError(#[from] serde_json::Error),
 
@@ -53,7 +61,7 @@ pub fn json_to_bson(
     value: Value,
 ) -> Result<Bson> {
     match expected_type {
-        Type::Any => serde_json::from_value::<Bson>(value.clone()).map_err(JsonToBsonError::SerdeError),
+        Type::Any => serde_json::from_value::<Bson>(value).map_err(JsonToBsonError::SerdeError),
         Type::Scalar(t) => json_to_bson_scalar(*t, value),
         Type::Object(object_type_name) => {
             let object_type = object_types
@@ -71,7 +79,7 @@ pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Resul
     let result = match expected_type {
         BsonScalarType::Double => Bson::Double(deserialize(expected_type, value)?),
         BsonScalarType::Int => Bson::Int32(deserialize(expected_type, value)?),
-        BsonScalarType::Long => Bson::Int64(deserialize(expected_type, value)?),
+        BsonScalarType::Long => convert_long(&from_string(expected_type, value)?)?,
         BsonScalarType::Decimal => Bson::Decimal128(
             Decimal128::from_str(&from_string(expected_type, value.clone())?).map_err(|err| {
                 JsonToBsonError::ConversionErrorWithContext(
@@ -83,8 +91,12 @@ pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Resul
         ),
         BsonScalarType::String => Bson::String(deserialize(expected_type, value)?),
         BsonScalarType::Date => convert_date(&from_string(expected_type, value)?)?,
-        BsonScalarType::Timestamp => deserialize::<de::Timestamp>(expected_type, value)?.into(),
-        BsonScalarType::BinData => deserialize::<de::BinData>(expected_type, value)?.into(),
+        BsonScalarType::Timestamp => {
+            deserialize::<json_formats::Timestamp>(expected_type, value)?.into()
+        }
+        BsonScalarType::BinData => {
+            deserialize::<json_formats::BinData>(expected_type, value)?.into()
+        }
         BsonScalarType::ObjectId => Bson::ObjectId(deserialize(expected_type, value)?),
         BsonScalarType::Bool => match value {
             Value::Bool(b) => Bson::Boolean(b),
@@ -98,10 +110,10 @@ pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Resul
             Value::Null => Bson::Undefined,
             _ => incompatible_scalar_type(BsonScalarType::Undefined, value)?,
         },
-        BsonScalarType::Regex => deserialize::<de::Regex>(expected_type, value)?.into(),
+        BsonScalarType::Regex => deserialize::<json_formats::Regex>(expected_type, value)?.into(),
         BsonScalarType::Javascript => Bson::JavaScriptCode(deserialize(expected_type, value)?),
         BsonScalarType::JavascriptWithScope => {
-            deserialize::<de::JavaScripCodetWithScope>(expected_type, value)?.into()
+            deserialize::<json_formats::JavaScriptCodeWithScope>(expected_type, value)?.into()
         }
         BsonScalarType::MinKey => Bson::MinKey,
         BsonScalarType::MaxKey => Bson::MaxKey,
@@ -110,81 +122,6 @@ pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Resul
         BsonScalarType::DbPointer => Err(JsonToBsonError::NotImplemented(expected_type))?,
     };
     Ok(result)
-}
-
-/// Types defined just to get deserialization logic for BSON "scalar" types that are represented in
-/// JSON as composite structures. The types here are designed to match the representations of BSON
-/// types in extjson.
-mod de {
-    use mongodb::bson::{self, Bson};
-    use serde::Deserialize;
-    use serde_with::{base64::Base64, hex::Hex, serde_as};
-
-    #[serde_as]
-    #[derive(Deserialize)]
-    #[serde(rename_all = "camelCase")]
-    pub struct BinData {
-        #[serde_as(as = "Base64")]
-        base64: Vec<u8>,
-        #[serde_as(as = "Hex")]
-        sub_type: [u8; 1],
-    }
-
-    impl From<BinData> for Bson {
-        fn from(value: BinData) -> Self {
-            Bson::Binary(bson::Binary {
-                bytes: value.base64,
-                subtype: value.sub_type[0].into(),
-            })
-        }
-    }
-
-    #[derive(Deserialize)]
-    pub struct JavaScripCodetWithScope {
-        #[serde(rename = "$code")]
-        code: String,
-        #[serde(rename = "$scope")]
-        scope: bson::Document,
-    }
-
-    impl From<JavaScripCodetWithScope> for Bson {
-        fn from(value: JavaScripCodetWithScope) -> Self {
-            Bson::JavaScriptCodeWithScope(bson::JavaScriptCodeWithScope {
-                code: value.code,
-                scope: value.scope,
-            })
-        }
-    }
-
-    #[derive(Deserialize)]
-    pub struct Regex {
-        pattern: String,
-        options: String,
-    }
-
-    impl From<Regex> for Bson {
-        fn from(value: Regex) -> Self {
-            Bson::RegularExpression(bson::Regex {
-                pattern: value.pattern,
-                options: value.options,
-            })
-        }
-    }
-
-    #[derive(Deserialize)]
-    pub struct Timestamp {
-        t: u32,
-        i: u32,
-    }
-
-    impl From<Timestamp> for Bson {
-        fn from(value: Timestamp) -> Self {
-            Bson::Timestamp(bson::Timestamp {
-                time: value.t,
-                increment: value.i,
-            })
-        }
-    }
 }
 
 fn convert_array(
@@ -209,20 +146,40 @@ fn convert_object(
     let input_fields: BTreeMap<String, Value> = serde_json::from_value(value)?;
     let bson_doc: bson::Document = object_type
         .named_fields()
-        .map(|field| {
-            let input_field_value = input_fields.get(field.name).ok_or_else(|| {
-                JsonToBsonError::MissingObjectField(
-                    Type::Object(object_type_name.to_owned()),
-                    field.name.to_owned(),
-                )
-            })?;
+        .filter_map(|field| {
+            let field_value_result =
+                get_object_field_value(object_type_name, field.clone(), &input_fields)
+                    .transpose()?;
+            Some((field, field_value_result))
+        })
+        .map(|(field, field_value_result)| {
             Ok((
                 field.name.to_owned(),
-                json_to_bson(&field.value.r#type, object_types, input_field_value.clone())?,
+                json_to_bson(&field.value.r#type, object_types, field_value_result?)?,
             ))
         })
         .try_collect::<_, _, JsonToBsonError>()?;
     Ok(bson_doc.into())
+}
+
+// Gets value for the appropriate key from the input object. Returns `Ok(None)` if the value is
+// missing, and the field is nullable. Returns `Err` if the value is missing and the field is *not*
+// nullable.
+fn get_object_field_value(
+    object_type_name: &str,
+    field: WithNameRef<'_, ObjectField>,
+    object: &BTreeMap<String, Value>,
+) -> Result<Option<Value>> {
+    let value = object.get(field.name);
+    if value.is_none() && field.value.r#type.is_nullable() {
+        return Ok(None);
+    }
+    Ok(Some(value.cloned().ok_or_else(|| {
+        JsonToBsonError::MissingObjectField(
+            Type::Object(object_type_name.to_owned()),
+            field.name.to_owned(),
+        )
+    })?))
 }
 
 fn convert_nullable(
@@ -247,6 +204,13 @@ fn convert_date(value: &str) -> Result<Bson> {
     Ok(Bson::DateTime(bson::DateTime::from_system_time(
         date.into(),
     )))
+}
+
+fn convert_long(value: &str) -> Result<Bson> {
+    let n: i64 = value
+        .parse()
+        .map_err(|err| JsonToBsonError::ParseInt(value.to_owned(), err))?;
+    Ok(Bson::Int64(n))
 }
 
 fn deserialize<T>(expected_type: BsonScalarType, value: Value) -> Result<T>
@@ -281,7 +245,7 @@ mod tests {
     use std::{collections::BTreeMap, str::FromStr};
 
     use configuration::schema::{ObjectField, ObjectType, Type};
-    use mongodb::bson::{self, datetime::DateTimeBuilder, Bson};
+    use mongodb::bson::{self, bson, datetime::DateTimeBuilder, Bson};
     use mongodb_support::BsonScalarType;
     use pretty_assertions::assert_eq;
     use serde_json::json;
@@ -322,7 +286,7 @@ mod tests {
         let input = json!({
             "double": 3.14159,
             "int": 3,
-            "long": 3,
+            "long": "3",
             "decimal": "3.14159",
             "string": "hello",
             "date": "2024-03-22T00:59:01Z",
@@ -421,6 +385,30 @@ mod tests {
             input,
         )?;
         assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn deserializes_object_with_missing_nullable_field() -> anyhow::Result<()> {
+        let expected_type = Type::Object("test_object".to_owned());
+        let object_types = [(
+            "test_object".to_owned(),
+            ObjectType {
+                fields: [(
+                    "field".to_owned(),
+                    ObjectField {
+                        r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::String))),
+                        description: None,
+                    },
+                )]
+                .into(),
+                description: None,
+            },
+        )]
+        .into();
+        let value = json!({});
+        let actual = json_to_bson(&expected_type, &object_types, value)?;
+        assert_eq!(actual, bson!({}));
         Ok(())
     }
 }
