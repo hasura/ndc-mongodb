@@ -216,3 +216,35 @@ fn convert_small_number(expected_type: BsonScalarType, value: Bson) -> Result<Va
         )),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use pretty_assertions::assert_eq;
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn serializes_document_with_missing_nullable_field() -> anyhow::Result<()> {
+        let expected_type = Type::Object("test_object".to_owned());
+        let object_types = [(
+            "test_object".to_owned(),
+            ObjectType {
+                fields: [(
+                    "field".to_owned(),
+                    ObjectField {
+                        r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::String))),
+                        description: None,
+                    },
+                )]
+                .into(),
+                description: None,
+            },
+        )]
+        .into();
+        let value = bson::doc! {};
+        let actual = bson_to_json(&expected_type, &object_types, value.into())?;
+        assert_eq!(actual, json!({ "field": null }));
+        Ok(())
+    }
+}

@@ -380,4 +380,28 @@ mod tests {
         assert_eq!(actual, expected);
         Ok(())
     }
+
+    #[test]
+    fn deserializes_object_with_missing_nullable_field() -> anyhow::Result<()> {
+        let expected_type = Type::Object("test_object".to_owned());
+        let object_types = [(
+            "test_object".to_owned(),
+            ObjectType {
+                fields: [(
+                    "field".to_owned(),
+                    ObjectField {
+                        r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::String))),
+                        description: None,
+                    },
+                )]
+                .into(),
+                description: None,
+            },
+        )]
+        .into();
+        let value = json!({});
+        let actual = json_to_bson(&expected_type, &object_types, value)?;
+        assert_eq!(actual, bson!({ "field": null }));
+        Ok(())
+    }
 }
