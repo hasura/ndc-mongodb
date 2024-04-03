@@ -238,7 +238,7 @@ mod tests {
     use std::{collections::BTreeMap, str::FromStr};
 
     use configuration::schema::{ObjectField, ObjectType, Type};
-    use mongodb::bson::{self, datetime::DateTimeBuilder, Bson};
+    use mongodb::bson::{self, bson, datetime::DateTimeBuilder, Bson};
     use mongodb_support::BsonScalarType;
     use pretty_assertions::assert_eq;
     use serde_json::json;
@@ -279,7 +279,7 @@ mod tests {
         let input = json!({
             "double": 3.14159,
             "int": 3,
-            "long": 3,
+            "long": "3",
             "decimal": "3.14159",
             "string": "hello",
             "date": "2024-03-22T00:59:01Z",
