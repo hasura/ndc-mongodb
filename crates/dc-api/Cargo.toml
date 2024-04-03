@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 axum = { version = "0.6.18", features = ["headers"] }
-bytes = "1"
+bytes = "^1"
 dc-api-types = { path = "../dc-api-types" }
 http = "^0.2"
 jsonwebtoken = "8"

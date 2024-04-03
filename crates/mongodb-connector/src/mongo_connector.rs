@@ -9,8 +9,7 @@ use mongodb_agent_common::{
 };
 use ndc_sdk::{
     connector::{
-        Connector, ExplainError, FetchMetricsError, HealthError, InitializationError,
-        MutationError, ParseError, QueryError, SchemaError,
+        Connector, ConnectorSetup, ExplainError, FetchMetricsError, HealthError, InitializationError, MutationError, ParseError, QueryError, SchemaError
     },
     json_response::JsonResponse,
     models::{
@@ -31,13 +30,13 @@ use crate::{capabilities::mongo_capabilities_response, mutation::handle_mutation
 pub struct MongoConnector;
 
 #[async_trait]
-impl Connector for MongoConnector {
-    type Configuration = Configuration;
-    type State = MongoConfig;
+impl ConnectorSetup for MongoConnector {
+    type Connector = MongoConnector;
 
     async fn parse_configuration(
+        &self,
         configuration_dir: impl AsRef<Path> + Send,
-    ) -> Result<Self::Configuration, ParseError> {
+    ) -> Result<Configuration, ParseError> {
         let configuration = Configuration::parse_configuration(configuration_dir)
             .await
             .map_err(|err| ParseError::Other(err.into()))?;
@@ -46,12 +45,19 @@ impl Connector for MongoConnector {
 
     /// Reads database connection URI from environment variable
     async fn try_init_state(
-        configuration: &Self::Configuration,
+        &self,
+        configuration: &Configuration,
         _metrics: &mut prometheus::Registry,
-    ) -> Result<Self::State, InitializationError> {
+    ) -> Result<MongoConfig, InitializationError> {
         let state = mongodb_agent_common::state::try_init_state(configuration).await?;
         Ok(state)
     }
+}
+
+#[async_trait]
+impl Connector for MongoConnector {
+    type Configuration = Configuration;
+    type State = MongoConfig;
 
     fn fetch_metrics(
         _configuration: &Self::Configuration,
