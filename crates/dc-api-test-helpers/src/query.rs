@@ -26,6 +26,14 @@ impl QueryBuilder {
         self
     }
 
+    pub fn aggregates<I>(mut self, aggregates: I) -> Self
+    where
+        I: IntoIterator<Item = (String, Aggregate)>,
+    {
+        self.aggregates = Some(Some(aggregates.into_iter().collect()));
+        self
+    }
+
     pub fn predicate(mut self, predicate: Expression) -> Self {
         self.predicate = Some(predicate);
         self

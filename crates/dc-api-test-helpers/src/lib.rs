@@ -1,6 +1,7 @@
 //! Defining a DSL using builders cuts out SO MUCH noise from test cases
 #![allow(unused_imports)]
 
+mod aggregates;
 mod column_selector;
 mod comparison_column;
 mod comparison_value;

@@ -1,6 +1,7 @@
 //! Defining a DSL using builders cuts out SO MUCH noise from test cases
 #![allow(unused_imports)]
 
+mod aggregates;
 mod comparison_target;
 mod comparison_value;
 mod exists_in_collection;
@@ -145,6 +146,16 @@ impl QueryBuilder {
                 .into_iter()
                 .map(|(name, field)| (name.to_owned(), field))
                 .collect(),
+        );
+        self
+    }
+
+    pub fn aggregates<const S: usize>(mut self, aggregates: [(&str, Aggregate); S]) -> Self {
+        self.aggregates = Some(
+            aggregates
+                .into_iter()
+                .map(|(name, aggregate)| (name.to_owned(), aggregate))
+                .collect()
         );
         self
     }
