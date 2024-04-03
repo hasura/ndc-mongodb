@@ -68,8 +68,9 @@ pub fn bson_to_json(
 // values can be converted back to BSON without loss of meaning.
 fn bson_scalar_to_json(expected_type: BsonScalarType, value: Bson) -> Result<Value> {
     match (expected_type, value) {
-        (BsonScalarType::Null, Bson::Null) => Ok(Value::Null),
-        (BsonScalarType::Undefined, Bson::Undefined) => Ok(Value::Null),
+        (BsonScalarType::Null | BsonScalarType::Undefined, Bson::Null | Bson::Undefined) => {
+            Ok(Value::Null)
+        }
         (BsonScalarType::MinKey, Bson::MinKey) => Ok(Value::Object(Default::default())),
         (BsonScalarType::MaxKey, Bson::MaxKey) => Ok(Value::Object(Default::default())),
         (BsonScalarType::Bool, Bson::Boolean(b)) => Ok(Value::Bool(b)),
@@ -136,8 +137,7 @@ fn convert_object(
         .named_fields()
         .filter_map(|field| {
             let field_value_result =
-                get_object_field_value(object_type_name, field.clone(), &input_doc)
-                    .transpose()?;
+                get_object_field_value(object_type_name, field.clone(), &input_doc).transpose()?;
             Some((field, field_value_result))
         })
         .map(|(field, field_value_result)| {
