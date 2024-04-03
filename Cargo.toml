@@ -3,15 +3,16 @@ version = "0.0.3"
 
 [workspace]
 members = [
+  "crates/cli",
   "crates/configuration",
-  "crates/mongodb-connector",
-  "crates/mongodb-agent-common",
-  "crates/mongodb-support",
   "crates/dc-api",
-  "crates/dc-api-types",
   "crates/dc-api-test-helpers",
+  "crates/dc-api-types",
+  "crates/mongodb-agent-common",
+  "crates/mongodb-connector",
+  "crates/mongodb-support",
   "crates/ndc-test-helpers",
-  "crates/cli"
+  "crates/test-helpers",
 ]
 resolver = "2"
 

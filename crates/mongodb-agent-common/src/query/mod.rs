@@ -8,6 +8,7 @@ mod make_selector;
 mod make_sort;
 mod pipeline;
 mod relations;
+pub mod serialization;
 
 use dc_api::JsonResponse;
 use dc_api_types::{QueryRequest, QueryResponse, Target};
