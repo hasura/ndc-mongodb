@@ -36,6 +36,14 @@ pub enum Type {
 }
 
 impl Type {
+    pub fn is_nullable(&self) -> bool {
+        match self {
+            Type::Any => true,
+            Type::Nullable(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn normalize_type(self) -> Type {
         match self {
             Type::Any => Type::Any,

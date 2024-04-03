@@ -16,7 +16,7 @@ proptest! {
     #[test]
     fn converts_bson_to_json_and_back(bson in arb_bson_with_options(ArbBsonOptions { heterogeneous_arrays: false, ..Default::default() })) {
         let (object_types, inferred_type) = type_from_bson("test_object", &bson);
-        let json = bson_to_json(bson.clone())?;
+        let json = bson_to_json(&inferred_type, &object_types, bson.clone())?;
         let actual = json_to_bson(&inferred_type, &object_types, json)?;
         prop_assert_eq!(actual, bson)
     }
@@ -25,9 +25,10 @@ proptest! {
 proptest! {
     #[test]
     fn converts_datetime_from_bson_to_json_and_back(d in arb_datetime()) {
+        let t = Type::Scalar(BsonScalarType::Date);
         let bson = Bson::DateTime(d);
-        let json = bson_to_json(bson.clone())?;
-        let actual = json_to_bson(&Type::Scalar(BsonScalarType::Date), &Default::default(), json.clone())?;
+        let json = bson_to_json(&t, &Default::default(), bson.clone())?;
+        let actual = json_to_bson(&t, &Default::default(), json.clone())?;
         prop_assert_eq!(actual, bson, "json representation: {}", json)
     }
 }

@@ -1,6 +1,9 @@
-use std::{collections::BTreeMap, str::FromStr};
+use std::{collections::BTreeMap, num::ParseIntError, str::FromStr};
 
-use configuration::schema::{ObjectType, Type};
+use configuration::{
+    schema::{ObjectField, ObjectType, Type},
+    WithNameRef,
+};
 use itertools::Itertools as _;
 use mongodb::bson::{self, Bson, Decimal128};
 use mongodb_support::BsonScalarType;
@@ -34,6 +37,9 @@ pub enum JsonToBsonError {
 
     #[error("inputs of type {0} are not implemented")]
     NotImplemented(BsonScalarType),
+
+    #[error("could not parse 64-bit integer input, {0}: {1}")]
+    ParseInt(String, #[source] ParseIntError),
 
     #[error("error deserializing input: {0}")]
     SerdeError(#[from] serde_json::Error),
@@ -73,7 +79,7 @@ pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Resul
     let result = match expected_type {
         BsonScalarType::Double => Bson::Double(deserialize(expected_type, value)?),
         BsonScalarType::Int => Bson::Int32(deserialize(expected_type, value)?),
-        BsonScalarType::Long => Bson::Int64(deserialize(expected_type, value)?),
+        BsonScalarType::Long => convert_long(&from_string(expected_type, value)?)?,
         BsonScalarType::Decimal => Bson::Decimal128(
             Decimal128::from_str(&from_string(expected_type, value.clone())?).map_err(|err| {
                 JsonToBsonError::ConversionErrorWithContext(
@@ -141,12 +147,8 @@ fn convert_object(
     let bson_doc: bson::Document = object_type
         .named_fields()
         .map(|field| {
-            let input_field_value = input_fields.get(field.name).ok_or_else(|| {
-                JsonToBsonError::MissingObjectField(
-                    Type::Object(object_type_name.to_owned()),
-                    field.name.to_owned(),
-                )
-            })?;
+            let input_field_value =
+                get_object_field_value(object_type_name, field.clone(), &input_fields)?;
             Ok((
                 field.name.to_owned(),
                 json_to_bson(&field.value.r#type, object_types, input_field_value.clone())?,
@@ -154,6 +156,23 @@ fn convert_object(
         })
         .try_collect::<_, _, JsonToBsonError>()?;
     Ok(bson_doc.into())
+}
+
+fn get_object_field_value(
+    object_type_name: &str,
+    field: WithNameRef<'_, ObjectField>,
+    object: &BTreeMap<String, Value>,
+) -> Result<Value> {
+    let value = object.get(field.name);
+    if value.is_none() && field.value.r#type.is_nullable() {
+        return Ok(Value::Null);
+    }
+    value.cloned().ok_or_else(|| {
+        JsonToBsonError::MissingObjectField(
+            Type::Object(object_type_name.to_owned()),
+            field.name.to_owned(),
+        )
+    })
 }
 
 fn convert_nullable(
@@ -178,6 +197,13 @@ fn convert_date(value: &str) -> Result<Bson> {
     Ok(Bson::DateTime(bson::DateTime::from_system_time(
         date.into(),
     )))
+}
+
+fn convert_long(value: &str) -> Result<Bson> {
+    let n: i64 = value
+        .parse()
+        .map_err(|err| JsonToBsonError::ParseInt(value.to_owned(), err))?;
+    Ok(Bson::Int64(n))
 }
 
 fn deserialize<T>(expected_type: BsonScalarType, value: Value) -> Result<T>

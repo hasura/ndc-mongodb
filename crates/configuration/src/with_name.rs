@@ -52,7 +52,7 @@ impl<T> From<(String, T)> for WithName<T> {
     }
 }
 
-#[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct WithNameRef<'a, T> {
     pub name: &'a str,
     pub value: &'a T,
