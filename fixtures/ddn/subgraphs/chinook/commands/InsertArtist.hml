@@ -2,7 +2,7 @@ kind: Command
 version: v1
 definition:
   name: insertArtist
-  description: Example of a database update using a native query
+  description: Example of a database update using a native procedure
   outputType: InsertArtist
   arguments:
     - name: id

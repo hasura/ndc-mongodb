@@ -2,6 +2,7 @@ use std::path::Path;
 
 use anyhow::anyhow;
 use async_trait::async_trait;
+use bytes::Bytes;
 use configuration::Configuration;
 use mongodb_agent_common::{
     explain::explain_query, health::check_health, interface_types::MongoConfig,
@@ -9,7 +10,8 @@ use mongodb_agent_common::{
 };
 use ndc_sdk::{
     connector::{
-        Connector, ConnectorSetup, ExplainError, FetchMetricsError, HealthError, InitializationError, MutationError, ParseError, QueryError, SchemaError
+        Connector, ConnectorSetup, ExplainError, FetchMetricsError, HealthError,
+        InitializationError, MutationError, ParseError, QueryError, SchemaError,
     },
     json_response::JsonResponse,
     models::{
@@ -17,22 +19,26 @@ use ndc_sdk::{
         QueryResponse, SchemaResponse,
     },
 };
+use tracing::instrument;
 
 use crate::{
     api_type_conversions::{
         v2_to_v3_explain_response, v2_to_v3_query_response, v3_to_v2_query_request, QueryContext,
     },
-    error_mapping::{mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error}, schema,
+    error_mapping::{mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error},
+    schema,
 };
 use crate::{capabilities::mongo_capabilities_response, mutation::handle_mutation_request};
 
 #[derive(Clone, Default)]
 pub struct MongoConnector;
 
+#[allow(clippy::blocks_in_conditions)]
 #[async_trait]
 impl ConnectorSetup for MongoConnector {
     type Connector = MongoConnector;
 
+    #[instrument(err, skip_all)]
     async fn parse_configuration(
         &self,
         configuration_dir: impl AsRef<Path> + Send,
@@ -44,6 +50,10 @@ impl ConnectorSetup for MongoConnector {
     }
 
     /// Reads database connection URI from environment variable
+    #[instrument(err, skip_all)]
+    // `instrument` automatically emits traces when this function returns.
+    // - `err` limits logging to `Err` results, at log level `error`
+    // - `skip_all` omits arguments from the trace
     async fn try_init_state(
         &self,
         configuration: &Configuration,
@@ -54,11 +64,13 @@ impl ConnectorSetup for MongoConnector {
     }
 }
 
+#[allow(clippy::blocks_in_conditions)]
 #[async_trait]
 impl Connector for MongoConnector {
     type Configuration = Configuration;
     type State = MongoConfig;
 
+    #[instrument(err, skip_all)]
     fn fetch_metrics(
         _configuration: &Self::Configuration,
         _state: &Self::State,
@@ -66,6 +78,7 @@ impl Connector for MongoConnector {
         Ok(())
     }
 
+    #[instrument(err, skip_all)]
     async fn health_check(
         _configuration: &Self::Configuration,
         state: &Self::State,
@@ -83,6 +96,7 @@ impl Connector for MongoConnector {
         mongo_capabilities_response().into()
     }
 
+    #[instrument(err, skip_all)]
     async fn get_schema(
         configuration: &Self::Configuration,
     ) -> Result<JsonResponse<SchemaResponse>, SchemaError> {
@@ -90,6 +104,7 @@ impl Connector for MongoConnector {
         Ok(response.into())
     }
 
+    #[instrument(err, skip_all)]
     async fn query_explain(
         configuration: &Self::Configuration,
         state: &Self::State,
@@ -109,6 +124,7 @@ impl Connector for MongoConnector {
         Ok(v2_to_v3_explain_response(response).into())
     }
 
+    #[instrument(err, skip_all)]
     async fn mutation_explain(
         _configuration: &Self::Configuration,
         _state: &Self::State,
@@ -119,6 +135,7 @@ impl Connector for MongoConnector {
         ))
     }
 
+    #[instrument(err, skip_all)]
     async fn mutation(
         _configuration: &Self::Configuration,
         state: &Self::State,
@@ -127,6 +144,7 @@ impl Connector for MongoConnector {
         handle_mutation_request(state, request).await
     }
 
+    #[instrument(err, skip_all)]
     async fn query(
         configuration: &Self::Configuration,
         state: &Self::State,
@@ -144,16 +162,18 @@ impl Connector for MongoConnector {
             .await
             .map_err(mongo_agent_error_to_query_error)?;
 
-        // TODO: This requires parsing and reserializing the response from MongoDB. We can avoid
-        // this by passing a response format enum to the query pipeline builder that will format
-        // responses differently for v3 vs v2. MVC-7
-        let response = response_json
-            .into_value()
-            .map_err(|e| QueryError::Other(Box::new(e)))?;
-
-        // TODO: If we are able to push v3 response formatting to the MongoDB aggregation pipeline
-        // then we can switch to using `map_unserialized` here to avoid  deserializing and
-        // reserializing the response. MVC-7
-        Ok(v2_to_v3_query_response(response).into())
+        match response_json {
+            dc_api::JsonResponse::Value(v2_response) => {
+                Ok(JsonResponse::Value(v2_to_v3_query_response(v2_response)))
+            }
+            dc_api::JsonResponse::Serialized(bytes) => {
+                let v2_value: serde_json::Value = serde_json::de::from_slice(&bytes)
+                    .map_err(|e| QueryError::Other(Box::new(e)))?;
+                let v3_bytes: Bytes = serde_json::to_vec(&vec![v2_value])
+                    .map_err(|e| QueryError::Other(Box::new(e)))?
+                    .into();
+                Ok(JsonResponse::Serialized(v3_bytes))
+            }
+        }
     }
 }

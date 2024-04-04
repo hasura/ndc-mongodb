@@ -8,6 +8,9 @@ use clap::{Parser, Subcommand};
 
 use mongodb_agent_common::interface_types::MongoConfig;
 
+// Exported for use in tests
+pub use introspection::type_from_bson;
+
 #[derive(Debug, Clone, Parser)]
 pub struct UpdateArgs {
     #[arg(long = "sample-size", value_name = "N", default_value_t = 10)]

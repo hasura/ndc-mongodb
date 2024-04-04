@@ -114,6 +114,15 @@ fn make_object_field(
     (collected_otds, object_field)
 }
 
+// Exported for use in tests
+pub fn type_from_bson(
+    object_type_name: &str,
+    value: &Bson,
+) -> (BTreeMap<std::string::String, schema::ObjectType>, Type) {
+    let (object_types, t) = make_field_type(object_type_name, value);
+    (WithName::into_map(object_types), t)
+}
+
 fn make_field_type(
     object_type_name: &str,
     field_value: &Bson,
