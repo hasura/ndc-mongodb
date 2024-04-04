@@ -1,6 +1,6 @@
 mod configuration;
 mod directory;
-pub mod native_queries;
+pub mod native_procedure;
 pub mod schema;
 mod with_name;
 

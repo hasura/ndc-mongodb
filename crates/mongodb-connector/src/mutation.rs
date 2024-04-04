@@ -41,10 +41,10 @@ fn look_up_procedures(
             MutationOperation::Procedure {
                 name, arguments, ..
             } => {
-                let native_query = config.native_queries.get(&name);
-                native_query
-                    .ok_or(name)
-                    .map(|native_query| Procedure::from_native_query(native_query, arguments))
+                let native_procedure = config.native_procedures.get(&name);
+                native_procedure.ok_or(name).map(|native_procedure| {
+                    Procedure::from_native_procedure(native_procedure, arguments)
+                })
             }
         })
         .partition_result();
