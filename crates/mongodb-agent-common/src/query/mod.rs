@@ -335,7 +335,7 @@ mod tests {
                 })?)]))
             });
 
-        let result = execute_query_request(&collection, query_request)
+        let result = execute_query_request(&collection, &query_request)
             .await?
             .into_value()?;
         assert_eq!(expected_response, result);
