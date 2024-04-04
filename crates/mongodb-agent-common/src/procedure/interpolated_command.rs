@@ -7,7 +7,7 @@ use super::ProcedureError;
 
 type Result<T> = std::result::Result<T, ProcedureError>;
 
-/// Parse native query commands, and interpolate arguments.
+/// Parse native procedure commands, and interpolate arguments.
 pub fn interpolated_command(
     command: &bson::Document,
     arguments: &BTreeMap<String, Bson>,
@@ -69,19 +69,19 @@ fn interpolate_document(
 ///
 /// if the type of the variable `recordId` is `int`.
 fn interpolate_string(string: &str, arguments: &BTreeMap<String, Bson>) -> Result<Bson> {
-    let parts = parse_native_query(string);
+    let parts = parse_native_procedure(string);
     if parts.len() == 1 {
         let mut parts = parts;
         match parts.remove(0) {
-            NativeQueryPart::Text(string) => Ok(Bson::String(string)),
-            NativeQueryPart::Parameter(param) => resolve_argument(&param, arguments),
+            NativeProcedurePart::Text(string) => Ok(Bson::String(string)),
+            NativeProcedurePart::Parameter(param) => resolve_argument(&param, arguments),
         }
     } else {
         let interpolated_parts: Vec<String> = parts
             .into_iter()
             .map(|part| match part {
-                NativeQueryPart::Text(string) => Ok(string),
-                NativeQueryPart::Parameter(param) => {
+                NativeProcedurePart::Text(string) => Ok(string),
+                NativeProcedurePart::Parameter(param) => {
                     let argument_value = resolve_argument(&param, arguments)?;
                     match argument_value {
                         Bson::String(string) => Ok(string),
@@ -101,30 +101,30 @@ fn resolve_argument(argument_name: &str, arguments: &BTreeMap<String, Bson>) -> 
     Ok(argument.clone())
 }
 
-/// A part of a Native Query text, either raw text or a parameter.
+/// A part of a Native Procedure command text, either raw text or a parameter.
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum NativeQueryPart {
+enum NativeProcedurePart {
     /// A raw text part
     Text(String),
     /// A parameter
     Parameter(String),
 }
 
-/// Parse a string or key in a native query into parts where variables have the syntax
+/// Parse a string or key in a native procedure into parts where variables have the syntax
 /// `{{<variable>}}`.
-fn parse_native_query(string: &str) -> Vec<NativeQueryPart> {
-    let vec: Vec<Vec<NativeQueryPart>> = string
+fn parse_native_procedure(string: &str) -> Vec<NativeProcedurePart> {
+    let vec: Vec<Vec<NativeProcedurePart>> = string
         .split("{{")
         .filter(|part| !part.is_empty())
         .map(|part| match part.split_once("}}") {
-            None => vec![NativeQueryPart::Text(part.to_string())],
+            None => vec![NativeProcedurePart::Text(part.to_string())],
             Some((var, text)) => {
                 if text.is_empty() {
-                    vec![NativeQueryPart::Parameter(var.trim().to_owned())]
+                    vec![NativeProcedurePart::Parameter(var.trim().to_owned())]
                 } else {
                     vec![
-                        NativeQueryPart::Parameter(var.trim().to_owned()),
-                        NativeQueryPart::Text(text.to_string()),
+                        NativeProcedurePart::Parameter(var.trim().to_owned()),
+                        NativeProcedurePart::Text(text.to_string()),
                     ]
                 }
             }
@@ -135,7 +135,7 @@ fn parse_native_query(string: &str) -> Vec<NativeQueryPart> {
 
 #[cfg(test)]
 mod tests {
-    use configuration::native_queries::NativeQuery;
+    use configuration::native_procedure::NativeProcedure;
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
@@ -148,7 +148,7 @@ mod tests {
 
     #[test]
     fn interpolates_non_string_type() -> anyhow::Result<()> {
-        let native_query_input = json!({
+        let native_procedure_input = json!({
             "resultType": { "object": "InsertArtist" },
             "arguments": {
                 "id": { "type": { "scalar": "int" } },
@@ -169,13 +169,13 @@ mod tests {
         .into_iter()
         .collect();
 
-        let native_query: NativeQuery = serde_json::from_value(native_query_input)?;
+        let native_procedure: NativeProcedure = serde_json::from_value(native_procedure_input)?;
         let arguments = resolve_arguments(
-            &native_query.object_types,
-            &native_query.arguments,
+            &native_procedure.object_types,
+            &native_procedure.arguments,
             input_arguments,
         )?;
-        let command = interpolated_command(&native_query.command, &arguments)?;
+        let command = interpolated_command(&native_procedure.command, &arguments)?;
 
         assert_eq!(
             command,
@@ -192,7 +192,7 @@ mod tests {
 
     #[test]
     fn interpolates_array_argument() -> anyhow::Result<()> {
-        let native_query_input = json!({
+        let native_procedure_input = json!({
             "name": "insertArtist",
             "resultType": { "object": "InsertArtist" },
             "objectTypes": {
@@ -221,13 +221,13 @@ mod tests {
         .into_iter()
         .collect();
 
-        let native_query: NativeQuery = serde_json::from_value(native_query_input)?;
+        let native_procedure: NativeProcedure = serde_json::from_value(native_procedure_input)?;
         let arguments = resolve_arguments(
-            &native_query.object_types,
-            &native_query.arguments,
+            &native_procedure.object_types,
+            &native_procedure.arguments,
             input_arguments,
         )?;
-        let command = interpolated_command(&native_query.command, &arguments)?;
+        let command = interpolated_command(&native_procedure.command, &arguments)?;
 
         assert_eq!(
             command,
@@ -250,7 +250,7 @@ mod tests {
 
     #[test]
     fn interpolates_arguments_within_string() -> anyhow::Result<()> {
-        let native_query_input = json!({
+        let native_procedure_input = json!({
             "name": "insert",
             "resultType": { "object": "Insert" },
             "arguments": {
@@ -269,13 +269,13 @@ mod tests {
         .into_iter()
         .collect();
 
-        let native_query: NativeQuery = serde_json::from_value(native_query_input)?;
+        let native_procedure: NativeProcedure = serde_json::from_value(native_procedure_input)?;
         let arguments = resolve_arguments(
-            &native_query.object_types,
-            &native_query.arguments,
+            &native_procedure.object_types,
+            &native_procedure.arguments,
             input_arguments,
         )?;
-        let command = interpolated_command(&native_query.command, &arguments)?;
+        let command = interpolated_command(&native_procedure.command, &arguments)?;
 
         assert_eq!(
             command,

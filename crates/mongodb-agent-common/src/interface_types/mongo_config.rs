@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use configuration::{native_queries::NativeQuery, schema::ObjectType};
+use configuration::{native_procedure::NativeProcedure, schema::ObjectType};
 use mongodb::Client;
 
 #[derive(Clone, Debug)]
@@ -10,6 +10,6 @@ pub struct MongoConfig {
     /// Name of the database to connect to
     pub database: String,
 
-    pub native_queries: BTreeMap<String, NativeQuery>,
+    pub native_procedures: BTreeMap<String, NativeProcedure>,
     pub object_types: BTreeMap<String, ObjectType>,
 }

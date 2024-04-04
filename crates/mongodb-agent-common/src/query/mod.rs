@@ -1,7 +1,6 @@
 pub mod arguments;
 mod column_ref;
 mod constants;
-mod execute_native_query_request;
 mod execute_query_request;
 mod foreach;
 mod make_selector;
@@ -20,10 +19,7 @@ pub use self::{
     make_sort::make_sort,
     pipeline::{is_response_faceted, pipeline_for_non_foreach, pipeline_for_query_request},
 };
-use crate::{
-    interface_types::{MongoAgentError, MongoConfig},
-    query::execute_native_query_request::handle_native_query_request,
-};
+use crate::interface_types::{MongoAgentError, MongoConfig};
 
 pub fn collection_name(query_request_target: &Target) -> String {
     query_request_target.name().join(".")
@@ -36,20 +32,6 @@ pub async fn handle_query_request(
     tracing::debug!(?config, query_request = %serde_json::to_string(&query_request).unwrap(), "executing query");
 
     let database = config.client.database(&config.database);
-
-    let target = &query_request.target;
-    let target_name = {
-        let name = target.name();
-        if name.len() == 1 {
-            Some(&name[0])
-        } else {
-            None
-        }
-    };
-    if let Some(native_query) = target_name.and_then(|name| config.native_queries.get(name)) {
-        return handle_native_query_request(native_query.clone(), database).await;
-    }
-
     let collection = database.collection::<Document>(&collection_name(&query_request.target));
 
     execute_query_request(&collection, query_request).await
