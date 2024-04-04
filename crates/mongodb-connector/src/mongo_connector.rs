@@ -147,16 +147,16 @@ impl Connector for MongoConnector {
             .await
             .map_err(mongo_agent_error_to_query_error)?;
 
-         match response_json {
+        match response_json {
             dc_api::JsonResponse::Value(v2_response) => {
                 Ok(JsonResponse::Value(v2_to_v3_query_response(v2_response)))
             }
             dc_api::JsonResponse::Serialized(bytes) => {
                 let v2_value: serde_json::Value = serde_json::de::from_slice(&bytes)
-                        .map_err(|e| QueryError::Other(Box::new(e)))?;
+                    .map_err(|e| QueryError::Other(Box::new(e)))?;
                 let v3_bytes: Bytes = serde_json::to_vec(&vec![v2_value])
-                        .map_err(|e| QueryError::Other(Box::new(e)))?
-                        .into();
+                    .map_err(|e| QueryError::Other(Box::new(e)))?
+                    .into();
                 Ok(JsonResponse::Serialized(v3_bytes))
             }
         }
