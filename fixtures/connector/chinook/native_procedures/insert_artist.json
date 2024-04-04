@@ -1,7 +1,6 @@
 {
   "name": "insertArtist",
-  "description": "Example of a database update using a native query",
-  "mode": "readWrite",
+  "description": "Example of a database update using a native procedure",
   "resultType": {
     "object": "InsertArtist"
   },

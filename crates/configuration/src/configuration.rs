@@ -5,7 +5,7 @@ use itertools::Itertools;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::{native_queries::NativeQuery, read_directory, schema::ObjectType, Schema};
+use crate::{native_procedure::NativeProcedure, read_directory, schema::ObjectType, Schema};
 
 #[derive(Clone, Debug, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -13,20 +13,20 @@ pub struct Configuration {
     /// Descriptions of collections and types used in the database
     pub schema: Schema,
 
-    /// Native queries allow arbitrary MongoDB aggregation pipelines where types of results are
+    /// Native procedures allow arbitrary MongoDB commands where types of results are
     /// specified via user configuration.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub native_queries: BTreeMap<String, NativeQuery>,
+    pub native_procedures: BTreeMap<String, NativeProcedure>,
 }
 
 impl Configuration {
     pub fn validate(
         schema: Schema,
-        native_queries: BTreeMap<String, NativeQuery>,
+        native_procedures: BTreeMap<String, NativeProcedure>,
     ) -> anyhow::Result<Self> {
         let config = Configuration {
             schema,
-            native_queries,
+            native_procedures,
         };
 
         {
@@ -55,14 +55,14 @@ impl Configuration {
         read_directory(configuration_dir).await
     }
 
-    /// Returns object types collected from schema and native queries
+    /// Returns object types collected from schema and native procedures
     pub fn object_types(&self) -> impl Iterator<Item = (&String, &ObjectType)> {
         let object_types_from_schema = self.schema.object_types.iter();
-        let object_types_from_native_queries = self
-            .native_queries
+        let object_types_from_native_procedures = self
+            .native_procedures
             .values()
-            .flat_map(|native_query| &native_query.object_types);
-        object_types_from_schema.chain(object_types_from_native_queries)
+            .flat_map(|native_procedure| &native_procedure.object_types);
+        object_types_from_schema.chain(object_types_from_native_procedures)
     }
 }
 
@@ -87,9 +87,9 @@ mod tests {
             .into_iter()
             .collect(),
         };
-        let native_queries = [(
+        let native_procedures = [(
             "hello".to_owned(),
-            NativeQuery {
+            NativeProcedure {
                 object_types: [(
                     "Album".to_owned(),
                     ObjectType {
@@ -104,12 +104,11 @@ mod tests {
                 arguments: Default::default(),
                 selection_criteria: Default::default(),
                 description: Default::default(),
-                mode: Default::default(),
             },
         )]
         .into_iter()
         .collect();
-        let result = Configuration::validate(schema, native_queries);
+        let result = Configuration::validate(schema, native_procedures);
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("multiple definitions"));
         assert!(error_msg.contains("Album"));

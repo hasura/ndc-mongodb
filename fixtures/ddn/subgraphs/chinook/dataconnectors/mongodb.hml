@@ -905,12 +905,6 @@ definition:
                 underlying_type:
                   type: named
                   name: ObjectId
-        HelloResult:
-          fields:
-            ok:
-              type: { type: named, name: Int }
-            readOnly:
-              type: { type: named, name: Boolean }
         InsertArtist:
           fields:
             ok:
@@ -1006,15 +1000,10 @@ definition:
               unique_columns:
                 - _id
           foreign_keys: {}
-      functions:
-        - name: hello
-          description: Example of a read-only native query
-          result_type: { type: named, name: HelloResult } 
-          arguments: {}
-          command: { hello: 1 }
+      functions: []
       procedures:
         - name: insertArtist
-          description: Example of a database update using a native query
+          description: Example of a database update using a native procedure
           result_type: { type: named, name: InsertArtist }
           arguments:
             id: { type: { type: named, name: Int } }

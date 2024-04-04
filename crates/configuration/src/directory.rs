@@ -12,7 +12,7 @@ use tokio_stream::wrappers::ReadDirStream;
 use crate::{with_name::WithName, Configuration, Schema};
 
 pub const SCHEMA_DIRNAME: &str = "schema";
-pub const NATIVE_QUERIES_DIRNAME: &str = "native_queries";
+pub const NATIVE_PROCEDURES_DIRNAME: &str = "native_procedures";
 
 pub const CONFIGURATION_EXTENSIONS: [(&str, FileFormat); 3] =
     [("json", JSON), ("yaml", YAML), ("yml", YAML)];
@@ -38,16 +38,16 @@ pub async fn read_directory(
         .unwrap_or_default();
     let schema = schemas.into_values().fold(Schema::default(), Schema::merge);
 
-    let native_queries = read_subdir_configs(&dir.join(NATIVE_QUERIES_DIRNAME))
+    let native_procedures = read_subdir_configs(&dir.join(NATIVE_PROCEDURES_DIRNAME))
         .await?
         .unwrap_or_default();
 
-    Configuration::validate(schema, native_queries)
+    Configuration::validate(schema, native_procedures)
 }
 
 /// Parse all files in a directory with one of the allowed configuration extensions according to
-/// the given type argument. For example if `T` is `NativeQuery` this function assumes that all
-/// json and yaml files in the given directory should be parsed as native query configurations.
+/// the given type argument. For example if `T` is `NativeProcedure` this function assumes that all
+/// json and yaml files in the given directory should be parsed as native procedure configurations.
 ///
 /// Assumes that every configuration file has a `name` field.
 async fn read_subdir_configs<T>(subdir: &Path) -> anyhow::Result<Option<BTreeMap<String, T>>>

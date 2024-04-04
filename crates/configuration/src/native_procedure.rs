@@ -8,21 +8,23 @@ use crate::schema::{ObjectField, ObjectType, Type};
 
 /// An arbitrary database command using MongoDB's runCommand API.
 /// See https://www.mongodb.com/docs/manual/reference/method/db.runCommand/
+///
+/// Native Procedures appear as "procedures" in your data graph.
 #[derive(Clone, Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct NativeQuery {
+pub struct NativeProcedure {
     /// You may define object types here to reference in `result_type`. Any types defined here will
     /// be merged with the definitions in `schema.json`. This allows you to maintain hand-written
-    /// types for native queries without having to edit a generated `schema.json` file.
+    /// types for native procedures without having to edit a generated `schema.json` file.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub object_types: BTreeMap<String, ObjectType>,
 
-    /// Type of data returned by the query. You may reference object types defined in the
+    /// Type of data returned by the procedure. You may reference object types defined in the
     /// `object_types` list in this definition, or you may reference object types from
     /// `schema.json`.
     pub result_type: Type,
 
-    /// Arguments to be supplied for each query invocation. These will be substituted into the
+    /// Arguments to be supplied for each procedure invocation. These will be substituted into the
     /// given `command`.
     ///
     /// Argument values are standard JSON mapped from GraphQL input types, not Extended JSON.
@@ -38,7 +40,7 @@ pub struct NativeQuery {
     /// See https://www.mongodb.com/docs/manual/reference/mongodb-extended-json/
     ///
     /// Keys and values in the command may contain placeholders of the form `{{variableName}}`
-    /// which will be substituted when the native query is executed according to the given
+    /// which will be substituted when the native procedure is executed according to the given
     /// arguments.
     ///
     /// Placeholders must be inside quotes so that the command can be stored in JSON format. If the
@@ -75,22 +77,6 @@ pub struct NativeQuery {
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-
-    /// Set to `readWrite` if this native query might modify data in the database. When refreshing
-    /// a dataconnector native queries will appear in the corresponding `DataConnectorLink`
-    /// definition as `functions` if they are read-only, or as `procedures` if they are read-write.
-    /// Functions are intended to map to GraphQL Query fields, while procedures map to Mutation
-    /// fields.
-    #[serde(default)]
-    pub mode: Mode,
-}
-
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-pub enum Mode {
-    #[default]
-    ReadOnly,
-    ReadWrite,
 }
 
 type Object = serde_json::Map<String, serde_json::Value>;
