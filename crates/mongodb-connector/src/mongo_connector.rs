@@ -19,6 +19,7 @@ use ndc_sdk::{
         QueryResponse, SchemaResponse,
     },
 };
+use tracing::instrument;
 
 use crate::{
     api_type_conversions::{
@@ -32,10 +33,12 @@ use crate::{capabilities::mongo_capabilities_response, mutation::handle_mutation
 #[derive(Clone, Default)]
 pub struct MongoConnector;
 
+#[allow(clippy::blocks_in_conditions)]
 #[async_trait]
 impl ConnectorSetup for MongoConnector {
     type Connector = MongoConnector;
 
+    #[instrument(err, skip_all)]
     async fn parse_configuration(
         &self,
         configuration_dir: impl AsRef<Path> + Send,
@@ -47,6 +50,10 @@ impl ConnectorSetup for MongoConnector {
     }
 
     /// Reads database connection URI from environment variable
+    #[instrument(err, skip_all)]
+    // `instrument` automatically emits traces when this function returns.
+    // - `err` limits logging to `Err` results, at log level `error`
+    // - `skip_all` omits arguments from the trace
     async fn try_init_state(
         &self,
         configuration: &Configuration,
@@ -57,11 +64,13 @@ impl ConnectorSetup for MongoConnector {
     }
 }
 
+#[allow(clippy::blocks_in_conditions)]
 #[async_trait]
 impl Connector for MongoConnector {
     type Configuration = Configuration;
     type State = MongoConfig;
 
+    #[instrument(err, skip_all)]
     fn fetch_metrics(
         _configuration: &Self::Configuration,
         _state: &Self::State,
@@ -69,6 +78,7 @@ impl Connector for MongoConnector {
         Ok(())
     }
 
+    #[instrument(err, skip_all)]
     async fn health_check(
         _configuration: &Self::Configuration,
         state: &Self::State,
@@ -86,6 +96,7 @@ impl Connector for MongoConnector {
         mongo_capabilities_response().into()
     }
 
+    #[instrument(err, skip_all)]
     async fn get_schema(
         configuration: &Self::Configuration,
     ) -> Result<JsonResponse<SchemaResponse>, SchemaError> {
@@ -93,6 +104,7 @@ impl Connector for MongoConnector {
         Ok(response.into())
     }
 
+    #[instrument(err, skip_all)]
     async fn query_explain(
         configuration: &Self::Configuration,
         state: &Self::State,
@@ -112,6 +124,7 @@ impl Connector for MongoConnector {
         Ok(v2_to_v3_explain_response(response).into())
     }
 
+    #[instrument(err, skip_all)]
     async fn mutation_explain(
         _configuration: &Self::Configuration,
         _state: &Self::State,
@@ -122,6 +135,7 @@ impl Connector for MongoConnector {
         ))
     }
 
+    #[instrument(err, skip_all)]
     async fn mutation(
         _configuration: &Self::Configuration,
         state: &Self::State,
@@ -130,6 +144,7 @@ impl Connector for MongoConnector {
         handle_mutation_request(state, request).await
     }
 
+    #[instrument(err, skip_all)]
     async fn query(
         configuration: &Self::Configuration,
         state: &Self::State,
