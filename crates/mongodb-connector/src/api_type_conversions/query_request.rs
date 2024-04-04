@@ -34,7 +34,7 @@ impl QueryContext<'_> {
             .object_types
             .get(object_type_name)
             .ok_or_else(|| ConversionError::UnknownObjectType(object_type_name.to_string()))?;
-    
+
         Ok(WithNameRef { name: object_type_name, value: object_type })
     }
 
@@ -44,13 +44,20 @@ impl QueryContext<'_> {
             .ok_or_else(|| ConversionError::UnknownScalarType(scalar_type_name.to_owned()))
     }
 
+    fn find_aggregation_function_definition(&self, scalar_type_name: &str, function: &str) -> Result<&v3::AggregateFunctionDefinition, ConversionError> {
+        let scalar_type = self.find_scalar_type(scalar_type_name)?;
+        scalar_type
+            .aggregate_functions
+            .get(function)
+            .ok_or_else(|| ConversionError::UnknownAggregateFunction { scalar_type: scalar_type_name.to_string(), aggregate_function: function.to_string() })
+    }
+
     fn find_comparison_operator_definition(&self, scalar_type_name: &str, operator: &str) -> Result<&v3::ComparisonOperatorDefinition, ConversionError> {
         let scalar_type = self.find_scalar_type(scalar_type_name)?;
-        let operator = scalar_type
+        scalar_type
             .comparison_operators
             .get(operator)
-            .ok_or_else(|| ConversionError::UnknownComparisonOperator(operator.to_owned()))?;
-        Ok(operator)
+            .ok_or_else(|| ConversionError::UnknownComparisonOperator(operator.to_owned()))
     }
 }
 
@@ -71,7 +78,7 @@ pub fn v3_to_v2_query_request(
 ) -> Result<v2::QueryRequest, ConversionError> {
     let collection = context.find_collection(&request.collection)?;
     let collection_object_type = context.find_object_type(&collection.r#type)?;
-        
+
     Ok(v2::QueryRequest {
         relationships: v3_to_v2_relationships(&request)?,
         target: Target::TTable {
@@ -106,7 +113,7 @@ fn v3_to_v2_query(
             aggregates
                 .into_iter()
                 .map(|(name, aggregate)| {
-                    Ok((name, v3_to_v2_aggregate(&context.functions, aggregate)?))
+                    Ok((name, v3_to_v2_aggregate(context, collection_object_type, aggregate)?))
                 })
                 .collect()
         })
@@ -124,7 +131,7 @@ fn v3_to_v2_query(
     let order_by: Option<Option<v2::OrderBy>> = query
         .order_by
         .map(|order_by| -> Result<_, ConversionError> {
-            let (elements, relations) = 
+            let (elements, relations) =
                 order_by
                     .elements
                     .into_iter()
@@ -132,7 +139,7 @@ fn v3_to_v2_query(
                     .collect::<Result<Vec::<(_,_)>, ConversionError>>()?
                     .into_iter()
                     .try_fold(
-                        (Vec::<v2::OrderByElement>::new(), HashMap::<String, v2::OrderByRelation>::new()), 
+                        (Vec::<v2::OrderByElement>::new(), HashMap::<String, v2::OrderByRelation>::new()),
                         |(mut acc_elems, mut acc_rels), (elem, rels)| {
                             acc_elems.push(elem);
                             merge_order_by_relations(&mut acc_rels, rels)?;
@@ -166,7 +173,7 @@ fn merge_order_by_relations(rels1: &mut HashMap<String, v2::OrderByRelation>, re
         if let Some(relation1) = rels1.get_mut(&relationship_name) {
             if relation1.r#where != relation2.r#where {
                 // v2 does not support navigating the same relationship more than once across multiple
-                // order by elements and having different predicates used on the same relationship in 
+                // order by elements and having different predicates used on the same relationship in
                 // different order by elements. This appears to be technically supported by NDC.
                 return Err(ConversionError::NotImplemented("Relationships used in order by elements cannot contain different predicates when used more than once"))
             }
@@ -179,7 +186,8 @@ fn merge_order_by_relations(rels1: &mut HashMap<String, v2::OrderByRelation>, re
 }
 
 fn v3_to_v2_aggregate(
-    functions: &[v3::FunctionInfo],
+    context: &QueryContext,
+    collection_object_type: &WithNameRef<schema::ObjectType>,
     aggregate: v3::Aggregate,
 ) -> Result<v2::Aggregate, ConversionError> {
     match aggregate {
@@ -187,11 +195,10 @@ fn v3_to_v2_aggregate(
             Ok(v2::Aggregate::ColumnCount { column, distinct })
         }
         v3::Aggregate::SingleColumn { column, function } => {
-            let function_definition = functions
-                .iter()
-                .find(|f| f.name == function)
-                .ok_or_else(|| ConversionError::UnspecifiedFunction(function.clone()))?;
-            let result_type = type_to_type_name(&function_definition.result_type)?;
+            let object_type_field = find_object_field(collection_object_type, column.as_ref())?;
+            let column_scalar_type_name = get_scalar_type_name(&object_type_field.r#type)?;
+            let aggregate_function = context.find_aggregation_function_definition(&column_scalar_type_name, &function)?;
+            let result_type = type_to_type_name(&aggregate_function.result_type)?;
             Ok(v2::Aggregate::SingleColumn {
                 column,
                 function,
@@ -333,7 +340,7 @@ fn v3_to_v2_nested_field(
                         query: Box::new(query),
                     })
                 },
-                Some(v3::NestedField::Array(_nested_array)) => 
+                Some(v3::NestedField::Array(_nested_array)) =>
                     Err(ConversionError::TypeMismatch("Expected an array nested field selection, but got an object nested field selection instead".into())),
             }
         },
@@ -370,8 +377,7 @@ fn v3_to_v2_order_by_element(
             let target_object_type = end_of_relationship_path_object_type.as_ref().unwrap_or(object_type);
             let object_field = find_object_field(target_object_type, &column)?;
             let scalar_type_name = get_scalar_type_name(&object_field.r#type)?;
-            let scalar_type = context.find_scalar_type(&scalar_type_name)?;
-            let aggregate_function = scalar_type.aggregate_functions.get(&function).ok_or_else(|| ConversionError::UnknownAggregateFunction { scalar_type: scalar_type_name, aggregate_function: function.clone() })?;
+            let aggregate_function = context.find_aggregation_function_definition(&scalar_type_name, &function)?;
             let result_type = type_to_type_name(&aggregate_function.result_type)?;
             let target = v2::OrderByTarget::SingleColumnAggregate {
                 column,
@@ -411,7 +417,7 @@ fn v3_to_v2_target_path_step<T : IntoIterator<Item = v3::PathElement>>(
     context: &QueryContext,
     collection_relationships: &BTreeMap<String, v3::Relationship>,
     root_collection_object_type: &WithNameRef<schema::ObjectType>,
-    mut path_iter: T::IntoIter, 
+    mut path_iter: T::IntoIter,
     v2_path: &mut Vec<String>
 ) -> Result<HashMap<String, v2::OrderByRelation>, ConversionError> {
     let mut v2_relations = HashMap::new();
@@ -431,9 +437,9 @@ fn v3_to_v2_target_path_step<T : IntoIterator<Item = v3::PathElement>>(
             .transpose()?;
 
         let subrelations = v3_to_v2_target_path_step::<T>(context, collection_relationships, root_collection_object_type, path_iter, v2_path)?;
-        
+
         v2_relations.insert(
-            path_element.relationship, 
+            path_element.relationship,
             v2::OrderByRelation {
                 r#where: where_expr,
                 subrelations,
@@ -651,7 +657,7 @@ fn v3_to_v2_comparison_target(
             let object_field = find_object_field(object_type, &name)?;
             let scalar_type_name = get_scalar_type_name(&object_field.r#type)?;
             if !path.is_empty() {
-                // This is not supported in the v2 model. ComparisonColumn.path accepts only two values: 
+                // This is not supported in the v2 model. ComparisonColumn.path accepts only two values:
                 // []/None for the current table, and ["*"] for the RootCollectionColumn (handled below)
                 Err(ConversionError::NotImplemented(
                     "The MongoDB connector does not currently support comparisons against columns from related tables",
@@ -908,6 +914,44 @@ mod tests {
     }
 
     #[test]
+    fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
+        let scalar_types = make_scalar_types();
+        let schema = make_flat_schema();
+        let query_context = QueryContext {
+            functions: vec![],
+            scalar_types: &scalar_types,
+            schema: &schema,
+        };
+        let query = query_request()
+            .collection("authors")
+            .query(
+                query()
+                    .aggregates([
+                        star_count_aggregate!("count_star"),
+                        column_count_aggregate!("count_id" => "last_name", distinct: true),
+                        column_aggregate!("avg_id" => "id", "avg"),
+                    ])
+            )
+            .into();
+        let v2_request = v3_to_v2_query_request(&query_context, query)?;
+
+        let expected = v2::query_request()
+            .target(["authors"])
+            .query(
+                v2::query()
+                    .aggregates([
+                        v2::star_count_aggregate!("count_star"),
+                        v2::column_count_aggregate!("count_id" => "last_name", distinct: true),
+                        v2::column_aggregate!("avg_id" => "id", "avg": "Float"),
+                    ])
+            )
+            .into();
+
+        assert_eq!(v2_request, expected);
+        Ok(())
+    }
+
+    #[test]
     fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), anyhow::Error> {
         let scalar_types = make_scalar_types();
         let schema = make_flat_schema();
@@ -923,7 +967,7 @@ mod tests {
                     .fields([
                         field!("last_name"),
                         relation_field!(
-                            "author_articles" => "articles", 
+                            "author_articles" => "articles",
                             query().fields([field!("title"), field!("year")])
                         )
                     ])
@@ -965,10 +1009,10 @@ mod tests {
                     .fields([
                         v2::column!("last_name": "String"),
                         v2::relation_field!(
-                            "author_articles" => "articles", 
+                            "author_articles" => "articles",
                             v2::query()
                                 .fields([
-                                    v2::column!("title": "String"), 
+                                    v2::column!("title": "String"),
                                     v2::column!("year": "Int")]
                                 )
                         )
@@ -982,23 +1026,23 @@ mod tests {
                         ),
                     ))
                     .order_by(
-                        dc_api_types::OrderBy { 
+                        dc_api_types::OrderBy {
                             elements: vec![
-                                dc_api_types::OrderByElement { 
-                                    order_direction: dc_api_types::OrderDirection::Asc, 
-                                    target: dc_api_types::OrderByTarget::SingleColumnAggregate { 
-                                        column: "year".into(), 
-                                        function: "avg".into(), 
-                                        result_type: "Float".into() 
-                                    }, 
+                                dc_api_types::OrderByElement {
+                                    order_direction: dc_api_types::OrderDirection::Asc,
+                                    target: dc_api_types::OrderByTarget::SingleColumnAggregate {
+                                        column: "year".into(),
+                                        function: "avg".into(),
+                                        result_type: "Float".into()
+                                    },
                                     target_path: vec!["author_articles".into()],
                                 },
-                                dc_api_types::OrderByElement { 
-                                    order_direction: dc_api_types::OrderDirection::Desc, 
-                                    target: dc_api_types::OrderByTarget::Column { column: v2::select!("id") }, 
+                                dc_api_types::OrderByElement {
+                                    order_direction: dc_api_types::OrderDirection::Desc,
+                                    target: dc_api_types::OrderByTarget::Column { column: v2::select!("id") },
                                     target_path: vec![],
                                 }
-                            ], 
+                            ],
                             relations: HashMap::from([(
                                 "author_articles".into(),
                                 dc_api_types::OrderByRelation {
