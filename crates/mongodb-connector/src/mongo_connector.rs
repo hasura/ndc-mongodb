@@ -143,7 +143,7 @@ impl Connector for MongoConnector {
             },
             request,
         )?;
-        let response_json = handle_query_request(state, &v2_request)
+        let response_json = handle_query_request(state, v2_request)
             .await
             .map_err(mongo_agent_error_to_query_error)?;
 

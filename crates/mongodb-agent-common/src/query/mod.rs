@@ -31,9 +31,9 @@ pub fn collection_name(query_request_target: &Target) -> String {
 
 pub async fn handle_query_request(
     config: &MongoConfig,
-    query_request: &QueryRequest,
+    query_request: QueryRequest,
 ) -> Result<JsonResponse<QueryResponse>, MongoAgentError> {
-    tracing::debug!(?config, query_request = %serde_json::to_string(query_request).unwrap(), "executing query");
+    tracing::debug!(?config, query_request = %serde_json::to_string(&query_request).unwrap(), "executing query");
 
     let database = config.client.database(&config.database);
 
@@ -335,7 +335,7 @@ mod tests {
                 })?)]))
             });
 
-        let result = execute_query_request(&collection, &query_request)
+        let result = execute_query_request(&collection, query_request)
             .await?
             .into_value()?;
         assert_eq!(expected_response, result);
