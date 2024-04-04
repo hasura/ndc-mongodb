@@ -10,9 +10,9 @@ use crate::{interface_types::MongoAgentError, mongodb::CollectionTrait};
 
 pub async fn execute_query_request(
     collection: &impl CollectionTrait<Document>,
-    query_request: QueryRequest,
+    query_request: &QueryRequest,
 ) -> Result<JsonResponse<QueryResponse>, MongoAgentError> {
-    let (pipeline, response_shape) = pipeline_for_query_request(&query_request)?;
+    let (pipeline, response_shape) = pipeline_for_query_request(query_request)?;
     tracing::debug!(pipeline = %serde_json::to_string(&pipeline).unwrap(), "aggregate pipeline");
 
     let document_cursor = collection.aggregate(pipeline, None).await?;
