@@ -1,4 +1,5 @@
 pub mod inference;
+pub mod local_document;
 pub mod sampling;
 pub mod type_unification;
 pub mod validation_schema;
