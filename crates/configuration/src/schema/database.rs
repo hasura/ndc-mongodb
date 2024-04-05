@@ -21,11 +21,12 @@ pub struct Collection {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum Type {
-    /// Any BSON value. To be used when we don't have any more information
+    /// Any BSON value, represented as Extended JSON.
+    /// To be used when we don't have any more information
     /// about the types of values that a column, field or argument can take.
     /// Also used when we unifying two incompatible types in schemas derived
     /// from sample documents.
-    Any,
+    ExtendedJSON,
     /// One of the predefined BSON scalar types
     Scalar(BsonScalarType),
     /// The name of an object type declared in `objectTypes`
@@ -37,17 +38,20 @@ pub enum Type {
 
 impl Type {
     pub fn is_nullable(&self) -> bool {
-        matches!(self, Type::Any | Type::Nullable(_) | Type::Scalar(BsonScalarType::Null))
+        matches!(
+            self,
+            Type::ExtendedJSON | Type::Nullable(_) | Type::Scalar(BsonScalarType::Null)
+        )
     }
 
     pub fn normalize_type(self) -> Type {
         match self {
-            Type::Any => Type::Any,
+            Type::ExtendedJSON => Type::ExtendedJSON,
             Type::Scalar(s) => Type::Scalar(s),
             Type::Object(o) => Type::Object(o),
             Type::ArrayOf(a) => Type::ArrayOf(Box::new((*a).normalize_type())),
             Type::Nullable(n) => match *n {
-                Type::Any => Type::Any,
+                Type::ExtendedJSON => Type::ExtendedJSON,
                 Type::Scalar(BsonScalarType::Null) => Type::Scalar(BsonScalarType::Null),
                 Type::Nullable(t) => Type::Nullable(t).normalize_type(),
                 t => Type::Nullable(Box::new(t.normalize_type())),
@@ -57,7 +61,7 @@ impl Type {
 
     pub fn make_nullable(self) -> Type {
         match self {
-            Type::Any => Type::Any,
+            Type::ExtendedJSON => Type::ExtendedJSON,
             Type::Nullable(t) => Type::Nullable(t),
             Type::Scalar(BsonScalarType::Null) => Type::Scalar(BsonScalarType::Null),
             t => Type::Nullable(Box::new(t)),

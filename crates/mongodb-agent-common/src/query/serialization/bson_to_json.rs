@@ -42,7 +42,7 @@ type Result<T> = std::result::Result<T, BsonToJsonError>;
 /// The BSON library already has a `Serialize` impl that can convert to JSON. But that
 /// implementation emits Extended JSON which includes inline type tags in JSON output to
 /// disambiguate types on the BSON side. We don't want those tags because we communicate type
-/// information out of band. That is except for the `Type::Any` type where we do want to emit
+/// information out of band. That is except for the `Type::ExtendedJSON` type where we do want to emit
 /// Extended JSON because we don't have out-of-band information in that case.
 pub fn bson_to_json(
     expected_type: &Type,
@@ -50,7 +50,7 @@ pub fn bson_to_json(
     value: Bson,
 ) -> Result<Value> {
     match expected_type {
-        Type::Any => Ok(value.into_canonical_extjson()),
+        Type::ExtendedJSON => Ok(value.into_canonical_extjson()),
         Type::Scalar(scalar_type) => bson_scalar_to_json(*scalar_type, value),
         Type::Object(object_type_name) => {
             let object_type = object_types

@@ -65,10 +65,10 @@ fn map_field_infos(
 fn map_type(t: &schema::Type) -> models::Type {
     fn map_normalized_type(t: &schema::Type) -> models::Type {
         match t {
-            // Any can respresent any BSON value, including null, so it is always nullable
-            schema::Type::Any => models::Type::Nullable {
+            // ExtendedJSON can respresent any BSON value, including null, so it is always nullable
+            schema::Type::ExtendedJSON => models::Type::Nullable {
                 underlying_type: Box::new(models::Type::Named {
-                    name: mongodb_support::ANY_TYPE_NAME.to_owned(),
+                    name: mongodb_support::EXTENDED_JSON_TYPE_NAME.to_owned(),
                 }),
             },
             schema::Type::Scalar(t) => models::Type::Named {

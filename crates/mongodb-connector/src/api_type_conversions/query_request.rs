@@ -20,22 +20,30 @@ pub struct QueryContext<'a> {
 }
 
 impl QueryContext<'_> {
-    fn find_collection(&self, collection_name: &str) -> Result<&schema::Collection, ConversionError> {
-        self
-            .schema
+    fn find_collection(
+        &self,
+        collection_name: &str,
+    ) -> Result<&schema::Collection, ConversionError> {
+        self.schema
             .collections
             .get(collection_name)
             .ok_or_else(|| ConversionError::UnknownCollection(collection_name.to_string()))
     }
 
-    fn find_object_type<'a>(&'a self, object_type_name: &'a str) -> Result<WithNameRef<schema::ObjectType>, ConversionError> {
+    fn find_object_type<'a>(
+        &'a self,
+        object_type_name: &'a str,
+    ) -> Result<WithNameRef<schema::ObjectType>, ConversionError> {
         let object_type = self
             .schema
             .object_types
             .get(object_type_name)
             .ok_or_else(|| ConversionError::UnknownObjectType(object_type_name.to_string()))?;
 
-        Ok(WithNameRef { name: object_type_name, value: object_type })
+        Ok(WithNameRef {
+            name: object_type_name,
+            value: object_type,
+        })
     }
 
     fn find_scalar_type(&self, scalar_type_name: &str) -> Result<&v3::ScalarType, ConversionError> {
@@ -44,15 +52,26 @@ impl QueryContext<'_> {
             .ok_or_else(|| ConversionError::UnknownScalarType(scalar_type_name.to_owned()))
     }
 
-    fn find_aggregation_function_definition(&self, scalar_type_name: &str, function: &str) -> Result<&v3::AggregateFunctionDefinition, ConversionError> {
+    fn find_aggregation_function_definition(
+        &self,
+        scalar_type_name: &str,
+        function: &str,
+    ) -> Result<&v3::AggregateFunctionDefinition, ConversionError> {
         let scalar_type = self.find_scalar_type(scalar_type_name)?;
         scalar_type
             .aggregate_functions
             .get(function)
-            .ok_or_else(|| ConversionError::UnknownAggregateFunction { scalar_type: scalar_type_name.to_string(), aggregate_function: function.to_string() })
+            .ok_or_else(|| ConversionError::UnknownAggregateFunction {
+                scalar_type: scalar_type_name.to_string(),
+                aggregate_function: function.to_string(),
+            })
     }
 
-    fn find_comparison_operator_definition(&self, scalar_type_name: &str, operator: &str) -> Result<&v3::ComparisonOperatorDefinition, ConversionError> {
+    fn find_comparison_operator_definition(
+        &self,
+        scalar_type_name: &str,
+        operator: &str,
+    ) -> Result<&v3::ComparisonOperatorDefinition, ConversionError> {
         let scalar_type = self.find_scalar_type(scalar_type_name)?;
         scalar_type
             .comparison_operators
@@ -61,15 +80,16 @@ impl QueryContext<'_> {
     }
 }
 
-fn find_object_field<'a>(object_type: &'a WithNameRef<schema::ObjectType>, field_name: &str) -> Result<&'a schema::ObjectField, ConversionError> {
-    object_type
-        .value
-        .fields
-        .get(field_name)
-        .ok_or_else(|| ConversionError::UnknownObjectTypeField {
+fn find_object_field<'a>(
+    object_type: &'a WithNameRef<schema::ObjectType>,
+    field_name: &str,
+) -> Result<&'a schema::ObjectField, ConversionError> {
+    object_type.value.fields.get(field_name).ok_or_else(|| {
+        ConversionError::UnknownObjectTypeField {
             object_type: object_type.name.to_string(),
             field_name: field_name.to_string(),
-        })
+        }
+    })
 }
 
 pub fn v3_to_v2_query_request(
@@ -113,7 +133,10 @@ fn v3_to_v2_query(
             aggregates
                 .into_iter()
                 .map(|(name, aggregate)| {
-                    Ok((name, v3_to_v2_aggregate(context, collection_object_type, aggregate)?))
+                    Ok((
+                        name,
+                        v3_to_v2_aggregate(context, collection_object_type, aggregate)?,
+                    ))
                 })
                 .collect()
         })
@@ -131,22 +154,35 @@ fn v3_to_v2_query(
     let order_by: Option<Option<v2::OrderBy>> = query
         .order_by
         .map(|order_by| -> Result<_, ConversionError> {
-            let (elements, relations) =
-                order_by
-                    .elements
-                    .into_iter()
-                    .map(|order_by_element| v3_to_v2_order_by_element(context, collection_relationships, root_collection_object_type, collection_object_type, order_by_element))
-                    .collect::<Result<Vec::<(_,_)>, ConversionError>>()?
-                    .into_iter()
-                    .try_fold(
-                        (Vec::<v2::OrderByElement>::new(), HashMap::<String, v2::OrderByRelation>::new()),
-                        |(mut acc_elems, mut acc_rels), (elem, rels)| {
-                            acc_elems.push(elem);
-                            merge_order_by_relations(&mut acc_rels, rels)?;
-                            Ok((acc_elems, acc_rels))
-                        }
-                    )?;
-            Ok(v2::OrderBy { elements, relations })
+            let (elements, relations) = order_by
+                .elements
+                .into_iter()
+                .map(|order_by_element| {
+                    v3_to_v2_order_by_element(
+                        context,
+                        collection_relationships,
+                        root_collection_object_type,
+                        collection_object_type,
+                        order_by_element,
+                    )
+                })
+                .collect::<Result<Vec<(_, _)>, ConversionError>>()?
+                .into_iter()
+                .try_fold(
+                    (
+                        Vec::<v2::OrderByElement>::new(),
+                        HashMap::<String, v2::OrderByRelation>::new(),
+                    ),
+                    |(mut acc_elems, mut acc_rels), (elem, rels)| {
+                        acc_elems.push(elem);
+                        merge_order_by_relations(&mut acc_rels, rels)?;
+                        Ok((acc_elems, acc_rels))
+                    },
+                )?;
+            Ok(v2::OrderBy {
+                elements,
+                relations,
+            })
         })
         .transpose()?
         .map(Some);
@@ -163,19 +199,30 @@ fn v3_to_v2_query(
         offset,
         r#where: query
             .predicate
-            .map(|expr| v3_to_v2_expression(context, collection_relationships, root_collection_object_type, collection_object_type, expr))
+            .map(|expr| {
+                v3_to_v2_expression(
+                    context,
+                    collection_relationships,
+                    root_collection_object_type,
+                    collection_object_type,
+                    expr,
+                )
+            })
             .transpose()?,
     })
 }
 
-fn merge_order_by_relations(rels1: &mut HashMap<String, v2::OrderByRelation>, rels2: HashMap<String, v2::OrderByRelation>) -> Result<(), ConversionError> {
+fn merge_order_by_relations(
+    rels1: &mut HashMap<String, v2::OrderByRelation>,
+    rels2: HashMap<String, v2::OrderByRelation>,
+) -> Result<(), ConversionError> {
     for (relationship_name, relation2) in rels2 {
         if let Some(relation1) = rels1.get_mut(&relationship_name) {
             if relation1.r#where != relation2.r#where {
                 // v2 does not support navigating the same relationship more than once across multiple
                 // order by elements and having different predicates used on the same relationship in
                 // different order by elements. This appears to be technically supported by NDC.
-                return Err(ConversionError::NotImplemented("Relationships used in order by elements cannot contain different predicates when used more than once"))
+                return Err(ConversionError::NotImplemented("Relationships used in order by elements cannot contain different predicates when used more than once"));
             }
             merge_order_by_relations(&mut relation1.subrelations, relation2.subrelations)?;
         } else {
@@ -197,7 +244,8 @@ fn v3_to_v2_aggregate(
         v3::Aggregate::SingleColumn { column, function } => {
             let object_type_field = find_object_field(collection_object_type, column.as_ref())?;
             let column_scalar_type_name = get_scalar_type_name(&object_type_field.r#type)?;
-            let aggregate_function = context.find_aggregation_function_definition(&column_scalar_type_name, &function)?;
+            let aggregate_function = context
+                .find_aggregation_function_definition(&column_scalar_type_name, &function)?;
             let result_type = type_to_type_name(&aggregate_function.result_type)?;
             Ok(v2::Aggregate::SingleColumn {
                 column,
@@ -236,7 +284,13 @@ fn v3_to_v2_fields(
                 .map(|(name, field)| {
                     Ok((
                         name,
-                        v3_to_v2_field(context, collection_relationships, root_collection_object_type, object_type, field)?,
+                        v3_to_v2_field(
+                            context,
+                            collection_relationships,
+                            root_collection_object_type,
+                            object_type,
+                            field,
+                        )?,
                     ))
                 })
                 .collect::<Result<_, ConversionError>>()
@@ -296,10 +350,10 @@ fn v3_to_v2_nested_field(
     nested_field: Option<v3::NestedField>,
 ) -> Result<v2::Field, ConversionError> {
     match schema_type {
-        schema::Type::Any => {
+        schema::Type::ExtendedJSON => {
             Ok(v2::Field::Column {
                 column,
-                column_type: mongodb_support::ANY_TYPE_NAME.to_string(),
+                column_type: mongodb_support::EXTENDED_JSON_TYPE_NAME.to_string(),
             })
         }
         schema::Type::Scalar(bson_scalar_type) => {
@@ -369,15 +423,22 @@ fn v3_to_v2_order_by_element(
             let end_of_relationship_path_object_type = path
                 .last()
                 .map(|last_path_element| {
-                    let relationship = lookup_relationship(collection_relationships, &last_path_element.relationship)?;
-                    let target_collection = context.find_collection(&relationship.target_collection)?;
+                    let relationship = lookup_relationship(
+                        collection_relationships,
+                        &last_path_element.relationship,
+                    )?;
+                    let target_collection =
+                        context.find_collection(&relationship.target_collection)?;
                     context.find_object_type(&target_collection.r#type)
                 })
                 .transpose()?;
-            let target_object_type = end_of_relationship_path_object_type.as_ref().unwrap_or(object_type);
+            let target_object_type = end_of_relationship_path_object_type
+                .as_ref()
+                .unwrap_or(object_type);
             let object_field = find_object_field(target_object_type, &column)?;
             let scalar_type_name = get_scalar_type_name(&object_field.r#type)?;
-            let aggregate_function = context.find_aggregation_function_definition(&scalar_type_name, &function)?;
+            let aggregate_function =
+                context.find_aggregation_function_definition(&scalar_type_name, &function)?;
             let result_type = type_to_type_name(&aggregate_function.result_type)?;
             let target = v2::OrderByTarget::SingleColumnAggregate {
                 column,
@@ -385,12 +446,17 @@ fn v3_to_v2_order_by_element(
                 result_type,
             };
             (target, path)
-        },
+        }
         v3::OrderByTarget::StarCountAggregate { path } => {
             (v2::OrderByTarget::StarCountAggregate {}, path)
         }
     };
-    let (target_path, relations) = v3_to_v2_target_path(context, collection_relationships, root_collection_object_type, target_path)?;
+    let (target_path, relations) = v3_to_v2_target_path(
+        context,
+        collection_relationships,
+        root_collection_object_type,
+        target_path,
+    )?;
     let order_by_element = v2::OrderByElement {
         order_direction: match elem.order_direction {
             v3::OrderDirection::Asc => v2::OrderDirection::Asc,
@@ -406,19 +472,25 @@ fn v3_to_v2_target_path(
     context: &QueryContext,
     collection_relationships: &BTreeMap<String, v3::Relationship>,
     root_collection_object_type: &WithNameRef<schema::ObjectType>,
-    path: Vec<v3::PathElement>
+    path: Vec<v3::PathElement>,
 ) -> Result<(Vec<String>, HashMap<String, v2::OrderByRelation>), ConversionError> {
     let mut v2_path = vec![];
-    let v2_relations = v3_to_v2_target_path_step::<Vec<_>>(context, collection_relationships, root_collection_object_type, path.into_iter(), &mut v2_path)?;
+    let v2_relations = v3_to_v2_target_path_step::<Vec<_>>(
+        context,
+        collection_relationships,
+        root_collection_object_type,
+        path.into_iter(),
+        &mut v2_path,
+    )?;
     Ok((v2_path, v2_relations))
 }
 
-fn v3_to_v2_target_path_step<T : IntoIterator<Item = v3::PathElement>>(
+fn v3_to_v2_target_path_step<T: IntoIterator<Item = v3::PathElement>>(
     context: &QueryContext,
     collection_relationships: &BTreeMap<String, v3::Relationship>,
     root_collection_object_type: &WithNameRef<schema::ObjectType>,
     mut path_iter: T::IntoIter,
-    v2_path: &mut Vec<String>
+    v2_path: &mut Vec<String>,
 ) -> Result<HashMap<String, v2::OrderByRelation>, ConversionError> {
     let mut v2_relations = HashMap::new();
 
@@ -428,22 +500,36 @@ fn v3_to_v2_target_path_step<T : IntoIterator<Item = v3::PathElement>>(
         let where_expr = path_element
             .predicate
             .map(|expression| {
-                let v3_relationship = lookup_relationship(collection_relationships, &path_element.relationship)?;
-                let target_collection = context.find_collection(&v3_relationship.target_collection)?;
+                let v3_relationship =
+                    lookup_relationship(collection_relationships, &path_element.relationship)?;
+                let target_collection =
+                    context.find_collection(&v3_relationship.target_collection)?;
                 let target_object_type = context.find_object_type(&target_collection.r#type)?;
-                let v2_expression = v3_to_v2_expression(context, collection_relationships, root_collection_object_type, &target_object_type, *expression)?;
+                let v2_expression = v3_to_v2_expression(
+                    context,
+                    collection_relationships,
+                    root_collection_object_type,
+                    &target_object_type,
+                    *expression,
+                )?;
                 Ok(Box::new(v2_expression))
             })
             .transpose()?;
 
-        let subrelations = v3_to_v2_target_path_step::<T>(context, collection_relationships, root_collection_object_type, path_iter, v2_path)?;
+        let subrelations = v3_to_v2_target_path_step::<T>(
+            context,
+            collection_relationships,
+            root_collection_object_type,
+            path_iter,
+            v2_path,
+        )?;
 
         v2_relations.insert(
             path_element.relationship,
             v2::OrderByRelation {
                 r#where: where_expr,
                 subrelations,
-            }
+            },
         );
     }
 
@@ -558,21 +644,47 @@ fn v3_to_v2_expression(
         v3::Expression::And { expressions } => Ok(v2::Expression::And {
             expressions: expressions
                 .into_iter()
-                .map(|expr| v3_to_v2_expression(context, collection_relationships, root_collection_object_type, object_type, expr))
+                .map(|expr| {
+                    v3_to_v2_expression(
+                        context,
+                        collection_relationships,
+                        root_collection_object_type,
+                        object_type,
+                        expr,
+                    )
+                })
                 .collect::<Result<_, _>>()?,
         }),
         v3::Expression::Or { expressions } => Ok(v2::Expression::Or {
             expressions: expressions
                 .into_iter()
-                .map(|expr| v3_to_v2_expression(context, collection_relationships, root_collection_object_type, object_type, expr))
+                .map(|expr| {
+                    v3_to_v2_expression(
+                        context,
+                        collection_relationships,
+                        root_collection_object_type,
+                        object_type,
+                        expr,
+                    )
+                })
                 .collect::<Result<_, _>>()?,
         }),
         v3::Expression::Not { expression } => Ok(v2::Expression::Not {
-            expression: Box::new(v3_to_v2_expression(context, collection_relationships, root_collection_object_type, object_type, *expression)?),
+            expression: Box::new(v3_to_v2_expression(
+                context,
+                collection_relationships,
+                root_collection_object_type,
+                object_type,
+                *expression,
+            )?),
         }),
         v3::Expression::UnaryComparisonOperator { column, operator } => {
             Ok(v2::Expression::ApplyUnaryComparison {
-                column: v3_to_v2_comparison_target(root_collection_object_type, object_type, column)?,
+                column: v3_to_v2_comparison_target(
+                    root_collection_object_type,
+                    object_type,
+                    column,
+                )?,
                 operator: match operator {
                     v3::UnaryComparisonOperator::IsNull => v2::UnaryComparisonOperator::IsNull,
                 },
@@ -582,27 +694,53 @@ fn v3_to_v2_expression(
             column,
             operator,
             value,
-        } => v3_to_v2_binary_comparison(context, root_collection_object_type, object_type, column, operator, value),
-        v3::Expression::Exists { in_collection, predicate, } => {
+        } => v3_to_v2_binary_comparison(
+            context,
+            root_collection_object_type,
+            object_type,
+            column,
+            operator,
+            value,
+        ),
+        v3::Expression::Exists {
+            in_collection,
+            predicate,
+        } => {
             let (in_table, collection_object_type) = match in_collection {
-                v3::ExistsInCollection::Related { relationship, arguments: _ } => {
-                    let v3_relationship = lookup_relationship(collection_relationships, &relationship)?;
-                    let v3_collection = context.find_collection(&v3_relationship.target_collection)?;
+                v3::ExistsInCollection::Related {
+                    relationship,
+                    arguments: _,
+                } => {
+                    let v3_relationship =
+                        lookup_relationship(collection_relationships, &relationship)?;
+                    let v3_collection =
+                        context.find_collection(&v3_relationship.target_collection)?;
                     let collection_object_type = context.find_object_type(&v3_collection.r#type)?;
                     let in_table = v2::ExistsInTable::RelatedTable { relationship };
                     Ok((in_table, collection_object_type))
-                },
-                v3::ExistsInCollection::Unrelated { collection, arguments: _ } => {
+                }
+                v3::ExistsInCollection::Unrelated {
+                    collection,
+                    arguments: _,
+                } => {
                     let v3_collection = context.find_collection(&collection)?;
                     let collection_object_type = context.find_object_type(&v3_collection.r#type)?;
-                    let in_table = v2::ExistsInTable::UnrelatedTable { table: vec![collection] };
+                    let in_table = v2::ExistsInTable::UnrelatedTable {
+                        table: vec![collection],
+                    };
                     Ok((in_table, collection_object_type))
-                },
+                }
             }?;
             Ok(v2::Expression::Exists {
                 in_table,
                 r#where: Box::new(if let Some(predicate) = predicate {
-                    v3_to_v2_expression(context, collection_relationships, root_collection_object_type, &collection_object_type, *predicate)?
+                    v3_to_v2_expression(
+                        context,
+                        collection_relationships,
+                        root_collection_object_type,
+                        &collection_object_type,
+                        *predicate,
+                    )?
                 } else {
                     // empty expression
                     v2::Expression::Or {
@@ -610,7 +748,7 @@ fn v3_to_v2_expression(
                     }
                 }),
             })
-        },
+        }
     }
 }
 
@@ -624,14 +762,21 @@ fn v3_to_v2_binary_comparison(
     operator: String,
     value: v3::ComparisonValue,
 ) -> Result<v2::Expression, ConversionError> {
-    let comparison_column = v3_to_v2_comparison_target(root_collection_object_type, object_type, column)?;
-    let operator_definition = context.find_comparison_operator_definition(&comparison_column.column_type, &operator)?;
+    let comparison_column =
+        v3_to_v2_comparison_target(root_collection_object_type, object_type, column)?;
+    let operator_definition =
+        context.find_comparison_operator_definition(&comparison_column.column_type, &operator)?;
     let operator = match operator_definition {
         v3::ComparisonOperatorDefinition::Equal => v2::BinaryComparisonOperator::Equal,
         _ => v2::BinaryComparisonOperator::CustomBinaryComparisonOperator(operator),
     };
     Ok(v2::Expression::ApplyBinaryComparison {
-        value: v3_to_v2_comparison_value(root_collection_object_type, object_type, comparison_column.column_type.clone(), value)?,
+        value: v3_to_v2_comparison_value(
+            root_collection_object_type,
+            object_type,
+            comparison_column.column_type.clone(),
+            value,
+        )?,
         column: comparison_column,
         operator,
     })
@@ -639,10 +784,14 @@ fn v3_to_v2_binary_comparison(
 
 fn get_scalar_type_name(schema_type: &schema::Type) -> Result<String, ConversionError> {
     match schema_type {
-        schema::Type::Any => Ok(mongodb_support::ANY_TYPE_NAME.to_string()),
+        schema::Type::ExtendedJSON => Ok(mongodb_support::EXTENDED_JSON_TYPE_NAME.to_string()),
         schema::Type::Scalar(scalar_type_name) => Ok(scalar_type_name.graphql_name()),
-        schema::Type::Object(object_name_name) => Err(ConversionError::TypeMismatch(format!("Expected a scalar type, got the object type {object_name_name}"))),
-        schema::Type::ArrayOf(element_type) => Err(ConversionError::TypeMismatch(format!("Expected a scalar type, got an array of {element_type:?}"))),
+        schema::Type::Object(object_name_name) => Err(ConversionError::TypeMismatch(format!(
+            "Expected a scalar type, got the object type {object_name_name}"
+        ))),
+        schema::Type::ArrayOf(element_type) => Err(ConversionError::TypeMismatch(format!(
+            "Expected a scalar type, got an array of {element_type:?}"
+        ))),
         schema::Type::Nullable(underlying_type) => get_scalar_type_name(underlying_type),
     }
 }
@@ -678,7 +827,7 @@ fn v3_to_v2_comparison_target(
                 name: ColumnSelector::Column(name),
                 path: Some(vec!["$".to_owned()]),
             })
-        },
+        }
     }
 }
 
@@ -691,7 +840,11 @@ fn v3_to_v2_comparison_value(
     match value {
         v3::ComparisonValue::Column { column } => {
             Ok(v2::ComparisonValue::AnotherColumnComparison {
-                column: v3_to_v2_comparison_target(root_collection_object_type, object_type, column)?,
+                column: v3_to_v2_comparison_target(
+                    root_collection_object_type,
+                    object_type,
+                    column,
+                )?,
             })
         }
         v3::ComparisonValue::Scalar { value } => Ok(v2::ComparisonValue::ScalarValueComparison {
@@ -718,7 +871,8 @@ mod tests {
     use dc_api_test_helpers::{self as v2, source, table_relationships, target};
     use mongodb_support::BsonScalarType;
     use ndc_sdk::models::{
-        AggregateFunctionDefinition, ComparisonOperatorDefinition, OrderByElement, OrderByTarget, OrderDirection, ScalarType, Type, TypeRepresentation
+        AggregateFunctionDefinition, ComparisonOperatorDefinition, OrderByElement, OrderByTarget,
+        OrderDirection, ScalarType, Type, TypeRepresentation,
     };
     use ndc_test_helpers::*;
     use pretty_assertions::assert_eq;
@@ -924,27 +1078,21 @@ mod tests {
         };
         let query = query_request()
             .collection("authors")
-            .query(
-                query()
-                    .aggregates([
-                        star_count_aggregate!("count_star"),
-                        column_count_aggregate!("count_id" => "last_name", distinct: true),
-                        column_aggregate!("avg_id" => "id", "avg"),
-                    ])
-            )
+            .query(query().aggregates([
+                star_count_aggregate!("count_star"),
+                column_count_aggregate!("count_id" => "last_name", distinct: true),
+                column_aggregate!("avg_id" => "id", "avg"),
+            ]))
             .into();
         let v2_request = v3_to_v2_query_request(&query_context, query)?;
 
         let expected = v2::query_request()
             .target(["authors"])
-            .query(
-                v2::query()
-                    .aggregates([
-                        v2::star_count_aggregate!("count_star"),
-                        v2::column_count_aggregate!("count_id" => "last_name", distinct: true),
-                        v2::column_aggregate!("avg_id" => "id", "avg": "Float"),
-                    ])
-            )
+            .query(v2::query().aggregates([
+                v2::star_count_aggregate!("count_star"),
+                v2::column_count_aggregate!("count_id" => "last_name", distinct: true),
+                v2::column_aggregate!("avg_id" => "id", "avg": "Float"),
+            ]))
             .into();
 
         assert_eq!(v2_request, expected);
@@ -969,7 +1117,7 @@ mod tests {
                         relation_field!(
                             "author_articles" => "articles",
                             query().fields([field!("title"), field!("year")])
-                        )
+                        ),
                     ])
                     .predicate(exists(
                         related!("author_articles"),
@@ -981,9 +1129,7 @@ mod tests {
                             target: OrderByTarget::SingleColumnAggregate {
                                 column: "year".into(),
                                 function: "avg".into(),
-                                path: vec![
-                                    path_element("author_articles").into()
-                                ],
+                                path: vec![path_element("author_articles").into()],
                             },
                         },
                         OrderByElement {
@@ -992,8 +1138,8 @@ mod tests {
                                 name: "id".into(),
                                 path: vec![],
                             },
-                        }
-                    ])
+                        },
+                    ]),
             )
             .relationships([(
                 "author_articles",
@@ -1015,7 +1161,7 @@ mod tests {
                                     v2::column!("title": "String"),
                                     v2::column!("year": "Int")]
                                 )
-                        )
+                        ),
                     ])
                     .predicate(v2::exists(
                         "author_articles",
@@ -1025,48 +1171,44 @@ mod tests {
                             v2::value!(json!("Functional.*"), "String"),
                         ),
                     ))
-                    .order_by(
-                        dc_api_types::OrderBy {
-                            elements: vec![
-                                dc_api_types::OrderByElement {
-                                    order_direction: dc_api_types::OrderDirection::Asc,
-                                    target: dc_api_types::OrderByTarget::SingleColumnAggregate {
-                                        column: "year".into(),
-                                        function: "avg".into(),
-                                        result_type: "Float".into()
-                                    },
-                                    target_path: vec!["author_articles".into()],
+                    .order_by(dc_api_types::OrderBy {
+                        elements: vec![
+                            dc_api_types::OrderByElement {
+                                order_direction: dc_api_types::OrderDirection::Asc,
+                                target: dc_api_types::OrderByTarget::SingleColumnAggregate {
+                                    column: "year".into(),
+                                    function: "avg".into(),
+                                    result_type: "Float".into(),
                                 },
-                                dc_api_types::OrderByElement {
-                                    order_direction: dc_api_types::OrderDirection::Desc,
-                                    target: dc_api_types::OrderByTarget::Column { column: v2::select!("id") },
-                                    target_path: vec![],
-                                }
-                            ],
-                            relations: HashMap::from([(
-                                "author_articles".into(),
-                                dc_api_types::OrderByRelation {
-                                    r#where: None,
-                                    subrelations: HashMap::new(),
-                                }
-                            )])
-                        }
-                    ),
+                                target_path: vec!["author_articles".into()],
+                            },
+                            dc_api_types::OrderByElement {
+                                order_direction: dc_api_types::OrderDirection::Desc,
+                                target: dc_api_types::OrderByTarget::Column {
+                                    column: v2::select!("id"),
+                                },
+                                target_path: vec![],
+                            },
+                        ],
+                        relations: HashMap::from([(
+                            "author_articles".into(),
+                            dc_api_types::OrderByRelation {
+                                r#where: None,
+                                subrelations: HashMap::new(),
+                            },
+                        )]),
+                    }),
             )
-            .relationships(vec![
-                table_relationships(
-                    source("authors"),
-                    [
-                        (
-                            "author_articles",
-                            v2::relationship(
-                                target("articles"),
-                                [(v2::select!("id"), v2::select!("author_id"))],
-                            )
-                        ),
-                    ],
-                )
-            ])
+            .relationships(vec![table_relationships(
+                source("authors"),
+                [(
+                    "author_articles",
+                    v2::relationship(
+                        target("articles"),
+                        [(v2::select!("id"), v2::select!("author_id"))],
+                    ),
+                )],
+            )])
             .into();
 
         assert_eq!(v2_request, expected);
@@ -1129,21 +1271,20 @@ mod tests {
                 "Int".to_owned(),
                 ScalarType {
                     representation: Some(TypeRepresentation::Integer),
-                    aggregate_functions: BTreeMap::from([
-                        (
-                            "avg".into(),
-                            AggregateFunctionDefinition {
-                                result_type: Type::Named {
-                                    name: "Float".into() // Different result type to the input scalar type
-                                }
-                            }
-                        )
-                    ]),
-                    comparison_operators: BTreeMap::from([
-                        ("_eq".to_owned(), ComparisonOperatorDefinition::Equal),
-                    ]),
+                    aggregate_functions: BTreeMap::from([(
+                        "avg".into(),
+                        AggregateFunctionDefinition {
+                            result_type: Type::Named {
+                                name: "Float".into(), // Different result type to the input scalar type
+                            },
+                        },
+                    )]),
+                    comparison_operators: BTreeMap::from([(
+                        "_eq".to_owned(),
+                        ComparisonOperatorDefinition::Equal,
+                    )]),
                 },
-            )
+            ),
         ])
     }
 
@@ -1154,15 +1295,15 @@ mod tests {
                     "authors".into(),
                     schema::Collection {
                         description: None,
-                        r#type: "Author".into()
-                    }
+                        r#type: "Author".into(),
+                    },
                 ),
                 (
                     "articles".into(),
                     schema::Collection {
                         description: None,
-                        r#type: "Article".into()
-                    }
+                        r#type: "Article".into(),
+                    },
                 ),
             ]),
             object_types: BTreeMap::from([
@@ -1175,18 +1316,18 @@ mod tests {
                                 "id".into(),
                                 schema::ObjectField {
                                     description: None,
-                                    r#type: schema::Type::Scalar(BsonScalarType::Int)
-                                }
+                                    r#type: schema::Type::Scalar(BsonScalarType::Int),
+                                },
                             ),
                             (
                                 "last_name".into(),
                                 schema::ObjectField {
                                     description: None,
-                                    r#type: schema::Type::Scalar(BsonScalarType::String)
-                                }
+                                    r#type: schema::Type::Scalar(BsonScalarType::String),
+                                },
                             ),
                         ]),
-                    }
+                    },
                 ),
                 (
                     "Article".into(),
@@ -1197,25 +1338,27 @@ mod tests {
                                 "author_id".into(),
                                 schema::ObjectField {
                                     description: None,
-                                    r#type: schema::Type::Scalar(BsonScalarType::Int)
-                                }
+                                    r#type: schema::Type::Scalar(BsonScalarType::Int),
+                                },
                             ),
                             (
                                 "title".into(),
                                 schema::ObjectField {
                                     description: None,
-                                    r#type: schema::Type::Scalar(BsonScalarType::String)
-                                }
+                                    r#type: schema::Type::Scalar(BsonScalarType::String),
+                                },
                             ),
                             (
                                 "year".into(),
                                 schema::ObjectField {
                                     description: None,
-                                    r#type: schema::Type::Nullable(Box::new(schema::Type::Scalar(BsonScalarType::Int)))
-                                }
+                                    r#type: schema::Type::Nullable(Box::new(schema::Type::Scalar(
+                                        BsonScalarType::Int,
+                                    ))),
+                                },
                             ),
                         ]),
-                    }
+                    },
                 ),
             ]),
         }
@@ -1223,15 +1366,13 @@ mod tests {
 
     fn make_nested_schema() -> Schema {
         Schema {
-            collections: BTreeMap::from([
-                (
-                    "authors".into(),
-                    schema::Collection {
-                        description: None,
-                        r#type: "Author".into()
-                    }
-                )
-            ]),
+            collections: BTreeMap::from([(
+                "authors".into(),
+                schema::Collection {
+                    description: None,
+                    r#type: "Author".into(),
+                },
+            )]),
             object_types: BTreeMap::from([
                 (
                     "Author".into(),
@@ -1242,55 +1383,55 @@ mod tests {
                                 "address".into(),
                                 schema::ObjectField {
                                     description: None,
-                                    r#type: schema::Type::Object("Address".into())
-                                }
+                                    r#type: schema::Type::Object("Address".into()),
+                                },
                             ),
                             (
                                 "articles".into(),
                                 schema::ObjectField {
                                     description: None,
-                                    r#type: schema::Type::ArrayOf(Box::new(schema::Type::Object("Article".into())))
-                                }
+                                    r#type: schema::Type::ArrayOf(Box::new(schema::Type::Object(
+                                        "Article".into(),
+                                    ))),
+                                },
                             ),
                             (
                                 "array_of_arrays".into(),
                                 schema::ObjectField {
                                     description: None,
-                                    r#type: schema::Type::ArrayOf(Box::new(schema::Type::ArrayOf(Box::new(schema::Type::Object("Article".into())))))
-                                }
+                                    r#type: schema::Type::ArrayOf(Box::new(schema::Type::ArrayOf(
+                                        Box::new(schema::Type::Object("Article".into())),
+                                    ))),
+                                },
                             ),
                         ]),
-                    }
+                    },
                 ),
                 (
                     "Address".into(),
                     schema::ObjectType {
                         description: None,
-                        fields: BTreeMap::from([
-                            (
-                                "country".into(),
-                                schema::ObjectField {
-                                    description: None,
-                                    r#type: schema::Type::Scalar(BsonScalarType::String)
-                                }
-                            ),
-                        ]),
-                    }
+                        fields: BTreeMap::from([(
+                            "country".into(),
+                            schema::ObjectField {
+                                description: None,
+                                r#type: schema::Type::Scalar(BsonScalarType::String),
+                            },
+                        )]),
+                    },
                 ),
                 (
                     "Article".into(),
                     schema::ObjectType {
                         description: None,
-                        fields: BTreeMap::from([
-                            (
-                                "title".into(),
-                                schema::ObjectField {
-                                    description: None,
-                                    r#type: schema::Type::Scalar(BsonScalarType::String)
-                                }
-                            ),
-                        ]),
-                    }
+                        fields: BTreeMap::from([(
+                            "title".into(),
+                            schema::ObjectField {
+                                description: None,
+                                r#type: schema::Type::Scalar(BsonScalarType::String),
+                            },
+                        )]),
+                    },
                 ),
             ]),
         }

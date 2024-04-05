@@ -14,7 +14,10 @@ pub fn scalar_types_capabilities() -> HashMap<String, ScalarTypeCapabilities> {
     let mut map = all::<BsonScalarType>()
         .map(|t| (t.graphql_name(), capabilities(t)))
         .collect::<HashMap<_, _>>();
-    map.insert(mongodb_support::ANY_TYPE_NAME.to_owned(), ScalarTypeCapabilities::new());
+    map.insert(
+        mongodb_support::EXTENDED_JSON_TYPE_NAME.to_owned(),
+        ScalarTypeCapabilities::new(),
+    );
     map
 }
 
