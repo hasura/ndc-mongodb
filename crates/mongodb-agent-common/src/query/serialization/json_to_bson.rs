@@ -61,7 +61,9 @@ pub fn json_to_bson(
     value: Value,
 ) -> Result<Bson> {
     match expected_type {
-        Type::Any => serde_json::from_value::<Bson>(value).map_err(JsonToBsonError::SerdeError),
+        Type::ExtendedJSON => {
+            serde_json::from_value::<Bson>(value).map_err(JsonToBsonError::SerdeError)
+        }
         Type::Scalar(t) => json_to_bson_scalar(*t, value),
         Type::Object(object_type_name) => {
             let object_type = object_types

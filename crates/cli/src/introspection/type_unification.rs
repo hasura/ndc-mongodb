@@ -16,12 +16,12 @@ type ObjectType = WithName<schema::ObjectType>;
 
 /// Unify two types.
 /// This is computing the join (or least upper bound) of the two types in a lattice
-/// where `Any` is the Top element, Scalar(Undefined) is the Bottom element, and Nullable(T) >= T for all T.
+/// where `ExtendedJSON` is the Top element, Scalar(Undefined) is the Bottom element, and Nullable(T) >= T for all T.
 pub fn unify_type(type_a: Type, type_b: Type) -> Type {
     let result_type = match (type_a, type_b) {
-        // Union of any type with Any is Any
-        (Type::Any, _) => Type::Any,
-        (_, Type::Any) => Type::Any,
+        // Union of any type with ExtendedJSON is ExtendedJSON
+        (Type::ExtendedJSON, _) => Type::ExtendedJSON,
+        (_, Type::ExtendedJSON) => Type::ExtendedJSON,
 
         // If one type is undefined, the union is the other type.
         // This is used as the base case when inferring array types from documents.
@@ -44,22 +44,22 @@ pub fn unify_type(type_a: Type, type_b: Type) -> Type {
         (type_a, Type::Scalar(Null)) => type_a.make_nullable(),
 
         // Scalar types unify if they are the same type.
-        // If they are diffferent then the union is Any.
+        // If they are diffferent then the union is ExtendedJSON.
         (Type::Scalar(scalar_a), Type::Scalar(scalar_b)) => {
             if scalar_a == scalar_b {
                 Type::Scalar(scalar_a)
             } else {
-                Type::Any
+                Type::ExtendedJSON
             }
         }
 
         // Object types unify if they have the same name.
-        // If they are diffferent then the union is Any.
+        // If they are diffferent then the union is ExtendedJSON.
         (Type::Object(object_a), Type::Object(object_b)) => {
             if object_a == object_b {
                 Type::Object(object_a)
             } else {
-                Type::Any
+                Type::ExtendedJSON
             }
         }
 
@@ -69,8 +69,8 @@ pub fn unify_type(type_a: Type, type_b: Type) -> Type {
             Type::ArrayOf(Box::new(elem_type))
         }
 
-        // Anything else gives Any
-        (_, _) => Type::Any,
+        // Anything else gives ExtendedJSON
+        (_, _) => Type::ExtendedJSON,
     };
     result_type.normalize_type()
 }
@@ -194,7 +194,7 @@ mod tests {
 
     #[test]
     fn test_unify_scalar_error() -> Result<(), anyhow::Error> {
-        let expected = Type::Any;
+        let expected = Type::ExtendedJSON;
         let actual = unify_type(
             Type::Scalar(BsonScalarType::Int),
             Type::Scalar(BsonScalarType::String),
@@ -206,7 +206,7 @@ mod tests {
     fn is_nullable(t: &Type) -> bool {
         matches!(
             t,
-            Type::Scalar(BsonScalarType::Null) | Type::Nullable(_) | Type::Any
+            Type::Scalar(BsonScalarType::Null) | Type::Nullable(_) | Type::ExtendedJSON
         )
     }
 
@@ -255,16 +255,16 @@ mod tests {
     proptest! {
         #[test]
         fn test_any_left(t in arb_type()) {
-            let u = unify_type(Type::Any, t);
-            prop_assert_eq!(Type::Any, u)
+            let u = unify_type(Type::ExtendedJSON, t);
+            prop_assert_eq!(Type::ExtendedJSON, u)
         }
     }
 
     proptest! {
         #[test]
         fn test_any_right(t in arb_type()) {
-            let u = unify_type(t, Type::Any);
-            prop_assert_eq!(Type::Any, u)
+            let u = unify_type(t, Type::ExtendedJSON);
+            prop_assert_eq!(Type::ExtendedJSON, u)
         }
     }
 
