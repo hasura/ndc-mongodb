@@ -5,7 +5,10 @@ use itertools::Itertools;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::{native_procedure::NativeProcedure, read_directory, schema::ObjectType, Schema};
+use crate::{
+    native_procedure::NativeProcedure, native_query::NativeQuery, read_directory,
+    schema::ObjectType, Schema,
+};
 
 #[derive(Clone, Debug, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -17,16 +20,22 @@ pub struct Configuration {
     /// specified via user configuration.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub native_procedures: BTreeMap<String, NativeProcedure>,
+
+    // Native queries allow arbitrary aggregation pipelines that can be included in a query plan.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub native_queries: BTreeMap<String, NativeQuery>,
 }
 
 impl Configuration {
     pub fn validate(
         schema: Schema,
         native_procedures: BTreeMap<String, NativeProcedure>,
+        native_queries: BTreeMap<String, NativeQuery>,
     ) -> anyhow::Result<Self> {
         let config = Configuration {
             schema,
             native_procedures,
+            native_queries,
         };
 
         {
@@ -46,7 +55,7 @@ impl Configuration {
     }
 
     pub fn from_schema(schema: Schema) -> anyhow::Result<Self> {
-        Self::validate(schema, Default::default())
+        Self::validate(schema, Default::default(), Default::default())
     }
 
     pub async fn parse_configuration(
@@ -62,7 +71,11 @@ impl Configuration {
             .native_procedures
             .values()
             .flat_map(|native_procedure| &native_procedure.object_types);
-        object_types_from_schema.chain(object_types_from_native_procedures)
+        let object_types_from_native_queries = self
+            .native_queries
+            .values()
+            .flat_map(|native_query| &native_query.object_types);
+        object_types_from_schema.chain(object_types_from_native_procedures).chain(object_types_from_native_queries)
     }
 }
 
@@ -108,7 +121,7 @@ mod tests {
         )]
         .into_iter()
         .collect();
-        let result = Configuration::validate(schema, native_procedures);
+        let result = Configuration::validate(schema, native_procedures, Default::default());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("multiple definitions"));
         assert!(error_msg.contains("Album"));

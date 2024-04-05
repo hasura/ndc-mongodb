@@ -31,6 +31,7 @@ pub async fn try_init_state_from_uri(
         client,
         database: database_name,
         native_procedures: configuration.native_procedures.clone(),
+        native_queries: configuration.native_queries.clone(),
         object_types: configuration
             .object_types()
             .map(|(name, object_type)| (name.clone(), object_type.clone()))
