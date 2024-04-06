@@ -1,17 +1,26 @@
 use anyhow::anyhow;
 use bytes::Bytes;
 use dc_api::JsonResponse;
-use dc_api_types::{QueryRequest, QueryResponse};
+use dc_api_types::{QueryRequest, QueryResponse, Target};
 use futures_util::TryStreamExt;
 use mongodb::bson::{doc, Document};
 
 use super::pipeline::{pipeline_for_query_request, ResponseShape};
-use crate::{interface_types::MongoAgentError, mongodb::CollectionTrait};
+use crate::{
+    interface_types::MongoAgentError,
+    mongodb::{CollectionTrait, DatabaseTrait},
+};
 
+/// Execute a query request against the given collection.
+///
+/// The use of `DatabaseTrait` lets us inject a mock implementation of the MongoDB driver for
+/// testing.
 pub async fn execute_query_request(
-    collection: &impl CollectionTrait<Document>,
+    database: impl DatabaseTrait,
     query_request: QueryRequest,
 ) -> Result<JsonResponse<QueryResponse>, MongoAgentError> {
+    let collection = database.collection(&collection_name(&query_request.target));
+
     let (pipeline, response_shape) = pipeline_for_query_request(&query_request)?;
     tracing::debug!(pipeline = %serde_json::to_string(&pipeline).unwrap(), "aggregate pipeline");
 
@@ -38,4 +47,8 @@ pub async fn execute_query_request(
         .map_err(MongoAgentError::Serialization)?
         .into();
     Ok(JsonResponse::Serialized(bytes))
+}
+
+pub fn collection_name(query_request_target: &Target) -> String {
+    query_request_target.name().join(".")
 }

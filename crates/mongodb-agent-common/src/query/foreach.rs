@@ -134,15 +134,12 @@ fn facet_name(index: usize) -> String {
 #[cfg(test)]
 mod tests {
     use dc_api_types::{QueryRequest, QueryResponse};
-    use mongodb::{
-        bson::{doc, from_document},
-        options::AggregateOptions,
-    };
+    use mongodb::bson::bson;
     use pretty_assertions::assert_eq;
-    use serde_json::{from_value, json, to_value};
+    use serde_json::{from_value, json};
 
     use crate::{
-        mongodb::{test_helpers::mock_stream, MockCollectionTrait},
+        mongodb::test_helpers::mock_result_for_pipeline,
         query::execute_query_request::execute_query_request,
     };
 
@@ -171,19 +168,19 @@ mod tests {
             ]
         }))?;
 
-        let expected_pipeline = json!([
+        let expected_pipeline = bson!([
             {
                 "$facet": {
                     "__FACET___0": [
                         { "$match": { "$and": [{ "artistId": {"$eq":1 }}]}},
-                        { "$replaceWith": { 
+                        { "$replaceWith": {
                             "albumId": { "$ifNull": ["$albumId", null] },
                             "title": { "$ifNull": ["$title", null] }
                         } },
                     ],
                     "__FACET___1": [
                         { "$match": { "$and": [{ "artistId": {"$eq":2}}]}},
-                        { "$replaceWith": { 
+                        { "$replaceWith": {
                             "albumId": { "$ifNull": ["$albumId", null] },
                             "title": { "$ifNull": ["$title", null] }
                         } },
@@ -221,34 +218,32 @@ mod tests {
             ]
         }))?;
 
-        let mut collection = MockCollectionTrait::new();
-        collection
-            .expect_aggregate()
-            .returning(move |pipeline, _: Option<AggregateOptions>| {
-                assert_eq!(expected_pipeline, to_value(pipeline).unwrap());
-                Ok(mock_stream(vec![Ok(from_document(doc! {
-                    "rows": [
-                        {
-                            "query": {
-                                "rows": [
-                                    { "albumId": 1, "title": "For Those About To Rock We Salute You" },
-                                    { "albumId": 4, "title": "Let There Be Rock" }
-                                ]
-                            }
-                        },
-                        {
-                            "query": {
-                                "rows": [
-                                    { "albumId": 2, "title": "Balls to the Wall" },
-                                    { "albumId": 3, "title": "Restless and Wild" }
-                                ]
-                            }
+        let db = mock_result_for_pipeline(
+            "tracks",
+            expected_pipeline,
+            bson!([{
+                "rows": [
+                    {
+                        "query": {
+                            "rows": [
+                                { "albumId": 1, "title": "For Those About To Rock We Salute You" },
+                                { "albumId": 4, "title": "Let There Be Rock" }
+                            ]
                         }
-                    ],
-                })?)]))
-            });
+                    },
+                    {
+                        "query": {
+                            "rows": [
+                                { "albumId": 2, "title": "Balls to the Wall" },
+                                { "albumId": 3, "title": "Restless and Wild" }
+                            ]
+                        }
+                    }
+                ],
+            }]),
+        );
 
-        let result = execute_query_request(&collection, query_request)
+        let result = execute_query_request(db, query_request)
             .await?
             .into_value()?;
         assert_eq!(expected_response, result);
@@ -284,7 +279,7 @@ mod tests {
             ]
         }))?;
 
-        let expected_pipeline = json!([
+        let expected_pipeline = bson!([
             {
                 "$facet": {
                     "__FACET___0": [
@@ -364,41 +359,38 @@ mod tests {
             ]
         }))?;
 
-
-        let mut collection = MockCollectionTrait::new();
-        collection
-            .expect_aggregate()
-            .returning(move |pipeline, _: Option<AggregateOptions>| {
-                assert_eq!(expected_pipeline, to_value(pipeline).unwrap());
-                Ok(mock_stream(vec![Ok(from_document(doc! {
-                    "rows": [
-                        {
-                            "query": {
-                                "aggregates": {
-                                    "count": 2,
-                                },
-                                "rows": [
-                                    { "albumId": 1, "title": "For Those About To Rock We Salute You" },
-                                    { "albumId": 4, "title": "Let There Be Rock" }
-                                ]
-                            }
-                        },
-                        {
-                            "query": {
-                                "aggregates": {
-                                    "count": 2,
-                                },
-                                "rows": [
-                                    { "albumId": 2, "title": "Balls to the Wall" },
-                                    { "albumId": 3, "title": "Restless and Wild" }
-                                ]
-                            }
+        let db = mock_result_for_pipeline(
+            "tracks",
+            expected_pipeline,
+            bson!([{
+                "rows": [
+                    {
+                        "query": {
+                            "aggregates": {
+                                "count": 2,
+                            },
+                            "rows": [
+                                { "albumId": 1, "title": "For Those About To Rock We Salute You" },
+                                { "albumId": 4, "title": "Let There Be Rock" }
+                            ]
                         }
-                    ],
-                })?)]))
-            });
+                    },
+                    {
+                        "query": {
+                            "aggregates": {
+                                "count": 2,
+                            },
+                            "rows": [
+                                { "albumId": 2, "title": "Balls to the Wall" },
+                                { "albumId": 3, "title": "Restless and Wild" }
+                            ]
+                        }
+                    }
+                ],
+            }]),
+        );
 
-        let result = execute_query_request(&collection, query_request)
+        let result = execute_query_request(db, query_request)
             .await?
             .into_value()?;
         assert_eq!(expected_response, result);
