@@ -1,0 +1,175 @@
+[{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f15b"
+  },
+  "GenreId": 1,
+  "Name": "Rock"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f15c"
+  },
+  "GenreId": 2,
+  "Name": "Jazz"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f15d"
+  },
+  "GenreId": 3,
+  "Name": "Metal"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f15e"
+  },
+  "GenreId": 4,
+  "Name": "Alternative & Punk"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f15f"
+  },
+  "GenreId": 5,
+  "Name": "Rock And Roll"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f160"
+  },
+  "GenreId": 6,
+  "Name": "Blues"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f161"
+  },
+  "GenreId": 7,
+  "Name": "Latin"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f162"
+  },
+  "GenreId": 8,
+  "Name": "Reggae"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f163"
+  },
+  "GenreId": 9,
+  "Name": "Pop"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f164"
+  },
+  "GenreId": 10,
+  "Name": "Soundtrack"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f165"
+  },
+  "GenreId": 11,
+  "Name": "Bossa Nova"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f166"
+  },
+  "GenreId": 12,
+  "Name": "Easy Listening"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f167"
+  },
+  "GenreId": 13,
+  "Name": "Heavy Metal"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f168"
+  },
+  "GenreId": 14,
+  "Name": "R&B/Soul"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f169"
+  },
+  "GenreId": 15,
+  "Name": "Electronica/Dance"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f16a"
+  },
+  "GenreId": 16,
+  "Name": "World"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f16b"
+  },
+  "GenreId": 17,
+  "Name": "Hip Hop/Rap"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f16c"
+  },
+  "GenreId": 18,
+  "Name": "Science Fiction"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f16d"
+  },
+  "GenreId": 19,
+  "Name": "TV Shows"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f16e"
+  },
+  "GenreId": 20,
+  "Name": "Sci Fi & Fantasy"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f16f"
+  },
+  "GenreId": 21,
+  "Name": "Drama"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f170"
+  },
+  "GenreId": 22,
+  "Name": "Comedy"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f171"
+  },
+  "GenreId": 23,
+  "Name": "Alternative"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f172"
+  },
+  "GenreId": 24,
+  "Name": "Classical"
+},
+{
+  "_id": {
+    "$oid": "66135d02eed2c00176f6f173"
+  },
+  "GenreId": 25,
+  "Name": "Opera"
+}]
