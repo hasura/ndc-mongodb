@@ -1,14 +1,18 @@
+use std::collections::BTreeMap;
+
 use anyhow::anyhow;
 use bytes::Bytes;
+use configuration::native_query::NativeQuery;
 use dc_api::JsonResponse;
-use dc_api_types::{QueryRequest, QueryResponse, Target};
-use futures_util::TryStreamExt;
+use dc_api_types::{QueryRequest, QueryResponse};
+use futures_util::{Stream, TryStreamExt as _};
 use mongodb::bson::{doc, Document};
 
 use super::pipeline::{pipeline_for_query_request, ResponseShape};
 use crate::{
     interface_types::MongoAgentError,
     mongodb::{CollectionTrait, DatabaseTrait},
+    query::query_target::QueryTarget,
 };
 
 /// Execute a query request against the given collection.
@@ -18,19 +22,25 @@ use crate::{
 pub async fn execute_query_request(
     database: impl DatabaseTrait,
     query_request: QueryRequest,
+    native_queries: &BTreeMap<String, NativeQuery>,
 ) -> Result<JsonResponse<QueryResponse>, MongoAgentError> {
-    let collection = database.collection(&collection_name(&query_request.target));
+    let target = QueryTarget::for_request(&query_request, native_queries);
 
-    let (pipeline, response_shape) = pipeline_for_query_request(&query_request)?;
-    tracing::debug!(pipeline = %serde_json::to_string(&pipeline).unwrap(), "aggregate pipeline");
+    let (pipeline, response_shape) = pipeline_for_query_request(&query_request, native_queries)?;
+    tracing::debug!(pipeline = %serde_json::to_string(&pipeline).unwrap(), target = %target, "aggregate pipeline");
 
-    let document_cursor = collection.aggregate(pipeline, None).await?;
-
-    let documents = document_cursor
-        .into_stream()
-        .map_err(MongoAgentError::MongoDB)
-        .try_collect::<Vec<_>>()
-        .await?;
+    // The target of a query request might be a collection, or it might be a native query. In the
+    // latter case there is no collection to perform the aggregation against. So instead of sending
+    // the MongoDB API call `db.<collection>.aggregate` we instead call `db.aggregate`.
+    let documents = match target {
+        QueryTarget::Collection(collection_name) => {
+            let collection = database.collection(&collection_name);
+            collect_from_cursor(collection.aggregate(pipeline, None).await?).await
+        }
+        QueryTarget::NativeQuery { .. } => {
+            collect_from_cursor(database.aggregate(pipeline, None).await?).await
+        }
+    }?;
 
     let response_document: Document = match response_shape {
         ResponseShape::RowStream => {
@@ -49,6 +59,12 @@ pub async fn execute_query_request(
     Ok(JsonResponse::Serialized(bytes))
 }
 
-pub fn collection_name(query_request_target: &Target) -> String {
-    query_request_target.name().join(".")
+async fn collect_from_cursor(
+    document_cursor: impl Stream<Item = Result<Document, mongodb::error::Error>>,
+) -> Result<Vec<Document>, MongoAgentError> {
+    document_cursor
+        .into_stream()
+        .map_err(MongoAgentError::MongoDB)
+        .try_collect::<Vec<_>>()
+        .await
 }

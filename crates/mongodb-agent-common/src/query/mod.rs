@@ -6,6 +6,7 @@ mod foreach;
 mod make_selector;
 mod make_sort;
 mod pipeline;
+mod query_target;
 mod relations;
 pub mod serialization;
 
@@ -14,10 +15,10 @@ use dc_api_types::{QueryRequest, QueryResponse};
 
 use self::execute_query_request::execute_query_request;
 pub use self::{
-    execute_query_request::collection_name,
     make_selector::make_selector,
     make_sort::make_sort,
     pipeline::{is_response_faceted, pipeline_for_non_foreach, pipeline_for_query_request},
+    query_target::QueryTarget,
 };
 use crate::interface_types::{MongoAgentError, MongoConfig};
 
@@ -29,7 +30,7 @@ pub async fn handle_query_request(
     let database = config.client.database(&config.database);
     // This function delegates to another function which gives is a point to inject a mock database
     // implementation for testing.
-    execute_query_request(database, query_request).await
+    execute_query_request(database, query_request, &config.native_queries).await
 }
 
 #[cfg(test)]
@@ -81,7 +82,7 @@ mod tests {
             ]),
         );
 
-        let result = execute_query_request(db, query_request)
+        let result = execute_query_request(db, query_request, &Default::default())
             .await?
             .into_value()?;
         assert_eq!(expected_response, result);
@@ -158,7 +159,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request)
+        let result = execute_query_request(db, query_request, &Default::default())
             .await?
             .into_value()?;
         assert_eq!(expected_response, result);
@@ -241,7 +242,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request)
+        let result = execute_query_request(db, query_request, &Default::default())
             .await?
             .into_value()?;
         assert_eq!(expected_response, result);
@@ -301,7 +302,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request)
+        let result = execute_query_request(db, query_request, &Default::default())
             .await?
             .into_value()?;
         assert_eq!(expected_response, result);

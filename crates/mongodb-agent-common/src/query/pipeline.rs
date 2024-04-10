@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use configuration::native_query::NativeQuery;
 use dc_api_types::{Aggregate, Query, QueryRequest, VariableSet};
 use mongodb::bson::{self, doc, Bson};
 
@@ -13,6 +14,7 @@ use super::{
     constants::{RESULT_FIELD, ROWS_FIELD},
     foreach::{foreach_variants, pipeline_for_foreach},
     make_selector, make_sort,
+    query_target::QueryTarget,
     relations::pipeline_for_relations,
 };
 
@@ -47,12 +49,13 @@ pub fn is_response_faceted(query: &Query) -> bool {
 /// post-processing in the agent.
 pub fn pipeline_for_query_request(
     query_request: &QueryRequest,
+    native_queries: &BTreeMap<String, NativeQuery>,
 ) -> Result<(Pipeline, ResponseShape), MongoAgentError> {
     let foreach = foreach_variants(query_request);
     if let Some(foreach) = foreach {
-        pipeline_for_foreach(foreach, query_request)
+        pipeline_for_foreach(foreach, query_request, native_queries)
     } else {
-        pipeline_for_non_foreach(None, query_request)
+        pipeline_for_non_foreach(None, query_request, native_queries)
     }
 }
 
@@ -64,6 +67,7 @@ pub fn pipeline_for_query_request(
 pub fn pipeline_for_non_foreach(
     variables: Option<&VariableSet>,
     query_request: &QueryRequest,
+    native_queries: &BTreeMap<String, NativeQuery>,
 ) -> Result<(Pipeline, ResponseShape), MongoAgentError> {
     let query = &*query_request.query;
     let Query {
@@ -72,8 +76,13 @@ pub fn pipeline_for_non_foreach(
         r#where,
         ..
     } = query;
+    let mut pipeline = Pipeline::empty();
+
+    // If this is a native query then we start with the native query's pipeline
+    pipeline.append(pipeline_for_native_query(query_request, native_queries));
+
     // Stages common to aggregate and row queries.
-    let mut pipeline = pipeline_for_relations(variables, query_request)?;
+    pipeline.append(pipeline_for_relations(variables, query_request, native_queries)?);
 
     let match_stage = r#where
         .as_ref()
@@ -294,4 +303,23 @@ fn pipeline_for_aggregate(
         ),
     };
     Ok(pipeline)
+}
+
+/// Returns either the pipeline defined by a native query with variable bindings for arguments, or
+/// an empty pipeline if the query request target is not a native query
+fn pipeline_for_native_query(
+    query_request: &QueryRequest,
+    native_queries: &BTreeMap<String, NativeQuery>,
+) -> Pipeline {
+    // TODO: bind arguments
+    let stages = match QueryTarget::for_request(query_request, native_queries) {
+        QueryTarget::Collection(_) => vec![],
+        QueryTarget::NativeQuery { native_query, .. } => native_query
+            .pipeline
+            .iter()
+            .cloned()
+            .map(Stage::Other)
+            .collect(),
+    };
+    Pipeline::new(stages)
 }

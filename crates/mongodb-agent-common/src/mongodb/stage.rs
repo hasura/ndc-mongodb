@@ -151,4 +151,9 @@ pub enum Stage {
     /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/replaceWith/#mongodb-pipeline-pipe.-replaceWith
     #[serde(rename = "$replaceWith")]
     ReplaceWith(Selection),
+
+    /// For cases where we receive pipeline stages from an external source, such as a native query,
+    /// and we don't want to attempt to parse it we store the stage BSON document unaltered.
+    #[serde(untagged)]
+    Other(bson::Document),
 }

@@ -1,6 +1,7 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use anyhow::anyhow;
+use configuration::native_query::NativeQuery;
 use dc_api_types::comparison_column::ColumnSelector;
 use dc_api_types::relationship::ColumnMapping;
 use dc_api_types::{Field, QueryRequest, Relationship, VariableSet};
@@ -18,6 +19,7 @@ use super::pipeline::pipeline_for_non_foreach;
 pub fn pipeline_for_relations(
     variables: Option<&VariableSet>,
     query_request: &QueryRequest,
+    native_queries: &BTreeMap<String, NativeQuery>,
 ) -> Result<Pipeline, MongoAgentError> {
     let QueryRequest {
         target,
@@ -45,13 +47,21 @@ pub fn pipeline_for_relations(
         })
         .unwrap_or(&empty_relation_map);
 
-    let stages = lookups_for_fields(query_request, variables, relationships, &[], fields)?;
+    let stages = lookups_for_fields(
+        query_request,
+        native_queries,
+        variables,
+        relationships,
+        &[],
+        fields,
+    )?;
     Ok(Pipeline::new(stages))
 }
 
 /// Produces $lookup stages for any necessary joins
 fn lookups_for_fields(
     query_request: &QueryRequest,
+    native_queries: &BTreeMap<String, NativeQuery>,
     variables: Option<&VariableSet>,
     relationships: &HashMap<String, Relationship>,
     parent_columns: &[&str],
@@ -62,6 +72,7 @@ fn lookups_for_fields(
         .map(|(field_name, field)| {
             lookups_for_field(
                 query_request,
+                native_queries,
                 variables,
                 relationships,
                 parent_columns,
@@ -79,6 +90,7 @@ fn lookups_for_fields(
 /// Produces $lookup stages for any necessary joins
 fn lookups_for_field(
     query_request: &QueryRequest,
+    native_queries: &BTreeMap<String, NativeQuery>,
     variables: Option<&VariableSet>,
     relationships: &HashMap<String, Relationship>,
     parent_columns: &[&str],
@@ -92,6 +104,7 @@ fn lookups_for_field(
             let fields = query.fields.clone().flatten().unwrap_or_default();
             lookups_for_fields(
                 query_request,
+                native_queries,
                 variables,
                 relationships,
                 &nested_parent_columns,
@@ -108,6 +121,7 @@ fn lookups_for_field(
             r#where: _,
         } => lookups_for_field(
             query_request,
+            native_queries,
             variables,
             relationships,
             parent_columns,
@@ -138,6 +152,7 @@ fn lookups_for_field(
                     target: target.clone(),
                     ..query_request.clone()
                 },
+                native_queries,
             )?;
 
             let lookup = make_lookup_stage(from, column_mapping, r#as, lookup_pipeline)?;
@@ -331,7 +346,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request)
+        let result = execute_query_request(db, query_request, &Default::default())
             .await?
             .into_value()?;
         assert_eq!(expected_response, result);
@@ -429,7 +444,7 @@ mod tests {
             ]),
         );
 
-        let result = execute_query_request(db, query_request)
+        let result = execute_query_request(db, query_request, &Default::default())
             .await?
             .into_value()?;
         assert_eq!(expected_response, result);
@@ -527,7 +542,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request)
+        let result = execute_query_request(db, query_request, &Default::default())
             .await?
             .into_value()?;
         assert_eq!(expected_response, result);
@@ -699,7 +714,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request)
+        let result = execute_query_request(db, query_request, &Default::default())
             .await?
             .into_value()?;
         assert_eq!(expected_response, result);
@@ -805,7 +820,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request)
+        let result = execute_query_request(db, query_request, &Default::default())
             .await?
             .into_value()?;
         assert_eq!(expected_response, result);
@@ -939,7 +954,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request)
+        let result = execute_query_request(db, query_request, &Default::default())
             .await?
             .into_value()?;
         assert_eq!(expected_response, result);
@@ -1084,7 +1099,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request)
+        let result = execute_query_request(db, query_request, &Default::default())
             .await?
             .into_value()?;
         assert_eq!(expected_response, result);

@@ -1,9 +1,9 @@
 use dc_api_types::{ExplainResponse, QueryRequest};
-use mongodb::bson::{doc, to_bson};
+use mongodb::bson::{doc, to_bson, Bson};
 
 use crate::{
     interface_types::{MongoAgentError, MongoConfig},
-    query::{self, collection_name},
+    query::{self, QueryTarget},
 };
 
 pub async fn explain_query(
@@ -14,11 +14,18 @@ pub async fn explain_query(
 
     let db = config.client.database(&config.database);
 
-    let (pipeline, _) = query::pipeline_for_query_request(&query_request)?;
+    let (pipeline, _) = query::pipeline_for_query_request(&query_request, &config.native_queries)?;
     let pipeline_bson = to_bson(&pipeline)?;
 
+    let aggregate_target = match QueryTarget::for_request(&query_request, &config.native_queries) {
+        QueryTarget::Collection(collection_name) => Bson::String(collection_name),
+        // 1 means aggregation without a collection target - as in `db.aggregate()` instead of
+        // `db.<collection>.aggregate()`
+        QueryTarget::NativeQuery { .. } => Bson::Int32(1),
+    };
+
     let query_command = doc! {
-        "aggregate": collection_name(&query_request.target),
+        "aggregate": aggregate_target,
         "pipeline": pipeline_bson,
         "cursor": {},
     };

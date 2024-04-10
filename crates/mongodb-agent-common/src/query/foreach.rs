@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
+use configuration::native_query::NativeQuery;
 use dc_api_types::comparison_column::ColumnSelector;
 use dc_api_types::{
     BinaryComparisonOperator, ComparisonColumn, ComparisonValue, Expression, QueryRequest,
@@ -55,6 +56,7 @@ pub fn foreach_variants(query_request: &QueryRequest) -> Option<Vec<ForeachVaria
 pub fn pipeline_for_foreach(
     foreach: Vec<ForeachVariant>,
     query_request: &QueryRequest,
+    native_queries: &BTreeMap<String, NativeQuery>,
 ) -> Result<(Pipeline, ResponseShape), MongoAgentError> {
     let pipelines_with_response_shapes: BTreeMap<String, (Pipeline, ResponseShape)> = foreach
         .into_iter()
@@ -74,7 +76,8 @@ pub fn pipeline_for_foreach(
                 .into();
             }
 
-            let pipeline_with_response_shape = pipeline_for_non_foreach(variables.as_ref(), &q)?;
+            let pipeline_with_response_shape =
+                pipeline_for_non_foreach(variables.as_ref(), &q, native_queries)?;
             Ok((facet_name(index), pipeline_with_response_shape))
         })
         .collect::<Result<_, MongoAgentError>>()?;
@@ -243,7 +246,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request)
+        let result = execute_query_request(db, query_request, &Default::default())
             .await?
             .into_value()?;
         assert_eq!(expected_response, result);
@@ -390,7 +393,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request)
+        let result = execute_query_request(db, query_request, &Default::default())
             .await?
             .into_value()?;
         assert_eq!(expected_response, result);
