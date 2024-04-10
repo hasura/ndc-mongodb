@@ -2,7 +2,7 @@
   "name": "hello",
   "description": "Basic test of native queries",
   "resultType": {
-    "object": "HelloResult",
+    "object": "HelloResult"
   },
   "arguments": {
     "name": { "type": { "scalar": "string" } }

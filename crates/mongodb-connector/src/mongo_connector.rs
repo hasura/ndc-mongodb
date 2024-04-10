@@ -26,6 +26,7 @@ use crate::{
         v2_to_v3_explain_response, v2_to_v3_query_response, v3_to_v2_query_request, QueryContext,
     },
     error_mapping::{mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error},
+    functions::function_definitions,
     schema,
 };
 use crate::{capabilities::mongo_capabilities_response, mutation::handle_mutation_request};
@@ -112,7 +113,7 @@ impl Connector for MongoConnector {
     ) -> Result<JsonResponse<ExplainResponse>, ExplainError> {
         let v2_request = v3_to_v2_query_request(
             &QueryContext {
-                functions: vec![],
+                functions: function_definitions(configuration),
                 scalar_types: &schema::SCALAR_TYPES,
                 schema: &configuration.schema,
             },
@@ -152,7 +153,7 @@ impl Connector for MongoConnector {
     ) -> Result<JsonResponse<QueryResponse>, QueryError> {
         let v2_request = v3_to_v2_query_request(
             &QueryContext {
-                functions: vec![],
+                functions: function_definitions(configuration),
                 scalar_types: &schema::SCALAR_TYPES,
                 schema: &configuration.schema,
             },

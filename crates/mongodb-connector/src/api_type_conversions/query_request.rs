@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, HashMap};
 use configuration::{schema, Schema, WithNameRef};
 use dc_api_types::{self as v2, ColumnSelector, Target};
 use indexmap::IndexMap;
-use itertools::Itertools;
+use itertools::{Either, Itertools as _};
 use ndc_sdk::models::{self as v3};
 
 use super::{
@@ -14,7 +14,7 @@ use super::{
 
 #[derive(Clone, Debug)]
 pub struct QueryContext<'a> {
-    pub functions: Vec<v3::FunctionInfo>,
+    pub functions: BTreeMap<String, v3::FunctionInfo>,
     pub scalar_types: &'a BTreeMap<String, v3::ScalarType>,
     pub schema: &'a Schema,
 }
@@ -23,11 +23,33 @@ impl QueryContext<'_> {
     fn find_collection(
         &self,
         collection_name: &str,
-    ) -> Result<&schema::Collection, ConversionError> {
-        self.schema
-            .collections
-            .get(collection_name)
-            .ok_or_else(|| ConversionError::UnknownCollection(collection_name.to_string()))
+    ) -> Result<Either<&schema::Collection, &v3::FunctionInfo>, ConversionError> {
+        if let Some(collection) = self.schema.collections.get(collection_name) {
+            return Ok(Either::Left(collection));
+        }
+        if let Some(function) = self.functions.get(collection_name) {
+            return Ok(Either::Right(function));
+        }
+
+        Err(ConversionError::UnknownCollection(
+            collection_name.to_string(),
+        ))
+    }
+
+    fn find_collection_object_type(
+        &self,
+        collection_name: &str,
+    ) -> Result<WithNameRef<schema::ObjectType>, ConversionError> {
+        let type_name = match self.find_collection(collection_name)? {
+            Either::Left(collection) => Ok(&collection.r#type),
+            Either::Right(function) => match &function.result_type {
+                v3::Type::Named { name } => Ok(name),
+                _ => Err(ConversionError::RootTypeIsNotObject(
+                    collection_name.to_owned(),
+                )),
+            },
+        }?;
+        self.find_object_type(type_name)
     }
 
     fn find_object_type<'a>(
@@ -96,8 +118,7 @@ pub fn v3_to_v2_query_request(
     context: &QueryContext,
     request: v3::QueryRequest,
 ) -> Result<v2::QueryRequest, ConversionError> {
-    let collection = context.find_collection(&request.collection)?;
-    let collection_object_type = context.find_object_type(&collection.r#type)?;
+    let collection_object_type = context.find_collection_object_type(&request.collection)?;
 
     Ok(v2::QueryRequest {
         relationships: v3_to_v2_relationships(&request)?,
@@ -325,8 +346,8 @@ fn v3_to_v2_field(
             arguments: _,
         } => {
             let v3_relationship = lookup_relationship(collection_relationships, &relationship)?;
-            let collection = context.find_collection(&v3_relationship.target_collection)?;
-            let collection_object_type = context.find_object_type(&collection.r#type)?;
+            let collection_object_type =
+                context.find_collection_object_type(&v3_relationship.target_collection)?;
             Ok(v2::Field::Relationship {
                 query: Box::new(v3_to_v2_query(
                     context,
@@ -427,9 +448,7 @@ fn v3_to_v2_order_by_element(
                         collection_relationships,
                         &last_path_element.relationship,
                     )?;
-                    let target_collection =
-                        context.find_collection(&relationship.target_collection)?;
-                    context.find_object_type(&target_collection.r#type)
+                    context.find_collection_object_type(&relationship.target_collection)
                 })
                 .transpose()?;
             let target_object_type = end_of_relationship_path_object_type
@@ -502,9 +521,8 @@ fn v3_to_v2_target_path_step<T: IntoIterator<Item = v3::PathElement>>(
             .map(|expression| {
                 let v3_relationship =
                     lookup_relationship(collection_relationships, &path_element.relationship)?;
-                let target_collection =
-                    context.find_collection(&v3_relationship.target_collection)?;
-                let target_object_type = context.find_object_type(&target_collection.r#type)?;
+                let target_object_type =
+                    context.find_collection_object_type(&v3_relationship.target_collection)?;
                 let v2_expression = v3_to_v2_expression(
                     context,
                     collection_relationships,
@@ -713,9 +731,8 @@ fn v3_to_v2_expression(
                 } => {
                     let v3_relationship =
                         lookup_relationship(collection_relationships, &relationship)?;
-                    let v3_collection =
-                        context.find_collection(&v3_relationship.target_collection)?;
-                    let collection_object_type = context.find_object_type(&v3_collection.r#type)?;
+                    let collection_object_type =
+                        context.find_collection_object_type(&v3_relationship.target_collection)?;
                     let in_table = v2::ExistsInTable::RelatedTable { relationship };
                     Ok((in_table, collection_object_type))
                 }
@@ -723,8 +740,8 @@ fn v3_to_v2_expression(
                     collection,
                     arguments: _,
                 } => {
-                    let v3_collection = context.find_collection(&collection)?;
-                    let collection_object_type = context.find_object_type(&v3_collection.r#type)?;
+                    let collection_object_type =
+                        context.find_collection_object_type(&collection)?;
                     let in_table = v2::ExistsInTable::UnrelatedTable {
                         table: vec![collection],
                     };
@@ -1025,7 +1042,7 @@ mod tests {
         let scalar_types = make_scalar_types();
         let schema = make_flat_schema();
         let query_context = QueryContext {
-            functions: vec![],
+            functions: Default::default(),
             scalar_types: &scalar_types,
             schema: &schema,
         };
@@ -1072,7 +1089,7 @@ mod tests {
         let scalar_types = make_scalar_types();
         let schema = make_flat_schema();
         let query_context = QueryContext {
-            functions: vec![],
+            functions: Default::default(),
             scalar_types: &scalar_types,
             schema: &schema,
         };
@@ -1104,7 +1121,7 @@ mod tests {
         let scalar_types = make_scalar_types();
         let schema = make_flat_schema();
         let query_context = QueryContext {
-            functions: vec![],
+            functions: Default::default(),
             scalar_types: &scalar_types,
             schema: &schema,
         };
@@ -1220,7 +1237,7 @@ mod tests {
         let scalar_types = make_scalar_types();
         let schema = make_nested_schema();
         let query_context = QueryContext {
-            functions: vec![],
+            functions: Default::default(),
             scalar_types: &scalar_types,
             schema: &schema,
         };
