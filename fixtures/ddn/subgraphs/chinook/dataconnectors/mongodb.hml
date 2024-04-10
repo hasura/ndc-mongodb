@@ -911,6 +911,10 @@ definition:
               type: { type: named, name: Int }
             n:
               type: { type: named, name: Int }
+        HelloResult:
+          fields:
+            hello:
+              type: { type: named, name: String }
       collections:
         - name: Album
           arguments: {}
@@ -1000,7 +1004,15 @@ definition:
               unique_columns:
                 - _id
           foreign_keys: {}
-      functions: []
+      functions:
+        - name: hello
+          description: Basic test of native queries
+          result_type: { type: named, name: HelloResult }
+          arguments:
+            name: { type: { type: named, name: String } }
+          pipeline:
+            - $documents:
+                - hello: "{{ name }}"
       procedures:
         - name: insertArtist
           description: Example of a database update using a native procedure

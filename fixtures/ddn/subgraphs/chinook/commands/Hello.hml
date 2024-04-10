@@ -1,0 +1,53 @@
+kind: Command
+version: v1
+definition:
+  name: hello
+  description: Basic test of native queries
+  outputType: HelloResult
+  arguments:
+    - name: name
+      type: String!
+  source:
+    dataConnectorName: mongodb
+    dataConnectorCommand:
+      function: hello
+    typeMapping:
+      HelloResult:
+        fieldMapping:
+          hello: { column: hello }
+  graphql:
+    rootFieldName: hello
+    rootFieldKind: Query
+
+---
+kind: CommandPermissions
+version: v1
+definition:
+  commandName: hello
+  permissions:
+    - role: admin
+      allowExecution: true
+    
+---
+kind: ObjectType
+version: v1
+definition:
+  name: HelloResult
+  graphql:
+    typeName: HelloResult
+  fields:
+    - name: hello
+      type: String!
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: HelloResult
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - hello
+
+
