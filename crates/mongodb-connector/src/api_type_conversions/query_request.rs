@@ -1,6 +1,9 @@
-use std::collections::{BTreeMap, HashMap};
+use std::{
+    borrow::Cow,
+    collections::{BTreeMap, HashMap},
+};
 
-use configuration::{schema, Schema, WithNameRef};
+use configuration::{schema, WithNameRef};
 use dc_api_types::{self as v2, ColumnSelector, Target};
 use indexmap::IndexMap;
 use itertools::{Either, Itertools as _};
@@ -14,9 +17,10 @@ use super::{
 
 #[derive(Clone, Debug)]
 pub struct QueryContext<'a> {
+    pub collections: Cow<'a, BTreeMap<String, schema::Collection>>,
     pub functions: BTreeMap<String, v3::FunctionInfo>,
-    pub scalar_types: &'a BTreeMap<String, v3::ScalarType>,
-    pub schema: &'a Schema,
+    pub object_types: BTreeMap<String, schema::ObjectType>,
+    pub scalar_types: Cow<'a, BTreeMap<String, v3::ScalarType>>,
 }
 
 impl QueryContext<'_> {
@@ -24,7 +28,7 @@ impl QueryContext<'_> {
         &self,
         collection_name: &str,
     ) -> Result<Either<&schema::Collection, &v3::FunctionInfo>, ConversionError> {
-        if let Some(collection) = self.schema.collections.get(collection_name) {
+        if let Some(collection) = self.collections.get(collection_name) {
             return Ok(Either::Left(collection));
         }
         if let Some(function) = self.functions.get(collection_name) {
@@ -57,7 +61,6 @@ impl QueryContext<'_> {
         object_type_name: &'a str,
     ) -> Result<WithNameRef<schema::ObjectType>, ConversionError> {
         let object_type = self
-            .schema
             .object_types
             .get(object_type_name)
             .ok_or_else(|| ConversionError::UnknownObjectType(object_type_name.to_string()))?;
@@ -882,9 +885,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{BTreeMap, HashMap};
+    use std::{
+        borrow::Cow,
+        collections::{BTreeMap, HashMap},
+    };
 
-    use configuration::{schema, Schema};
+    use configuration::schema;
     use dc_api_test_helpers::{self as v2, source, table_relationships, target};
     use mongodb_support::BsonScalarType;
     use ndc_sdk::models::{
@@ -1039,13 +1045,7 @@ mod tests {
 
     #[test]
     fn translates_root_column_references() -> Result<(), anyhow::Error> {
-        let scalar_types = make_scalar_types();
-        let schema = make_flat_schema();
-        let query_context = QueryContext {
-            functions: Default::default(),
-            scalar_types: &scalar_types,
-            schema: &schema,
-        };
+        let query_context = make_flat_schema();
         let query = query_request()
             .collection("authors")
             .query(query().fields([field!("last_name")]).predicate(exists(
@@ -1086,13 +1086,7 @@ mod tests {
 
     #[test]
     fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
-        let scalar_types = make_scalar_types();
-        let schema = make_flat_schema();
-        let query_context = QueryContext {
-            functions: Default::default(),
-            scalar_types: &scalar_types,
-            schema: &schema,
-        };
+        let query_context = make_flat_schema();
         let query = query_request()
             .collection("authors")
             .query(query().aggregates([
@@ -1118,13 +1112,7 @@ mod tests {
 
     #[test]
     fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), anyhow::Error> {
-        let scalar_types = make_scalar_types();
-        let schema = make_flat_schema();
-        let query_context = QueryContext {
-            functions: Default::default(),
-            scalar_types: &scalar_types,
-            schema: &schema,
-        };
+        let query_context = make_flat_schema();
         let query = query_request()
             .collection("authors")
             .query(
@@ -1234,13 +1222,7 @@ mod tests {
 
     #[test]
     fn translates_nested_fields() -> Result<(), anyhow::Error> {
-        let scalar_types = make_scalar_types();
-        let schema = make_nested_schema();
-        let query_context = QueryContext {
-            functions: Default::default(),
-            scalar_types: &scalar_types,
-            schema: &schema,
-        };
+        let query_context = make_nested_schema();
         let query_request = query_request()
             .collection("authors")
             .query(query().fields([
@@ -1305,9 +1287,9 @@ mod tests {
         ])
     }
 
-    fn make_flat_schema() -> Schema {
-        Schema {
-            collections: BTreeMap::from([
+    fn make_flat_schema() -> QueryContext<'static> {
+        QueryContext {
+            collections: Cow::Owned(BTreeMap::from([
                 (
                     "authors".into(),
                     schema::Collection {
@@ -1322,7 +1304,8 @@ mod tests {
                         r#type: "Article".into(),
                     },
                 ),
-            ]),
+            ])),
+            functions: Default::default(),
             object_types: BTreeMap::from([
                 (
                     "Author".into(),
@@ -1378,18 +1361,20 @@ mod tests {
                     },
                 ),
             ]),
+            scalar_types: Cow::Owned(make_scalar_types()),
         }
     }
 
-    fn make_nested_schema() -> Schema {
-        Schema {
-            collections: BTreeMap::from([(
+    fn make_nested_schema() -> QueryContext<'static> {
+        QueryContext {
+            collections: Cow::Owned(BTreeMap::from([(
                 "authors".into(),
                 schema::Collection {
                     description: None,
                     r#type: "Author".into(),
                 },
-            )]),
+            )])),
+            functions: Default::default(),
             object_types: BTreeMap::from([
                 (
                     "Author".into(),
@@ -1451,6 +1436,7 @@ mod tests {
                     },
                 ),
             ]),
+            scalar_types: Cow::Owned(make_scalar_types()),
         }
     }
 }

@@ -1,9 +1,9 @@
 mod api_type_conversions;
 mod capabilities;
 mod error_mapping;
-mod functions;
 mod mongo_connector;
 mod mutation;
+mod query_context;
 mod schema;
 
 use std::error::Error;

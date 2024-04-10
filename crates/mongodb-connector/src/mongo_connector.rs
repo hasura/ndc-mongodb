@@ -23,11 +23,10 @@ use tracing::instrument;
 
 use crate::{
     api_type_conversions::{
-        v2_to_v3_explain_response, v2_to_v3_query_response, v3_to_v2_query_request, QueryContext,
+        v2_to_v3_explain_response, v2_to_v3_query_response, v3_to_v2_query_request,
     },
     error_mapping::{mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error},
-    functions::function_definitions,
-    schema,
+    query_context::get_query_context,
 };
 use crate::{capabilities::mongo_capabilities_response, mutation::handle_mutation_request};
 
@@ -111,14 +110,7 @@ impl Connector for MongoConnector {
         state: &Self::State,
         request: QueryRequest,
     ) -> Result<JsonResponse<ExplainResponse>, ExplainError> {
-        let v2_request = v3_to_v2_query_request(
-            &QueryContext {
-                functions: function_definitions(configuration),
-                scalar_types: &schema::SCALAR_TYPES,
-                schema: &configuration.schema,
-            },
-            request,
-        )?;
+        let v2_request = v3_to_v2_query_request(&get_query_context(configuration), request)?;
         let response = explain_query(state, v2_request)
             .await
             .map_err(mongo_agent_error_to_explain_error)?;
@@ -151,14 +143,7 @@ impl Connector for MongoConnector {
         state: &Self::State,
         request: QueryRequest,
     ) -> Result<JsonResponse<QueryResponse>, QueryError> {
-        let v2_request = v3_to_v2_query_request(
-            &QueryContext {
-                functions: function_definitions(configuration),
-                scalar_types: &schema::SCALAR_TYPES,
-                schema: &configuration.schema,
-            },
-            request,
-        )?;
+        let v2_request = v3_to_v2_query_request(&get_query_context(configuration), request)?;
         let response_json = handle_query_request(state, v2_request)
             .await
             .map_err(mongo_agent_error_to_query_error)?;

@@ -1,10 +1,24 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
+use crate::{api_type_conversions::QueryContext, schema::SCALAR_TYPES};
 use configuration::{native_query::NativeQuery, schema as config, Configuration};
 use mongodb_support::EXTENDED_JSON_TYPE_NAME;
 use ndc_sdk::models::{self as ndc, ArgumentInfo, FunctionInfo};
 
-pub fn function_definitions(configuration: &Configuration) -> BTreeMap<String, FunctionInfo> {
+/// Produce a query context from the connector configuration to direct query request processing
+pub fn get_query_context(configuration: &Configuration) -> QueryContext<'_> {
+    QueryContext {
+        collections: Cow::Borrowed(&configuration.schema.collections),
+        functions: function_definitions(configuration),
+        object_types: configuration
+            .object_types()
+            .map(|(name, ot)| (name.clone(), ot.clone()))
+            .collect(),
+        scalar_types: Cow::Borrowed(&SCALAR_TYPES),
+    }
+}
+
+fn function_definitions(configuration: &Configuration) -> BTreeMap<String, FunctionInfo> {
     configuration
         .native_queries
         .iter()
