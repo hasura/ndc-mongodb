@@ -1,17 +1,31 @@
+---
 kind: ObjectType
 version: v1
 definition:
   name: Playlist
-  graphql:
-    typeName: playlist
-    inputTypeName: playlistInput
   fields:
-    - name: Name
-      type: String
-    - name: PlaylistId
+    - name: id
+      type: ObjectId!
+    - name: name
+      type: String!
+    - name: playlistId
       type: Int!
-    - name: _id
-      type: ObjectId
+  graphql:
+    typeName: App_Playlist
+    inputTypeName: App_PlaylistInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: mongodb
+      dataConnectorObjectType: Playlist
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        name:
+          column:
+            name: Name
+        playlistId:
+          column:
+            name: PlaylistId
 
 ---
 kind: TypePermissions
@@ -22,9 +36,30 @@ definition:
     - role: admin
       output:
         allowedFields:
-          - Name
-          - PlaylistId
-          - _id
+          - id
+          - name
+          - playlistId
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: PlaylistBoolExp
+  objectType: Playlist
+  dataConnectorName: mongodb
+  dataConnectorObjectType: Playlist
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: name
+      operators:
+        enableAll: true
+    - fieldName: playlistId
+      operators:
+        enableAll: true
+  graphql:
+    typeName: App_PlaylistBoolExp
 
 ---
 kind: Model
@@ -32,39 +67,28 @@ version: v1
 definition:
   name: Playlist
   objectType: Playlist
-  filterableFields:
-    - fieldName: Name
-      operators:
-        enableAll: true
-    - fieldName: PlaylistId
-      operators:
-        enableAll: true
-    - fieldName: _id
-      operators:
-        enableAll: true
+  source:
+    dataConnectorName: mongodb
+    collection: Playlist
+  filterExpressionType: PlaylistBoolExp
   orderableFields:
-    - fieldName: Name
+    - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: PlaylistId
+    - fieldName: name
       orderByDirections:
         enableAll: true
-    - fieldName: _id
+    - fieldName: playlistId
       orderByDirections:
         enableAll: true
-  arguments: []
   graphql:
+    selectMany:
+      queryRootField: playlist
     selectUniques:
       - queryRootField: playlistById
         uniqueIdentifier:
-          - _id
-    selectMany:
-      queryRootField: playlist
-    filterExpressionType: playlistBoolExp
-    orderByExpressionType: playlistOrderBy
-  source:
-    collection: Playlist
-    dataConnectorName: mongodb
+          - id
+    orderByExpressionType: App_PlaylistOrderBy
 
 ---
 kind: ModelPermissions
@@ -75,3 +99,4 @@ definition:
     - role: admin
       select:
         filter: null
+

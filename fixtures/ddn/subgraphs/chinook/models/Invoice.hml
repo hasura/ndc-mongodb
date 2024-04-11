@@ -1,31 +1,66 @@
+---
 kind: ObjectType
 version: v1
 definition:
   name: Invoice
-  graphql:
-    typeName: invoice
-    inputTypeName: invoiceInput
   fields:
-    - name: BillingAddress
-      type: String
-    - name: BillingCity
-      type: String
-    - name: BillingCountry
-      type: String
-    - name: BillingPostalCode
-      type: String
-    - name: BillingState
-      type: String
-    - name: CustomerId
-      type: Int!
-    - name: InvoiceDate
+    - name: id
+      type: ObjectId!
+    - name: billingAddress
       type: String!
-    - name: InvoiceId
+    - name: billingCity
+      type: String!
+    - name: billingCountry
+      type: String!
+    - name: billingPostalCode
+      type: ExtendedJson
+    - name: billingState
+      type: String!
+    - name: customerId
       type: Int!
-    - name: Total
+    - name: invoiceDate
+      type: String!
+    - name: invoiceId
+      type: Int!
+    - name: total
       type: Float!
-    - name: _id
-      type: ObjectId
+  graphql:
+    typeName: App_Invoice
+    inputTypeName: App_InvoiceInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: mongodb
+      dataConnectorObjectType: Invoice
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        billingAddress:
+          column:
+            name: BillingAddress
+        billingCity:
+          column:
+            name: BillingCity
+        billingCountry:
+          column:
+            name: BillingCountry
+        billingPostalCode:
+          column:
+            name: BillingPostalCode
+        billingState:
+          column:
+            name: BillingState
+        customerId:
+          column:
+            name: CustomerId
+        invoiceDate:
+          column:
+            name: InvoiceDate
+        invoiceId:
+          column:
+            name: InvoiceId
+        total:
+          column:
+            name: Total
 
 ---
 kind: TypePermissions
@@ -36,16 +71,58 @@ definition:
     - role: admin
       output:
         allowedFields:
-          - BillingAddress
-          - BillingCity
-          - BillingCountry
-          - BillingPostalCode
-          - BillingState
-          - CustomerId
-          - InvoiceDate
-          - InvoiceId
-          - Total
-          - _id
+          - id
+          - billingAddress
+          - billingCity
+          - billingCountry
+          - billingPostalCode
+          - billingState
+          - customerId
+          - invoiceDate
+          - invoiceId
+          - total
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: InvoiceBoolExp
+  objectType: Invoice
+  dataConnectorName: mongodb
+  dataConnectorObjectType: Invoice
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: billingAddress
+      operators:
+        enableAll: true
+    - fieldName: billingCity
+      operators:
+        enableAll: true
+    - fieldName: billingCountry
+      operators:
+        enableAll: true
+    - fieldName: billingPostalCode
+      operators:
+        enableAll: true
+    - fieldName: billingState
+      operators:
+        enableAll: true
+    - fieldName: customerId
+      operators:
+        enableAll: true
+    - fieldName: invoiceDate
+      operators:
+        enableAll: true
+    - fieldName: invoiceId
+      operators:
+        enableAll: true
+    - fieldName: total
+      operators:
+        enableAll: true
+  graphql:
+    typeName: App_InvoiceBoolExp
 
 ---
 kind: Model
@@ -53,81 +130,49 @@ version: v1
 definition:
   name: Invoice
   objectType: Invoice
-  filterableFields:
-    - fieldName: BillingAddress
-      operators:
-        enableAll: true
-    - fieldName: BillingCity
-      operators:
-        enableAll: true
-    - fieldName: BillingCountry
-      operators:
-        enableAll: true
-    - fieldName: BillingPostalCode
-      operators:
-        enableAll: true
-    - fieldName: BillingState
-      operators:
-        enableAll: true
-    - fieldName: CustomerId
-      operators:
-        enableAll: true
-    - fieldName: InvoiceDate
-      operators:
-        enableAll: true
-    - fieldName: InvoiceId
-      operators:
-        enableAll: true
-    - fieldName: Total
-      operators:
-        enableAll: true
-    - fieldName: _id
-      operators:
-        enableAll: true
+  source:
+    dataConnectorName: mongodb
+    collection: Invoice
+  filterExpressionType: InvoiceBoolExp
   orderableFields:
-    - fieldName: BillingAddress
+    - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: BillingCity
+    - fieldName: billingAddress
       orderByDirections:
         enableAll: true
-    - fieldName: BillingCountry
+    - fieldName: billingCity
       orderByDirections:
         enableAll: true
-    - fieldName: BillingPostalCode
+    - fieldName: billingCountry
       orderByDirections:
         enableAll: true
-    - fieldName: BillingState
+    - fieldName: billingPostalCode
       orderByDirections:
         enableAll: true
-    - fieldName: CustomerId
+    - fieldName: billingState
       orderByDirections:
         enableAll: true
-    - fieldName: InvoiceDate
+    - fieldName: customerId
       orderByDirections:
         enableAll: true
-    - fieldName: InvoiceId
+    - fieldName: invoiceDate
       orderByDirections:
         enableAll: true
-    - fieldName: Total
+    - fieldName: invoiceId
       orderByDirections:
         enableAll: true
-    - fieldName: _id
+    - fieldName: total
       orderByDirections:
         enableAll: true
-  arguments: []
   graphql:
+    selectMany:
+      queryRootField: invoice
     selectUniques:
       - queryRootField: invoiceById
         uniqueIdentifier:
-          - _id
-    selectMany:
-      queryRootField: invoice
-    filterExpressionType: invoiceBoolExp
-    orderByExpressionType: invoiceOrderBy
-  source:
-    collection: Invoice
-    dataConnectorName: mongodb
+          - id
+    orderByExpressionType: App_InvoiceOrderBy
 
 ---
 kind: ModelPermissions
@@ -138,3 +183,4 @@ definition:
     - role: admin
       select:
         filter: null
+

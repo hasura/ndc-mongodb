@@ -13,11 +13,9 @@ definition:
     dataConnectorName: mongodb
     dataConnectorCommand:
       procedure: insertArtist
-    typeMapping:
-      InsertArtist:
-        fieldMapping:
-          ok: { column: ok }
-          n: { column: n }
+    argumentMapping:
+      id: id
+      name: name
   graphql:
     rootFieldName: insertArtist
     rootFieldKind: Mutation
@@ -43,6 +41,12 @@ definition:
       type: Int!
     - name: n
       type: Int!
+  dataConnectorTypeMapping:
+    - dataConnectorName: mongodb
+      dataConnectorObjectType: InsertArtist
+      fieldMapping:
+        ok: { column: { name: ok } }
+        n: { column: { name: n } }
 
 ---
 kind: TypePermissions
@@ -55,4 +59,3 @@ definition:
         allowedFields:
           - ok
           - n
-

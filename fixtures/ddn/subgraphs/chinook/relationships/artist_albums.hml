@@ -1,7 +1,7 @@
 kind: Relationship
 version: v1
 definition:
-  name: Albums
+  name: albums
   source: Artist
   target:
     model:
@@ -10,7 +10,7 @@ definition:
   mapping:
     - source:
         fieldPath:
-          - fieldName: ArtistId
+          - fieldName: artistId
       target:
         modelField:
-          - fieldName: ArtistId
+          - fieldName: artistId
