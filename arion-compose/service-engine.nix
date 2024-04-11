@@ -28,7 +28,7 @@ let
       done
       cat "$combined" \
         | yq -o=json \
-        | jq -s 'map(if .kind == "DataConnectorLink" then .definition.url = { singleUrl: { value: "${connector-url}" } } else . end)' \
+        | jq -s 'map(if .kind == "DataConnectorLink" then .definition.url = { singleUrl: { value: "${connector-url}" } } else . end) | map(select(type != "null"))' \
         > metadata.json
     '';
 
