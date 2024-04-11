@@ -13,11 +13,9 @@ definition:
     dataConnectorName: mongodb
     dataConnectorCommand:
       procedure: insertArtist
-    typeMapping:
-      InsertArtist:
-        fieldMapping:
-          ok: { column: ok }
-          n: { column: n }
+    argumentMapping:
+      id: id
+      name: name
   graphql:
     rootFieldName: insertArtist
     rootFieldKind: Mutation

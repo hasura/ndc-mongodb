@@ -1,12 +1,12 @@
 use std::collections::BTreeMap;
 
 use anyhow::anyhow;
-use bytes::Bytes;
 use configuration::native_query::NativeQuery;
 use dc_api::JsonResponse;
 use dc_api_types::{QueryRequest, QueryResponse};
+use futures::StreamExt;
 use futures_util::{Stream, TryStreamExt as _};
-use mongodb::bson::{doc, Document};
+use mongodb::bson::{doc, from_bson, Document};
 
 use super::pipeline::{pipeline_for_query_request, ResponseShape};
 use crate::{
@@ -27,20 +27,30 @@ pub async fn execute_query_request(
     let target = QueryTarget::for_request(&query_request, native_queries);
 
     let (pipeline, response_shape) = pipeline_for_query_request(&query_request, native_queries)?;
-    tracing::debug!(pipeline = %serde_json::to_string(&pipeline).unwrap(), target = %target, "aggregate pipeline");
+    tracing::warn!(pipeline = %serde_json::to_string(&pipeline).unwrap(), target = %target, "aggregate pipeline");
 
     // The target of a query request might be a collection, or it might be a native query. In the
     // latter case there is no collection to perform the aggregation against. So instead of sending
     // the MongoDB API call `db.<collection>.aggregate` we instead call `db.aggregate`.
-    let documents = match target {
+    let documents_result = match target {
         QueryTarget::Collection(collection_name) => {
             let collection = database.collection(&collection_name);
-            collect_from_cursor(collection.aggregate(pipeline, None).await?).await
+            collect_from_cursor(log_err(collection.aggregate(pipeline, None).await)?).await
         }
         QueryTarget::NativeQuery { .. } => {
-            collect_from_cursor(database.aggregate(pipeline, None).await?).await
+            collect_from_cursor(log_err(database.aggregate(pipeline, None).await)?).await
+        }
+    };
+
+    let documents = match documents_result {
+        Ok(docs) => Ok(docs),
+        Err(error) => {
+            tracing::warn!(?error, "error response from MongoDB");
+            Err(error)
         }
     }?;
+
+    tracing::warn!(documents = %serde_json::to_string(&documents).unwrap(), "response from MongoDB");
 
     let response_document: Document = match response_shape {
         ResponseShape::RowStream => {
@@ -53,10 +63,11 @@ pub async fn execute_query_request(
         })?,
     };
 
-    let bytes: Bytes = serde_json::to_vec(&response_document)
-        .map_err(MongoAgentError::Serialization)?
-        .into();
-    Ok(JsonResponse::Serialized(bytes))
+    let response: QueryResponse = from_bson(response_document.into())?;
+
+    tracing::warn!(response = %serde_json::to_string(&response).unwrap(), "response from connector");
+
+    Ok(JsonResponse::Value(response))
 }
 
 async fn collect_from_cursor(
@@ -67,4 +78,17 @@ async fn collect_from_cursor(
         .map_err(MongoAgentError::MongoDB)
         .try_collect::<Vec<_>>()
         .await
+}
+
+fn log_err<T, E>(result: Result<T, E>) -> Result<T, E>
+where
+    E: std::fmt::Debug,
+{
+    match result {
+        Ok(v) => Ok(v),
+        Err(error) => {
+            tracing::warn!(?error, "log_error");
+            Err(error)
+        }
+    }
 }

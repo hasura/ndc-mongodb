@@ -137,12 +137,13 @@ impl Connector for MongoConnector {
         handle_mutation_request(state, request).await
     }
 
-    #[instrument(err, skip_all)]
+    #[instrument]
     async fn query(
         configuration: &Self::Configuration,
         state: &Self::State,
         request: QueryRequest,
     ) -> Result<JsonResponse<QueryResponse>, QueryError> {
+        tracing::warn!(query_request = %serde_json::to_string(&request).unwrap(), "query");
         let v2_request = v3_to_v2_query_request(&get_query_context(configuration), request)?;
         let response_json = handle_query_request(state, v2_request)
             .await

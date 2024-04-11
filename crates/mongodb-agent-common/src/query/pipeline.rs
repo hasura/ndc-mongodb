@@ -82,7 +82,11 @@ pub fn pipeline_for_non_foreach(
     pipeline.append(pipeline_for_native_query(query_request, native_queries));
 
     // Stages common to aggregate and row queries.
-    pipeline.append(pipeline_for_relations(variables, query_request, native_queries)?);
+    pipeline.append(pipeline_for_relations(
+        variables,
+        query_request,
+        native_queries,
+    )?);
 
     let match_stage = r#where
         .as_ref()
@@ -312,6 +316,9 @@ fn pipeline_for_native_query(
     native_queries: &BTreeMap<String, NativeQuery>,
 ) -> Pipeline {
     // TODO: bind arguments
+    // TODO: if the native query result type is not an array we may want to implicitly get the
+    // first or last document from the native query pipeline instead of accumulating an array. We
+    // should restrict allowed result types to object, or array of object.
     let stages = match QueryTarget::for_request(query_request, native_queries) {
         QueryTarget::Collection(_) => vec![],
         QueryTarget::NativeQuery { native_query, .. } => native_query
@@ -321,5 +328,14 @@ fn pipeline_for_native_query(
             .map(Stage::Other)
             .collect(),
     };
-    Pipeline::new(stages)
+    let mut pipeline = Pipeline::new(stages);
+    // if !pipeline.is_empty() {
+    //     // Functions are supposed to return a single value. This "$group" stage accumulates all
+    //     // output documents from the native query pipeline into a single array value.
+    //     pipeline.push(Stage::Group {
+    //         key_expression: Bson::Null,
+    //         accumulators: [("__value".to_owned(), Accumulator::Push("$$CURRENT".into()))].into(),
+    //     });
+    // }
+    pipeline
 }

@@ -3,7 +3,7 @@ version: v1
 definition:
   name: hello
   description: Basic test of native queries
-  outputType: HelloResult
+  outputType: String
   arguments:
     - name: name
       type: String!
@@ -11,10 +11,8 @@ definition:
     dataConnectorName: mongodb
     dataConnectorCommand:
       function: hello
-    typeMapping:
-      HelloResult:
-        fieldMapping:
-          hello: { column: hello }
+    argumentMapping:
+      name: name
   graphql:
     rootFieldName: hello
     rootFieldKind: Query
@@ -27,27 +25,3 @@ definition:
   permissions:
     - role: admin
       allowExecution: true
-    
----
-kind: ObjectType
-version: v1
-definition:
-  name: HelloResult
-  graphql:
-    typeName: HelloResult
-  fields:
-    - name: hello
-      type: String!
-
----
-kind: TypePermissions
-version: v1
-definition:
-  typeName: HelloResult
-  permissions:
-    - role: admin
-      output:
-        allowedFields:
-          - hello
-
-

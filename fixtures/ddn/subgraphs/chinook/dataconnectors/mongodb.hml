@@ -1007,12 +1007,9 @@ definition:
       functions:
         - name: hello
           description: Basic test of native queries
-          result_type: { type: named, name: HelloResult }
+          result_type: { type: named, name: String }
           arguments:
             name: { type: { type: named, name: String } }
-          pipeline:
-            - $documents:
-                - hello: "{{ name }}"
       procedures:
         - name: insertArtist
           description: Example of a database update using a native procedure
@@ -1020,7 +1017,6 @@ definition:
           arguments:
             id: { type: { type: named, name: Int } }
             name: { type: { type: named, name: String } }
-          command: { insert: Artist, documents: [{ ArtistId: "{{ id }}", Name: "{{ name }}" }] }
     capabilities:
       version: ^0.1.0
       capabilities:

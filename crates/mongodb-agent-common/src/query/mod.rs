@@ -26,7 +26,7 @@ pub async fn handle_query_request(
     config: &MongoConfig,
     query_request: QueryRequest,
 ) -> Result<JsonResponse<QueryResponse>, MongoAgentError> {
-    tracing::debug!(?config, query_request = %serde_json::to_string(&query_request).unwrap(), "executing query");
+    tracing::warn!(?config, query_request = %serde_json::to_string(&query_request).unwrap(), "executing query");
     let database = config.client.database(&config.database);
     // This function delegates to another function which gives is a point to inject a mock database
     // implementation for testing.

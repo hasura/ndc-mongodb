@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use mongodb::{bson, options::SelectionCriteria};
+use mongodb::bson;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -38,31 +38,33 @@ pub struct NativeQuery {
     ///
     /// The pipeline may include Extended JSON.
     ///
-    /// Arguments specified for this native query will be available as variables. See
-    /// https://www.mongodb.com/docs/manual/reference/aggregation-variables/
+    /// Keys and values in the pipeline may contain placeholders of the form `{{variableName}}`
+    /// which will be substituted when the native procedure is executed according to the given
+    /// arguments.
+    ///
+    /// Placeholders must be inside quotes so that the pipeline can be stored in JSON format. If
+    /// the pipeline includes a string whose only content is a placeholder, when the variable is
+    /// substituted the string will be replaced by the type of the variable. For example in this
+    /// pipeline,
+    ///
+    /// ```json
+    /// json!([{
+    ///   "$documents": "{{ documents }}"
+    /// }])
+    /// ```
+    ///
+    /// If the type of the `documents` argument is an array then after variable substitution the
+    /// pipeline will expand to:
+    ///
+    /// ```json
+    /// json!([{
+    ///   "$documents": [/* array of documents */]
+    /// }])
+    /// ```
+    ///
     #[schemars(with = "Vec<serde_json::Value>")]
     pub pipeline: Vec<bson::Document>,
-
-    #[serde(default)]
-    pub representation: NativeQueryRepresentation,
-
-    /// Determines which servers in a cluster to read from by specifying read preference, or
-    /// a predicate to apply to candidate servers.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "OptionalObject")]
-    pub selection_criteria: Option<SelectionCriteria>,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 }
-
-#[derive(Clone, Copy, Debug, Default, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-pub enum NativeQueryRepresentation {
-    #[default]
-    Collection,
-    Function,
-}
-
-type Object = serde_json::Map<String, serde_json::Value>;
-type OptionalObject = Option<Object>;
