@@ -1,4 +1,4 @@
-# Dependencies and build configuration for the v3-engine crate.
+# Dependencies and build configuration for the graphql-engine crate.
 #
 # To add runtime library dependencies, add packge names to the argument set
 # here, and add the same name to the `buildInputs` list below.
@@ -12,6 +12,7 @@
 # https://crane.dev/API.html#cranelibbuildpackage
 #
 { src
+, package ? null # leave as null to build or test all packages
 
   # The following arguments come from nixpkgs, and are automatically populated
   # by `callPackage`.
@@ -33,8 +34,12 @@ let
       inherit src;
 
       # craneLib wants a name for the workspace root
-      pname = "v3-engine-workspace";
-      version = "3.0.0";
+      pname = if package != null then "hasura-${package}" else "graphql-engine-workspace";
+
+      cargoExtraArgs =
+        if package == null
+        then "--locked"
+        else "--locked --package ${package}";
 
       buildInputs = [
         openssl
