@@ -35,7 +35,7 @@ in
     engine = import ./service-engine.nix {
       inherit pkgs;
       port = engine-port;
-      connectors = [{ name = "mongodb"; url = "http://connector:${connector-port}"; }];
+      connectors = [{ name = "mongodb"; url = "http://connector:${connector-port}"; subgraph = ../fixtures/ddn/subgraphs/chinook; }];
       service.depends_on = {
         auth-hook.condition = "service_started";
       };
