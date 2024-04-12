@@ -176,14 +176,14 @@ mod tests {
                 "$facet": {
                     "__FACET___0": [
                         { "$match": { "$and": [{ "artistId": {"$eq":1 }}]}},
-                        { "$replaceWith": { 
+                        { "$replaceWith": {
                             "albumId": { "$ifNull": ["$albumId", null] },
                             "title": { "$ifNull": ["$title", null] }
                         } },
                     ],
                     "__FACET___1": [
                         { "$match": { "$and": [{ "artistId": {"$eq":2}}]}},
-                        { "$replaceWith": { 
+                        { "$replaceWith": {
                             "albumId": { "$ifNull": ["$albumId", null] },
                             "title": { "$ifNull": ["$title", null] }
                         } },
@@ -248,9 +248,7 @@ mod tests {
                 })?)]))
             });
 
-        let result = execute_query_request(&collection, query_request)
-            .await?
-            .into_value()?;
+        let result = execute_query_request(&collection, query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -364,7 +362,6 @@ mod tests {
             ]
         }))?;
 
-
         let mut collection = MockCollectionTrait::new();
         collection
             .expect_aggregate()
@@ -398,9 +395,7 @@ mod tests {
                 })?)]))
             });
 
-        let result = execute_query_request(&collection, query_request)
-            .await?
-            .into_value()?;
+        let result = execute_query_request(&collection, query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())

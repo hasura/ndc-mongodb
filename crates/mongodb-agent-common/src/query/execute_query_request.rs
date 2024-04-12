@@ -1,9 +1,7 @@
 use anyhow::anyhow;
-use bytes::Bytes;
-use dc_api::JsonResponse;
 use dc_api_types::{QueryRequest, QueryResponse};
 use futures_util::TryStreamExt;
-use mongodb::bson::{doc, Document};
+use mongodb::bson::{self, doc, Document};
 
 use super::pipeline::{pipeline_for_query_request, ResponseShape};
 use crate::{interface_types::MongoAgentError, mongodb::CollectionTrait};
@@ -11,7 +9,7 @@ use crate::{interface_types::MongoAgentError, mongodb::CollectionTrait};
 pub async fn execute_query_request(
     collection: &impl CollectionTrait<Document>,
     query_request: QueryRequest,
-) -> Result<JsonResponse<QueryResponse>, MongoAgentError> {
+) -> Result<QueryResponse, MongoAgentError> {
     let (pipeline, response_shape) = pipeline_for_query_request(&query_request)?;
     tracing::debug!(pipeline = %serde_json::to_string(&pipeline).unwrap(), "aggregate pipeline");
 
@@ -33,9 +31,8 @@ pub async fn execute_query_request(
             ))
         })?,
     };
+    tracing::debug!(response_document = %serde_json::to_string(&response_document).unwrap(), "response from MongoDB");
 
-    let bytes: Bytes = serde_json::to_vec(&response_document)
-        .map_err(MongoAgentError::Serialization)?
-        .into();
-    Ok(JsonResponse::Serialized(bytes))
+    let response = bson::from_document(response_document)?;
+    Ok(response)
 }

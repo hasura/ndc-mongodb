@@ -10,7 +10,7 @@ use mongodb_support::BsonScalarType;
 
 use crate::{
     comparison_function::ComparisonFunction, interface_types::MongoAgentError,
-    query::serialization::json_to_bson_scalar, query::column_ref::column_ref,
+    query::column_ref::column_ref, query::serialization::json_to_bson_scalar,
 };
 
 use BinaryArrayComparisonOperator as ArrOp;
@@ -112,7 +112,7 @@ fn make_selector_helper(
                         "comparisons between columns",
                     )),
                     ArrayComparisonValue::Variable(name) => {
-                        Ok(variable_to_mongo_expression(variables, name, value_type)?.into())
+                        variable_to_mongo_expression(variables, name, value_type)
                     }
                 })
                 .collect::<Result<_, MongoAgentError>>()?;
@@ -149,11 +149,10 @@ fn variable_to_mongo_expression(
     variables: Option<&BTreeMap<String, serde_json::Value>>,
     variable: &str,
     value_type: &str,
-) -> Result<bson::Document, MongoAgentError> {
+) -> Result<bson::Bson, MongoAgentError> {
     let value = variables
         .and_then(|vars| vars.get(variable))
         .ok_or_else(|| MongoAgentError::VariableNotDefined(variable.to_owned()))?;
-    Ok(doc! {
-        "$literal": bson_from_scalar_value(value, value_type)?
-    })
+
+    bson_from_scalar_value(value, value_type)
 }

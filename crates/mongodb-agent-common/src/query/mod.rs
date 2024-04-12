@@ -9,7 +9,6 @@ mod pipeline;
 mod relations;
 pub mod serialization;
 
-use dc_api::JsonResponse;
 use dc_api_types::{QueryRequest, QueryResponse, Target};
 use mongodb::bson::Document;
 
@@ -28,7 +27,7 @@ pub fn collection_name(query_request_target: &Target) -> String {
 pub async fn handle_query_request(
     config: &MongoConfig,
     query_request: QueryRequest,
-) -> Result<JsonResponse<QueryResponse>, MongoAgentError> {
+) -> Result<QueryResponse, MongoAgentError> {
     tracing::debug!(?config, query_request = %serde_json::to_string(&query_request).unwrap(), "executing query");
 
     let database = config.client.database(&config.database);
@@ -91,9 +90,7 @@ mod tests {
                 ]))
             });
 
-        let result = execute_query_request(&collection, query_request)
-            .await?
-            .into_value()?;
+        let result = execute_query_request(&collection, query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -170,9 +167,7 @@ mod tests {
                 })?)]))
             });
 
-        let result = execute_query_request(&collection, query_request)
-            .await?
-            .into_value()?;
+        let result = execute_query_request(&collection, query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -255,9 +250,7 @@ mod tests {
                 })?)]))
             });
 
-        let result = execute_query_request(&collection, query_request)
-            .await?
-            .into_value()?;
+        let result = execute_query_request(&collection, query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -317,9 +310,7 @@ mod tests {
                 })?)]))
             });
 
-        let result = execute_query_request(&collection, query_request)
-            .await?
-            .into_value()?;
+        let result = execute_query_request(&collection, query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
