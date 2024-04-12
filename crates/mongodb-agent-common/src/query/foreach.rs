@@ -133,7 +133,9 @@ fn facet_name(index: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use dc_api_types::{QueryRequest, QueryResponse};
+    use dc_api_types::{
+        BinaryComparisonOperator, ComparisonColumn, Field, Query, QueryRequest, QueryResponse,
+    };
     use mongodb::{
         bson::{doc, from_document},
         options::AggregateOptions,
@@ -385,6 +387,158 @@ mod tests {
                                 "aggregates": {
                                     "count": 2,
                                 },
+                                "rows": [
+                                    { "albumId": 2, "title": "Balls to the Wall" },
+                                    { "albumId": 3, "title": "Restless and Wild" }
+                                ]
+                            }
+                        }
+                    ],
+                })?)]))
+            });
+
+        let result = execute_query_request(&collection, query_request).await?;
+        assert_eq!(expected_response, result);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn executes_foreach_with_variables() -> Result<(), anyhow::Error> {
+        let query_request = QueryRequest {
+            foreach: None,
+            variables: Some(vec![
+                [("artistId".to_owned(), json!(1))].into(),
+                [("artistId".to_owned(), json!(2))].into(),
+                [("artistId".to_owned(), json!(3))].into(),
+            ]),
+            target: dc_api_types::Target::TTable {
+                name: vec!["tracks".to_owned()],
+            },
+            relationships: Default::default(),
+            query: Box::new(Query {
+                r#where: Some(dc_api_types::Expression::ApplyBinaryComparison {
+                    column: ComparisonColumn::new(
+                        "int".to_owned(),
+                        dc_api_types::ColumnSelector::Column("artistId".to_owned()),
+                    ),
+                    operator: BinaryComparisonOperator::Equal,
+                    value: dc_api_types::ComparisonValue::Variable {
+                        name: "artistId".to_owned(),
+                    },
+                }),
+                fields: Some(Some(
+                    [
+                        (
+                            "albumId".to_owned(),
+                            Field::Column {
+                                column: "albumId".to_owned(),
+                                column_type: "int".to_owned(),
+                            },
+                        ),
+                        (
+                            "title".to_owned(),
+                            Field::Column {
+                                column: "title".to_owned(),
+                                column_type: "string".to_owned(),
+                            },
+                        ),
+                    ]
+                    .into(),
+                )),
+                aggregates: None,
+                aggregates_limit: None,
+                limit: None,
+                offset: None,
+                order_by: None,
+            }),
+        };
+
+        let expected_pipeline = json!([
+            {
+                "$facet": {
+                    "__FACET___0": [
+                        { "$match": { "artistId": {"$eq":1 } } },
+                        { "$replaceWith": {
+                            "albumId": { "$ifNull": ["$albumId", null] },
+                            "title": { "$ifNull": ["$title", null] }
+                        } },
+                    ],
+                    "__FACET___1": [
+                        { "$match": { "artistId": {"$eq": 2 } } },
+                        { "$replaceWith": {
+                            "albumId": { "$ifNull": ["$albumId", null] },
+                            "title": { "$ifNull": ["$title", null] }
+                        } },
+                    ],
+                    "__FACET___2": [
+                        { "$match": { "artistId": {"$eq": 3 } } },
+                        { "$replaceWith": {
+                            "albumId": { "$ifNull": ["$albumId", null] },
+                            "title": { "$ifNull": ["$title", null] }
+                        } },
+                    ]
+                },
+            },
+            {
+                "$replaceWith": {
+                    "rows": [
+                        { "query": { "rows": "$__FACET___0" } },
+                        { "query": { "rows": "$__FACET___1" } },
+                        { "query": { "rows": "$__FACET___2" } },
+                    ]
+                },
+            }
+        ]);
+
+        let expected_response: QueryResponse = from_value(json! ({
+            "rows": [
+                {
+                    "query": {
+                        "rows": [
+                            { "albumId": 1, "title": "For Those About To Rock We Salute You" },
+                            { "albumId": 4, "title": "Let There Be Rock" }
+                        ]
+                    }
+                },
+                {
+                    "query": {
+                        "rows": []
+                    }
+                },
+                {
+                    "query": {
+                        "rows": [
+                            { "albumId": 2, "title": "Balls to the Wall" },
+                            { "albumId": 3, "title": "Restless and Wild" }
+                        ]
+                    }
+                }
+            ]
+        }))?;
+
+        let mut collection = MockCollectionTrait::new();
+        collection
+            .expect_aggregate()
+            .returning(move |pipeline, _: Option<AggregateOptions>| {
+                assert_eq!(expected_pipeline, to_value(pipeline).unwrap());
+                Ok(mock_stream(vec![Ok(from_document(doc! {
+                    "rows": [
+                        {
+                            "query": {
+                                "rows": [
+                                    { "albumId": 1, "title": "For Those About To Rock We Salute You" },
+                                    { "albumId": 4, "title": "Let There Be Rock" }
+                                ]
+                            }
+                        },
+                        {
+                            "query": {
+                                "rows": []
+                            }
+                        },
+                        {
+                            "query": {
                                 "rows": [
                                     { "albumId": 2, "title": "Balls to the Wall" },
                                     { "albumId": 3, "title": "Restless and Wild" }
