@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 anyhow = "1"
 async-trait = "^0.1"
-bytes = "^1"
 configuration = { path = "../configuration" }
 dc-api = { path = "../dc-api" }
 dc-api-types = { path = "../dc-api-types" }
