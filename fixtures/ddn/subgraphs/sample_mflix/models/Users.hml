@@ -2,99 +2,111 @@
 kind: ObjectType
 version: v1
 definition:
-  name: Genre
+  name: Users
   fields:
     - name: id
       type: ObjectId!
-    - name: genreId
-      type: Int!
+    - name: email
+      type: String!
     - name: name
       type: String!
+    - name: password
+      type: String!
   graphql:
-    typeName: App_Genre
-    inputTypeName: App_GenreInput
+    typeName: App_Users
+    inputTypeName: App_UsersInput
   dataConnectorTypeMapping:
-    - dataConnectorName: chinook
-      dataConnectorObjectType: Genre
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: users
       fieldMapping:
         id:
           column:
             name: _id
-        genreId:
+        email:
           column:
-            name: GenreId
+            name: email
         name:
           column:
-            name: Name
+            name: name
+        password:
+          column:
+            name: password
 
 ---
 kind: TypePermissions
 version: v1
 definition:
-  typeName: Genre
+  typeName: Users
   permissions:
     - role: admin
       output:
         allowedFields:
           - id
-          - genreId
+          - email
           - name
+          - password
 
 ---
 kind: ObjectBooleanExpressionType
 version: v1
 definition:
-  name: GenreBoolExp
-  objectType: Genre
-  dataConnectorName: chinook
-  dataConnectorObjectType: Genre
+  name: UsersBoolExp
+  objectType: Users
+  dataConnectorName: sample_mflix
+  dataConnectorObjectType: users
   comparableFields:
     - fieldName: id
       operators:
         enableAll: true
-    - fieldName: genreId
+    - fieldName: email
       operators:
         enableAll: true
     - fieldName: name
       operators:
         enableAll: true
+    - fieldName: password
+      operators:
+        enableAll: true
   graphql:
-    typeName: App_GenreBoolExp
+    typeName: App_UsersBoolExp
 
 ---
 kind: Model
 version: v1
 definition:
-  name: Genre
-  objectType: Genre
+  name: Users
+  objectType: Users
   source:
-    dataConnectorName: chinook
-    collection: Genre
-  filterExpressionType: GenreBoolExp
+    dataConnectorName: sample_mflix
+    collection: users
+  filterExpressionType: UsersBoolExp
   orderableFields:
     - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: genreId
+    - fieldName: email
       orderByDirections:
         enableAll: true
     - fieldName: name
       orderByDirections:
         enableAll: true
+    - fieldName: password
+      orderByDirections:
+        enableAll: true
   graphql:
     selectMany:
-      queryRootField: genre
+      queryRootField: users
     selectUniques:
-      - queryRootField: genreById
+      - queryRootField: usersById
         uniqueIdentifier:
           - id
-    orderByExpressionType: App_GenreOrderBy
+    orderByExpressionType: App_UsersOrderBy
 
 ---
 kind: ModelPermissions
 version: v1
 definition:
-  modelName: Genre
+  modelName: Users
   permissions:
     - role: admin
       select:

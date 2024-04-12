@@ -2,99 +2,99 @@
 kind: ObjectType
 version: v1
 definition:
-  name: Genre
+  name: Sessions
   fields:
     - name: id
       type: ObjectId!
-    - name: genreId
-      type: Int!
-    - name: name
+    - name: jwt
+      type: String!
+    - name: userId
       type: String!
   graphql:
-    typeName: App_Genre
-    inputTypeName: App_GenreInput
+    typeName: App_Sessions
+    inputTypeName: App_SessionsInput
   dataConnectorTypeMapping:
-    - dataConnectorName: chinook
-      dataConnectorObjectType: Genre
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: sessions
       fieldMapping:
         id:
           column:
             name: _id
-        genreId:
+        jwt:
           column:
-            name: GenreId
-        name:
+            name: jwt
+        userId:
           column:
-            name: Name
+            name: user_id
 
 ---
 kind: TypePermissions
 version: v1
 definition:
-  typeName: Genre
+  typeName: Sessions
   permissions:
     - role: admin
       output:
         allowedFields:
           - id
-          - genreId
-          - name
+          - jwt
+          - userId
 
 ---
 kind: ObjectBooleanExpressionType
 version: v1
 definition:
-  name: GenreBoolExp
-  objectType: Genre
-  dataConnectorName: chinook
-  dataConnectorObjectType: Genre
+  name: SessionsBoolExp
+  objectType: Sessions
+  dataConnectorName: sample_mflix
+  dataConnectorObjectType: sessions
   comparableFields:
     - fieldName: id
       operators:
         enableAll: true
-    - fieldName: genreId
+    - fieldName: jwt
       operators:
         enableAll: true
-    - fieldName: name
+    - fieldName: userId
       operators:
         enableAll: true
   graphql:
-    typeName: App_GenreBoolExp
+    typeName: App_SessionsBoolExp
 
 ---
 kind: Model
 version: v1
 definition:
-  name: Genre
-  objectType: Genre
+  name: Sessions
+  objectType: Sessions
   source:
-    dataConnectorName: chinook
-    collection: Genre
-  filterExpressionType: GenreBoolExp
+    dataConnectorName: sample_mflix
+    collection: sessions
+  filterExpressionType: SessionsBoolExp
   orderableFields:
     - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: genreId
+    - fieldName: jwt
       orderByDirections:
         enableAll: true
-    - fieldName: name
+    - fieldName: userId
       orderByDirections:
         enableAll: true
   graphql:
     selectMany:
-      queryRootField: genre
+      queryRootField: sessions
     selectUniques:
-      - queryRootField: genreById
+      - queryRootField: sessionsById
         uniqueIdentifier:
           - id
-    orderByExpressionType: App_GenreOrderBy
+    orderByExpressionType: App_SessionsOrderBy
 
 ---
 kind: ModelPermissions
 version: v1
 definition:
-  modelName: Genre
+  modelName: Sessions
   permissions:
     - role: admin
       select:

@@ -7,10 +7,18 @@ definition:
     typeName: App_ObjectId
 
 ---
+kind: ScalarType
+version: v1
+definition:
+  name: Date
+  graphql:
+    typeName: App_Date
+
+---
 kind: DataConnectorScalarRepresentation
 version: v1
 definition:
-  dataConnectorName: mongodb
+  dataConnectorName: sample_mflix
   dataConnectorScalarType: ObjectId
   representation: ObjectId
   graphql:
@@ -20,17 +28,17 @@ definition:
 kind: DataConnectorScalarRepresentation
 version: v1
 definition:
-  dataConnectorName: mongodb
-  dataConnectorScalarType: Int
-  representation: Int
+  dataConnectorName: sample_mflix
+  dataConnectorScalarType: Date
+  representation: Date
   graphql:
-    comparisonExpressionTypeName: App_IntComparisonExp
+    comparisonExpressionTypeName: App_DateComparisonExp
 
 ---
 kind: DataConnectorScalarRepresentation
 version: v1
 definition:
-  dataConnectorName: mongodb
+  dataConnectorName: sample_mflix
   dataConnectorScalarType: String
   representation: String
   graphql:
@@ -48,7 +56,17 @@ definition:
 kind: DataConnectorScalarRepresentation
 version: v1
 definition:
-  dataConnectorName: mongodb
+  dataConnectorName: sample_mflix
+  dataConnectorScalarType: Int
+  representation: Int
+  graphql:
+    comparisonExpressionTypeName: App_IntComparisonExp
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: sample_mflix
   dataConnectorScalarType: ExtendedJSON
   representation: ExtendedJson
   graphql:
@@ -58,7 +76,7 @@ definition:
 kind: DataConnectorScalarRepresentation
 version: v1
 definition:
-  dataConnectorName: mongodb
+  dataConnectorName: sample_mflix
   dataConnectorScalarType: Float
   representation: Float
   graphql:

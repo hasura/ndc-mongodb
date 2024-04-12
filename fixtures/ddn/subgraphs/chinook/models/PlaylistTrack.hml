@@ -14,7 +14,7 @@ definition:
     typeName: App_PlaylistTrack
     inputTypeName: App_PlaylistTrackInput
   dataConnectorTypeMapping:
-    - dataConnectorName: mongodb
+    - dataConnectorName: chinook
       dataConnectorObjectType: PlaylistTrack
       fieldMapping:
         id:
@@ -46,7 +46,7 @@ version: v1
 definition:
   name: PlaylistTrackBoolExp
   objectType: PlaylistTrack
-  dataConnectorName: mongodb
+  dataConnectorName: chinook
   dataConnectorObjectType: PlaylistTrack
   comparableFields:
     - fieldName: id
@@ -68,7 +68,7 @@ definition:
   name: PlaylistTrack
   objectType: PlaylistTrack
   source:
-    dataConnectorName: mongodb
+    dataConnectorName: chinook
     collection: PlaylistTrack
   filterExpressionType: PlaylistTrackBoolExp
   orderableFields:

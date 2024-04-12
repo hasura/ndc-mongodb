@@ -12,8 +12,8 @@
 , profile ? "dev" # Rust crate profile, usually either "dev" or "release"
 , hostPort ? null
 , command ? "serve"
-, configuration-dir ? ../fixtures/connector/chinook
-, database-uri ? "mongodb://mongodb/chinook"
+, configuration-dir ? ../fixtures/connector/sample_mflix
+, database-uri ? "mongodb://mongodb/sample_mflix"
 , service ? { } # additional options to customize this service configuration
 , otlp-endpoint ? null
 }:

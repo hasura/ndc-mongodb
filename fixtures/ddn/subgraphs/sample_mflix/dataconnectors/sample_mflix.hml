@@ -1,10 +1,10 @@
 kind: DataConnectorLink
 version: v1
 definition:
-  name: mongodb
+  name: sample_mflix
   url:
     singleUrl:
-      value: http://localhost:7130
+      value: http://localhost:7131
   schema:
     version: v0.1
     schema:
@@ -496,437 +496,403 @@ definition:
                 type: named
                 name: Undefined
       object_types:
-        Album:
+        comments:
           fields:
             _id:
               type:
                 type: named
                 name: ObjectId
-            AlbumId:
+            date:
               type:
                 type: named
-                name: Int
-            ArtistId:
-              type:
-                type: named
-                name: Int
-            Title:
+                name: Date
+            email:
               type:
                 type: named
                 name: String
-        Artist:
+            movie_id:
+              type:
+                type: named
+                name: ObjectId
+            name:
+              type:
+                type: named
+                name: String
+            text:
+              type:
+                type: named
+                name: String
+        movies:
           fields:
             _id:
               type:
                 type: named
                 name: ObjectId
-            ArtistId:
+            awards:
               type:
                 type: named
-                name: Int
-            Name:
+                name: movies_awards
+            cast:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: String
+            countries:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: String
+            directors:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: String
+            fullplot:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
+            genres:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: String
+            imdb:
+              type:
+                type: named
+                name: movies_imdb
+            languages:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: String
+            lastupdated:
               type:
                 type: named
                 name: String
-        Customer:
+            metacritic:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
+            num_mflix_comments:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
+            plot:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
+            poster:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
+            rated:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
+            released:
+              type:
+                type: named
+                name: Date
+            runtime:
+              type:
+                type: named
+                name: Int
+            title:
+              type:
+                type: named
+                name: String
+            tomatoes:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: movies_tomatoes
+            type:
+              type:
+                type: named
+                name: String
+            writers:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: String
+            year:
+              type:
+                type: named
+                name: Int
+        movies_awards:
           fields:
-            _id:
-              type:
-                type: named
-                name: ObjectId
-            Address:
-              type:
-                type: named
-                name: String
-            City:
-              type:
-                type: named
-                name: String
-            Company:
-              type:
-                type: named
-                name: String
-            Country:
-              type:
-                type: named
-                name: String
-            CustomerId:
+            nominations:
               type:
                 type: named
                 name: Int
-            Email:
+            text:
               type:
                 type: named
                 name: String
-            Fax:
+            wins:
               type:
                 type: named
-                name: String
-            FirstName:
+                name: Int
+        movies_imdb:
+          fields:
+            id:
               type:
                 type: named
-                name: String
-            LastName:
-              type:
-                type: named
-                name: String
-            Phone:
-              type:
-                type: named
-                name: String
-            PostalCode:
+                name: Int
+            rating:
               type:
                 type: nullable
                 underlying_type:
                   type: named
                   name: ExtendedJSON
-            State:
-              type:
-                type: named
-                name: String
-            SupportRepId:
+            votes:
               type:
                 type: named
                 name: Int
-        Employee:
+        movies_tomatoes:
           fields:
-            _id:
+            boxOffice:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
+            consensus:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
+            critic:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: movies_tomatoes_critic
+            dvd:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Date
+            fresh:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
+            lastUpdated:
               type:
                 type: named
-                name: ObjectId
-            Address:
+                name: Date
+            production:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
+            rotten:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
+            viewer:
               type:
                 type: named
-                name: String
-            BirthDate:
+                name: movies_tomatoes_viewer
+            website:
               type:
-                type: named
-                name: String
-            City:
-              type:
-                type: named
-                name: String
-            Country:
-              type:
-                type: named
-                name: String
-            Email:
-              type:
-                type: named
-                name: String
-            EmployeeId:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
+        movies_tomatoes_critic:
+          fields:
+            meter:
               type:
                 type: named
                 name: Int
-            Fax:
+            numReviews:
               type:
                 type: named
-                name: String
-            FirstName:
-              type:
-                type: named
-                name: String
-            HireDate:
-              type:
-                type: named
-                name: String
-            LastName:
-              type:
-                type: named
-                name: String
-            Phone:
-              type:
-                type: named
-                name: String
-            PostalCode:
-              type:
-                type: named
-                name: String
-            ReportsTo:
+                name: Int
+            rating:
               type:
                 type: nullable
                 underlying_type:
                   type: named
                   name: ExtendedJSON
-            State:
-              type:
-                type: named
-                name: String
-            Title:
-              type:
-                type: named
-                name: String
-        Genre:
+        movies_tomatoes_viewer:
           fields:
-            _id:
-              type:
-                type: named
-                name: ObjectId
-            GenreId:
+            meter:
               type:
                 type: named
                 name: Int
-            Name:
+            numReviews:
               type:
                 type: named
-                name: String
-        Invoice:
-          fields:
-            _id:
-              type:
-                type: named
-                name: ObjectId
-            BillingAddress:
-              type:
-                type: named
-                name: String
-            BillingCity:
-              type:
-                type: named
-                name: String
-            BillingCountry:
-              type:
-                type: named
-                name: String
-            BillingPostalCode:
+                name: Int
+            rating:
               type:
                 type: nullable
                 underlying_type:
                   type: named
                   name: ExtendedJSON
-            BillingState:
-              type:
-                type: named
-                name: String
-            CustomerId:
-              type:
-                type: named
-                name: Int
-            InvoiceDate:
-              type:
-                type: named
-                name: String
-            InvoiceId:
-              type:
-                type: named
-                name: Int
-            Total:
-              type:
-                type: named
-                name: Float
-        InvoiceLine:
+        sessions:
           fields:
             _id:
               type:
                 type: named
                 name: ObjectId
-            InvoiceId:
+            jwt:
               type:
                 type: named
-                name: Int
-            InvoiceLineId:
+                name: String
+            user_id:
               type:
                 type: named
-                name: Int
-            Quantity:
-              type:
-                type: named
-                name: Int
-            TrackId:
-              type:
-                type: named
-                name: Int
-            UnitPrice:
-              type:
-                type: named
-                name: Float
-        MediaType:
+                name: String
+        theaters:
           fields:
             _id:
               type:
                 type: named
                 name: ObjectId
-            MediaTypeId:
+            location:
+              type:
+                type: named
+                name: theaters_location
+            theaterId:
               type:
                 type: named
                 name: Int
-            Name:
+        theaters_location:
+          fields:
+            address:
+              type:
+                type: named
+                name: theaters_location_address
+            geo:
+              type:
+                type: named
+                name: theaters_location_geo
+        theaters_location_address:
+          fields:
+            city:
               type:
                 type: named
                 name: String
-        Playlist:
+            state:
+              type:
+                type: named
+                name: String
+            street1:
+              type:
+                type: named
+                name: String
+            street2:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
+            zipcode:
+              type:
+                type: named
+                name: String
+        theaters_location_geo:
+          fields:
+            coordinates:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: Float
+            type:
+              type:
+                type: named
+                name: String
+        users:
           fields:
             _id:
               type:
                 type: named
                 name: ObjectId
-            Name:
+            email:
               type:
                 type: named
                 name: String
-            PlaylistId:
-              type:
-                type: named
-                name: Int
-        PlaylistTrack:
-          fields:
-            _id:
-              type:
-                type: named
-                name: ObjectId
-            PlaylistId:
-              type:
-                type: named
-                name: Int
-            TrackId:
-              type:
-                type: named
-                name: Int
-        Track:
-          fields:
-            _id:
-              type:
-                type: named
-                name: ObjectId
-            AlbumId:
-              type:
-                type: named
-                name: Int
-            Bytes:
-              type:
-                type: named
-                name: Int
-            Composer:
+            name:
               type:
                 type: named
                 name: String
-            GenreId:
-              type:
-                type: named
-                name: Int
-            MediaTypeId:
-              type:
-                type: named
-                name: Int
-            Milliseconds:
-              type:
-                type: named
-                name: Int
-            Name:
+            password:
               type:
                 type: named
                 name: String
-            TrackId:
-              type:
-                type: named
-                name: Int
-            UnitPrice:
-              type:
-                type: named
-                name: Float
-        InsertArtist:
-          fields:
-            ok:
-              type: { type: named, name: Int }
-            n:
-              type: { type: named, name: Int }
       collections:
-        - name: Album
+        - name: comments
           arguments: {}
-          type: Album
+          type: comments
           uniqueness_constraints:
-            Album_id:
+            comments_id:
               unique_columns:
                 - _id
           foreign_keys: {}
-        - name: Artist
+        - name: movies
           arguments: {}
-          type: Artist
+          type: movies
           uniqueness_constraints:
-            Artist_id:
+            movies_id:
               unique_columns:
                 - _id
           foreign_keys: {}
-        - name: Customer
+        - name: sessions
           arguments: {}
-          type: Customer
+          type: sessions
           uniqueness_constraints:
-            Customer_id:
+            sessions_id:
               unique_columns:
                 - _id
           foreign_keys: {}
-        - name: Employee
+        - name: theaters
           arguments: {}
-          type: Employee
+          type: theaters
           uniqueness_constraints:
-            Employee_id:
+            theaters_id:
               unique_columns:
                 - _id
           foreign_keys: {}
-        - name: Genre
+        - name: users
           arguments: {}
-          type: Genre
+          type: users
           uniqueness_constraints:
-            Genre_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
-        - name: Invoice
-          arguments: {}
-          type: Invoice
-          uniqueness_constraints:
-            Invoice_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
-        - name: InvoiceLine
-          arguments: {}
-          type: InvoiceLine
-          uniqueness_constraints:
-            InvoiceLine_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
-        - name: MediaType
-          arguments: {}
-          type: MediaType
-          uniqueness_constraints:
-            MediaType_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
-        - name: Playlist
-          arguments: {}
-          type: Playlist
-          uniqueness_constraints:
-            Playlist_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
-        - name: PlaylistTrack
-          arguments: {}
-          type: PlaylistTrack
-          uniqueness_constraints:
-            PlaylistTrack_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
-        - name: Track
-          arguments: {}
-          type: Track
-          uniqueness_constraints:
-            Track_id:
+            users_id:
               unique_columns:
                 - _id
           foreign_keys: {}
       functions: []
-      procedures:
-        - name: insertArtist
-          description: Example of a database update using a native procedure
-          result_type: { type: named, name: InsertArtist }
-          arguments:
-            id: { type: { type: named, name: Int } }
-            name: { type: { type: named, name: String } }
+      procedures: []
     capabilities:
       version: 0.1.1
       capabilities:
@@ -936,4 +902,3 @@ definition:
           explain: {}
         mutation: {}
         relationships: {}
-

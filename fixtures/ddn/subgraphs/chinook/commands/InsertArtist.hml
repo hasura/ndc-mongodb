@@ -10,7 +10,7 @@ definition:
     - name: name
       type: String!
   source:
-    dataConnectorName: mongodb
+    dataConnectorName: chinook
     dataConnectorCommand:
       procedure: insertArtist
     argumentMapping:
@@ -42,7 +42,7 @@ definition:
     - name: n
       type: Int!
   dataConnectorTypeMapping:
-    - dataConnectorName: mongodb
+    - dataConnectorName: chinook
       dataConnectorObjectType: InsertArtist
       fieldMapping:
         ok: { column: { name: ok } }

@@ -28,7 +28,7 @@ definition:
     typeName: App_Invoice
     inputTypeName: App_InvoiceInput
   dataConnectorTypeMapping:
-    - dataConnectorName: mongodb
+    - dataConnectorName: chinook
       dataConnectorObjectType: Invoice
       fieldMapping:
         id:
@@ -88,7 +88,7 @@ version: v1
 definition:
   name: InvoiceBoolExp
   objectType: Invoice
-  dataConnectorName: mongodb
+  dataConnectorName: chinook
   dataConnectorObjectType: Invoice
   comparableFields:
     - fieldName: id
@@ -131,7 +131,7 @@ definition:
   name: Invoice
   objectType: Invoice
   source:
-    dataConnectorName: mongodb
+    dataConnectorName: chinook
     collection: Invoice
   filterExpressionType: InvoiceBoolExp
   orderableFields:

@@ -40,7 +40,7 @@ definition:
     typeName: App_Employee
     inputTypeName: App_EmployeeInput
   dataConnectorTypeMapping:
-    - dataConnectorName: mongodb
+    - dataConnectorName: chinook
       dataConnectorObjectType: Employee
       fieldMapping:
         id:
@@ -124,7 +124,7 @@ version: v1
 definition:
   name: EmployeeBoolExp
   objectType: Employee
-  dataConnectorName: mongodb
+  dataConnectorName: chinook
   dataConnectorObjectType: Employee
   comparableFields:
     - fieldName: id
@@ -185,7 +185,7 @@ definition:
   name: Employee
   objectType: Employee
   source:
-    dataConnectorName: mongodb
+    dataConnectorName: chinook
     collection: Employee
   filterExpressionType: EmployeeBoolExp
   orderableFields:
