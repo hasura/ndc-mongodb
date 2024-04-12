@@ -149,11 +149,10 @@ fn variable_to_mongo_expression(
     variables: Option<&BTreeMap<String, serde_json::Value>>,
     variable: &str,
     value_type: &str,
-) -> Result<bson::Document, MongoAgentError> {
+) -> Result<bson::Bson, MongoAgentError> {
     let value = variables
         .and_then(|vars| vars.get(variable))
         .ok_or_else(|| MongoAgentError::VariableNotDefined(variable.to_owned()))?;
-    Ok(doc! {
-        "$literal": bson_from_scalar_value(value, value_type)?
-    })
+    
+    bson_from_scalar_value(value, value_type)
 }
