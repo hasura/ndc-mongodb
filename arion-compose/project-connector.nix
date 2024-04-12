@@ -14,7 +14,7 @@ in
   project.name = "mongodb-connector";
 
   services = {
-    connector = import ./service-mongodb-connector.nix {
+    connector = import ./service-connector.nix {
       inherit pkgs;
       configuration-dir = ../fixtures/connector/sample_mflix;
       database-uri = "mongodb://mongodb/sample_mflix";
@@ -23,6 +23,7 @@ in
       otlp-endpoint = "http://jaeger:4317";
       service.depends_on = {
         jaeger.condition = "service_healthy";
+        mongodb.condition = "service_healthy";
       };
     };
 

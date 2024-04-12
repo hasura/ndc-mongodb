@@ -14,7 +14,7 @@ definition:
     typeName: App_Artist
     inputTypeName: App_ArtistInput
   dataConnectorTypeMapping:
-    - dataConnectorName: mongodb
+    - dataConnectorName: chinook
       dataConnectorObjectType: Artist
       fieldMapping:
         id:
@@ -46,7 +46,7 @@ version: v1
 definition:
   name: ArtistBoolExp
   objectType: Artist
-  dataConnectorName: mongodb
+  dataConnectorName: chinook
   dataConnectorObjectType: Artist
   comparableFields:
     - fieldName: id
@@ -68,7 +68,7 @@ definition:
   name: Artist
   objectType: Artist
   source:
-    dataConnectorName: mongodb
+    dataConnectorName: chinook
     collection: Artist
   filterExpressionType: ArtistBoolExp
   orderableFields:

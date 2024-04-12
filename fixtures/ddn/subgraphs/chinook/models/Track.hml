@@ -28,7 +28,7 @@ definition:
     typeName: App_Track
     inputTypeName: App_TrackInput
   dataConnectorTypeMapping:
-    - dataConnectorName: mongodb
+    - dataConnectorName: chinook
       dataConnectorObjectType: Track
       fieldMapping:
         id:
@@ -88,7 +88,7 @@ version: v1
 definition:
   name: TrackBoolExp
   objectType: Track
-  dataConnectorName: mongodb
+  dataConnectorName: chinook
   dataConnectorObjectType: Track
   comparableFields:
     - fieldName: id
@@ -131,7 +131,7 @@ definition:
   name: Track
   objectType: Track
   source:
-    dataConnectorName: mongodb
+    dataConnectorName: chinook
     collection: Track
   filterExpressionType: TrackBoolExp
   orderableFields:

@@ -16,7 +16,7 @@ definition:
     typeName: App_Album
     inputTypeName: App_AlbumInput
   dataConnectorTypeMapping:
-    - dataConnectorName: mongodb
+    - dataConnectorName: chinook
       dataConnectorObjectType: Album
       fieldMapping:
         id:
@@ -52,7 +52,7 @@ version: v1
 definition:
   name: AlbumBoolExp
   objectType: Album
-  dataConnectorName: mongodb
+  dataConnectorName: chinook
   dataConnectorObjectType: Album
   comparableFields:
     - fieldName: id
@@ -77,7 +77,7 @@ definition:
   name: Album
   objectType: Album
   source:
-    dataConnectorName: mongodb
+    dataConnectorName: chinook
     collection: Album
   filterExpressionType: AlbumBoolExp
   orderableFields:

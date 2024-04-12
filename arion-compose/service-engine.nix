@@ -1,7 +1,7 @@
 { pkgs
 , port ? "7100"
 , hostPort ? null
-, connectors ? [{ name = "mongodb"; url = "http://connector:7130"; subgraph = ../fixtures/ddn/subgraphs/chinook; }]
+, connectors ? [{ name = "sample_mflix"; url = "http://connector:7130"; subgraph = ../fixtures/ddn/subgraphs/sample_mflix; }]
 , auth-webhook ? { url = "http://auth-hook:3050/validate-request"; }
 , otlp-endpoint ? "http://jaeger:4317"
 , service ? { } # additional options to customize this service configuration

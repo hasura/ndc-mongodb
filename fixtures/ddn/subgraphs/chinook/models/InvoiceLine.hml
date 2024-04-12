@@ -20,7 +20,7 @@ definition:
     typeName: App_InvoiceLine
     inputTypeName: App_InvoiceLineInput
   dataConnectorTypeMapping:
-    - dataConnectorName: mongodb
+    - dataConnectorName: chinook
       dataConnectorObjectType: InvoiceLine
       fieldMapping:
         id:
@@ -64,7 +64,7 @@ version: v1
 definition:
   name: InvoiceLineBoolExp
   objectType: InvoiceLine
-  dataConnectorName: mongodb
+  dataConnectorName: chinook
   dataConnectorObjectType: InvoiceLine
   comparableFields:
     - fieldName: id
@@ -95,7 +95,7 @@ definition:
   name: InvoiceLine
   objectType: InvoiceLine
   source:
-    dataConnectorName: mongodb
+    dataConnectorName: chinook
     collection: InvoiceLine
   filterExpressionType: InvoiceLineBoolExp
   orderableFields:

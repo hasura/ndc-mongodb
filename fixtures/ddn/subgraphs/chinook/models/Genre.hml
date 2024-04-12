@@ -14,7 +14,7 @@ definition:
     typeName: App_Genre
     inputTypeName: App_GenreInput
   dataConnectorTypeMapping:
-    - dataConnectorName: mongodb
+    - dataConnectorName: chinook
       dataConnectorObjectType: Genre
       fieldMapping:
         id:
@@ -46,7 +46,7 @@ version: v1
 definition:
   name: GenreBoolExp
   objectType: Genre
-  dataConnectorName: mongodb
+  dataConnectorName: chinook
   dataConnectorObjectType: Genre
   comparableFields:
     - fieldName: id
@@ -68,7 +68,7 @@ definition:
   name: Genre
   objectType: Genre
   source:
-    dataConnectorName: mongodb
+    dataConnectorName: chinook
     collection: Genre
   filterExpressionType: GenreBoolExp
   orderableFields:

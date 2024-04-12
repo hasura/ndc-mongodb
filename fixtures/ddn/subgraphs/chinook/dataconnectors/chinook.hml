@@ -1,7 +1,7 @@
 kind: DataConnectorLink
 version: v1
 definition:
-  name: mongodb
+  name: chinook
   url:
     singleUrl:
       value: http://localhost:7130

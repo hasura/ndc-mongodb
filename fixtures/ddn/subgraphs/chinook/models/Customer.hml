@@ -36,7 +36,7 @@ definition:
     typeName: App_Customer
     inputTypeName: App_CustomerInput
   dataConnectorTypeMapping:
-    - dataConnectorName: mongodb
+    - dataConnectorName: chinook
       dataConnectorObjectType: Customer
       fieldMapping:
         id:
@@ -112,7 +112,7 @@ version: v1
 definition:
   name: CustomerBoolExp
   objectType: Customer
-  dataConnectorName: mongodb
+  dataConnectorName: chinook
   dataConnectorObjectType: Customer
   comparableFields:
     - fieldName: id
@@ -167,7 +167,7 @@ definition:
   name: Customer
   objectType: Customer
   source:
-    dataConnectorName: mongodb
+    dataConnectorName: chinook
     collection: Customer
   filterExpressionType: CustomerBoolExp
   orderableFields:
