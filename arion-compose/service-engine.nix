@@ -1,8 +1,7 @@
 { pkgs
 , port ? "7100"
 , hostPort ? null
-, connector-url ? "http://connector:7130"
-, ddn-subgraph-dir ? ../fixtures/ddn/subgraphs/chinook
+, connectors ? [{ name = "mongodb"; url = "http://connector:7130"; subgraph = ../fixtures/ddn/subgraphs/chinook; }]
 , auth-webhook ? { url = "http://auth-hook:3050/validate-request"; }
 , otlp-endpoint ? "http://jaeger:4317"
 , service ? { } # additional options to customize this service configuration
@@ -12,8 +11,8 @@ let
   # Compile JSON metadata from HML fixture
   metadata = pkgs.stdenv.mkDerivation {
     name = "hasura-metadata.json";
-    src = ddn-subgraph-dir;
-    nativeBuildInputs = with pkgs; [ jq yq-go ];
+    src = (builtins.head connectors).subgraph;
+    nativeBuildInputs = with pkgs; [ findutils jq yq-go ];
 
     # The yq command converts the input sequence of yaml docs to a sequence of
     # newline-separated json docs.
@@ -22,13 +21,14 @@ let
     # switch), and modifies the json to update the data connector url.
     buildPhase = ''
       combined=$(mktemp -t subgraph-XXXXXX.hml)
-      for obj in **/*.hml; do
+      for obj in $(find . -name '*hml'); do
         echo "---" >> "$combined"
         cat "$obj" >> "$combined"
       done
       cat "$combined" \
         | yq -o=json \
-        | jq -s 'map(if .kind == "DataConnectorLink" then .definition.url = { singleUrl: { value: "${connector-url}" } } else . end) | map(select(type != "null"))' \
+        ${connector-url-substituters} \
+        | jq -s 'map(select(type != "null"))' \
         > metadata.json
     '';
 
@@ -36,6 +36,14 @@ let
       cp metadata.json "$out"
     '';
   };
+
+  # Pipe commands to replace data connector urls in fixture configuration with
+  # urls of dockerized connector instances
+  connector-url-substituters = builtins.toString (builtins.map
+    ({ name, url, ... }:
+      '' | jq 'if .kind == "DataConnectorLink" and .definition.name == "${name}" then .definition.url = { singleUrl: { value: "${url}" } } else . end' ''
+    )
+    connectors);
 
   auth-config = pkgs.writeText "auth_config.json" (builtins.toJSON {
     version = "v1";

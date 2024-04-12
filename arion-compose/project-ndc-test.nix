@@ -11,7 +11,6 @@ in
       inherit pkgs;
       command = "test";
       database-uri = "mongodb://mongodb:${mongodb-port}/chinook";
-      service.depends_on.mongodb.condition = "service_healthy";
     };
 
     mongodb = import ./service-mongodb.nix {
