@@ -1,43 +1,96 @@
+---
 kind: ObjectType
 version: v1
 definition:
   name: Employee
-  graphql:
-    typeName: employee
-    inputTypeName: employeeInput
   fields:
-    - name: Address
-      type: String
-    - name: BirthDate
-      type: String
-    - name: City
-      type: String
-    - name: Country
-      type: String
-    - name: Email
-      type: String
-    - name: EmployeeId
+    - name: id
+      type: ObjectId!
+    - name: address
+      type: String!
+    - name: birthDate
+      type: String!
+    - name: city
+      type: String!
+    - name: country
+      type: String!
+    - name: email
+      type: String!
+    - name: employeeId
       type: Int!
-    - name: Fax
-      type: String
-    - name: FirstName
+    - name: fax
       type: String!
-    - name: HireDate
-      type: String
-    - name: LastName
+    - name: firstName
       type: String!
-    - name: Phone
-      type: String
-    - name: PostalCode
-      type: String
-    - name: ReportsTo
-      type: String
-    - name: State
-      type: String
-    - name: Title
-      type: String
-    - name: _id
-      type: ObjectId
+    - name: hireDate
+      type: String!
+    - name: lastName
+      type: String!
+    - name: phone
+      type: String!
+    - name: postalCode
+      type: String!
+    - name: reportsTo
+      type: ExtendedJson
+    - name: state
+      type: String!
+    - name: title
+      type: String!
+  graphql:
+    typeName: App_Employee
+    inputTypeName: App_EmployeeInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: mongodb
+      dataConnectorObjectType: Employee
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        address:
+          column:
+            name: Address
+        birthDate:
+          column:
+            name: BirthDate
+        city:
+          column:
+            name: City
+        country:
+          column:
+            name: Country
+        email:
+          column:
+            name: Email
+        employeeId:
+          column:
+            name: EmployeeId
+        fax:
+          column:
+            name: Fax
+        firstName:
+          column:
+            name: FirstName
+        hireDate:
+          column:
+            name: HireDate
+        lastName:
+          column:
+            name: LastName
+        phone:
+          column:
+            name: Phone
+        postalCode:
+          column:
+            name: PostalCode
+        reportsTo:
+          column:
+            name: ReportsTo
+        state:
+          column:
+            name: State
+        title:
+          column:
+            name: Title
 
 ---
 kind: TypePermissions
@@ -48,22 +101,82 @@ definition:
     - role: admin
       output:
         allowedFields:
-          - Address
-          - BirthDate
-          - City
-          - Country
-          - Email
-          - EmployeeId
-          - Fax
-          - FirstName
-          - HireDate
-          - LastName
-          - Phone
-          - PostalCode
-          - ReportsTo
-          - State
-          - Title
-          - _id
+          - id
+          - address
+          - birthDate
+          - city
+          - country
+          - email
+          - employeeId
+          - fax
+          - firstName
+          - hireDate
+          - lastName
+          - phone
+          - postalCode
+          - reportsTo
+          - state
+          - title
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: EmployeeBoolExp
+  objectType: Employee
+  dataConnectorName: mongodb
+  dataConnectorObjectType: Employee
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: address
+      operators:
+        enableAll: true
+    - fieldName: birthDate
+      operators:
+        enableAll: true
+    - fieldName: city
+      operators:
+        enableAll: true
+    - fieldName: country
+      operators:
+        enableAll: true
+    - fieldName: email
+      operators:
+        enableAll: true
+    - fieldName: employeeId
+      operators:
+        enableAll: true
+    - fieldName: fax
+      operators:
+        enableAll: true
+    - fieldName: firstName
+      operators:
+        enableAll: true
+    - fieldName: hireDate
+      operators:
+        enableAll: true
+    - fieldName: lastName
+      operators:
+        enableAll: true
+    - fieldName: phone
+      operators:
+        enableAll: true
+    - fieldName: postalCode
+      operators:
+        enableAll: true
+    - fieldName: reportsTo
+      operators:
+        enableAll: true
+    - fieldName: state
+      operators:
+        enableAll: true
+    - fieldName: title
+      operators:
+        enableAll: true
+  graphql:
+    typeName: App_EmployeeBoolExp
 
 ---
 kind: Model
@@ -71,117 +184,67 @@ version: v1
 definition:
   name: Employee
   objectType: Employee
-  filterableFields:
-    - fieldName: Address
-      operators:
-        enableAll: true
-    - fieldName: BirthDate
-      operators:
-        enableAll: true
-    - fieldName: City
-      operators:
-        enableAll: true
-    - fieldName: Country
-      operators:
-        enableAll: true
-    - fieldName: Email
-      operators:
-        enableAll: true
-    - fieldName: EmployeeId
-      operators:
-        enableAll: true
-    - fieldName: Fax
-      operators:
-        enableAll: true
-    - fieldName: FirstName
-      operators:
-        enableAll: true
-    - fieldName: HireDate
-      operators:
-        enableAll: true
-    - fieldName: LastName
-      operators:
-        enableAll: true
-    - fieldName: Phone
-      operators:
-        enableAll: true
-    - fieldName: PostalCode
-      operators:
-        enableAll: true
-    - fieldName: ReportsTo
-      operators:
-        enableAll: true
-    - fieldName: State
-      operators:
-        enableAll: true
-    - fieldName: Title
-      operators:
-        enableAll: true
-    - fieldName: _id
-      operators:
-        enableAll: true
+  source:
+    dataConnectorName: mongodb
+    collection: Employee
+  filterExpressionType: EmployeeBoolExp
   orderableFields:
-    - fieldName: Address
+    - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: BirthDate
+    - fieldName: address
       orderByDirections:
         enableAll: true
-    - fieldName: City
+    - fieldName: birthDate
       orderByDirections:
         enableAll: true
-    - fieldName: Country
+    - fieldName: city
       orderByDirections:
         enableAll: true
-    - fieldName: Email
+    - fieldName: country
       orderByDirections:
         enableAll: true
-    - fieldName: EmployeeId
+    - fieldName: email
       orderByDirections:
         enableAll: true
-    - fieldName: Fax
+    - fieldName: employeeId
       orderByDirections:
         enableAll: true
-    - fieldName: FirstName
+    - fieldName: fax
       orderByDirections:
         enableAll: true
-    - fieldName: HireDate
+    - fieldName: firstName
       orderByDirections:
         enableAll: true
-    - fieldName: LastName
+    - fieldName: hireDate
       orderByDirections:
         enableAll: true
-    - fieldName: Phone
+    - fieldName: lastName
       orderByDirections:
         enableAll: true
-    - fieldName: PostalCode
+    - fieldName: phone
       orderByDirections:
         enableAll: true
-    - fieldName: ReportsTo
+    - fieldName: postalCode
       orderByDirections:
         enableAll: true
-    - fieldName: State
+    - fieldName: reportsTo
       orderByDirections:
         enableAll: true
-    - fieldName: Title
+    - fieldName: state
       orderByDirections:
         enableAll: true
-    - fieldName: _id
+    - fieldName: title
       orderByDirections:
         enableAll: true
-  arguments: []
   graphql:
+    selectMany:
+      queryRootField: employee
     selectUniques:
       - queryRootField: employeeById
         uniqueIdentifier:
-          - _id
-    selectMany:
-      queryRootField: employee
-    filterExpressionType: employeeBoolExp
-    orderByExpressionType: employeeOrderBy
-  source:
-    collection: Employee
-    dataConnectorName: mongodb
+          - id
+    orderByExpressionType: App_EmployeeOrderBy
 
 ---
 kind: ModelPermissions
@@ -192,3 +255,4 @@ definition:
     - role: admin
       select:
         filter: null
+

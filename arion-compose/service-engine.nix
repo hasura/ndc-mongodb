@@ -28,7 +28,7 @@ let
       done
       cat "$combined" \
         | yq -o=json \
-        | jq -s 'map(if .kind == "DataConnectorLink" then .definition.url = { singleUrl: { value: "${connector-url}" } } else . end)' \
+        | jq -s 'map(if .kind == "DataConnectorLink" then .definition.url = { singleUrl: { value: "${connector-url}" } } else . end) | map(select(type != "null"))' \
         > metadata.json
     '';
 
@@ -54,7 +54,7 @@ in
   image.contents = with pkgs.pkgsCross.linux; [
     cacert
     curl
-    v3-engine # added to pkgs via an overlay in flake.nix.
+    graphql-engine # added to pkgs via an overlay in flake.nix.
   ];
   service = withOverrides service {
     useHostStore = true;

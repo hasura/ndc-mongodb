@@ -1,31 +1,66 @@
+---
 kind: ObjectType
 version: v1
 definition:
   name: Track
-  graphql:
-    typeName: track
-    inputTypeName: trackInput
   fields:
-    - name: AlbumId
-      type: Int
-    - name: Bytes
-      type: Int
-    - name: Composer
-      type: String
-    - name: GenreId
-      type: Int
-    - name: MediaTypeId
+    - name: id
+      type: ObjectId!
+    - name: albumId
       type: Int!
-    - name: Milliseconds
+    - name: bytes
       type: Int!
-    - name: Name
+    - name: composer
       type: String!
-    - name: TrackId
+    - name: genreId
       type: Int!
-    - name: UnitPrice
+    - name: mediaTypeId
+      type: Int!
+    - name: milliseconds
+      type: Int!
+    - name: name
+      type: String!
+    - name: trackId
+      type: Int!
+    - name: unitPrice
       type: Float!
-    - name: _id
-      type: ObjectId
+  graphql:
+    typeName: App_Track
+    inputTypeName: App_TrackInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: mongodb
+      dataConnectorObjectType: Track
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        albumId:
+          column:
+            name: AlbumId
+        bytes:
+          column:
+            name: Bytes
+        composer:
+          column:
+            name: Composer
+        genreId:
+          column:
+            name: GenreId
+        mediaTypeId:
+          column:
+            name: MediaTypeId
+        milliseconds:
+          column:
+            name: Milliseconds
+        name:
+          column:
+            name: Name
+        trackId:
+          column:
+            name: TrackId
+        unitPrice:
+          column:
+            name: UnitPrice
 
 ---
 kind: TypePermissions
@@ -36,16 +71,58 @@ definition:
     - role: admin
       output:
         allowedFields:
-          - AlbumId
-          - Bytes
-          - Composer
-          - GenreId
-          - MediaTypeId
-          - Milliseconds
-          - Name
-          - TrackId
-          - UnitPrice
-          - _id
+          - id
+          - albumId
+          - bytes
+          - composer
+          - genreId
+          - mediaTypeId
+          - milliseconds
+          - name
+          - trackId
+          - unitPrice
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: TrackBoolExp
+  objectType: Track
+  dataConnectorName: mongodb
+  dataConnectorObjectType: Track
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: albumId
+      operators:
+        enableAll: true
+    - fieldName: bytes
+      operators:
+        enableAll: true
+    - fieldName: composer
+      operators:
+        enableAll: true
+    - fieldName: genreId
+      operators:
+        enableAll: true
+    - fieldName: mediaTypeId
+      operators:
+        enableAll: true
+    - fieldName: milliseconds
+      operators:
+        enableAll: true
+    - fieldName: name
+      operators:
+        enableAll: true
+    - fieldName: trackId
+      operators:
+        enableAll: true
+    - fieldName: unitPrice
+      operators:
+        enableAll: true
+  graphql:
+    typeName: App_TrackBoolExp
 
 ---
 kind: Model
@@ -53,81 +130,49 @@ version: v1
 definition:
   name: Track
   objectType: Track
-  filterableFields:
-    - fieldName: AlbumId
-      operators:
-        enableAll: true
-    - fieldName: Bytes
-      operators:
-        enableAll: true
-    - fieldName: Composer
-      operators:
-        enableAll: true
-    - fieldName: GenreId
-      operators:
-        enableAll: true
-    - fieldName: MediaTypeId
-      operators:
-        enableAll: true
-    - fieldName: Milliseconds
-      operators:
-        enableAll: true
-    - fieldName: Name
-      operators:
-        enableAll: true
-    - fieldName: TrackId
-      operators:
-        enableAll: true
-    - fieldName: UnitPrice
-      operators:
-        enableAll: true
-    - fieldName: _id
-      operators:
-        enableAll: true
+  source:
+    dataConnectorName: mongodb
+    collection: Track
+  filterExpressionType: TrackBoolExp
   orderableFields:
-    - fieldName: AlbumId
+    - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: Bytes
+    - fieldName: albumId
       orderByDirections:
         enableAll: true
-    - fieldName: Composer
+    - fieldName: bytes
       orderByDirections:
         enableAll: true
-    - fieldName: GenreId
+    - fieldName: composer
       orderByDirections:
         enableAll: true
-    - fieldName: MediaTypeId
+    - fieldName: genreId
       orderByDirections:
         enableAll: true
-    - fieldName: Milliseconds
+    - fieldName: mediaTypeId
       orderByDirections:
         enableAll: true
-    - fieldName: Name
+    - fieldName: milliseconds
       orderByDirections:
         enableAll: true
-    - fieldName: TrackId
+    - fieldName: name
       orderByDirections:
         enableAll: true
-    - fieldName: UnitPrice
+    - fieldName: trackId
       orderByDirections:
         enableAll: true
-    - fieldName: _id
+    - fieldName: unitPrice
       orderByDirections:
         enableAll: true
-  arguments: []
   graphql:
+    selectMany:
+      queryRootField: track
     selectUniques:
       - queryRootField: trackById
         uniqueIdentifier:
-          - _id
-    selectMany:
-      queryRootField: track
-    filterExpressionType: trackBoolExp
-    orderByExpressionType: trackOrderBy
-  source:
-    collection: Track
-    dataConnectorName: mongodb
+          - id
+    orderByExpressionType: App_TrackOrderBy
 
 ---
 kind: ModelPermissions
@@ -138,3 +183,4 @@ definition:
     - role: admin
       select:
         filter: null
+

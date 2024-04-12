@@ -59,6 +59,23 @@
         "type": "github"
       }
     },
+    "dev-auth-webhook-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1712739493,
+        "narHash": "sha256-kBtsPnuNLG5zuwmDAHQafyzDHodARBKlSBJXDlFE/7U=",
+        "owner": "hasura",
+        "repo": "graphql-engine",
+        "rev": "50f1243a46e22f0fecca03364b0b181fbb3735c6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hasura",
+        "repo": "graphql-engine",
+        "rev": "50f1243a46e22f0fecca03364b0b181fbb3735c6",
+        "type": "github"
+      }
+    },
     "flake-compat": {
       "locked": {
         "lastModified": 1696426674,
@@ -134,6 +151,22 @@
         "type": "github"
       }
     },
+    "graphql-engine-source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1712845182,
+        "narHash": "sha256-Pam+Gf7ve+AuTTHE1BRC3tjhHJqV2xoR3jRDRZ04q5c=",
+        "owner": "hasura",
+        "repo": "graphql-engine",
+        "rev": "4bc2f21f801055796f008ce0d8da44a57283bca1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hasura",
+        "repo": "graphql-engine",
+        "type": "github"
+      }
+    },
     "haskell-flake": {
       "locked": {
         "lastModified": 1675296942,
@@ -193,12 +226,13 @@
         "advisory-db": "advisory-db",
         "arion": "arion",
         "crane": "crane",
+        "dev-auth-webhook-source": "dev-auth-webhook-source",
         "flake-compat": "flake-compat",
+        "graphql-engine-source": "graphql-engine-source",
         "nixpkgs": "nixpkgs",
         "rust-overlay": "rust-overlay",
         "systems": "systems_2",
-        "v3-e2e-testing-source": "v3-e2e-testing-source",
-        "v3-engine-source": "v3-engine-source"
+        "v3-e2e-testing-source": "v3-e2e-testing-source"
       }
     },
     "rust-overlay": {
@@ -267,22 +301,6 @@
         "ref": "jesse/update-mongodb",
         "type": "git",
         "url": "ssh://git@github.com/hasura/v3-e2e-testing"
-      }
-    },
-    "v3-engine-source": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1708518175,
-        "narHash": "sha256-UqmrwcyptOOh/sWlTml5i6PRAWoNScC8Kjqgl59PsPU=",
-        "ref": "refs/heads/main",
-        "rev": "0f36da2472c44a1e403bc2fa10ebbc377daeba0d",
-        "revCount": 344,
-        "type": "git",
-        "url": "ssh://git@github.com/hasura/v3-engine"
-      },
-      "original": {
-        "type": "git",
-        "url": "ssh://git@github.com/hasura/v3-engine"
       }
     }
   },

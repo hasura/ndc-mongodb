@@ -1,19 +1,36 @@
+---
 kind: ObjectType
 version: v1
 definition:
   name: Album
-  graphql:
-    typeName: album
-    inputTypeName: albumInput
   fields:
-    - name: AlbumId
+    - name: id
+      type: ObjectId!
+    - name: albumId
       type: Int!
-    - name: ArtistId
+    - name: artistId
       type: Int!
-    - name: Title
+    - name: title
       type: String!
-    - name: _id
-      type: ObjectId
+  graphql:
+    typeName: App_Album
+    inputTypeName: App_AlbumInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: mongodb
+      dataConnectorObjectType: Album
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        albumId:
+          column:
+            name: AlbumId
+        artistId:
+          column:
+            name: ArtistId
+        title:
+          column:
+            name: Title
 
 ---
 kind: TypePermissions
@@ -24,10 +41,34 @@ definition:
     - role: admin
       output:
         allowedFields:
-          - AlbumId
-          - ArtistId
-          - Title
-          - _id
+          - id
+          - albumId
+          - artistId
+          - title
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: AlbumBoolExp
+  objectType: Album
+  dataConnectorName: mongodb
+  dataConnectorObjectType: Album
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: albumId
+      operators:
+        enableAll: true
+    - fieldName: artistId
+      operators:
+        enableAll: true
+    - fieldName: title
+      operators:
+        enableAll: true
+  graphql:
+    typeName: App_AlbumBoolExp
 
 ---
 kind: Model
@@ -35,45 +76,31 @@ version: v1
 definition:
   name: Album
   objectType: Album
-  filterableFields:
-    - fieldName: AlbumId
-      operators:
-        enableAll: true
-    - fieldName: ArtistId
-      operators:
-        enableAll: true
-    - fieldName: Title
-      operators:
-        enableAll: true
-    - fieldName: _id
-      operators:
-        enableAll: true
+  source:
+    dataConnectorName: mongodb
+    collection: Album
+  filterExpressionType: AlbumBoolExp
   orderableFields:
-    - fieldName: AlbumId
+    - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: ArtistId
+    - fieldName: albumId
       orderByDirections:
         enableAll: true
-    - fieldName: Title
+    - fieldName: artistId
       orderByDirections:
         enableAll: true
-    - fieldName: _id
+    - fieldName: title
       orderByDirections:
         enableAll: true
-  arguments: []
   graphql:
+    selectMany:
+      queryRootField: album
     selectUniques:
       - queryRootField: albumById
         uniqueIdentifier:
-          - AlbumId
-    selectMany:
-      queryRootField: album
-    filterExpressionType: albumBoolExp
-    orderByExpressionType: albumOrderBy
-  source:
-    collection: Album
-    dataConnectorName: mongodb
+          - id
+    orderByExpressionType: App_AlbumOrderBy
 
 ---
 kind: ModelPermissions
@@ -84,3 +111,4 @@ definition:
     - role: admin
       select:
         filter: null
+

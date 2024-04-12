@@ -1,17 +1,31 @@
+---
 kind: ObjectType
 version: v1
 definition:
   name: PlaylistTrack
-  graphql:
-    typeName: playlistTrack
-    inputTypeName: playlistTrackInput
   fields:
-    - name: PlaylistId
+    - name: id
+      type: ObjectId!
+    - name: playlistId
       type: Int!
-    - name: TrackId
+    - name: trackId
       type: Int!
-    - name: _id
-      type: ObjectId
+  graphql:
+    typeName: App_PlaylistTrack
+    inputTypeName: App_PlaylistTrackInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: mongodb
+      dataConnectorObjectType: PlaylistTrack
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        playlistId:
+          column:
+            name: PlaylistId
+        trackId:
+          column:
+            name: TrackId
 
 ---
 kind: TypePermissions
@@ -22,9 +36,30 @@ definition:
     - role: admin
       output:
         allowedFields:
-          - PlaylistId
-          - TrackId
-          - _id
+          - id
+          - playlistId
+          - trackId
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: PlaylistTrackBoolExp
+  objectType: PlaylistTrack
+  dataConnectorName: mongodb
+  dataConnectorObjectType: PlaylistTrack
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: playlistId
+      operators:
+        enableAll: true
+    - fieldName: trackId
+      operators:
+        enableAll: true
+  graphql:
+    typeName: App_PlaylistTrackBoolExp
 
 ---
 kind: Model
@@ -32,39 +67,28 @@ version: v1
 definition:
   name: PlaylistTrack
   objectType: PlaylistTrack
-  filterableFields:
-    - fieldName: PlaylistId
-      operators:
-        enableAll: true
-    - fieldName: TrackId
-      operators:
-        enableAll: true
-    - fieldName: _id
-      operators:
-        enableAll: true
+  source:
+    dataConnectorName: mongodb
+    collection: PlaylistTrack
+  filterExpressionType: PlaylistTrackBoolExp
   orderableFields:
-    - fieldName: PlaylistId
+    - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: TrackId
+    - fieldName: playlistId
       orderByDirections:
         enableAll: true
-    - fieldName: _id
+    - fieldName: trackId
       orderByDirections:
         enableAll: true
-  arguments: []
   graphql:
+    selectMany:
+      queryRootField: playlistTrack
     selectUniques:
       - queryRootField: playlistTrackById
         uniqueIdentifier:
-          - _id
-    selectMany:
-      queryRootField: playlistTrack
-    filterExpressionType: playlistTrackBoolExp
-    orderByExpressionType: playlistTrackOrderBy
-  source:
-    collection: PlaylistTrack
-    dataConnectorName: mongodb
+          - id
+    orderByExpressionType: App_PlaylistTrackOrderBy
 
 ---
 kind: ModelPermissions
@@ -75,3 +99,4 @@ definition:
     - role: admin
       select:
         filter: null
+

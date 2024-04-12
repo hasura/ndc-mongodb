@@ -1,17 +1,31 @@
+---
 kind: ObjectType
 version: v1
 definition:
   name: MediaType
-  graphql:
-    typeName: mediaType
-    inputTypeName: mediaTypeInput
   fields:
-    - name: MediaTypeId
+    - name: id
+      type: ObjectId!
+    - name: mediaTypeId
       type: Int!
-    - name: Name
-      type: String
-    - name: _id
-      type: ObjectId
+    - name: name
+      type: String!
+  graphql:
+    typeName: App_MediaType
+    inputTypeName: App_MediaTypeInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: mongodb
+      dataConnectorObjectType: MediaType
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        mediaTypeId:
+          column:
+            name: MediaTypeId
+        name:
+          column:
+            name: Name
 
 ---
 kind: TypePermissions
@@ -22,9 +36,30 @@ definition:
     - role: admin
       output:
         allowedFields:
-          - MediaTypeId
-          - Name
-          - _id
+          - id
+          - mediaTypeId
+          - name
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: MediaTypeBoolExp
+  objectType: MediaType
+  dataConnectorName: mongodb
+  dataConnectorObjectType: MediaType
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: mediaTypeId
+      operators:
+        enableAll: true
+    - fieldName: name
+      operators:
+        enableAll: true
+  graphql:
+    typeName: App_MediaTypeBoolExp
 
 ---
 kind: Model
@@ -32,39 +67,28 @@ version: v1
 definition:
   name: MediaType
   objectType: MediaType
-  filterableFields:
-    - fieldName: MediaTypeId
-      operators:
-        enableAll: true
-    - fieldName: Name
-      operators:
-        enableAll: true
-    - fieldName: _id
-      operators:
-        enableAll: true
+  source:
+    dataConnectorName: mongodb
+    collection: MediaType
+  filterExpressionType: MediaTypeBoolExp
   orderableFields:
-    - fieldName: MediaTypeId
+    - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: Name
+    - fieldName: mediaTypeId
       orderByDirections:
         enableAll: true
-    - fieldName: _id
+    - fieldName: name
       orderByDirections:
         enableAll: true
-  arguments: []
   graphql:
+    selectMany:
+      queryRootField: mediaType
     selectUniques:
       - queryRootField: mediaTypeById
         uniqueIdentifier:
-          - _id
-    selectMany:
-      queryRootField: mediaType
-    filterExpressionType: mediaTypeBoolExp
-    orderByExpressionType: mediaTypeOrderBy
-  source:
-    collection: MediaType
-    dataConnectorName: mongodb
+          - id
+    orderByExpressionType: App_MediaTypeOrderBy
 
 ---
 kind: ModelPermissions
@@ -75,3 +99,4 @@ definition:
     - role: admin
       select:
         filter: null
+

@@ -1,17 +1,31 @@
+---
 kind: ObjectType
 version: v1
 definition:
   name: Genre
-  graphql:
-    typeName: genre
-    inputTypeName: genreInput
   fields:
-    - name: GenreId
+    - name: id
+      type: ObjectId!
+    - name: genreId
       type: Int!
-    - name: Name
-      type: String
-    - name: _id
-      type: ObjectId
+    - name: name
+      type: String!
+  graphql:
+    typeName: App_Genre
+    inputTypeName: App_GenreInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: mongodb
+      dataConnectorObjectType: Genre
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        genreId:
+          column:
+            name: GenreId
+        name:
+          column:
+            name: Name
 
 ---
 kind: TypePermissions
@@ -22,9 +36,30 @@ definition:
     - role: admin
       output:
         allowedFields:
-          - GenreId
-          - Name
-          - _id
+          - id
+          - genreId
+          - name
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: GenreBoolExp
+  objectType: Genre
+  dataConnectorName: mongodb
+  dataConnectorObjectType: Genre
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: genreId
+      operators:
+        enableAll: true
+    - fieldName: name
+      operators:
+        enableAll: true
+  graphql:
+    typeName: App_GenreBoolExp
 
 ---
 kind: Model
@@ -32,39 +67,28 @@ version: v1
 definition:
   name: Genre
   objectType: Genre
-  filterableFields:
-    - fieldName: GenreId
-      operators:
-        enableAll: true
-    - fieldName: Name
-      operators:
-        enableAll: true
-    - fieldName: _id
-      operators:
-        enableAll: true
+  source:
+    dataConnectorName: mongodb
+    collection: Genre
+  filterExpressionType: GenreBoolExp
   orderableFields:
-    - fieldName: GenreId
+    - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: Name
+    - fieldName: genreId
       orderByDirections:
         enableAll: true
-    - fieldName: _id
+    - fieldName: name
       orderByDirections:
         enableAll: true
-  arguments: []
   graphql:
+    selectMany:
+      queryRootField: genre
     selectUniques:
       - queryRootField: genreById
         uniqueIdentifier:
-          - _id
-    selectMany:
-      queryRootField: genre
-    filterExpressionType: genreBoolExp
-    orderByExpressionType: genreOrderBy
-  source:
-    collection: Genre
-    dataConnectorName: mongodb
+          - id
+    orderByExpressionType: App_GenreOrderBy
 
 ---
 kind: ModelPermissions
@@ -75,3 +99,4 @@ definition:
     - role: admin
       select:
         filter: null
+
