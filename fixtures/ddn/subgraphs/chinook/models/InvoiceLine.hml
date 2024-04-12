@@ -1,23 +1,46 @@
+---
 kind: ObjectType
 version: v1
 definition:
   name: InvoiceLine
-  graphql:
-    typeName: invoiceLine
-    inputTypeName: invoiceLineInput
   fields:
-    - name: InvoiceId
+    - name: id
+      type: ObjectId!
+    - name: invoiceId
       type: Int!
-    - name: InvoiceLineId
+    - name: invoiceLineId
       type: Int!
-    - name: Quantity
+    - name: quantity
       type: Int!
-    - name: TrackId
+    - name: trackId
       type: Int!
-    - name: UnitPrice
+    - name: unitPrice
       type: Float!
-    - name: _id
-      type: ObjectId
+  graphql:
+    typeName: App_InvoiceLine
+    inputTypeName: App_InvoiceLineInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: mongodb
+      dataConnectorObjectType: InvoiceLine
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        invoiceId:
+          column:
+            name: InvoiceId
+        invoiceLineId:
+          column:
+            name: InvoiceLineId
+        quantity:
+          column:
+            name: Quantity
+        trackId:
+          column:
+            name: TrackId
+        unitPrice:
+          column:
+            name: UnitPrice
 
 ---
 kind: TypePermissions
@@ -28,12 +51,42 @@ definition:
     - role: admin
       output:
         allowedFields:
-          - InvoiceId
-          - InvoiceLineId
-          - Quantity
-          - TrackId
-          - UnitPrice
-          - _id
+          - id
+          - invoiceId
+          - invoiceLineId
+          - quantity
+          - trackId
+          - unitPrice
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: InvoiceLineBoolExp
+  objectType: InvoiceLine
+  dataConnectorName: mongodb
+  dataConnectorObjectType: InvoiceLine
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: invoiceId
+      operators:
+        enableAll: true
+    - fieldName: invoiceLineId
+      operators:
+        enableAll: true
+    - fieldName: quantity
+      operators:
+        enableAll: true
+    - fieldName: trackId
+      operators:
+        enableAll: true
+    - fieldName: unitPrice
+      operators:
+        enableAll: true
+  graphql:
+    typeName: App_InvoiceLineBoolExp
 
 ---
 kind: Model
@@ -41,57 +94,37 @@ version: v1
 definition:
   name: InvoiceLine
   objectType: InvoiceLine
-  filterableFields:
-    - fieldName: InvoiceId
-      operators:
-        enableAll: true
-    - fieldName: InvoiceLineId
-      operators:
-        enableAll: true
-    - fieldName: Quantity
-      operators:
-        enableAll: true
-    - fieldName: TrackId
-      operators:
-        enableAll: true
-    - fieldName: UnitPrice
-      operators:
-        enableAll: true
-    - fieldName: _id
-      operators:
-        enableAll: true
+  source:
+    dataConnectorName: mongodb
+    collection: InvoiceLine
+  filterExpressionType: InvoiceLineBoolExp
   orderableFields:
-    - fieldName: InvoiceId
+    - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: InvoiceLineId
+    - fieldName: invoiceId
       orderByDirections:
         enableAll: true
-    - fieldName: Quantity
+    - fieldName: invoiceLineId
       orderByDirections:
         enableAll: true
-    - fieldName: TrackId
+    - fieldName: quantity
       orderByDirections:
         enableAll: true
-    - fieldName: UnitPrice
+    - fieldName: trackId
       orderByDirections:
         enableAll: true
-    - fieldName: _id
+    - fieldName: unitPrice
       orderByDirections:
         enableAll: true
-  arguments: []
   graphql:
+    selectMany:
+      queryRootField: invoiceLine
     selectUniques:
       - queryRootField: invoiceLineById
         uniqueIdentifier:
-          - _id
-    selectMany:
-      queryRootField: invoiceLine
-    filterExpressionType: invoiceLineBoolExp
-    orderByExpressionType: invoiceLineOrderBy
-  source:
-    collection: InvoiceLine
-    dataConnectorName: mongodb
+          - id
+    orderByExpressionType: App_InvoiceLineOrderBy
 
 ---
 kind: ModelPermissions
@@ -102,3 +135,4 @@ definition:
     - role: admin
       select:
         filter: null
+

@@ -27,26 +27,34 @@
     # We need flake-compat in arion-pkgs.nix
     flake-compat.url = "github:edolstra/flake-compat";
 
-    # This gets the source for the v3-engine. We use an expression in
-    # ./nix/v3-engine.nix to build. This is used to produce an arion service.
+    # This gets the source for the graphql engine. We use an expression in
+    # ./nix/graphql-engine.nix to build. This is used to produce an arion
+    # service.
     #
     # To test against local engine changes, change the url here to:
     # 
-    #     url = "git+file:///home/me/path/to/v3-engine"
+    #     url = "git+file:///home/me/path/to/graphql-engine"
     #
     # If source changes aren't picked up automatically try:
     #
     # - committing changes to the local engine repo
-    # - running `nix flake lock --update-input v3-engine-source` in this repo
+    # - running `nix flake lock --update-input graphql-engine-source` in this repo
     # - arion up -d engine
     #
-    v3-engine-source = {
-      url = "git+ssh://git@github.com/hasura/v3-engine";
+    graphql-engine-source = {
+      url = "github:hasura/graphql-engine";
       flake = false;
     };
 
-    # See the note above on v3-engine-source for information on running against
-    # a version of v3-e2e-testing with local changes.
+    # This is a copy of graphql-engine-source that is pinned to a revision where
+    # dev-auth-webhook can be built independently.
+    dev-auth-webhook-source = {
+      url = "github:hasura/graphql-engine/50f1243a46e22f0fecca03364b0b181fbb3735c6";
+      flake = false;
+    };
+
+    # See the note above on graphql-engine-source for information on running
+    # against a version of v3-e2e-testing with local changes.
     v3-e2e-testing-source = {
       url = "git+ssh://git@github.com/hasura/v3-e2e-testing?ref=jesse/update-mongodb";
       flake = false;
@@ -60,7 +68,8 @@
     , rust-overlay
     , advisory-db
     , arion
-    , v3-engine-source
+    , graphql-engine-source
+    , dev-auth-webhook-source
     , v3-e2e-testing-source
     , systems
     , ...
@@ -84,16 +93,16 @@
           rustToolchain = final.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
           craneLib = (crane.mkLib final).overrideToolchain rustToolchain;
 
-          # Extend our package set with mongodb-connector, v3-engine, and other
-          # packages built by this flake to make these packages accessible in
-          # arion-compose.nix.
+          # Extend our package set with mongodb-connector, graphql-engine, and
+          # other packages built by this flake to make these packages accessible
+          # in arion-compose.nix.
           mongodb-connector-workspace = final.callPackage ./nix/mongodb-connector-workspace.nix { }; # builds all packages in this repo
           mongodb-connector = final.mongodb-connector-workspace.override { package = "mongodb-connector"; }; # override `package` to build one specific crate
           mongodb-cli-plugin = final.mongodb-connector-workspace.override { package = "mongodb-cli-plugin"; };
-          v3-engine = final.callPackage ./nix/v3-engine.nix { src = v3-engine-source; };
+          graphql-engine = final.callPackage ./nix/graphql-engine.nix { src = "${graphql-engine-source}/v3"; package = "engine"; };
           v3-e2e-testing = final.callPackage ./nix/v3-e2e-testing.nix { src = v3-e2e-testing-source; database-to-test = "mongodb"; };
           inherit v3-e2e-testing-source; # include this source so we can read files from it in arion-compose configs
-          dev-auth-webhook = final.callPackage ./nix/dev-auth-webhook.nix { src = "${v3-engine-source}/hasura-authn-webhook/dev-auth-webhook"; };
+          dev-auth-webhook = final.callPackage ./nix/dev-auth-webhook.nix { src = "${dev-auth-webhook-source}/v3/crates/hasura-authn-webhook/dev-auth-webhook"; };
 
           # Provide cross-compiled versions of each of our packages under
           # `pkgs.pkgsCross.${system}.${package-name}`
@@ -194,7 +203,7 @@
       });
 
       # Export our nixpkgs package set, which has been extended with the
-      # mongodb-connector, v3-engine, etc. We do this so that arion can pull in
+      # mongodb-connector, graphql-engine, etc. We do this so that arion can pull in
       # the same package set through arion-pkgs.nix.
       legacyPackages = eachSystem (pkgs: pkgs);
 

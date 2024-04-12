@@ -1,17 +1,31 @@
+---
 kind: ObjectType
 version: v1
 definition:
   name: Artist
-  graphql:
-    typeName: artist
-    inputTypeName: artistInput
   fields:
-    - name: ArtistId
+    - name: id
+      type: ObjectId!
+    - name: artistId
       type: Int!
-    - name: Name
-      type: String
-    - name: _id
-      type: ObjectId
+    - name: name
+      type: String!
+  graphql:
+    typeName: App_Artist
+    inputTypeName: App_ArtistInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: mongodb
+      dataConnectorObjectType: Artist
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        artistId:
+          column:
+            name: ArtistId
+        name:
+          column:
+            name: Name
 
 ---
 kind: TypePermissions
@@ -22,9 +36,30 @@ definition:
     - role: admin
       output:
         allowedFields:
-          - ArtistId
-          - Name
-          - _id
+          - id
+          - artistId
+          - name
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: ArtistBoolExp
+  objectType: Artist
+  dataConnectorName: mongodb
+  dataConnectorObjectType: Artist
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: artistId
+      operators:
+        enableAll: true
+    - fieldName: name
+      operators:
+        enableAll: true
+  graphql:
+    typeName: App_ArtistBoolExp
 
 ---
 kind: Model
@@ -32,39 +67,28 @@ version: v1
 definition:
   name: Artist
   objectType: Artist
-  filterableFields:
-    - fieldName: ArtistId
-      operators:
-        enableAll: true
-    - fieldName: Name
-      operators:
-        enableAll: true
-    - fieldName: _id
-      operators:
-        enableAll: true
+  source:
+    dataConnectorName: mongodb
+    collection: Artist
+  filterExpressionType: ArtistBoolExp
   orderableFields:
-    - fieldName: ArtistId
+    - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: Name
+    - fieldName: artistId
       orderByDirections:
         enableAll: true
-    - fieldName: _id
+    - fieldName: name
       orderByDirections:
         enableAll: true
-  arguments: []
   graphql:
+    selectMany:
+      queryRootField: artist
     selectUniques:
       - queryRootField: artistById
         uniqueIdentifier:
-          - _id
-    selectMany:
-      queryRootField: artist
-    filterExpressionType: artistBoolExp
-    orderByExpressionType: artistOrderBy
-  source:
-    collection: Artist
-    dataConnectorName: mongodb
+          - id
+    orderByExpressionType: App_ArtistOrderBy
 
 ---
 kind: ModelPermissions
@@ -75,3 +99,4 @@ definition:
     - role: admin
       select:
         filter: null
+

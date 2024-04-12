@@ -1,39 +1,86 @@
+---
 kind: ObjectType
 version: v1
 definition:
   name: Customer
-  graphql:
-    typeName: customer
-    inputTypeName: customerInput
   fields:
-    - name: Address
-      type: String
-    - name: City
-      type: String
-    - name: Company
-      type: String
-    - name: Country
-      type: String
-    - name: CustomerId
+    - name: id
+      type: ObjectId!
+    - name: address
+      type: String!
+    - name: city
+      type: String!
+    - name: company
+      type: String!
+    - name: country
+      type: String!
+    - name: customerId
       type: Int!
-    - name: Email
+    - name: email
       type: String!
-    - name: Fax
-      type: String
-    - name: FirstName
+    - name: fax
       type: String!
-    - name: LastName
+    - name: firstName
       type: String!
-    - name: Phone
-      type: String
-    - name: PostalCode
-      type: String
-    - name: State
-      type: String
-    - name: SupportRepId
-      type: Int
-    - name: _id
-      type: ObjectId
+    - name: lastName
+      type: String!
+    - name: phone
+      type: String!
+    - name: postalCode
+      type: ExtendedJson
+    - name: state
+      type: String!
+    - name: supportRepId
+      type: Int!
+  graphql:
+    typeName: App_Customer
+    inputTypeName: App_CustomerInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: mongodb
+      dataConnectorObjectType: Customer
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        address:
+          column:
+            name: Address
+        city:
+          column:
+            name: City
+        company:
+          column:
+            name: Company
+        country:
+          column:
+            name: Country
+        customerId:
+          column:
+            name: CustomerId
+        email:
+          column:
+            name: Email
+        fax:
+          column:
+            name: Fax
+        firstName:
+          column:
+            name: FirstName
+        lastName:
+          column:
+            name: LastName
+        phone:
+          column:
+            name: Phone
+        postalCode:
+          column:
+            name: PostalCode
+        state:
+          column:
+            name: State
+        supportRepId:
+          column:
+            name: SupportRepId
 
 ---
 kind: TypePermissions
@@ -44,20 +91,74 @@ definition:
     - role: admin
       output:
         allowedFields:
-          - Address
-          - City
-          - Company
-          - Country
-          - CustomerId
-          - Email
-          - Fax
-          - FirstName
-          - LastName
-          - Phone
-          - PostalCode
-          - State
-          - SupportRepId
-          - _id
+          - id
+          - address
+          - city
+          - company
+          - country
+          - customerId
+          - email
+          - fax
+          - firstName
+          - lastName
+          - phone
+          - postalCode
+          - state
+          - supportRepId
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: CustomerBoolExp
+  objectType: Customer
+  dataConnectorName: mongodb
+  dataConnectorObjectType: Customer
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: address
+      operators:
+        enableAll: true
+    - fieldName: city
+      operators:
+        enableAll: true
+    - fieldName: company
+      operators:
+        enableAll: true
+    - fieldName: country
+      operators:
+        enableAll: true
+    - fieldName: customerId
+      operators:
+        enableAll: true
+    - fieldName: email
+      operators:
+        enableAll: true
+    - fieldName: fax
+      operators:
+        enableAll: true
+    - fieldName: firstName
+      operators:
+        enableAll: true
+    - fieldName: lastName
+      operators:
+        enableAll: true
+    - fieldName: phone
+      operators:
+        enableAll: true
+    - fieldName: postalCode
+      operators:
+        enableAll: true
+    - fieldName: state
+      operators:
+        enableAll: true
+    - fieldName: supportRepId
+      operators:
+        enableAll: true
+  graphql:
+    typeName: App_CustomerBoolExp
 
 ---
 kind: Model
@@ -65,105 +166,61 @@ version: v1
 definition:
   name: Customer
   objectType: Customer
-  filterableFields:
-    - fieldName: Address
-      operators:
-        enableAll: true
-    - fieldName: City
-      operators:
-        enableAll: true
-    - fieldName: Company
-      operators:
-        enableAll: true
-    - fieldName: Country
-      operators:
-        enableAll: true
-    - fieldName: CustomerId
-      operators:
-        enableAll: true
-    - fieldName: Email
-      operators:
-        enableAll: true
-    - fieldName: Fax
-      operators:
-        enableAll: true
-    - fieldName: FirstName
-      operators:
-        enableAll: true
-    - fieldName: LastName
-      operators:
-        enableAll: true
-    - fieldName: Phone
-      operators:
-        enableAll: true
-    - fieldName: PostalCode
-      operators:
-        enableAll: true
-    - fieldName: State
-      operators:
-        enableAll: true
-    - fieldName: SupportRepId
-      operators:
-        enableAll: true
-    - fieldName: _id
-      operators:
-        enableAll: true
+  source:
+    dataConnectorName: mongodb
+    collection: Customer
+  filterExpressionType: CustomerBoolExp
   orderableFields:
-    - fieldName: Address
+    - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: City
+    - fieldName: address
       orderByDirections:
         enableAll: true
-    - fieldName: Company
+    - fieldName: city
       orderByDirections:
         enableAll: true
-    - fieldName: Country
+    - fieldName: company
       orderByDirections:
         enableAll: true
-    - fieldName: CustomerId
+    - fieldName: country
       orderByDirections:
         enableAll: true
-    - fieldName: Email
+    - fieldName: customerId
       orderByDirections:
         enableAll: true
-    - fieldName: Fax
+    - fieldName: email
       orderByDirections:
         enableAll: true
-    - fieldName: FirstName
+    - fieldName: fax
       orderByDirections:
         enableAll: true
-    - fieldName: LastName
+    - fieldName: firstName
       orderByDirections:
         enableAll: true
-    - fieldName: Phone
+    - fieldName: lastName
       orderByDirections:
         enableAll: true
-    - fieldName: PostalCode
+    - fieldName: phone
       orderByDirections:
         enableAll: true
-    - fieldName: State
+    - fieldName: postalCode
       orderByDirections:
         enableAll: true
-    - fieldName: SupportRepId
+    - fieldName: state
       orderByDirections:
         enableAll: true
-    - fieldName: _id
+    - fieldName: supportRepId
       orderByDirections:
         enableAll: true
-  arguments: []
   graphql:
+    selectMany:
+      queryRootField: customer
     selectUniques:
       - queryRootField: customerById
         uniqueIdentifier:
-          - _id
-    selectMany:
-      queryRootField: customer
-    filterExpressionType: customerBoolExp
-    orderByExpressionType: customerOrderBy
-  source:
-    collection: Customer
-    dataConnectorName: mongodb
+          - id
+    orderByExpressionType: App_CustomerOrderBy
 
 ---
 kind: ModelPermissions
@@ -174,3 +231,4 @@ definition:
     - role: admin
       select:
         filter: null
+
