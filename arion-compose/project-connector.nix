@@ -65,7 +65,7 @@ in
       ddn-dirs = [
         ../fixtures/ddn/chinook
         ../fixtures/ddn/sample_mflix
-        # ../fixtures/ddn/remote-relationship-todo-todo
+        ../fixtures/ddn/remote-relationships_chinook-sample_mflix
       ];
       otlp-endpoint = "http://jaeger:4317";
       service.depends_on = {
