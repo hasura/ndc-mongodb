@@ -5,7 +5,7 @@ definition:
   name: InvoiceLine
   fields:
     - name: id
-      type: ObjectId!
+      type: Chinook_ObjectId!
     - name: invoiceId
       type: Int!
     - name: invoiceLineId
@@ -17,8 +17,8 @@ definition:
     - name: unitPrice
       type: Float!
   graphql:
-    typeName: App_InvoiceLine
-    inputTypeName: App_InvoiceLineInput
+    typeName: InvoiceLine
+    inputTypeName: InvoiceLineInput
   dataConnectorTypeMapping:
     - dataConnectorName: chinook
       dataConnectorObjectType: InvoiceLine
@@ -86,7 +86,7 @@ definition:
       operators:
         enableAll: true
   graphql:
-    typeName: App_InvoiceLineBoolExp
+    typeName: InvoiceLineBoolExp
 
 ---
 kind: Model
@@ -124,7 +124,7 @@ definition:
       - queryRootField: invoiceLineById
         uniqueIdentifier:
           - id
-    orderByExpressionType: App_InvoiceLineOrderBy
+    orderByExpressionType: InvoiceLineOrderBy
 
 ---
 kind: ModelPermissions

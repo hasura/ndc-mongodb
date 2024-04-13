@@ -2,99 +2,99 @@
 kind: ObjectType
 version: v1
 definition:
-  name: Sessions
+  name: Playlist
   fields:
     - name: id
-      type: ObjectId!
-    - name: jwt
+      type: Chinook_ObjectId!
+    - name: name
       type: String!
-    - name: userId
-      type: String!
+    - name: playlistId
+      type: Int!
   graphql:
-    typeName: App_Sessions
-    inputTypeName: App_SessionsInput
+    typeName: Playlist
+    inputTypeName: PlaylistInput
   dataConnectorTypeMapping:
-    - dataConnectorName: sample_mflix
-      dataConnectorObjectType: sessions
+    - dataConnectorName: chinook
+      dataConnectorObjectType: Playlist
       fieldMapping:
         id:
           column:
             name: _id
-        jwt:
+        name:
           column:
-            name: jwt
-        userId:
+            name: Name
+        playlistId:
           column:
-            name: user_id
+            name: PlaylistId
 
 ---
 kind: TypePermissions
 version: v1
 definition:
-  typeName: Sessions
+  typeName: Playlist
   permissions:
     - role: admin
       output:
         allowedFields:
           - id
-          - jwt
-          - userId
+          - name
+          - playlistId
 
 ---
 kind: ObjectBooleanExpressionType
 version: v1
 definition:
-  name: SessionsBoolExp
-  objectType: Sessions
-  dataConnectorName: sample_mflix
-  dataConnectorObjectType: sessions
+  name: PlaylistBoolExp
+  objectType: Playlist
+  dataConnectorName: chinook
+  dataConnectorObjectType: Playlist
   comparableFields:
     - fieldName: id
       operators:
         enableAll: true
-    - fieldName: jwt
+    - fieldName: name
       operators:
         enableAll: true
-    - fieldName: userId
+    - fieldName: playlistId
       operators:
         enableAll: true
   graphql:
-    typeName: App_SessionsBoolExp
+    typeName: PlaylistBoolExp
 
 ---
 kind: Model
 version: v1
 definition:
-  name: Sessions
-  objectType: Sessions
+  name: Playlist
+  objectType: Playlist
   source:
-    dataConnectorName: sample_mflix
-    collection: sessions
-  filterExpressionType: SessionsBoolExp
+    dataConnectorName: chinook
+    collection: Playlist
+  filterExpressionType: PlaylistBoolExp
   orderableFields:
     - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: jwt
+    - fieldName: name
       orderByDirections:
         enableAll: true
-    - fieldName: userId
+    - fieldName: playlistId
       orderByDirections:
         enableAll: true
   graphql:
     selectMany:
-      queryRootField: sessions
+      queryRootField: playlist
     selectUniques:
-      - queryRootField: sessionsById
+      - queryRootField: playlistById
         uniqueIdentifier:
           - id
-    orderByExpressionType: App_SessionsOrderBy
+    orderByExpressionType: PlaylistOrderBy
 
 ---
 kind: ModelPermissions
 version: v1
 definition:
-  modelName: Sessions
+  modelName: Playlist
   permissions:
     - role: admin
       select:

@@ -2,111 +2,111 @@
 kind: ObjectType
 version: v1
 definition:
-  name: Users
+  name: Album
   fields:
     - name: id
-      type: ObjectId!
-    - name: email
-      type: String!
-    - name: name
-      type: String!
-    - name: password
+      type: Chinook_ObjectId!
+    - name: albumId
+      type: Int!
+    - name: artistId
+      type: Int!
+    - name: title
       type: String!
   graphql:
-    typeName: App_Users
-    inputTypeName: App_UsersInput
+    typeName: Album
+    inputTypeName: AlbumInput
   dataConnectorTypeMapping:
-    - dataConnectorName: sample_mflix
-      dataConnectorObjectType: users
+    - dataConnectorName: chinook
+      dataConnectorObjectType: Album
       fieldMapping:
         id:
           column:
             name: _id
-        email:
+        albumId:
           column:
-            name: email
-        name:
+            name: AlbumId
+        artistId:
           column:
-            name: name
-        password:
+            name: ArtistId
+        title:
           column:
-            name: password
+            name: Title
 
 ---
 kind: TypePermissions
 version: v1
 definition:
-  typeName: Users
+  typeName: Album
   permissions:
     - role: admin
       output:
         allowedFields:
           - id
-          - email
-          - name
-          - password
+          - albumId
+          - artistId
+          - title
 
 ---
 kind: ObjectBooleanExpressionType
 version: v1
 definition:
-  name: UsersBoolExp
-  objectType: Users
-  dataConnectorName: sample_mflix
-  dataConnectorObjectType: users
+  name: AlbumBoolExp
+  objectType: Album
+  dataConnectorName: chinook
+  dataConnectorObjectType: Album
   comparableFields:
     - fieldName: id
       operators:
         enableAll: true
-    - fieldName: email
+    - fieldName: albumId
       operators:
         enableAll: true
-    - fieldName: name
+    - fieldName: artistId
       operators:
         enableAll: true
-    - fieldName: password
+    - fieldName: title
       operators:
         enableAll: true
   graphql:
-    typeName: App_UsersBoolExp
+    typeName: AlbumBoolExp
 
 ---
 kind: Model
 version: v1
 definition:
-  name: Users
-  objectType: Users
+  name: Album
+  objectType: Album
   source:
-    dataConnectorName: sample_mflix
-    collection: users
-  filterExpressionType: UsersBoolExp
+    dataConnectorName: chinook
+    collection: Album
+  filterExpressionType: AlbumBoolExp
   orderableFields:
     - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: email
+    - fieldName: albumId
       orderByDirections:
         enableAll: true
-    - fieldName: name
+    - fieldName: artistId
       orderByDirections:
         enableAll: true
-    - fieldName: password
+    - fieldName: title
       orderByDirections:
         enableAll: true
   graphql:
     selectMany:
-      queryRootField: users
+      queryRootField: album
     selectUniques:
-      - queryRootField: usersById
+      - queryRootField: albumById
         uniqueIdentifier:
           - id
-    orderByExpressionType: App_UsersOrderBy
+    orderByExpressionType: AlbumOrderBy
 
 ---
 kind: ModelPermissions
 version: v1
 definition:
-  modelName: Users
+  modelName: Album
   permissions:
     - role: admin
       select:
