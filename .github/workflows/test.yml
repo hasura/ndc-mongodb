@@ -27,8 +27,15 @@ jobs:
       - name: run unit tests 🔨
         run: nix build .#checks.x86_64-linux.test --print-build-logs
 
-      - name: run linter checks with clippy 🔨
+      - name: run linter checks with clippy 📎
         run: nix build .#checks.x86_64-linux.lint --print-build-logs
 
-      - name: audit for reported security problems 🔨
+      - name: audit for reported security problems 🛡️
         run: nix build .#checks.x86_64-linux.audit --print-build-logs
+
+      - name: validate changelog 📜
+        uses: mindsers/changelog-reader-action@v2
+        with:
+          validation_level: error
+          version: Unreleased
+          path: ./CHANGELOG.md
