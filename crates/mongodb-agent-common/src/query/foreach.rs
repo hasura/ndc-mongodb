@@ -407,11 +407,12 @@ mod tests {
     async fn executes_foreach_with_variables() -> Result<(), anyhow::Error> {
         let query_request = QueryRequest {
             foreach: None,
-            variables: Some(vec![
-                [("artistId".to_owned(), json!(1))].into(),
-                [("artistId".to_owned(), json!(2))].into(),
-                [("artistId".to_owned(), json!(3))].into(),
-            ]),
+            variables: Some(
+                (1..=12)
+                    .into_iter()
+                    .map(|artist_id| [("artistId".to_owned(), json!(artist_id))].into())
+                    .collect(),
+            ),
             target: dc_api_types::Target::TTable {
                 name: vec!["tracks".to_owned()],
             },
@@ -454,30 +455,31 @@ mod tests {
             }),
         };
 
+        fn facet(artist_id: i32) -> serde_json::Value {
+            json!([
+                { "$match": { "artistId": {"$eq": artist_id } } },
+                { "$replaceWith": {
+                    "albumId": { "$ifNull": ["$albumId", null] },
+                    "title": { "$ifNull": ["$title", null] }
+                } },
+            ])
+        }
+
         let expected_pipeline = json!([
             {
                 "$facet": {
-                    "__FACET___0": [
-                        { "$match": { "artistId": {"$eq":1 } } },
-                        { "$replaceWith": {
-                            "albumId": { "$ifNull": ["$albumId", null] },
-                            "title": { "$ifNull": ["$title", null] }
-                        } },
-                    ],
-                    "__FACET___1": [
-                        { "$match": { "artistId": {"$eq": 2 } } },
-                        { "$replaceWith": {
-                            "albumId": { "$ifNull": ["$albumId", null] },
-                            "title": { "$ifNull": ["$title", null] }
-                        } },
-                    ],
-                    "__FACET___2": [
-                        { "$match": { "artistId": {"$eq": 3 } } },
-                        { "$replaceWith": {
-                            "albumId": { "$ifNull": ["$albumId", null] },
-                            "title": { "$ifNull": ["$title", null] }
-                        } },
-                    ]
+                    "__FACET___0": facet(1),
+                    "__FACET___1": facet(2),
+                    "__FACET___2": facet(3),
+                    "__FACET___3": facet(4),
+                    "__FACET___4": facet(5),
+                    "__FACET___5": facet(6),
+                    "__FACET___6": facet(7),
+                    "__FACET___7": facet(8),
+                    "__FACET___8": facet(9),
+                    "__FACET___9": facet(10),
+                    "__FACET___10": facet(11),
+                    "__FACET___11": facet(12),
                 },
             },
             {
@@ -486,6 +488,15 @@ mod tests {
                         { "query": { "rows": "$__FACET___0" } },
                         { "query": { "rows": "$__FACET___1" } },
                         { "query": { "rows": "$__FACET___2" } },
+                        { "query": { "rows": "$__FACET___3" } },
+                        { "query": { "rows": "$__FACET___4" } },
+                        { "query": { "rows": "$__FACET___5" } },
+                        { "query": { "rows": "$__FACET___6" } },
+                        { "query": { "rows": "$__FACET___7" } },
+                        { "query": { "rows": "$__FACET___8" } },
+                        { "query": { "rows": "$__FACET___9" } },
+                        { "query": { "rows": "$__FACET___10" } },
+                        { "query": { "rows": "$__FACET___11" } },
                     ]
                 },
             }
@@ -501,11 +512,7 @@ mod tests {
                         ]
                     }
                 },
-                {
-                    "query": {
-                        "rows": []
-                    }
-                },
+                { "query": { "rows": [] } },
                 {
                     "query": {
                         "rows": [
@@ -513,7 +520,15 @@ mod tests {
                             { "albumId": 3, "title": "Restless and Wild" }
                         ]
                     }
-                }
+                },
+                { "query": { "rows": [] } },
+                { "query": { "rows": [] } },
+                { "query": { "rows": [] } },
+                { "query": { "rows": [] } },
+                { "query": { "rows": [] } },
+                { "query": { "rows": [] } },
+                { "query": { "rows": [] } },
+                { "query": { "rows": [] } },
             ]
         }))?;
 
@@ -544,7 +559,15 @@ mod tests {
                                     { "albumId": 3, "title": "Restless and Wild" }
                                 ]
                             }
-                        }
+                        },
+                        { "query": { "rows": [] } },
+                        { "query": { "rows": [] } },
+                        { "query": { "rows": [] } },
+                        { "query": { "rows": [] } },
+                        { "query": { "rows": [] } },
+                        { "query": { "rows": [] } },
+                        { "query": { "rows": [] } },
+                        { "query": { "rows": [] } },
                     ],
                 })?)]))
             });
