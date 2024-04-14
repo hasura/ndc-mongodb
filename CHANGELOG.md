@@ -25,4 +25,4 @@ This changelog documents the changes between release versions.
 - Rename CLI plugin to ndc-mongodb ([PR #13](https://github.com/hasura/ndc-mongodb/pull/13))
 
 ## [0.0.1] - 2024-03-22
-Initial release
+- Initial release
