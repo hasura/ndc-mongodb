@@ -4,7 +4,7 @@ version: v1
 definition:
   name: ObjectId
   graphql:
-    typeName: App_ObjectId
+    typeName: ObjectId
 
 ---
 kind: ScalarType
@@ -12,7 +12,7 @@ version: v1
 definition:
   name: Date
   graphql:
-    typeName: App_Date
+    typeName: Date
 
 ---
 kind: DataConnectorScalarRepresentation
@@ -22,7 +22,7 @@ definition:
   dataConnectorScalarType: ObjectId
   representation: ObjectId
   graphql:
-    comparisonExpressionTypeName: App_ObjectIdComparisonExp
+    comparisonExpressionTypeName: ObjectIdComparisonExp
 
 ---
 kind: DataConnectorScalarRepresentation
@@ -32,7 +32,7 @@ definition:
   dataConnectorScalarType: Date
   representation: Date
   graphql:
-    comparisonExpressionTypeName: App_DateComparisonExp
+    comparisonExpressionTypeName: DateComparisonExp
 
 ---
 kind: DataConnectorScalarRepresentation
@@ -42,7 +42,7 @@ definition:
   dataConnectorScalarType: String
   representation: String
   graphql:
-    comparisonExpressionTypeName: App_StringComparisonExp
+    comparisonExpressionTypeName: StringComparisonExp
 
 ---
 kind: ScalarType
@@ -50,7 +50,7 @@ version: v1
 definition:
   name: ExtendedJson
   graphql:
-    typeName: App_ExtendedJson
+    typeName: ExtendedJson
 
 ---
 kind: DataConnectorScalarRepresentation
@@ -60,7 +60,7 @@ definition:
   dataConnectorScalarType: Int
   representation: Int
   graphql:
-    comparisonExpressionTypeName: App_IntComparisonExp
+    comparisonExpressionTypeName: IntComparisonExp
 
 ---
 kind: DataConnectorScalarRepresentation
@@ -70,7 +70,7 @@ definition:
   dataConnectorScalarType: ExtendedJSON
   representation: ExtendedJson
   graphql:
-    comparisonExpressionTypeName: App_ExtendedJsonComparisonExp
+    comparisonExpressionTypeName: ExtendedJsonComparisonExp
 
 ---
 kind: DataConnectorScalarRepresentation
@@ -80,4 +80,4 @@ definition:
   dataConnectorScalarType: Float
   representation: Float
   graphql:
-    comparisonExpressionTypeName: App_FloatComparisonExp
+    comparisonExpressionTypeName: FloatComparisonExp

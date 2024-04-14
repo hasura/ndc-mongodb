@@ -2,27 +2,27 @@
 kind: ObjectType
 version: v1
 definition:
-  name: Artist
+  name: Genre
   fields:
     - name: id
-      type: ObjectId!
-    - name: artistId
+      type: Chinook_ObjectId!
+    - name: genreId
       type: Int!
     - name: name
       type: String!
   graphql:
-    typeName: App_Artist
-    inputTypeName: App_ArtistInput
+    typeName: Genre
+    inputTypeName: GenreInput
   dataConnectorTypeMapping:
     - dataConnectorName: chinook
-      dataConnectorObjectType: Artist
+      dataConnectorObjectType: Genre
       fieldMapping:
         id:
           column:
             name: _id
-        artistId:
+        genreId:
           column:
-            name: ArtistId
+            name: GenreId
         name:
           column:
             name: Name
@@ -31,51 +31,51 @@ definition:
 kind: TypePermissions
 version: v1
 definition:
-  typeName: Artist
+  typeName: Genre
   permissions:
     - role: admin
       output:
         allowedFields:
           - id
-          - artistId
+          - genreId
           - name
 
 ---
 kind: ObjectBooleanExpressionType
 version: v1
 definition:
-  name: ArtistBoolExp
-  objectType: Artist
+  name: GenreBoolExp
+  objectType: Genre
   dataConnectorName: chinook
-  dataConnectorObjectType: Artist
+  dataConnectorObjectType: Genre
   comparableFields:
     - fieldName: id
       operators:
         enableAll: true
-    - fieldName: artistId
+    - fieldName: genreId
       operators:
         enableAll: true
     - fieldName: name
       operators:
         enableAll: true
   graphql:
-    typeName: App_ArtistBoolExp
+    typeName: GenreBoolExp
 
 ---
 kind: Model
 version: v1
 definition:
-  name: Artist
-  objectType: Artist
+  name: Genre
+  objectType: Genre
   source:
     dataConnectorName: chinook
-    collection: Artist
-  filterExpressionType: ArtistBoolExp
+    collection: Genre
+  filterExpressionType: GenreBoolExp
   orderableFields:
     - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: artistId
+    - fieldName: genreId
       orderByDirections:
         enableAll: true
     - fieldName: name
@@ -83,18 +83,18 @@ definition:
         enableAll: true
   graphql:
     selectMany:
-      queryRootField: artist
+      queryRootField: genre
     selectUniques:
-      - queryRootField: artistById
+      - queryRootField: genreById
         uniqueIdentifier:
           - id
-    orderByExpressionType: App_ArtistOrderBy
+    orderByExpressionType: GenreOrderBy
 
 ---
 kind: ModelPermissions
 version: v1
 definition:
-  modelName: Artist
+  modelName: Genre
   permissions:
     - role: admin
       select:

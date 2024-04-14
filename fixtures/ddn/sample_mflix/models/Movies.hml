@@ -11,8 +11,8 @@ definition:
     - name: wins
       type: Int!
   graphql:
-    typeName: App_MoviesAwards
-    inputTypeName: App_MoviesAwardsInput
+    typeName: MoviesAwards
+    inputTypeName: MoviesAwardsInput
   dataConnectorTypeMapping:
     - dataConnectorName: sample_mflix
       dataConnectorObjectType: movies_awards
@@ -43,8 +43,8 @@ definition:
     - name: votes
       type: Int!
   graphql:
-    typeName: App_MoviesImdb
-    inputTypeName: App_MoviesImdbInput
+    typeName: MoviesImdb
+    inputTypeName: MoviesImdbInput
   dataConnectorTypeMapping:
     - dataConnectorName: sample_mflix
       dataConnectorObjectType: movies_imdb
@@ -75,8 +75,8 @@ definition:
     - name: rating
       type: ExtendedJson
   graphql:
-    typeName: App_MoviesTomatoesCritic
-    inputTypeName: App_MoviesTomatoesCriticInput
+    typeName: MoviesTomatoesCritic
+    inputTypeName: MoviesTomatoesCriticInput
   dataConnectorTypeMapping:
     - dataConnectorName: sample_mflix
       dataConnectorObjectType: movies_tomatoes_critic
@@ -107,8 +107,8 @@ definition:
     - name: rating
       type: ExtendedJson
   graphql:
-    typeName: App_MoviesTomatoesViewer
-    inputTypeName: App_MoviesTomatoesViewerInput
+    typeName: MoviesTomatoesViewer
+    inputTypeName: MoviesTomatoesViewerInput
   dataConnectorTypeMapping:
     - dataConnectorName: sample_mflix
       dataConnectorObjectType: movies_tomatoes_viewer
@@ -153,8 +153,8 @@ definition:
     - name: website
       type: String
   graphql:
-    typeName: App_MoviesTomatoes
-    inputTypeName: App_MoviesTomatoesInput
+    typeName: MoviesTomatoes
+    inputTypeName: MoviesTomatoesInput
   dataConnectorTypeMapping:
     - dataConnectorName: sample_mflix
       dataConnectorObjectType: movies_tomatoes
@@ -230,8 +230,8 @@ definition:
     - name: year
       type: Int!
   graphql:
-    typeName: App_Movies
-    inputTypeName: App_MoviesInput
+    typeName: Movies
+    inputTypeName: MoviesInput
   dataConnectorTypeMapping:
     - dataConnectorName: sample_mflix
       dataConnectorObjectType: movies
@@ -411,7 +411,7 @@ definition:
       operators:
         enableAll: true
   graphql:
-    typeName: App_MoviesBoolExp
+    typeName: MoviesBoolExp
 
 ---
 kind: Model
@@ -497,7 +497,7 @@ definition:
       - queryRootField: moviesById
         uniqueIdentifier:
           - id
-    orderByExpressionType: App_MoviesOrderBy
+    orderByExpressionType: MoviesOrderBy
 
 ---
 kind: ModelPermissions

@@ -2,99 +2,99 @@
 kind: ObjectType
 version: v1
 definition:
-  name: Genre
+  name: PlaylistTrack
   fields:
     - name: id
-      type: ObjectId!
-    - name: genreId
+      type: Chinook_ObjectId!
+    - name: playlistId
       type: Int!
-    - name: name
-      type: String!
+    - name: trackId
+      type: Int!
   graphql:
-    typeName: App_Genre
-    inputTypeName: App_GenreInput
+    typeName: PlaylistTrack
+    inputTypeName: PlaylistTrackInput
   dataConnectorTypeMapping:
     - dataConnectorName: chinook
-      dataConnectorObjectType: Genre
+      dataConnectorObjectType: PlaylistTrack
       fieldMapping:
         id:
           column:
             name: _id
-        genreId:
+        playlistId:
           column:
-            name: GenreId
-        name:
+            name: PlaylistId
+        trackId:
           column:
-            name: Name
+            name: TrackId
 
 ---
 kind: TypePermissions
 version: v1
 definition:
-  typeName: Genre
+  typeName: PlaylistTrack
   permissions:
     - role: admin
       output:
         allowedFields:
           - id
-          - genreId
-          - name
+          - playlistId
+          - trackId
 
 ---
 kind: ObjectBooleanExpressionType
 version: v1
 definition:
-  name: GenreBoolExp
-  objectType: Genre
+  name: PlaylistTrackBoolExp
+  objectType: PlaylistTrack
   dataConnectorName: chinook
-  dataConnectorObjectType: Genre
+  dataConnectorObjectType: PlaylistTrack
   comparableFields:
     - fieldName: id
       operators:
         enableAll: true
-    - fieldName: genreId
+    - fieldName: playlistId
       operators:
         enableAll: true
-    - fieldName: name
+    - fieldName: trackId
       operators:
         enableAll: true
   graphql:
-    typeName: App_GenreBoolExp
+    typeName: PlaylistTrackBoolExp
 
 ---
 kind: Model
 version: v1
 definition:
-  name: Genre
-  objectType: Genre
+  name: PlaylistTrack
+  objectType: PlaylistTrack
   source:
     dataConnectorName: chinook
-    collection: Genre
-  filterExpressionType: GenreBoolExp
+    collection: PlaylistTrack
+  filterExpressionType: PlaylistTrackBoolExp
   orderableFields:
     - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: genreId
+    - fieldName: playlistId
       orderByDirections:
         enableAll: true
-    - fieldName: name
+    - fieldName: trackId
       orderByDirections:
         enableAll: true
   graphql:
     selectMany:
-      queryRootField: genre
+      queryRootField: playlistTrack
     selectUniques:
-      - queryRootField: genreById
+      - queryRootField: playlistTrackById
         uniqueIdentifier:
           - id
-    orderByExpressionType: App_GenreOrderBy
+    orderByExpressionType: PlaylistTrackOrderBy
 
 ---
 kind: ModelPermissions
 version: v1
 definition:
-  modelName: Genre
+  modelName: PlaylistTrack
   permissions:
     - role: admin
       select:

@@ -37,7 +37,8 @@ in
     engine = import ./service-engine.nix {
       inherit pkgs;
       port = engine-port;
-      connectors = [{ name = "chinook"; url = "http://connector:${connector-port}"; subgraph = ../fixtures/ddn/subgraphs/chinook; }];
+      connectors.chinook = "http://connector:${connector-port}";
+      ddn-dirs = [ ../fixtures/ddn/chinook ];
       service.depends_on = {
         auth-hook.condition = "service_started";
       };
