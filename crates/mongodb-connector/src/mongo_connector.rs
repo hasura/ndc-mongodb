@@ -149,6 +149,7 @@ impl Connector for MongoConnector {
         state: &Self::State,
         request: QueryRequest,
     ) -> Result<JsonResponse<QueryResponse>, QueryError> {
+        tracing::debug!(query_request = %serde_json::to_string(&request).unwrap(), "received query request");
         let v2_request = v3_to_v2_query_request(
             &QueryContext {
                 functions: vec![],
@@ -160,8 +161,6 @@ impl Connector for MongoConnector {
         let response = handle_query_request(state, v2_request)
             .await
             .map_err(mongo_agent_error_to_query_error)?;
-        let r = v2_to_v3_query_response(response);
-        tracing::warn!(v3_response = %serde_json::to_string(&r).unwrap());
-        Ok(r.into())
+        Ok(v2_to_v3_query_response(response).into())
     }
 }
