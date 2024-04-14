@@ -409,7 +409,6 @@ mod tests {
             foreach: None,
             variables: Some(
                 (1..=12)
-                    .into_iter()
                     .map(|artist_id| [("artistId".to_owned(), json!(artist_id))].into())
                     .collect(),
             ),
