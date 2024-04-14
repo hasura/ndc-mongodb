@@ -5,7 +5,7 @@ definition:
   name: Employee
   fields:
     - name: id
-      type: ObjectId!
+      type: Chinook_ObjectId!
     - name: address
       type: String!
     - name: birthDate
@@ -31,14 +31,14 @@ definition:
     - name: postalCode
       type: String!
     - name: reportsTo
-      type: ExtendedJson
+      type: Chinook_ExtendedJson
     - name: state
       type: String!
     - name: title
       type: String!
   graphql:
-    typeName: App_Employee
-    inputTypeName: App_EmployeeInput
+    typeName: Employee
+    inputTypeName: EmployeeInput
   dataConnectorTypeMapping:
     - dataConnectorName: chinook
       dataConnectorObjectType: Employee
@@ -176,7 +176,7 @@ definition:
       operators:
         enableAll: true
   graphql:
-    typeName: App_EmployeeBoolExp
+    typeName: EmployeeBoolExp
 
 ---
 kind: Model
@@ -244,7 +244,7 @@ definition:
       - queryRootField: employeeById
         uniqueIdentifier:
           - id
-    orderByExpressionType: App_EmployeeOrderBy
+    orderByExpressionType: EmployeeOrderBy
 
 ---
 kind: ModelPermissions

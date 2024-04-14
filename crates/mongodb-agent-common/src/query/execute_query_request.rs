@@ -14,7 +14,11 @@ pub async fn execute_query_request(
     query_request: QueryRequest,
 ) -> Result<QueryResponse, MongoAgentError> {
     let (pipeline, response_shape) = pipeline_for_query_request(&query_request)?;
-    tracing::debug!(pipeline = %serde_json::to_string(&pipeline).unwrap(), "aggregate pipeline");
+    tracing::debug!(
+        ?query_request,
+        pipeline = %serde_json::to_string(&pipeline).unwrap(),
+        "executing query"
+    );
 
     let document_cursor = collection.aggregate(pipeline, None).await?;
 

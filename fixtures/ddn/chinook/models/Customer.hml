@@ -5,7 +5,7 @@ definition:
   name: Customer
   fields:
     - name: id
-      type: ObjectId!
+      type: Chinook_ObjectId!
     - name: address
       type: String!
     - name: city
@@ -27,14 +27,14 @@ definition:
     - name: phone
       type: String!
     - name: postalCode
-      type: ExtendedJson
+      type: Chinook_ExtendedJson
     - name: state
       type: String!
     - name: supportRepId
       type: Int!
   graphql:
-    typeName: App_Customer
-    inputTypeName: App_CustomerInput
+    typeName: Customer
+    inputTypeName: CustomerInput
   dataConnectorTypeMapping:
     - dataConnectorName: chinook
       dataConnectorObjectType: Customer
@@ -158,7 +158,7 @@ definition:
       operators:
         enableAll: true
   graphql:
-    typeName: App_CustomerBoolExp
+    typeName: CustomerBoolExp
 
 ---
 kind: Model
@@ -220,7 +220,7 @@ definition:
       - queryRootField: customerById
         uniqueIdentifier:
           - id
-    orderByExpressionType: App_CustomerOrderBy
+    orderByExpressionType: CustomerOrderBy
 
 ---
 kind: ModelPermissions

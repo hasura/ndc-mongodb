@@ -1,0 +1,138 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: Comments
+  fields:
+    - name: id
+      type: ObjectId!
+    - name: date
+      type: Date!
+    - name: email
+      type: String!
+    - name: movieId
+      type: ObjectId!
+    - name: name
+      type: String!
+    - name: text
+      type: String!
+  graphql:
+    typeName: Comments
+    inputTypeName: CommentsInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: comments
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        date:
+          column:
+            name: date
+        email:
+          column:
+            name: email
+        movieId:
+          column:
+            name: movie_id
+        name:
+          column:
+            name: name
+        text:
+          column:
+            name: text
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Comments
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - date
+          - email
+          - movieId
+          - name
+          - text
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: CommentsBoolExp
+  objectType: Comments
+  dataConnectorName: sample_mflix
+  dataConnectorObjectType: comments
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: date
+      operators:
+        enableAll: true
+    - fieldName: email
+      operators:
+        enableAll: true
+    - fieldName: movieId
+      operators:
+        enableAll: true
+    - fieldName: name
+      operators:
+        enableAll: true
+    - fieldName: text
+      operators:
+        enableAll: true
+  graphql:
+    typeName: CommentsBoolExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: Comments
+  objectType: Comments
+  source:
+    dataConnectorName: sample_mflix
+    collection: comments
+  filterExpressionType: CommentsBoolExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: date
+      orderByDirections:
+        enableAll: true
+    - fieldName: email
+      orderByDirections:
+        enableAll: true
+    - fieldName: movieId
+      orderByDirections:
+        enableAll: true
+    - fieldName: name
+      orderByDirections:
+        enableAll: true
+    - fieldName: text
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: comments
+    selectUniques:
+      - queryRootField: commentsById
+        uniqueIdentifier:
+          - id
+    orderByExpressionType: CommentsOrderBy
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Comments
+  permissions:
+    - role: admin
+      select:
+        filter: null
+

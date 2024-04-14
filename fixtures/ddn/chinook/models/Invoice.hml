@@ -5,7 +5,7 @@ definition:
   name: Invoice
   fields:
     - name: id
-      type: ObjectId!
+      type: Chinook_ObjectId!
     - name: billingAddress
       type: String!
     - name: billingCity
@@ -13,7 +13,7 @@ definition:
     - name: billingCountry
       type: String!
     - name: billingPostalCode
-      type: ExtendedJson
+      type: Chinook_ExtendedJson
     - name: billingState
       type: String!
     - name: customerId
@@ -25,8 +25,8 @@ definition:
     - name: total
       type: Float!
   graphql:
-    typeName: App_Invoice
-    inputTypeName: App_InvoiceInput
+    typeName: Invoice
+    inputTypeName: InvoiceInput
   dataConnectorTypeMapping:
     - dataConnectorName: chinook
       dataConnectorObjectType: Invoice
@@ -122,7 +122,7 @@ definition:
       operators:
         enableAll: true
   graphql:
-    typeName: App_InvoiceBoolExp
+    typeName: InvoiceBoolExp
 
 ---
 kind: Model
@@ -172,7 +172,7 @@ definition:
       - queryRootField: invoiceById
         uniqueIdentifier:
           - id
-    orderByExpressionType: App_InvoiceOrderBy
+    orderByExpressionType: InvoiceOrderBy
 
 ---
 kind: ModelPermissions

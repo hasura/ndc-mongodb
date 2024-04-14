@@ -5,7 +5,7 @@ definition:
   name: Track
   fields:
     - name: id
-      type: ObjectId!
+      type: Chinook_ObjectId!
     - name: albumId
       type: Int!
     - name: bytes
@@ -25,8 +25,8 @@ definition:
     - name: unitPrice
       type: Float!
   graphql:
-    typeName: App_Track
-    inputTypeName: App_TrackInput
+    typeName: Track
+    inputTypeName: TrackInput
   dataConnectorTypeMapping:
     - dataConnectorName: chinook
       dataConnectorObjectType: Track
@@ -122,7 +122,7 @@ definition:
       operators:
         enableAll: true
   graphql:
-    typeName: App_TrackBoolExp
+    typeName: TrackBoolExp
 
 ---
 kind: Model
@@ -172,7 +172,7 @@ definition:
       - queryRootField: trackById
         uniqueIdentifier:
           - id
-    orderByExpressionType: App_TrackOrderBy
+    orderByExpressionType: TrackOrderBy
 
 ---
 kind: ModelPermissions

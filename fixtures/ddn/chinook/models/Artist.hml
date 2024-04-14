@@ -2,99 +2,99 @@
 kind: ObjectType
 version: v1
 definition:
-  name: Playlist
+  name: Artist
   fields:
     - name: id
-      type: ObjectId!
+      type: Chinook_ObjectId!
+    - name: artistId
+      type: Int!
     - name: name
       type: String!
-    - name: playlistId
-      type: Int!
   graphql:
-    typeName: App_Playlist
-    inputTypeName: App_PlaylistInput
+    typeName: Artist
+    inputTypeName: ArtistInput
   dataConnectorTypeMapping:
     - dataConnectorName: chinook
-      dataConnectorObjectType: Playlist
+      dataConnectorObjectType: Artist
       fieldMapping:
         id:
           column:
             name: _id
+        artistId:
+          column:
+            name: ArtistId
         name:
           column:
             name: Name
-        playlistId:
-          column:
-            name: PlaylistId
 
 ---
 kind: TypePermissions
 version: v1
 definition:
-  typeName: Playlist
+  typeName: Artist
   permissions:
     - role: admin
       output:
         allowedFields:
           - id
+          - artistId
           - name
-          - playlistId
 
 ---
 kind: ObjectBooleanExpressionType
 version: v1
 definition:
-  name: PlaylistBoolExp
-  objectType: Playlist
+  name: ArtistBoolExp
+  objectType: Artist
   dataConnectorName: chinook
-  dataConnectorObjectType: Playlist
+  dataConnectorObjectType: Artist
   comparableFields:
     - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: artistId
       operators:
         enableAll: true
     - fieldName: name
       operators:
         enableAll: true
-    - fieldName: playlistId
-      operators:
-        enableAll: true
   graphql:
-    typeName: App_PlaylistBoolExp
+    typeName: ArtistBoolExp
 
 ---
 kind: Model
 version: v1
 definition:
-  name: Playlist
-  objectType: Playlist
+  name: Artist
+  objectType: Artist
   source:
     dataConnectorName: chinook
-    collection: Playlist
-  filterExpressionType: PlaylistBoolExp
+    collection: Artist
+  filterExpressionType: ArtistBoolExp
   orderableFields:
     - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: artistId
       orderByDirections:
         enableAll: true
     - fieldName: name
       orderByDirections:
         enableAll: true
-    - fieldName: playlistId
-      orderByDirections:
-        enableAll: true
   graphql:
     selectMany:
-      queryRootField: playlist
+      queryRootField: artist
     selectUniques:
-      - queryRootField: playlistById
+      - queryRootField: artistById
         uniqueIdentifier:
           - id
-    orderByExpressionType: App_PlaylistOrderBy
+    orderByExpressionType: ArtistOrderBy
 
 ---
 kind: ModelPermissions
 version: v1
 definition:
-  modelName: Playlist
+  modelName: Artist
   permissions:
     - role: admin
       select:

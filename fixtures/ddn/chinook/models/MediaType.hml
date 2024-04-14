@@ -2,111 +2,99 @@
 kind: ObjectType
 version: v1
 definition:
-  name: Album
+  name: MediaType
   fields:
     - name: id
-      type: ObjectId!
-    - name: albumId
+      type: Chinook_ObjectId!
+    - name: mediaTypeId
       type: Int!
-    - name: artistId
-      type: Int!
-    - name: title
+    - name: name
       type: String!
   graphql:
-    typeName: App_Album
-    inputTypeName: App_AlbumInput
+    typeName: MediaType
+    inputTypeName: MediaTypeInput
   dataConnectorTypeMapping:
     - dataConnectorName: chinook
-      dataConnectorObjectType: Album
+      dataConnectorObjectType: MediaType
       fieldMapping:
         id:
           column:
             name: _id
-        albumId:
+        mediaTypeId:
           column:
-            name: AlbumId
-        artistId:
+            name: MediaTypeId
+        name:
           column:
-            name: ArtistId
-        title:
-          column:
-            name: Title
+            name: Name
 
 ---
 kind: TypePermissions
 version: v1
 definition:
-  typeName: Album
+  typeName: MediaType
   permissions:
     - role: admin
       output:
         allowedFields:
           - id
-          - albumId
-          - artistId
-          - title
+          - mediaTypeId
+          - name
 
 ---
 kind: ObjectBooleanExpressionType
 version: v1
 definition:
-  name: AlbumBoolExp
-  objectType: Album
+  name: MediaTypeBoolExp
+  objectType: MediaType
   dataConnectorName: chinook
-  dataConnectorObjectType: Album
+  dataConnectorObjectType: MediaType
   comparableFields:
     - fieldName: id
       operators:
         enableAll: true
-    - fieldName: albumId
+    - fieldName: mediaTypeId
       operators:
         enableAll: true
-    - fieldName: artistId
-      operators:
-        enableAll: true
-    - fieldName: title
+    - fieldName: name
       operators:
         enableAll: true
   graphql:
-    typeName: App_AlbumBoolExp
+    typeName: MediaTypeBoolExp
 
 ---
 kind: Model
 version: v1
 definition:
-  name: Album
-  objectType: Album
+  name: MediaType
+  objectType: MediaType
   source:
     dataConnectorName: chinook
-    collection: Album
-  filterExpressionType: AlbumBoolExp
+    collection: MediaType
+  filterExpressionType: MediaTypeBoolExp
   orderableFields:
     - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: albumId
+    - fieldName: mediaTypeId
       orderByDirections:
         enableAll: true
-    - fieldName: artistId
-      orderByDirections:
-        enableAll: true
-    - fieldName: title
+    - fieldName: name
       orderByDirections:
         enableAll: true
   graphql:
     selectMany:
-      queryRootField: album
+      queryRootField: mediaType
     selectUniques:
-      - queryRootField: albumById
+      - queryRootField: mediaTypeById
         uniqueIdentifier:
           - id
-    orderByExpressionType: App_AlbumOrderBy
+    orderByExpressionType: MediaTypeOrderBy
 
 ---
 kind: ModelPermissions
 version: v1
 definition:
-  modelName: Album
+  modelName: MediaType
   permissions:
     - role: admin
       select:

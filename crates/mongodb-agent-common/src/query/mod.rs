@@ -28,8 +28,6 @@ pub async fn handle_query_request(
     config: &MongoConfig,
     query_request: QueryRequest,
 ) -> Result<QueryResponse, MongoAgentError> {
-    tracing::debug!(?config, query_request = %serde_json::to_string(&query_request).unwrap(), "executing query");
-
     let database = config.client.database(&config.database);
     let collection = database.collection::<Document>(&collection_name(&query_request.target));
 
