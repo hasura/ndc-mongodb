@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 use dc_api_types::comparison_column::ColumnSelector;
 use dc_api_types::{
@@ -56,7 +56,7 @@ pub fn pipeline_for_foreach(
     foreach: Vec<ForeachVariant>,
     query_request: &QueryRequest,
 ) -> Result<(Pipeline, ResponseShape), MongoAgentError> {
-    let pipelines_with_response_shapes: BTreeMap<String, (Pipeline, ResponseShape)> = foreach
+    let pipelines_with_response_shapes: Vec<(String, (Pipeline, ResponseShape))> = foreach
         .into_iter()
         .enumerate()
         .map(|(index, foreach_variant)| {
