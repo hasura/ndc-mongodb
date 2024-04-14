@@ -15,8 +15,8 @@ definition:
     - name: zipcode
       type: String!
   graphql:
-    typeName: App_TheatersLocationAddress
-    inputTypeName: App_TheatersLocationAddressInput
+    typeName: TheatersLocationAddress
+    inputTypeName: TheatersLocationAddressInput
   dataConnectorTypeMapping:
     - dataConnectorName: sample_mflix
       dataConnectorObjectType: theaters_location_address
@@ -47,8 +47,8 @@ definition:
     - name: type
       type: String!
   graphql:
-    typeName: App_TheatersLocationGeo
-    inputTypeName: App_TheatersLocationGeoInput
+    typeName: TheatersLocationGeo
+    inputTypeName: TheatersLocationGeoInput
   dataConnectorTypeMapping:
     - dataConnectorName: sample_mflix
       dataConnectorObjectType: theaters_location_geo
@@ -76,8 +76,8 @@ definition:
     - name: geo
       type: TheatersLocationGeo!
   graphql:
-    typeName: App_TheatersLocation
-    inputTypeName: App_TheatersLocationInput
+    typeName: TheatersLocation
+    inputTypeName: TheatersLocationInput
   dataConnectorTypeMapping:
     - dataConnectorName: sample_mflix
       dataConnectorObjectType: theaters_location
@@ -107,8 +107,8 @@ definition:
     - name: theaterId
       type: Int!
   graphql:
-    typeName: App_Theaters
-    inputTypeName: App_TheatersInput
+    typeName: Theaters
+    inputTypeName: TheatersInput
   dataConnectorTypeMapping:
     - dataConnectorName: sample_mflix
       dataConnectorObjectType: theaters
@@ -155,7 +155,7 @@ definition:
       operators:
         enableAll: true
   graphql:
-    typeName: App_TheatersBoolExp
+    typeName: TheatersBoolExp
 
 ---
 kind: Model
@@ -184,7 +184,7 @@ definition:
       - queryRootField: theatersById
         uniqueIdentifier:
           - id
-    orderByExpressionType: App_TheatersOrderBy
+    orderByExpressionType: TheatersOrderBy
 
 ---
 kind: ModelPermissions

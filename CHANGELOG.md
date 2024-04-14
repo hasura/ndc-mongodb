@@ -2,6 +2,7 @@
 This changelog documents the changes between release versions.
 
 ## [Unreleased]
+- Fix incorrect order of results for query requests with more than 10 variable sets (#37)
 
 ## [0.0.4] - 2024-04-12
 - Queries that attempt to compare a column to a column in the query root table, or a related table, will now fail instead of giving the incorrect result ([#22](https://github.com/hasura/ndc-mongodb/pull/22))

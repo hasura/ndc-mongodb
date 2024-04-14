@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 use dc_api_types::comparison_column::ColumnSelector;
 use dc_api_types::{
@@ -56,7 +56,7 @@ pub fn pipeline_for_foreach(
     foreach: Vec<ForeachVariant>,
     query_request: &QueryRequest,
 ) -> Result<(Pipeline, ResponseShape), MongoAgentError> {
-    let pipelines_with_response_shapes: BTreeMap<String, (Pipeline, ResponseShape)> = foreach
+    let pipelines_with_response_shapes: Vec<(String, (Pipeline, ResponseShape))> = foreach
         .into_iter()
         .enumerate()
         .map(|(index, foreach_variant)| {
@@ -133,7 +133,9 @@ fn facet_name(index: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use dc_api_types::{QueryRequest, QueryResponse};
+    use dc_api_types::{
+        BinaryComparisonOperator, ComparisonColumn, Field, Query, QueryRequest, QueryResponse,
+    };
     use mongodb::{
         bson::{doc, from_document},
         options::AggregateOptions,
@@ -391,6 +393,180 @@ mod tests {
                                 ]
                             }
                         }
+                    ],
+                })?)]))
+            });
+
+        let result = execute_query_request(&collection, query_request).await?;
+        assert_eq!(expected_response, result);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn executes_foreach_with_variables() -> Result<(), anyhow::Error> {
+        let query_request = QueryRequest {
+            foreach: None,
+            variables: Some(
+                (1..=12)
+                    .map(|artist_id| [("artistId".to_owned(), json!(artist_id))].into())
+                    .collect(),
+            ),
+            target: dc_api_types::Target::TTable {
+                name: vec!["tracks".to_owned()],
+            },
+            relationships: Default::default(),
+            query: Box::new(Query {
+                r#where: Some(dc_api_types::Expression::ApplyBinaryComparison {
+                    column: ComparisonColumn::new(
+                        "int".to_owned(),
+                        dc_api_types::ColumnSelector::Column("artistId".to_owned()),
+                    ),
+                    operator: BinaryComparisonOperator::Equal,
+                    value: dc_api_types::ComparisonValue::Variable {
+                        name: "artistId".to_owned(),
+                    },
+                }),
+                fields: Some(Some(
+                    [
+                        (
+                            "albumId".to_owned(),
+                            Field::Column {
+                                column: "albumId".to_owned(),
+                                column_type: "int".to_owned(),
+                            },
+                        ),
+                        (
+                            "title".to_owned(),
+                            Field::Column {
+                                column: "title".to_owned(),
+                                column_type: "string".to_owned(),
+                            },
+                        ),
+                    ]
+                    .into(),
+                )),
+                aggregates: None,
+                aggregates_limit: None,
+                limit: None,
+                offset: None,
+                order_by: None,
+            }),
+        };
+
+        fn facet(artist_id: i32) -> serde_json::Value {
+            json!([
+                { "$match": { "artistId": {"$eq": artist_id } } },
+                { "$replaceWith": {
+                    "albumId": { "$ifNull": ["$albumId", null] },
+                    "title": { "$ifNull": ["$title", null] }
+                } },
+            ])
+        }
+
+        let expected_pipeline = json!([
+            {
+                "$facet": {
+                    "__FACET___0": facet(1),
+                    "__FACET___1": facet(2),
+                    "__FACET___2": facet(3),
+                    "__FACET___3": facet(4),
+                    "__FACET___4": facet(5),
+                    "__FACET___5": facet(6),
+                    "__FACET___6": facet(7),
+                    "__FACET___7": facet(8),
+                    "__FACET___8": facet(9),
+                    "__FACET___9": facet(10),
+                    "__FACET___10": facet(11),
+                    "__FACET___11": facet(12),
+                },
+            },
+            {
+                "$replaceWith": {
+                    "rows": [
+                        { "query": { "rows": "$__FACET___0" } },
+                        { "query": { "rows": "$__FACET___1" } },
+                        { "query": { "rows": "$__FACET___2" } },
+                        { "query": { "rows": "$__FACET___3" } },
+                        { "query": { "rows": "$__FACET___4" } },
+                        { "query": { "rows": "$__FACET___5" } },
+                        { "query": { "rows": "$__FACET___6" } },
+                        { "query": { "rows": "$__FACET___7" } },
+                        { "query": { "rows": "$__FACET___8" } },
+                        { "query": { "rows": "$__FACET___9" } },
+                        { "query": { "rows": "$__FACET___10" } },
+                        { "query": { "rows": "$__FACET___11" } },
+                    ]
+                },
+            }
+        ]);
+
+        let expected_response: QueryResponse = from_value(json! ({
+            "rows": [
+                {
+                    "query": {
+                        "rows": [
+                            { "albumId": 1, "title": "For Those About To Rock We Salute You" },
+                            { "albumId": 4, "title": "Let There Be Rock" }
+                        ]
+                    }
+                },
+                { "query": { "rows": [] } },
+                {
+                    "query": {
+                        "rows": [
+                            { "albumId": 2, "title": "Balls to the Wall" },
+                            { "albumId": 3, "title": "Restless and Wild" }
+                        ]
+                    }
+                },
+                { "query": { "rows": [] } },
+                { "query": { "rows": [] } },
+                { "query": { "rows": [] } },
+                { "query": { "rows": [] } },
+                { "query": { "rows": [] } },
+                { "query": { "rows": [] } },
+                { "query": { "rows": [] } },
+                { "query": { "rows": [] } },
+            ]
+        }))?;
+
+        let mut collection = MockCollectionTrait::new();
+        collection
+            .expect_aggregate()
+            .returning(move |pipeline, _: Option<AggregateOptions>| {
+                assert_eq!(expected_pipeline, to_value(pipeline).unwrap());
+                Ok(mock_stream(vec![Ok(from_document(doc! {
+                    "rows": [
+                        {
+                            "query": {
+                                "rows": [
+                                    { "albumId": 1, "title": "For Those About To Rock We Salute You" },
+                                    { "albumId": 4, "title": "Let There Be Rock" }
+                                ]
+                            }
+                        },
+                        {
+                            "query": {
+                                "rows": []
+                            }
+                        },
+                        {
+                            "query": {
+                                "rows": [
+                                    { "albumId": 2, "title": "Balls to the Wall" },
+                                    { "albumId": 3, "title": "Restless and Wild" }
+                                ]
+                            }
+                        },
+                        { "query": { "rows": [] } },
+                        { "query": { "rows": [] } },
+                        { "query": { "rows": [] } },
+                        { "query": { "rows": [] } },
+                        { "query": { "rows": [] } },
+                        { "query": { "rows": [] } },
+                        { "query": { "rows": [] } },
+                        { "query": { "rows": [] } },
                     ],
                 })?)]))
             });

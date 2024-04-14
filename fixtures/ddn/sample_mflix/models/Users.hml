@@ -2,135 +2,111 @@
 kind: ObjectType
 version: v1
 definition:
-  name: Comments
+  name: Users
   fields:
     - name: id
       type: ObjectId!
-    - name: date
-      type: Date!
     - name: email
       type: String!
-    - name: movieId
-      type: ObjectId!
     - name: name
       type: String!
-    - name: text
+    - name: password
       type: String!
   graphql:
-    typeName: App_Comments
-    inputTypeName: App_CommentsInput
+    typeName: Users
+    inputTypeName: UsersInput
   dataConnectorTypeMapping:
     - dataConnectorName: sample_mflix
-      dataConnectorObjectType: comments
+      dataConnectorObjectType: users
       fieldMapping:
         id:
           column:
             name: _id
-        date:
-          column:
-            name: date
         email:
           column:
             name: email
-        movieId:
-          column:
-            name: movie_id
         name:
           column:
             name: name
-        text:
+        password:
           column:
-            name: text
+            name: password
 
 ---
 kind: TypePermissions
 version: v1
 definition:
-  typeName: Comments
+  typeName: Users
   permissions:
     - role: admin
       output:
         allowedFields:
           - id
-          - date
           - email
-          - movieId
           - name
-          - text
+          - password
 
 ---
 kind: ObjectBooleanExpressionType
 version: v1
 definition:
-  name: CommentsBoolExp
-  objectType: Comments
+  name: UsersBoolExp
+  objectType: Users
   dataConnectorName: sample_mflix
-  dataConnectorObjectType: comments
+  dataConnectorObjectType: users
   comparableFields:
     - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: date
       operators:
         enableAll: true
     - fieldName: email
       operators:
         enableAll: true
-    - fieldName: movieId
-      operators:
-        enableAll: true
     - fieldName: name
       operators:
         enableAll: true
-    - fieldName: text
+    - fieldName: password
       operators:
         enableAll: true
   graphql:
-    typeName: App_CommentsBoolExp
+    typeName: UsersBoolExp
 
 ---
 kind: Model
 version: v1
 definition:
-  name: Comments
-  objectType: Comments
+  name: Users
+  objectType: Users
   source:
     dataConnectorName: sample_mflix
-    collection: comments
-  filterExpressionType: CommentsBoolExp
+    collection: users
+  filterExpressionType: UsersBoolExp
   orderableFields:
     - fieldName: id
-      orderByDirections:
-        enableAll: true
-    - fieldName: date
       orderByDirections:
         enableAll: true
     - fieldName: email
       orderByDirections:
         enableAll: true
-    - fieldName: movieId
-      orderByDirections:
-        enableAll: true
     - fieldName: name
       orderByDirections:
         enableAll: true
-    - fieldName: text
+    - fieldName: password
       orderByDirections:
         enableAll: true
   graphql:
     selectMany:
-      queryRootField: comments
+      queryRootField: users
     selectUniques:
-      - queryRootField: commentsById
+      - queryRootField: usersById
         uniqueIdentifier:
           - id
-    orderByExpressionType: App_CommentsOrderBy
+    orderByExpressionType: UsersOrderBy
 
 ---
 kind: ModelPermissions
 version: v1
 definition:
-  modelName: Comments
+  modelName: Users
   permissions:
     - role: admin
       select:

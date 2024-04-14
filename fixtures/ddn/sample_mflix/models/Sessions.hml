@@ -2,99 +2,99 @@
 kind: ObjectType
 version: v1
 definition:
-  name: PlaylistTrack
+  name: Sessions
   fields:
     - name: id
       type: ObjectId!
-    - name: playlistId
-      type: Int!
-    - name: trackId
-      type: Int!
+    - name: jwt
+      type: String!
+    - name: userId
+      type: String!
   graphql:
-    typeName: App_PlaylistTrack
-    inputTypeName: App_PlaylistTrackInput
+    typeName: Sessions
+    inputTypeName: SessionsInput
   dataConnectorTypeMapping:
-    - dataConnectorName: chinook
-      dataConnectorObjectType: PlaylistTrack
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: sessions
       fieldMapping:
         id:
           column:
             name: _id
-        playlistId:
+        jwt:
           column:
-            name: PlaylistId
-        trackId:
+            name: jwt
+        userId:
           column:
-            name: TrackId
+            name: user_id
 
 ---
 kind: TypePermissions
 version: v1
 definition:
-  typeName: PlaylistTrack
+  typeName: Sessions
   permissions:
     - role: admin
       output:
         allowedFields:
           - id
-          - playlistId
-          - trackId
+          - jwt
+          - userId
 
 ---
 kind: ObjectBooleanExpressionType
 version: v1
 definition:
-  name: PlaylistTrackBoolExp
-  objectType: PlaylistTrack
-  dataConnectorName: chinook
-  dataConnectorObjectType: PlaylistTrack
+  name: SessionsBoolExp
+  objectType: Sessions
+  dataConnectorName: sample_mflix
+  dataConnectorObjectType: sessions
   comparableFields:
     - fieldName: id
       operators:
         enableAll: true
-    - fieldName: playlistId
+    - fieldName: jwt
       operators:
         enableAll: true
-    - fieldName: trackId
+    - fieldName: userId
       operators:
         enableAll: true
   graphql:
-    typeName: App_PlaylistTrackBoolExp
+    typeName: SessionsBoolExp
 
 ---
 kind: Model
 version: v1
 definition:
-  name: PlaylistTrack
-  objectType: PlaylistTrack
+  name: Sessions
+  objectType: Sessions
   source:
-    dataConnectorName: chinook
-    collection: PlaylistTrack
-  filterExpressionType: PlaylistTrackBoolExp
+    dataConnectorName: sample_mflix
+    collection: sessions
+  filterExpressionType: SessionsBoolExp
   orderableFields:
     - fieldName: id
       orderByDirections:
         enableAll: true
-    - fieldName: playlistId
+    - fieldName: jwt
       orderByDirections:
         enableAll: true
-    - fieldName: trackId
+    - fieldName: userId
       orderByDirections:
         enableAll: true
   graphql:
     selectMany:
-      queryRootField: playlistTrack
+      queryRootField: sessions
     selectUniques:
-      - queryRootField: playlistTrackById
+      - queryRootField: sessionsById
         uniqueIdentifier:
           - id
-    orderByExpressionType: App_PlaylistTrackOrderBy
+    orderByExpressionType: SessionsOrderBy
 
 ---
 kind: ModelPermissions
 version: v1
 definition:
-  modelName: PlaylistTrack
+  modelName: Sessions
   permissions:
     - role: admin
       select:
