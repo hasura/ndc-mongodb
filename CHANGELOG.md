@@ -7,6 +7,7 @@ This changelog documents the changes between release versions.
 - Fixed bug where use of aggregate functions in queries would fail ([#26](https://github.com/hasura/ndc-mongodb/pull/26))
 - Rename Any type to ExtendedJSON to make its representation clearer ([#30](https://github.com/hasura/ndc-mongodb/pull/30))
 - The collection primary key `_id` property now has a unique constraint generated in the NDC schema for it ([#32](https://github.com/hasura/ndc-mongodb/pull/32))
+- Fix incorrect order of results for query requests with more than 10 variable sets (#37)
 
 ## [0.0.3] - 2024-03-28
 - Use separate schema files for each collection ([PR #14](https://github.com/hasura/ndc-mongodb/pull/14))
