@@ -28,6 +28,7 @@ pub async fn execute_query_request(
     let (pipeline, response_shape) = pipeline_for_query_request(&query_request, native_queries)?;
     tracing::debug!(
         ?query_request,
+        ?target,
         pipeline = %serde_json::to_string(&pipeline).unwrap(),
         "executing query"
     );
