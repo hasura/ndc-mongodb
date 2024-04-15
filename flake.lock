@@ -231,8 +231,7 @@
         "graphql-engine-source": "graphql-engine-source",
         "nixpkgs": "nixpkgs",
         "rust-overlay": "rust-overlay",
-        "systems": "systems_2",
-        "v3-e2e-testing-source": "v3-e2e-testing-source"
+        "systems": "systems_2"
       }
     },
     "rust-overlay": {
@@ -284,23 +283,6 @@
         "owner": "nix-systems",
         "repo": "default",
         "type": "github"
-      }
-    },
-    "v3-e2e-testing-source": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1706578034,
-        "narHash": "sha256-DkbumGH6W51qs4pHpEE972pUfyUiGfZFFNitv8p6DaQ=",
-        "ref": "jesse/update-mongodb",
-        "rev": "325240c938c253a21f2fe54161b0c94e54f1a3a5",
-        "revCount": 161,
-        "type": "git",
-        "url": "ssh://git@github.com/hasura/v3-e2e-testing"
-      },
-      "original": {
-        "ref": "jesse/update-mongodb",
-        "type": "git",
-        "url": "ssh://git@github.com/hasura/v3-e2e-testing"
       }
     }
   },
