@@ -8,7 +8,7 @@ definition:
     - name: name
       type: String!
   source:
-    dataConnectorName: mongodb
+    dataConnectorName: chinook
     dataConnectorCommand:
       function: hello
     argumentMapping:

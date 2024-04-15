@@ -830,10 +830,6 @@ definition:
               type: { type: named, name: Int }
             n:
               type: { type: named, name: Int }
-        HelloResult:
-          fields:
-            hello:
-              type: { type: named, name: String }
       collections:
         - name: Album
           arguments: {}
