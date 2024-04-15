@@ -1,4 +1,5 @@
 use lazy_static::lazy_static;
+use mongodb_support::BsonScalarType;
 use std::collections::BTreeMap;
 
 use configuration::{native_procedure::NativeProcedure, schema, Configuration};
@@ -15,8 +16,8 @@ pub async fn get_schema(
     config: &Configuration,
 ) -> Result<models::SchemaResponse, connector::SchemaError> {
     let schema = &config.schema;
-    let collections = schema.collections.iter().map(map_collection).collect();
     let object_types = config.object_types().map(map_object_type).collect();
+    let collections = schema.collections.iter().map(|(collection_name, collection)| map_collection(&object_types, collection_name, collection)).collect();
 
     let procedures = config
         .native_procedures
@@ -86,14 +87,36 @@ fn map_type(t: &schema::Type) -> models::Type {
     map_normalized_type(&t.clone().normalize_type())
 }
 
-fn map_collection((name, collection): (&String, &schema::Collection)) -> models::CollectionInfo {
+fn get_primary_key_uniqueness_constraint(object_types: &BTreeMap<String, models::ObjectType>, name: &str, collection: &schema::Collection) -> Option<(String, models::UniquenessConstraint)> {
+    // Check to make sure our collection's object type contains the _id objectid field
+    // If it doesn't (should never happen, all collections need an _id column), don't generate the constraint
+    let object_type = object_types.get(&collection.r#type)?;
+    let id_field = object_type.fields.get("_id")?;
+    match &id_field.r#type {
+        models::Type::Named { name } => {
+            if *name == BsonScalarType::ObjectId.graphql_name() { Some(()) } else { None }
+        },
+        models::Type::Nullable { .. } => None,
+        models::Type::Array { .. } => None,
+        models::Type::Predicate { .. } => None,
+    }?;
+    let uniqueness_constraint = models::UniquenessConstraint {
+        unique_columns: vec!["_id".into()]
+    };
+    let constraint_name = format!("{}_id", name);
+    Some((constraint_name, uniqueness_constraint))
+}
+
+fn map_collection(object_types: &BTreeMap<String, models::ObjectType>, name: &str, collection: &schema::Collection) -> models::CollectionInfo {
+    let pk_constraint = get_primary_key_uniqueness_constraint(object_types, name, collection);
+
     models::CollectionInfo {
-        name: name.clone(),
+        name: name.to_owned(),
         collection_type: collection.r#type.clone(),
         description: collection.description.clone(),
         arguments: Default::default(),
         foreign_keys: Default::default(),
-        uniqueness_constraints: Default::default(),
+        uniqueness_constraints: BTreeMap::from_iter(pk_constraint),
     }
 }
 

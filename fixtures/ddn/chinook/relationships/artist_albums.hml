@@ -1,0 +1,16 @@
+kind: Relationship
+version: v1
+definition:
+  name: albums
+  source: Artist
+  target:
+    model:
+      name: Album
+      relationshipType: Array
+  mapping:
+    - source:
+        fieldPath:
+          - fieldName: artistId
+      target:
+        modelField:
+          - fieldName: artistId

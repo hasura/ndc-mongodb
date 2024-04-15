@@ -18,8 +18,10 @@ in
       };
     };
 
-    connector = import ./service-mongodb-connector.nix {
+    connector = import ./service-connector.nix {
       inherit pkgs;
+      configuration-dir = ../fixtures/connector/chinook;
+      database-uri = "mongodb://mongodb/chinook";
       port = connector-port;
       service.depends_on.mongodb.condition = "service_healthy";
     };
@@ -35,7 +37,8 @@ in
     engine = import ./service-engine.nix {
       inherit pkgs;
       port = engine-port;
-      connector-url = "http://connector:${connector-port}";
+      connectors.chinook = "http://connector:${connector-port}";
+      ddn-dirs = [ ../fixtures/ddn/chinook ];
       service.depends_on = {
         auth-hook.condition = "service_started";
       };

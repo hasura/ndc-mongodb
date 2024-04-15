@@ -1,19 +1,35 @@
 { pkgs
 , port ? "7100"
 , hostPort ? null
-, connector-url ? "http://connector:7130"
-, ddn-subgraph-dir ? ../fixtures/ddn/subgraphs/chinook
+
+  # Each key in the `connectors` map should match
+  # a `DataConnectorLink.definition.name` value in one of the given `ddn-dirs`
+  # to correctly match up configuration to connector instances.
+, connectors ? { sample_mflix = "http://connector:7130"; }
+, ddn-dirs ? [ ../fixtures/ddn/subgraphs/sample_mflix ]
 , auth-webhook ? { url = "http://auth-hook:3050/validate-request"; }
 , otlp-endpoint ? "http://jaeger:4317"
 , service ? { } # additional options to customize this service configuration
 }:
 
 let
-  # Compile JSON metadata from HML fixture
-  metadata = pkgs.stdenv.mkDerivation {
-    name = "hasura-metadata.json";
-    src = ddn-subgraph-dir;
-    nativeBuildInputs = with pkgs; [ jq yq-go ];
+  # Compile JSON metadata from HML fixtures
+  #
+  # Converts yaml documents from each ddn-dir into json objects, and combines
+  # objects into one big array. Produces a file in the Nix store of the form
+  # /nix/store/<hash>-hasura-metadata.json
+  metadata = pkgs.runCommand "hasura-metadata.json" { } ''
+    ${pkgs.jq}/bin/jq -s 'flatten(1)' \
+      ${builtins.concatStringsSep " " (builtins.map compile-ddn ddn-dirs)} \
+      > $out
+  '';
+
+  # Translate each yaml document from hml files into a json object, and combine
+  # all objects into an array
+  compile-ddn = ddn-dir: pkgs.stdenv.mkDerivation {
+    name = "ddn-${builtins.baseNameOf ddn-dir}.json";
+    src = ddn-dir;
+    nativeBuildInputs = with pkgs; [ findutils jq yq-go ];
 
     # The yq command converts the input sequence of yaml docs to a sequence of
     # newline-separated json docs.
@@ -21,21 +37,30 @@ let
     # The jq command combines those json docs into an array (due to the -s
     # switch), and modifies the json to update the data connector url.
     buildPhase = ''
-      combined=$(mktemp -t subgraph-XXXXXX.hml)
-      for obj in **/*.hml; do
+      combined=$(mktemp -t ddn-${builtins.baseNameOf ddn-dir}-XXXXXX.hml)
+      for obj in $(find . -name '*hml'); do
         echo "---" >> "$combined"
         cat "$obj" >> "$combined"
       done
       cat "$combined" \
         | yq -o=json \
-        | jq -s 'map(if .kind == "DataConnectorLink" then .definition.url = { singleUrl: { value: "${connector-url}" } } else . end)' \
-        > metadata.json
+        ${connector-url-substituters} \
+        | jq -s 'map(select(type != "null"))' \
+        > ddn.json
     '';
 
     installPhase = ''
-      cp metadata.json "$out"
+      cp ddn.json "$out"
     '';
   };
+
+  # Pipe commands to replace data connector urls in fixture configuration with
+  # urls of dockerized connector instances
+  connector-url-substituters = builtins.toString (builtins.attrValues (builtins.mapAttrs
+    (name: url:
+      '' | jq 'if .kind == "DataConnectorLink" and .definition.name == "${name}" then .definition.url = { singleUrl: { value: "${url}" } } else . end' ''
+    )
+    connectors));
 
   auth-config = pkgs.writeText "auth_config.json" (builtins.toJSON {
     version = "v1";
@@ -54,7 +79,7 @@ in
   image.contents = with pkgs.pkgsCross.linux; [
     cacert
     curl
-    v3-engine # added to pkgs via an overlay in flake.nix.
+    graphql-engine # added to pkgs via an overlay in flake.nix.
   ];
   service = withOverrides service {
     useHostStore = true;

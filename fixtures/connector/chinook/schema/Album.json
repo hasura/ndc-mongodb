@@ -25,9 +25,7 @@
         },
         "_id": {
           "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
+            "scalar": "objectId"
           }
         }
       },
