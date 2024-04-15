@@ -36,7 +36,7 @@ pub async fn handle_query_request(
 
 #[cfg(test)]
 mod tests {
-    use dc_api_types::{QueryRequest, QueryResponse};
+    use dc_api_types::{QueryRequest, QueryResponse, RowSet};
     use mongodb::{
         bson::{self, bson, doc, from_document, to_bson},
         options::AggregateOptions,
@@ -307,6 +307,30 @@ mod tests {
                     "date": "2018-08-14T15:05:03.142Z",
                 })?)]))
             });
+
+        let result = execute_query_request(&collection, query_request).await?;
+        assert_eq!(expected_response, result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn parses_empty_response() -> Result<(), anyhow::Error> {
+        let query_request: QueryRequest = from_value(json!({
+          "query": {
+            "fields": {
+              "date": { "type": "column", "column": "date", "column_type": "date", },
+            },
+          },
+          "target": { "type": "table", "name": [ "comments" ] },
+          "relationships": [],
+        }))?;
+
+        let expected_response = QueryResponse::Single(RowSet::Rows { rows: vec![] });
+
+        let mut collection = MockCollectionTrait::new();
+        collection
+            .expect_aggregate()
+            .returning(move |_pipeline, _: Option<AggregateOptions>| Ok(mock_stream(vec![])));
 
         let result = execute_query_request(&collection, query_request).await?;
         assert_eq!(expected_response, result);

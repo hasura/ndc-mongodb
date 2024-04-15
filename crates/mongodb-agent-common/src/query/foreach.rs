@@ -82,7 +82,7 @@ pub fn pipeline_for_foreach(
     let selection = Selection(doc! {
         "rows": pipelines_with_response_shapes.iter().map(|(key, (_, response_shape))| doc! {
             "query": match response_shape {
-                ResponseShape::RowStream => doc! { "rows": format!("${key}") }.into(),
+                ResponseShape::ListOfRows => doc! { "rows": format!("${key}") }.into(),
                 ResponseShape::SingleObject => Bson::String(format!("${key}")),
             }
         }).collect::<Vec<_>>()
