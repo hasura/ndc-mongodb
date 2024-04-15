@@ -26,7 +26,7 @@ pub fn mock_stream<T>(
 }
 
 /// Mocks the result of an aggregate call on a given collection.
-pub fn mock_result(collection: impl ToString, result: Bson) -> MockDatabaseTrait {
+pub fn mock_collection_aggregate_response(collection: impl ToString, result: Bson) -> MockDatabaseTrait {
     let collection_name = collection.to_string();
 
     let mut db = MockDatabaseTrait::new();
@@ -66,7 +66,7 @@ pub fn mock_result(collection: impl ToString, result: Bson) -> MockDatabaseTrait
 
 /// Mocks the result of an aggregate call on a given collection. Asserts that the pipeline that the
 /// aggregate call receives matches the given pipeline.
-pub fn mock_result_for_pipeline(
+pub fn mock_collection_aggregate_response_for_pipeline(
     collection: impl ToString,
     expected_pipeline: Bson,
     result: Bson,

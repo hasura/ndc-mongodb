@@ -256,7 +256,7 @@ mod tests {
     use serde_json::{from_value, json};
 
     use super::super::execute_query_request;
-    use crate::mongodb::test_helpers::mock_result_for_pipeline;
+    use crate::mongodb::test_helpers::mock_collection_aggregate_response_for_pipeline;
 
     #[tokio::test]
     async fn looks_up_an_array_relation() -> Result<(), anyhow::Error> {
@@ -334,7 +334,7 @@ mod tests {
             },
         ]);
 
-        let db = mock_result_for_pipeline(
+        let db = mock_collection_aggregate_response_for_pipeline(
             "classes",
             expected_pipeline,
             bson!([{
@@ -427,7 +427,7 @@ mod tests {
             },
         ]);
 
-        let db = mock_result_for_pipeline(
+        let db = mock_collection_aggregate_response_for_pipeline(
             "students",
             expected_pipeline,
             bson!([
@@ -526,7 +526,7 @@ mod tests {
             },
         ]);
 
-        let db = mock_result_for_pipeline(
+        let db = mock_collection_aggregate_response_for_pipeline(
             "classes",
             expected_pipeline,
             bson!([{
@@ -679,7 +679,7 @@ mod tests {
             },
         ]);
 
-        let db = mock_result_for_pipeline(
+        let db = mock_collection_aggregate_response_for_pipeline(
             "classes",
             expected_pipeline,
             bson!([{
@@ -800,7 +800,7 @@ mod tests {
             },
         ]);
 
-        let db = mock_result_for_pipeline(
+        let db = mock_collection_aggregate_response_for_pipeline(
             "classes",
             expected_pipeline,
             bson!([{
@@ -932,7 +932,7 @@ mod tests {
           },
         ]);
 
-        let db = mock_result_for_pipeline(
+        let db = mock_collection_aggregate_response_for_pipeline(
             "comments",
             expected_pipeline,
             bson!([{
@@ -1074,7 +1074,7 @@ mod tests {
             },
         ]);
 
-        let db = mock_result_for_pipeline(
+        let db = mock_collection_aggregate_response_for_pipeline(
             "comments",
             expected_pipeline,
             bson!([{

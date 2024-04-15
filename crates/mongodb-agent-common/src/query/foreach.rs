@@ -144,7 +144,7 @@ mod tests {
     use serde_json::{from_value, json};
 
     use crate::{
-        mongodb::test_helpers::mock_result_for_pipeline,
+        mongodb::test_helpers::mock_collection_aggregate_response_for_pipeline,
         query::execute_query_request::execute_query_request,
     };
 
@@ -223,7 +223,7 @@ mod tests {
             ]
         }))?;
 
-        let db = mock_result_for_pipeline(
+        let db = mock_collection_aggregate_response_for_pipeline(
             "tracks",
             expected_pipeline,
             bson!([{
@@ -362,7 +362,7 @@ mod tests {
             ]
         }))?;
 
-        let db = mock_result_for_pipeline(
+        let db = mock_collection_aggregate_response_for_pipeline(
             "tracks",
             expected_pipeline,
             bson!([{
@@ -527,7 +527,7 @@ mod tests {
             ]
         }))?;
 
-        let db = mock_result_for_pipeline(
+        let db = mock_collection_aggregate_response_for_pipeline(
             "tracks",
             expected_pipeline,
             bson!([{

@@ -39,7 +39,9 @@ mod tests {
     use serde_json::{from_value, json};
 
     use super::execute_query_request;
-    use crate::mongodb::test_helpers::{mock_result, mock_result_for_pipeline};
+    use crate::mongodb::test_helpers::{
+        mock_collection_aggregate_response, mock_collection_aggregate_response_for_pipeline,
+    };
 
     #[tokio::test]
     async fn executes_query() -> Result<(), anyhow::Error> {
@@ -71,7 +73,7 @@ mod tests {
             { "$replaceWith": { "student_gpa": { "$ifNull": ["$gpa", null] } } },
         ]);
 
-        let db = mock_result_for_pipeline(
+        let db = mock_collection_aggregate_response_for_pipeline(
             "students",
             expected_pipeline,
             bson!([
@@ -144,7 +146,7 @@ mod tests {
             },
         ]);
 
-        let db = mock_result_for_pipeline(
+        let db = mock_collection_aggregate_response_for_pipeline(
             "students",
             expected_pipeline,
             bson!([{
@@ -223,7 +225,7 @@ mod tests {
             },
         ]);
 
-        let db = mock_result_for_pipeline(
+        let db = mock_collection_aggregate_response_for_pipeline(
             "students",
             expected_pipeline,
             bson!([{
@@ -286,7 +288,7 @@ mod tests {
             },
         ]);
 
-        let db = mock_result_for_pipeline(
+        let db = mock_collection_aggregate_response_for_pipeline(
             "comments",
             expected_pipeline,
             bson!([{
@@ -313,7 +315,7 @@ mod tests {
 
         let expected_response = QueryResponse::Single(RowSet::Rows { rows: vec![] });
 
-        let db = mock_result("comments", bson!([]));
+        let db = mock_collection_aggregate_response("comments", bson!([]));
 
         let result = execute_query_request(db, query_request, &Default::default()).await?;
         assert_eq!(expected_response, result);
