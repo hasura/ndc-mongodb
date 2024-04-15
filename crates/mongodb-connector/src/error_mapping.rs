@@ -8,7 +8,7 @@ pub fn mongo_agent_error_to_query_error(error: MongoAgentError) -> QueryError {
     }
     let (status, err) = error.status_and_error_response();
     match status {
-        StatusCode::BAD_REQUEST => QueryError::InvalidRequest(err.message),
+        StatusCode::BAD_REQUEST => QueryError::UnprocessableContent(err.message),
         _ => QueryError::Other(Box::new(error)),
     }
 }
@@ -19,7 +19,7 @@ pub fn mongo_agent_error_to_explain_error(error: MongoAgentError) -> ExplainErro
     }
     let (status, err) = error.status_and_error_response();
     match status {
-        StatusCode::BAD_REQUEST => ExplainError::InvalidRequest(err.message),
+        StatusCode::BAD_REQUEST => ExplainError::UnprocessableContent(err.message),
         _ => ExplainError::Other(Box::new(error)),
     }
 }

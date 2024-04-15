@@ -25,6 +25,47 @@ pub fn mock_stream<T>(
     iter(items)
 }
 
+/// Mocks the result of an aggregate call on a given collection.
+pub fn mock_result(collection: impl ToString, result: Bson) -> MockDatabaseTrait {
+    let collection_name = collection.to_string();
+
+    let mut db = MockDatabaseTrait::new();
+    db.expect_collection().returning(move |name| {
+        assert_eq!(
+            name, collection_name,
+            "unexpected target for mock aggregate"
+        );
+
+        // Make some clones to work around ownership issues. These closures are `FnMut`, not
+        // `FnOnce` so the type checker can't just move ownership into the closure.
+        let per_colection_result = result.clone();
+
+        let mut mock_collection = MockCollectionTrait::new();
+        mock_collection.expect_aggregate().returning(
+            move |_pipeline, _: Option<AggregateOptions>| {
+                let result_docs = {
+                    let items = match per_colection_result.clone() {
+                        Bson::Array(xs) => xs,
+                        _ => panic!("mock pipeline result should be an array of documents"),
+                    };
+                    items
+                        .into_iter()
+                        .map(|x| match x {
+                            Bson::Document(doc) => Ok(doc),
+                            _ => panic!("mock pipeline result should be an array of documents"),
+                        })
+                        .collect()
+                };
+                Ok(mock_stream(result_docs))
+            },
+        );
+        mock_collection
+    });
+    db
+}
+
+/// Mocks the result of an aggregate call on a given collection. Asserts that the pipeline that the
+/// aggregate call receives matches the given pipeline.
 pub fn mock_result_for_pipeline(
     collection: impl ToString,
     expected_pipeline: Bson,
@@ -34,7 +75,10 @@ pub fn mock_result_for_pipeline(
 
     let mut db = MockDatabaseTrait::new();
     db.expect_collection().returning(move |name| {
-        assert_eq!(name, collection_name, "unexpected target for mock aggregate");
+        assert_eq!(
+            name, collection_name,
+            "unexpected target for mock aggregate"
+        );
 
         // Make some clones to work around ownership issues. These closures are `FnMut`, not
         // `FnOnce` so the type checker can't just move ownership into the closure.

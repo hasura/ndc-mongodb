@@ -23,7 +23,7 @@ use super::{
 pub enum ResponseShape {
     /// Indicates that the response will be a stream of records that must be wrapped in an object
     /// with a `rows` field to produce a valid `QueryResponse` for HGE.
-    RowStream,
+    ListOfRows,
 
     /// Indicates that the response has already been wrapped in a single object with `rows` and/or
     /// `aggregates` fields.
@@ -116,7 +116,7 @@ pub fn pipeline_for_non_foreach(
         (stages, ResponseShape::SingleObject)
     } else {
         let stages = pipeline_for_fields_facet(query_request)?;
-        (stages, ResponseShape::RowStream)
+        (stages, ResponseShape::ListOfRows)
     };
 
     pipeline.append(diverging_stages);
@@ -328,7 +328,7 @@ fn pipeline_for_native_query(
             .map(Stage::Other)
             .collect(),
     };
-    let mut pipeline = Pipeline::new(stages);
+    let pipeline = Pipeline::new(stages);
     // if !pipeline.is_empty() {
     //     // Functions are supposed to return a single value. This "$group" stage accumulates all
     //     // output documents from the native query pipeline into a single array value.

@@ -2,17 +2,17 @@ use std::collections::BTreeMap;
 
 use anyhow::anyhow;
 use configuration::native_query::NativeQuery;
-use dc_api::JsonResponse;
-use dc_api_types::{QueryRequest, QueryResponse};
-use futures::StreamExt;
-use futures_util::{Stream, TryStreamExt as _};
-use mongodb::bson::{doc, from_bson, Document};
+use dc_api_types::{QueryRequest, QueryResponse, RowSet};
+use futures::Stream;
+use futures_util::TryStreamExt;
+use itertools::Itertools as _;
+use mongodb::bson::{self, Document};
 
 use super::pipeline::{pipeline_for_query_request, ResponseShape};
 use crate::{
     interface_types::MongoAgentError,
-    mongodb::{CollectionTrait, DatabaseTrait},
-    query::query_target::QueryTarget,
+    mongodb::{CollectionTrait as _, DatabaseTrait},
+    query::{foreach::foreach_variants, QueryTarget},
 };
 
 /// Execute a query request against the given collection.
@@ -23,11 +23,14 @@ pub async fn execute_query_request(
     database: impl DatabaseTrait,
     query_request: QueryRequest,
     native_queries: &BTreeMap<String, NativeQuery>,
-) -> Result<JsonResponse<QueryResponse>, MongoAgentError> {
+) -> Result<QueryResponse, MongoAgentError> {
     let target = QueryTarget::for_request(&query_request, native_queries);
-
     let (pipeline, response_shape) = pipeline_for_query_request(&query_request, native_queries)?;
-    tracing::warn!(pipeline = %serde_json::to_string(&pipeline).unwrap(), target = %target, "aggregate pipeline");
+    tracing::debug!(
+        ?query_request,
+        pipeline = %serde_json::to_string(&pipeline).unwrap(),
+        "executing query"
+    );
 
     // The target of a query request might be a collection, or it might be a native query. In the
     // latter case there is no collection to perform the aggregation against. So instead of sending
@@ -35,10 +38,10 @@ pub async fn execute_query_request(
     let documents_result = match target {
         QueryTarget::Collection(collection_name) => {
             let collection = database.collection(&collection_name);
-            collect_from_cursor(log_err(collection.aggregate(pipeline, None).await)?).await
+            collect_from_cursor(collection.aggregate(pipeline, None).await?).await
         }
         QueryTarget::NativeQuery { .. } => {
-            collect_from_cursor(log_err(database.aggregate(pipeline, None).await)?).await
+            collect_from_cursor(database.aggregate(pipeline, None).await?).await
         }
     };
 
@@ -50,24 +53,23 @@ pub async fn execute_query_request(
         }
     }?;
 
-    tracing::warn!(documents = %serde_json::to_string(&documents).unwrap(), "response from MongoDB");
+    tracing::debug!(response_documents = %serde_json::to_string(&documents).unwrap(), "response from MongoDB");
 
-    let response_document: Document = match response_shape {
-        ResponseShape::RowStream => {
-            doc! { "rows": documents }
+    let response = match (foreach_variants(&query_request), response_shape) {
+        (Some(_), _) => parse_single_document(documents)?,
+        (None, ResponseShape::ListOfRows) => QueryResponse::Single(RowSet::Rows {
+            rows: documents
+                .into_iter()
+                .map(bson::from_document)
+                .try_collect()?,
+        }),
+        (None, ResponseShape::SingleObject) => {
+            QueryResponse::Single(parse_single_document(documents)?)
         }
-        ResponseShape::SingleObject => documents.into_iter().next().ok_or_else(|| {
-            MongoAgentError::AdHoc(anyhow!(
-                "Expected a response document from MongoDB, but did not get one"
-            ))
-        })?,
     };
+    tracing::debug!(response = %serde_json::to_string(&response).unwrap(), "query response");
 
-    let response: QueryResponse = from_bson(response_document.into())?;
-
-    tracing::warn!(response = %serde_json::to_string(&response).unwrap(), "response from connector");
-
-    Ok(JsonResponse::Value(response))
+    Ok(response)
 }
 
 async fn collect_from_cursor(
@@ -80,15 +82,15 @@ async fn collect_from_cursor(
         .await
 }
 
-fn log_err<T, E>(result: Result<T, E>) -> Result<T, E>
+fn parse_single_document<T>(documents: Vec<Document>) -> Result<T, MongoAgentError>
 where
-    E: std::fmt::Debug,
+    T: for<'de> serde::Deserialize<'de>,
 {
-    match result {
-        Ok(v) => Ok(v),
-        Err(error) => {
-            tracing::warn!(?error, "log_error");
-            Err(error)
-        }
-    }
+    let document = documents.into_iter().next().ok_or_else(|| {
+        MongoAgentError::AdHoc(anyhow!(
+            "Expected a response document from MongoDB, but did not get one"
+        ))
+    })?;
+    let value = bson::from_document(document)?;
+    Ok(value)
 }

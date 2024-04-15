@@ -7,9 +7,10 @@ in
   project.name = "mongodb-ndc-test";
 
   services = {
-    test = import ./service-mongodb-connector.nix {
+    test = import ./service-connector.nix {
       inherit pkgs;
       command = "test";
+      configuration-dir = ../fixtures/connector/chinook;
       database-uri = "mongodb://mongodb:${mongodb-port}/chinook";
       service.depends_on.mongodb.condition = "service_healthy";
     };
@@ -17,6 +18,9 @@ in
     mongodb = import ./service-mongodb.nix {
       inherit pkgs;
       port = mongodb-port;
+      volumes = [
+        (import ./fixtures-mongodb.nix).chinook
+      ];
     };
   };
 }

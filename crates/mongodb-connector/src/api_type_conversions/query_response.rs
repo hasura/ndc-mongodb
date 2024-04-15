@@ -15,9 +15,14 @@ pub fn v2_to_v3_query_response(response: v2::QueryResponse) -> v3::QueryResponse
 }
 
 fn v2_to_v3_row_set(row_set: v2::RowSet) -> v3::RowSet {
+    let (aggregates, rows) = match row_set {
+        v2::RowSet::Aggregate { aggregates, rows } => (Some(aggregates), rows),
+        v2::RowSet::Rows { rows } => (None, Some(rows)),
+    };
+
     v3::RowSet {
-        aggregates: row_set.aggregates.map(hash_map_to_index_map),
-        rows: row_set.rows.map(|xs| {
+        aggregates: aggregates.map(hash_map_to_index_map),
+        rows: rows.map(|xs| {
             xs.into_iter()
                 .map(|field_values| {
                     field_values

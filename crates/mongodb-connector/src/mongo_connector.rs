@@ -2,7 +2,6 @@ use std::path::Path;
 
 use anyhow::anyhow;
 use async_trait::async_trait;
-use bytes::Bytes;
 use configuration::Configuration;
 use mongodb_agent_common::{
     explain::explain_query, health::check_health, interface_types::MongoConfig,
@@ -137,30 +136,17 @@ impl Connector for MongoConnector {
         handle_mutation_request(state, request).await
     }
 
-    #[instrument]
+    #[instrument(err, skip_all)]
     async fn query(
         configuration: &Self::Configuration,
         state: &Self::State,
         request: QueryRequest,
     ) -> Result<JsonResponse<QueryResponse>, QueryError> {
-        tracing::warn!(query_request = %serde_json::to_string(&request).unwrap(), "query");
+        tracing::debug!(query_request = %serde_json::to_string(&request).unwrap(), "received query request");
         let v2_request = v3_to_v2_query_request(&get_query_context(configuration), request)?;
-        let response_json = handle_query_request(state, v2_request)
+        let response = handle_query_request(state, v2_request)
             .await
             .map_err(mongo_agent_error_to_query_error)?;
-
-        match response_json {
-            dc_api::JsonResponse::Value(v2_response) => {
-                Ok(JsonResponse::Value(v2_to_v3_query_response(v2_response)))
-            }
-            dc_api::JsonResponse::Serialized(bytes) => {
-                let v2_value: serde_json::Value = serde_json::de::from_slice(&bytes)
-                    .map_err(|e| QueryError::Other(Box::new(e)))?;
-                let v3_bytes: Bytes = serde_json::to_vec(&vec![v2_value])
-                    .map_err(|e| QueryError::Other(Box::new(e)))?
-                    .into();
-                Ok(JsonResponse::Serialized(v3_bytes))
-            }
-        }
+        Ok(v2_to_v3_query_response(response).into())
     }
 }

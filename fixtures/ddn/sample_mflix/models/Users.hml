@@ -1,0 +1,114 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: Users
+  fields:
+    - name: id
+      type: ObjectId!
+    - name: email
+      type: String!
+    - name: name
+      type: String!
+    - name: password
+      type: String!
+  graphql:
+    typeName: Users
+    inputTypeName: UsersInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: users
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        email:
+          column:
+            name: email
+        name:
+          column:
+            name: name
+        password:
+          column:
+            name: password
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Users
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - email
+          - name
+          - password
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: UsersBoolExp
+  objectType: Users
+  dataConnectorName: sample_mflix
+  dataConnectorObjectType: users
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: email
+      operators:
+        enableAll: true
+    - fieldName: name
+      operators:
+        enableAll: true
+    - fieldName: password
+      operators:
+        enableAll: true
+  graphql:
+    typeName: UsersBoolExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: Users
+  objectType: Users
+  source:
+    dataConnectorName: sample_mflix
+    collection: users
+  filterExpressionType: UsersBoolExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: email
+      orderByDirections:
+        enableAll: true
+    - fieldName: name
+      orderByDirections:
+        enableAll: true
+    - fieldName: password
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: users
+    selectUniques:
+      - queryRootField: usersById
+        uniqueIdentifier:
+          - id
+    orderByExpressionType: UsersOrderBy
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Users
+  permissions:
+    - role: admin
+      select:
+        filter: null
+

@@ -1,0 +1,102 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: Genre
+  fields:
+    - name: id
+      type: Chinook_ObjectId!
+    - name: genreId
+      type: Int!
+    - name: name
+      type: String!
+  graphql:
+    typeName: Genre
+    inputTypeName: GenreInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: chinook
+      dataConnectorObjectType: Genre
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        genreId:
+          column:
+            name: GenreId
+        name:
+          column:
+            name: Name
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Genre
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - genreId
+          - name
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: GenreBoolExp
+  objectType: Genre
+  dataConnectorName: chinook
+  dataConnectorObjectType: Genre
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: genreId
+      operators:
+        enableAll: true
+    - fieldName: name
+      operators:
+        enableAll: true
+  graphql:
+    typeName: GenreBoolExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: Genre
+  objectType: Genre
+  source:
+    dataConnectorName: chinook
+    collection: Genre
+  filterExpressionType: GenreBoolExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: genreId
+      orderByDirections:
+        enableAll: true
+    - fieldName: name
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: genre
+    selectUniques:
+      - queryRootField: genreById
+        uniqueIdentifier:
+          - id
+    orderByExpressionType: GenreOrderBy
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Genre
+  permissions:
+    - role: admin
+      select:
+        filter: null
+

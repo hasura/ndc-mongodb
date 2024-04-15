@@ -1,0 +1,186 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: Invoice
+  fields:
+    - name: id
+      type: Chinook_ObjectId!
+    - name: billingAddress
+      type: String!
+    - name: billingCity
+      type: String!
+    - name: billingCountry
+      type: String!
+    - name: billingPostalCode
+      type: Chinook_ExtendedJson
+    - name: billingState
+      type: String!
+    - name: customerId
+      type: Int!
+    - name: invoiceDate
+      type: String!
+    - name: invoiceId
+      type: Int!
+    - name: total
+      type: Float!
+  graphql:
+    typeName: Invoice
+    inputTypeName: InvoiceInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: chinook
+      dataConnectorObjectType: Invoice
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        billingAddress:
+          column:
+            name: BillingAddress
+        billingCity:
+          column:
+            name: BillingCity
+        billingCountry:
+          column:
+            name: BillingCountry
+        billingPostalCode:
+          column:
+            name: BillingPostalCode
+        billingState:
+          column:
+            name: BillingState
+        customerId:
+          column:
+            name: CustomerId
+        invoiceDate:
+          column:
+            name: InvoiceDate
+        invoiceId:
+          column:
+            name: InvoiceId
+        total:
+          column:
+            name: Total
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Invoice
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - billingAddress
+          - billingCity
+          - billingCountry
+          - billingPostalCode
+          - billingState
+          - customerId
+          - invoiceDate
+          - invoiceId
+          - total
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: InvoiceBoolExp
+  objectType: Invoice
+  dataConnectorName: chinook
+  dataConnectorObjectType: Invoice
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: billingAddress
+      operators:
+        enableAll: true
+    - fieldName: billingCity
+      operators:
+        enableAll: true
+    - fieldName: billingCountry
+      operators:
+        enableAll: true
+    - fieldName: billingPostalCode
+      operators:
+        enableAll: true
+    - fieldName: billingState
+      operators:
+        enableAll: true
+    - fieldName: customerId
+      operators:
+        enableAll: true
+    - fieldName: invoiceDate
+      operators:
+        enableAll: true
+    - fieldName: invoiceId
+      operators:
+        enableAll: true
+    - fieldName: total
+      operators:
+        enableAll: true
+  graphql:
+    typeName: InvoiceBoolExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: Invoice
+  objectType: Invoice
+  source:
+    dataConnectorName: chinook
+    collection: Invoice
+  filterExpressionType: InvoiceBoolExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: billingAddress
+      orderByDirections:
+        enableAll: true
+    - fieldName: billingCity
+      orderByDirections:
+        enableAll: true
+    - fieldName: billingCountry
+      orderByDirections:
+        enableAll: true
+    - fieldName: billingPostalCode
+      orderByDirections:
+        enableAll: true
+    - fieldName: billingState
+      orderByDirections:
+        enableAll: true
+    - fieldName: customerId
+      orderByDirections:
+        enableAll: true
+    - fieldName: invoiceDate
+      orderByDirections:
+        enableAll: true
+    - fieldName: invoiceId
+      orderByDirections:
+        enableAll: true
+    - fieldName: total
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: invoice
+    selectUniques:
+      - queryRootField: invoiceById
+        uniqueIdentifier:
+          - id
+    orderByExpressionType: InvoiceOrderBy
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Invoice
+  permissions:
+    - role: admin
+      select:
+        filter: null
+

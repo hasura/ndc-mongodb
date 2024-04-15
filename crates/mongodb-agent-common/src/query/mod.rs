@@ -10,7 +10,6 @@ mod query_target;
 mod relations;
 pub mod serialization;
 
-use dc_api::JsonResponse;
 use dc_api_types::{QueryRequest, QueryResponse};
 
 use self::execute_query_request::execute_query_request;
@@ -25,8 +24,7 @@ use crate::interface_types::{MongoAgentError, MongoConfig};
 pub async fn handle_query_request(
     config: &MongoConfig,
     query_request: QueryRequest,
-) -> Result<JsonResponse<QueryResponse>, MongoAgentError> {
-    tracing::warn!(?config, query_request = %serde_json::to_string(&query_request).unwrap(), "executing query");
+) -> Result<QueryResponse, MongoAgentError> {
     let database = config.client.database(&config.database);
     // This function delegates to another function which gives is a point to inject a mock database
     // implementation for testing.
@@ -35,13 +33,13 @@ pub async fn handle_query_request(
 
 #[cfg(test)]
 mod tests {
-    use dc_api_types::{QueryRequest, QueryResponse};
+    use dc_api_types::{QueryRequest, QueryResponse, RowSet};
     use mongodb::bson::{self, bson};
     use pretty_assertions::assert_eq;
     use serde_json::{from_value, json};
 
     use super::execute_query_request;
-    use crate::mongodb::test_helpers::mock_result_for_pipeline;
+    use crate::mongodb::test_helpers::{mock_result, mock_result_for_pipeline};
 
     #[tokio::test]
     async fn executes_query() -> Result<(), anyhow::Error> {
@@ -82,9 +80,7 @@ mod tests {
             ]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default())
-            .await?
-            .into_value()?;
+        let result = execute_query_request(db, query_request, &Default::default()).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -159,9 +155,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default())
-            .await?
-            .into_value()?;
+        let result = execute_query_request(db, query_request, &Default::default()).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -242,9 +236,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default())
-            .await?
-            .into_value()?;
+        let result = execute_query_request(db, query_request, &Default::default()).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -302,9 +294,28 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default())
-            .await?
-            .into_value()?;
+        let result = execute_query_request(db, query_request, &Default::default()).await?;
+        assert_eq!(expected_response, result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn parses_empty_response() -> Result<(), anyhow::Error> {
+        let query_request: QueryRequest = from_value(json!({
+          "query": {
+            "fields": {
+              "date": { "type": "column", "column": "date", "column_type": "date", },
+            },
+          },
+          "target": { "type": "table", "name": [ "comments" ] },
+          "relationships": [],
+        }))?;
+
+        let expected_response = QueryResponse::Single(RowSet::Rows { rows: vec![] });
+
+        let db = mock_result("comments", bson!([]));
+
+        let result = execute_query_request(db, query_request, &Default::default()).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
