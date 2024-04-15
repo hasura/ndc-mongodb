@@ -55,7 +55,7 @@ pub fn foreach_variants(query_request: &QueryRequest) -> Option<Vec<ForeachVaria
 /// indicates whether the response requires post-processing in the agent.
 pub fn pipeline_for_foreach(
     foreach: Vec<ForeachVariant>,
-    config: &QueryConfig<'_>,
+    config: QueryConfig<'_>,
     query_request: &QueryRequest,
 ) -> Result<(Pipeline, ResponseShape), MongoAgentError> {
     let pipelines_with_response_shapes: Vec<(String, (Pipeline, ResponseShape))> = foreach

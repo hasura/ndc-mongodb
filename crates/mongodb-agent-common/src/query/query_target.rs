@@ -17,7 +17,7 @@ pub enum QueryTarget<'a> {
 
 impl QueryTarget<'_> {
     pub fn for_request<'a>(
-        config: &'a QueryConfig<'a>,
+        config: QueryConfig<'a>,
         query_request: &'a QueryRequest,
     ) -> QueryTarget<'a> {
         let target = &query_request.target;

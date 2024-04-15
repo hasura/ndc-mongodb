@@ -48,7 +48,7 @@ pub fn is_response_faceted(query: &Query) -> bool {
 /// Returns a pipeline paired with a value that indicates whether the response requires
 /// post-processing in the agent.
 pub fn pipeline_for_query_request(
-    config: &QueryConfig<'_>,
+    config: QueryConfig<'_>,
     query_request: &QueryRequest,
 ) -> Result<(Pipeline, ResponseShape), MongoAgentError> {
     let foreach = foreach_variants(query_request);
@@ -65,7 +65,7 @@ pub fn pipeline_for_query_request(
 /// Returns a pipeline paired with a value that indicates whether the response requires
 /// post-processing in the agent.
 pub fn pipeline_for_non_foreach(
-    config: &QueryConfig<'_>,
+    config: QueryConfig<'_>,
     variables: Option<&VariableSet>,
     query_request: &QueryRequest,
 ) -> Result<(Pipeline, ResponseShape), MongoAgentError> {

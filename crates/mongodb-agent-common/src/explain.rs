@@ -15,10 +15,10 @@ pub async fn explain_query(
     let db = config.client.database(&config.database);
     let query_config = QueryConfig::from(config);
 
-    let (pipeline, _) = query::pipeline_for_query_request(&query_config, &query_request)?;
+    let (pipeline, _) = query::pipeline_for_query_request(query_config, &query_request)?;
     let pipeline_bson = to_bson(&pipeline)?;
 
-    let aggregate_target = match QueryTarget::for_request(&query_config, &query_request) {
+    let aggregate_target = match QueryTarget::for_request(query_config, &query_request) {
         QueryTarget::Collection(collection_name) => Bson::String(collection_name),
         // 1 means aggregation without a collection target - as in `db.aggregate()` instead of
         // `db.<collection>.aggregate()`

@@ -15,7 +15,7 @@ use super::{arguments::resolve_arguments, query_target::QueryTarget, QueryConfig
 /// Returns either the pipeline defined by a native query with variable bindings for arguments, or
 /// an empty pipeline if the query request target is not a native query
 pub fn pipeline_for_native_query(
-    config: &QueryConfig<'_>,
+    config: QueryConfig<'_>,
     variables: Option<&VariableSet>,
     query_request: &QueryRequest,
 ) -> Result<Pipeline, MongoAgentError> {
@@ -30,7 +30,7 @@ pub fn pipeline_for_native_query(
 }
 
 fn make_pipeline(
-    config: &QueryConfig<'_>,
+    config: QueryConfig<'_>,
     variables: Option<&VariableSet>,
     native_query: &NativeQuery,
     arguments: &HashMap<String, Argument>,
@@ -45,12 +45,9 @@ fn make_pipeline(
         })
         .try_collect()?;
 
-    let bson_arguments = resolve_arguments(
-        config.object_types.as_ref(),
-        &native_query.arguments,
-        expressions,
-    )
-    .map_err(ProcedureError::UnresolvableArguments)?;
+    let bson_arguments =
+        resolve_arguments(config.object_types, &native_query.arguments, expressions)
+            .map_err(ProcedureError::UnresolvableArguments)?;
 
     // Replace argument placeholders with resolved expressions, convert document list to
     // a `Pipeline` value

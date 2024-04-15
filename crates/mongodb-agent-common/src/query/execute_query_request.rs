@@ -24,8 +24,8 @@ pub async fn execute_query_request(
     config: QueryConfig<'_>,
     query_request: QueryRequest,
 ) -> Result<QueryResponse, MongoAgentError> {
-    let target = QueryTarget::for_request(&config, &query_request);
-    let (pipeline, response_shape) = pipeline_for_query_request(&config, &query_request)?;
+    let target = QueryTarget::for_request(config, &query_request);
+    let (pipeline, response_shape) = pipeline_for_query_request(config, &query_request)?;
     tracing::debug!(
         ?query_request,
         ?target,
