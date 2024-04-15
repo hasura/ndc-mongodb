@@ -5,7 +5,9 @@ mod execute_query_request;
 mod foreach;
 mod make_selector;
 mod make_sort;
+mod native_query;
 mod pipeline;
+mod query_config;
 mod query_target;
 mod relations;
 pub mod serialization;
@@ -17,6 +19,7 @@ pub use self::{
     make_selector::make_selector,
     make_sort::make_sort,
     pipeline::{is_response_faceted, pipeline_for_non_foreach, pipeline_for_query_request},
+    query_config::QueryConfig,
     query_target::QueryTarget,
 };
 use crate::interface_types::{MongoAgentError, MongoConfig};
@@ -28,7 +31,7 @@ pub async fn handle_query_request(
     let database = config.client.database(&config.database);
     // This function delegates to another function which gives is a point to inject a mock database
     // implementation for testing.
-    execute_query_request(database, query_request, &config.native_queries).await
+    execute_query_request(database, QueryConfig::from(config), query_request).await
 }
 
 #[cfg(test)]
@@ -82,7 +85,7 @@ mod tests {
             ]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default()).await?;
+        let result = execute_query_request(db, Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -157,7 +160,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default()).await?;
+        let result = execute_query_request(db, Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -238,7 +241,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default()).await?;
+        let result = execute_query_request(db, Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -296,7 +299,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default()).await?;
+        let result = execute_query_request(db, Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -317,7 +320,7 @@ mod tests {
 
         let db = mock_collection_aggregate_response("comments", bson!([]));
 
-        let result = execute_query_request(db, query_request, &Default::default()).await?;
+        let result = execute_query_request(db, Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }

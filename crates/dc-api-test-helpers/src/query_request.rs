@@ -23,6 +23,7 @@ impl QueryRequestBuilder {
     {
         self.target = Some(Target::TTable {
             name: name.into_iter().map(|v| v.to_string()).collect(),
+            arguments: Default::default(),
         });
         self
     }

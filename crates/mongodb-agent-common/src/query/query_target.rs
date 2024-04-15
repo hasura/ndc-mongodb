@@ -1,7 +1,9 @@
-use std::{collections::BTreeMap, fmt::Display};
+use std::{collections::HashMap, fmt::Display};
 
 use configuration::native_query::NativeQuery;
-use dc_api_types::QueryRequest;
+use dc_api_types::{Argument, QueryRequest};
+
+use super::QueryConfig;
 
 #[derive(Clone, Debug)]
 pub enum QueryTarget<'a> {
@@ -9,20 +11,22 @@ pub enum QueryTarget<'a> {
     NativeQuery {
         name: String,
         native_query: &'a NativeQuery,
+        arguments: &'a HashMap<String, Argument>,
     },
 }
 
 impl QueryTarget<'_> {
     pub fn for_request<'a>(
-        query_request: &QueryRequest,
-        native_queries: &'a BTreeMap<String, NativeQuery>,
+        config: &'a QueryConfig<'a>,
+        query_request: &'a QueryRequest,
     ) -> QueryTarget<'a> {
         let target = &query_request.target;
         let target_name = target.name().join(".");
-        match native_queries.get(&target_name) {
+        match config.native_queries.get(&target_name) {
             Some(native_query) => QueryTarget::NativeQuery {
                 name: target_name,
                 native_query,
+                arguments: target.arguments(),
             },
             None => QueryTarget::Collection(target_name),
         }

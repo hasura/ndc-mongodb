@@ -7,13 +7,6 @@
   "arguments": {
     "name": { "type": { "scalar": "string" } }
   },
-  "objectTypes": {
-    "HelloResult": {
-      "fields": {
-        "hello": { "type": { "scalar": "string" } }
-      }
-    }
-  },
   "pipeline": [{  
     "$documents": [{
       "__value": "{{ name }}"

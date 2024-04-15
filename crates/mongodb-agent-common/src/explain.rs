@@ -3,7 +3,7 @@ use mongodb::bson::{doc, to_bson, Bson};
 
 use crate::{
     interface_types::{MongoAgentError, MongoConfig},
-    query::{self, QueryTarget},
+    query::{self, QueryConfig, QueryTarget},
 };
 
 pub async fn explain_query(
@@ -13,11 +13,12 @@ pub async fn explain_query(
     tracing::debug!(query_request = %serde_json::to_string(&query_request).unwrap());
 
     let db = config.client.database(&config.database);
+    let query_config = QueryConfig::from(config);
 
-    let (pipeline, _) = query::pipeline_for_query_request(&query_request, &config.native_queries)?;
+    let (pipeline, _) = query::pipeline_for_query_request(&query_config, &query_request)?;
     let pipeline_bson = to_bson(&pipeline)?;
 
-    let aggregate_target = match QueryTarget::for_request(&query_request, &config.native_queries) {
+    let aggregate_target = match QueryTarget::for_request(&query_config, &query_request) {
         QueryTarget::Collection(collection_name) => Bson::String(collection_name),
         // 1 means aggregation without a collection target - as in `db.aggregate()` instead of
         // `db.<collection>.aggregate()`

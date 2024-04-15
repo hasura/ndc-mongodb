@@ -1,6 +1,5 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
-use configuration::native_query::NativeQuery;
 use dc_api_types::comparison_column::ColumnSelector;
 use dc_api_types::{
     BinaryComparisonOperator, ComparisonColumn, ComparisonValue, Expression, QueryRequest,
@@ -9,6 +8,7 @@ use dc_api_types::{
 use mongodb::bson::{doc, Bson};
 
 use super::pipeline::{pipeline_for_non_foreach, ResponseShape};
+use super::QueryConfig;
 use crate::mongodb::Selection;
 use crate::{
     interface_types::MongoAgentError,
@@ -55,8 +55,8 @@ pub fn foreach_variants(query_request: &QueryRequest) -> Option<Vec<ForeachVaria
 /// indicates whether the response requires post-processing in the agent.
 pub fn pipeline_for_foreach(
     foreach: Vec<ForeachVariant>,
+    config: &QueryConfig<'_>,
     query_request: &QueryRequest,
-    native_queries: &BTreeMap<String, NativeQuery>,
 ) -> Result<(Pipeline, ResponseShape), MongoAgentError> {
     let pipelines_with_response_shapes: Vec<(String, (Pipeline, ResponseShape))> = foreach
         .into_iter()
@@ -77,7 +77,7 @@ pub fn pipeline_for_foreach(
             }
 
             let pipeline_with_response_shape =
-                pipeline_for_non_foreach(variables.as_ref(), &q, native_queries)?;
+                pipeline_for_non_foreach(config, variables.as_ref(), &q)?;
             Ok((facet_name(index), pipeline_with_response_shape))
         })
         .collect::<Result<_, MongoAgentError>>()?;
@@ -248,7 +248,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default()).await?;
+        let result = execute_query_request(db, Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -393,7 +393,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default()).await?;
+        let result = execute_query_request(db, Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -410,6 +410,7 @@ mod tests {
             ),
             target: dc_api_types::Target::TTable {
                 name: vec!["tracks".to_owned()],
+                arguments: Default::default(),
             },
             relationships: Default::default(),
             query: Box::new(Query {
@@ -565,7 +566,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default()).await?;
+        let result = execute_query_request(db, Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())

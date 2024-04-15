@@ -186,7 +186,7 @@ pub use self::table_relationships::TableRelationships;
 pub mod table_type;
 pub use self::table_type::TableType;
 pub mod target;
-pub use self::target::Target;
+pub use self::target::{Argument, Target};
 pub mod unary_comparison_operator;
 pub use self::unary_comparison_operator::UnaryComparisonOperator;
 pub mod unique_identifier_generation_strategy;

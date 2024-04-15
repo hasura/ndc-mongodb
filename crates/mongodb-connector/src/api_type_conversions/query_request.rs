@@ -127,6 +127,7 @@ pub fn v3_to_v2_query_request(
         relationships: v3_to_v2_relationships(&request)?,
         target: Target::TTable {
             name: vec![request.collection],
+            arguments: v3_to_v2_arguments(request.arguments.clone()),
         },
         query: Box::new(v3_to_v2_query(
             context,
@@ -592,16 +593,17 @@ fn v3_to_v2_relationships(
                 }) => Some((collection, relationship, arguments)),
                 _ => None,
             })
-            .map_ok(|(collection_name, relationship_name, _arguments)| {
+            .map_ok(|(collection_name, relationship_name, arguments)| {
                 let v3_relationship = lookup_relationship(
                     &query_request.collection_relationships,
                     relationship_name,
                 )?;
 
-                // TODO: Add an `arguments` field to v2::Relationship and populate it here. (MVC-3)
-                // I think it's possible that the same relationship might appear multiple time with
-                // different arguments, so we may want to make some change to relationship names to
-                // avoid overwriting in such a case. -Jesse
+                // TODO: Functions (native queries) may be referenced multiple times in a query
+                // request with different arguments. To accommodate that we will need to record
+                // separate v2 relations for each reference with different names. In the current
+                // implementation one set of arguments will override arguments to all occurrences of
+                // a given function. MDB-106
                 let v2_relationship = v2::Relationship {
                     column_mapping: v2::ColumnMapping(
                         v3_relationship
@@ -621,6 +623,7 @@ fn v3_to_v2_relationships(
                     },
                     target: v2::Target::TTable {
                         name: vec![v3_relationship.target_collection.clone()],
+                        arguments: v3_to_v2_relationship_arguments(arguments.clone()),
                     },
                 };
 
@@ -881,6 +884,35 @@ where
     B: From<A>,
 {
     n.map(|input| Some(input.into()))
+}
+
+fn v3_to_v2_arguments(arguments: BTreeMap<String, v3::Argument>) -> HashMap<String, v2::Argument> {
+    arguments
+        .into_iter()
+        .map(|(argument_name, argument)| match argument {
+            v3::Argument::Variable { name } => (argument_name, v2::Argument::Variable { name }),
+            v3::Argument::Literal { value } => (argument_name, v2::Argument::Literal { value }),
+        })
+        .collect()
+}
+
+fn v3_to_v2_relationship_arguments(
+    arguments: BTreeMap<String, v3::RelationshipArgument>,
+) -> HashMap<String, v2::Argument> {
+    arguments
+        .into_iter()
+        .map(|(argument_name, argument)| match argument {
+            v3::RelationshipArgument::Variable { name } => {
+                (argument_name, v2::Argument::Variable { name })
+            }
+            v3::RelationshipArgument::Literal { value } => {
+                (argument_name, v2::Argument::Literal { value })
+            }
+            v3::RelationshipArgument::Column { name } => {
+                (argument_name, v2::Argument::Column { name })
+            }
+        })
+        .collect()
 }
 
 #[cfg(test)]

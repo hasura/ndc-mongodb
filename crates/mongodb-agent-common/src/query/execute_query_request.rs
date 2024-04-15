@@ -1,14 +1,14 @@
-use std::collections::BTreeMap;
-
 use anyhow::anyhow;
-use configuration::native_query::NativeQuery;
 use dc_api_types::{QueryRequest, QueryResponse, RowSet};
 use futures::Stream;
 use futures_util::TryStreamExt;
 use itertools::Itertools as _;
 use mongodb::bson::{self, Document};
 
-use super::pipeline::{pipeline_for_query_request, ResponseShape};
+use super::{
+    pipeline::{pipeline_for_query_request, ResponseShape},
+    QueryConfig,
+};
 use crate::{
     interface_types::MongoAgentError,
     mongodb::{CollectionTrait as _, DatabaseTrait},
@@ -21,11 +21,11 @@ use crate::{
 /// testing.
 pub async fn execute_query_request(
     database: impl DatabaseTrait,
+    config: QueryConfig<'_>,
     query_request: QueryRequest,
-    native_queries: &BTreeMap<String, NativeQuery>,
 ) -> Result<QueryResponse, MongoAgentError> {
-    let target = QueryTarget::for_request(&query_request, native_queries);
-    let (pipeline, response_shape) = pipeline_for_query_request(&query_request, native_queries)?;
+    let target = QueryTarget::for_request(&config, &query_request);
+    let (pipeline, response_shape) = pipeline_for_query_request(&config, &query_request)?;
     tracing::debug!(
         ?query_request,
         ?target,

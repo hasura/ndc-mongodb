@@ -1,7 +1,6 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 use anyhow::anyhow;
-use configuration::native_query::NativeQuery;
 use dc_api_types::comparison_column::ColumnSelector;
 use dc_api_types::relationship::ColumnMapping;
 use dc_api_types::{Field, QueryRequest, Relationship, VariableSet};
@@ -15,11 +14,12 @@ use crate::{
 };
 
 use super::pipeline::pipeline_for_non_foreach;
+use super::QueryConfig;
 
 pub fn pipeline_for_relations(
+    config: &QueryConfig<'_>,
     variables: Option<&VariableSet>,
     query_request: &QueryRequest,
-    native_queries: &BTreeMap<String, NativeQuery>,
 ) -> Result<Pipeline, MongoAgentError> {
     let QueryRequest {
         target,
@@ -47,21 +47,14 @@ pub fn pipeline_for_relations(
         })
         .unwrap_or(&empty_relation_map);
 
-    let stages = lookups_for_fields(
-        query_request,
-        native_queries,
-        variables,
-        relationships,
-        &[],
-        fields,
-    )?;
+    let stages = lookups_for_fields(config, query_request, variables, relationships, &[], fields)?;
     Ok(Pipeline::new(stages))
 }
 
 /// Produces $lookup stages for any necessary joins
 fn lookups_for_fields(
+    config: &QueryConfig<'_>,
     query_request: &QueryRequest,
-    native_queries: &BTreeMap<String, NativeQuery>,
     variables: Option<&VariableSet>,
     relationships: &HashMap<String, Relationship>,
     parent_columns: &[&str],
@@ -71,8 +64,8 @@ fn lookups_for_fields(
         .iter()
         .map(|(field_name, field)| {
             lookups_for_field(
+                config,
                 query_request,
-                native_queries,
                 variables,
                 relationships,
                 parent_columns,
@@ -89,8 +82,8 @@ fn lookups_for_fields(
 
 /// Produces $lookup stages for any necessary joins
 fn lookups_for_field(
+    config: &QueryConfig<'_>,
     query_request: &QueryRequest,
-    native_queries: &BTreeMap<String, NativeQuery>,
     variables: Option<&VariableSet>,
     relationships: &HashMap<String, Relationship>,
     parent_columns: &[&str],
@@ -103,8 +96,8 @@ fn lookups_for_field(
             let nested_parent_columns = append_to_path(parent_columns, column);
             let fields = query.fields.clone().flatten().unwrap_or_default();
             lookups_for_fields(
+                config,
                 query_request,
-                native_queries,
                 variables,
                 relationships,
                 &nested_parent_columns,
@@ -120,8 +113,8 @@ fn lookups_for_field(
             offset: _,
             r#where: _,
         } => lookups_for_field(
+            config,
             query_request,
-            native_queries,
             variables,
             relationships,
             parent_columns,
@@ -146,13 +139,13 @@ fn lookups_for_field(
 
             // Recursively build pipeline according to relation query
             let (lookup_pipeline, _) = pipeline_for_non_foreach(
+                config,
                 variables,
                 &QueryRequest {
                     query: query.clone(),
                     target: target.clone(),
                     ..query_request.clone()
                 },
-                native_queries,
             )?;
 
             let lookup = make_lookup_stage(from, column_mapping, r#as, lookup_pipeline)?;
@@ -346,7 +339,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default()).await?;
+        let result = execute_query_request(db, Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -442,7 +435,7 @@ mod tests {
             ]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default()).await?;
+        let result = execute_query_request(db, Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -538,7 +531,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default()).await?;
+        let result = execute_query_request(db, Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -708,7 +701,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default()).await?;
+        let result = execute_query_request(db, Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -812,7 +805,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default()).await?;
+        let result = execute_query_request(db, Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -944,7 +937,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default()).await?;
+        let result = execute_query_request(db, Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -1087,7 +1080,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, query_request, &Default::default()).await?;
+        let result = execute_query_request(db, Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())

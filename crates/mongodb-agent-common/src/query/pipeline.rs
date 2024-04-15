@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 
-use configuration::native_query::NativeQuery;
 use dc_api_types::{Aggregate, Query, QueryRequest, VariableSet};
 use mongodb::bson::{self, doc, Bson};
 
@@ -14,8 +13,9 @@ use super::{
     constants::{RESULT_FIELD, ROWS_FIELD},
     foreach::{foreach_variants, pipeline_for_foreach},
     make_selector, make_sort,
-    query_target::QueryTarget,
+    native_query::pipeline_for_native_query,
     relations::pipeline_for_relations,
+    QueryConfig,
 };
 
 /// Signals the shape of data that will be returned by MongoDB.
@@ -48,14 +48,14 @@ pub fn is_response_faceted(query: &Query) -> bool {
 /// Returns a pipeline paired with a value that indicates whether the response requires
 /// post-processing in the agent.
 pub fn pipeline_for_query_request(
+    config: &QueryConfig<'_>,
     query_request: &QueryRequest,
-    native_queries: &BTreeMap<String, NativeQuery>,
 ) -> Result<(Pipeline, ResponseShape), MongoAgentError> {
     let foreach = foreach_variants(query_request);
     if let Some(foreach) = foreach {
-        pipeline_for_foreach(foreach, query_request, native_queries)
+        pipeline_for_foreach(foreach, config, query_request)
     } else {
-        pipeline_for_non_foreach(None, query_request, native_queries)
+        pipeline_for_non_foreach(config, None, query_request)
     }
 }
 
@@ -65,9 +65,9 @@ pub fn pipeline_for_query_request(
 /// Returns a pipeline paired with a value that indicates whether the response requires
 /// post-processing in the agent.
 pub fn pipeline_for_non_foreach(
+    config: &QueryConfig<'_>,
     variables: Option<&VariableSet>,
     query_request: &QueryRequest,
-    native_queries: &BTreeMap<String, NativeQuery>,
 ) -> Result<(Pipeline, ResponseShape), MongoAgentError> {
     let query = &*query_request.query;
     let Query {
@@ -79,14 +79,10 @@ pub fn pipeline_for_non_foreach(
     let mut pipeline = Pipeline::empty();
 
     // If this is a native query then we start with the native query's pipeline
-    pipeline.append(pipeline_for_native_query(query_request, native_queries));
+    pipeline.append(pipeline_for_native_query(config, variables, query_request)?);
 
     // Stages common to aggregate and row queries.
-    pipeline.append(pipeline_for_relations(
-        variables,
-        query_request,
-        native_queries,
-    )?);
+    pipeline.append(pipeline_for_relations(config, variables, query_request)?);
 
     let match_stage = r#where
         .as_ref()
@@ -307,35 +303,4 @@ fn pipeline_for_aggregate(
         ),
     };
     Ok(pipeline)
-}
-
-/// Returns either the pipeline defined by a native query with variable bindings for arguments, or
-/// an empty pipeline if the query request target is not a native query
-fn pipeline_for_native_query(
-    query_request: &QueryRequest,
-    native_queries: &BTreeMap<String, NativeQuery>,
-) -> Pipeline {
-    // TODO: bind arguments
-    // TODO: if the native query result type is not an array we may want to implicitly get the
-    // first or last document from the native query pipeline instead of accumulating an array. We
-    // should restrict allowed result types to object, or array of object.
-    let stages = match QueryTarget::for_request(query_request, native_queries) {
-        QueryTarget::Collection(_) => vec![],
-        QueryTarget::NativeQuery { native_query, .. } => native_query
-            .pipeline
-            .iter()
-            .cloned()
-            .map(Stage::Other)
-            .collect(),
-    };
-    let pipeline = Pipeline::new(stages);
-    // if !pipeline.is_empty() {
-    //     // Functions are supposed to return a single value. This "$group" stage accumulates all
-    //     // output documents from the native query pipeline into a single array value.
-    //     pipeline.push(Stage::Group {
-    //         key_expression: Bson::Null,
-    //         accumulators: [("__value".to_owned(), Accumulator::Push("$$CURRENT".into()))].into(),
-    //     });
-    // }
-    pipeline
 }
