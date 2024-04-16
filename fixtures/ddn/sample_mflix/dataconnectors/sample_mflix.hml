@@ -891,7 +891,12 @@ definition:
               unique_columns:
                 - _id
           foreign_keys: {}
-      functions: []
+      functions:
+        - name: hello
+          description: Basic test of native queries
+          result_type: { type: named, name: String }
+          arguments:
+            name: { type: { type: named, name: String } }
       procedures: []
     capabilities:
       version: 0.1.1

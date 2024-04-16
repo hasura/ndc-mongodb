@@ -919,12 +919,7 @@ definition:
               unique_columns:
                 - _id
           foreign_keys: {}
-      functions:
-        - name: hello
-          description: Basic test of native queries
-          result_type: { type: named, name: String }
-          arguments:
-            name: { type: { type: named, name: String } }
+      functions: []
       procedures:
         - name: insertArtist
           description: Example of a database update using a native procedure

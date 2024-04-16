@@ -8,7 +8,7 @@ definition:
     - name: name
       type: String!
   source:
-    dataConnectorName: chinook
+    dataConnectorName: sample_mflix
     dataConnectorCommand:
       function: hello
     argumentMapping:
