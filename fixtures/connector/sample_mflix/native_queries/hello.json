@@ -1,11 +1,19 @@
 {
   "name": "hello",
+  "representation": "function",
   "description": "Basic test of native queries",
-  "resultType": {
-    "scalar": "string"
-  },
   "arguments": {
     "name": { "type": { "scalar": "string" } }
+  },
+  "resultType": {
+    "object": "Hello"
+  },
+  "objectTypes": {
+    "Hello": {
+      "fields": {
+        "__value": { "type": { "scalar": "string" } }
+      }
+    }
   },
   "pipeline": [{  
     "$documents": [{

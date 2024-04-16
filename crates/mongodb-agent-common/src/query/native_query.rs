@@ -82,7 +82,7 @@ fn argument_to_mongodb_expression(
 #[cfg(test)]
 mod tests {
     use configuration::{
-        native_query::NativeQuery,
+        native_query::{NativeQuery, NativeQueryRepresentation},
         schema::{ObjectField, ObjectType, Type},
     };
     use dc_api_test_helpers::{column, query, query_request};
@@ -100,7 +100,7 @@ mod tests {
     #[tokio::test]
     async fn executes_native_query() -> Result<(), anyhow::Error> {
         let native_query = NativeQuery {
-            result_type: Type::Object("VectorResult".to_owned()),
+            representation: NativeQueryRepresentation::Collection,
             arguments: [
                 (
                     "filter".to_string(),
@@ -132,6 +132,7 @@ mod tests {
                 ),
             ]
             .into(),
+            result_type: Type::Object("VectorResult".to_owned()),
             pipeline: vec![doc! {
               "$vectorSearch": {
                 "index": "movie-vector-index",
@@ -262,7 +263,7 @@ mod tests {
                     "year": { "$ifNull": ["$year", null] },
                     "genres": { "$ifNull": ["$genres", null] },
                 }
-            }
+            },
         ]);
 
         let expected_response: QueryResponse = from_value(json!({
