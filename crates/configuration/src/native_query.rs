@@ -4,7 +4,7 @@ use mongodb::bson;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::schema::{ObjectField, ObjectType, Type};
+use crate::schema::{ObjectField, ObjectType};
 
 /// Define an arbitrary MongoDB aggregation pipeline that can be referenced in your data graph. For
 /// details on aggregation pipelines see https://www.mongodb.com/docs/manual/core/aggregation-pipeline/
@@ -39,14 +39,14 @@ pub struct NativeQuery {
     #[serde(default)]
     pub arguments: BTreeMap<String, ObjectField>,
 
-    /// Type of documents produced by the given pipeline. MongoDB aggregation pipelines always
-    /// produce a list of documents. This type describes the type of each of those individual
-    /// documents.
+    /// The name of an object type that describes documents produced by the given pipeline. MongoDB
+    /// aggregation pipelines always produce a list of documents. This type describes the type of
+    /// each of those individual documents.
     ///
-    /// You may reference object types defined in
-    /// the `object_types` list in this definition, or you may reference object types from
-    /// `schema.json`.
-    pub result_type: Type,
+    /// You may reference object types defined in the `object_types` list in this definition, or
+    /// you may reference object types from `schema.json`.
+    #[serde(rename = "type")]
+    pub r#type: String,
 
     /// You may define object types here to reference in `result_type`. Any types defined here will
     /// be merged with the definitions in `schema.json`. This allows you to maintain hand-written
@@ -90,7 +90,7 @@ pub struct NativeQuery {
     pub description: Option<String>,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, JsonSchema)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Hash, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum NativeQueryRepresentation {
     Collection,
