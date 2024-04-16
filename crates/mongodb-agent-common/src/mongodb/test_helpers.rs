@@ -26,7 +26,10 @@ pub fn mock_stream<T>(
 }
 
 /// Mocks the result of an aggregate call on a given collection.
-pub fn mock_collection_aggregate_response(collection: impl ToString, result: Bson) -> MockDatabaseTrait {
+pub fn mock_collection_aggregate_response(
+    collection: impl ToString,
+    result: Bson,
+) -> MockDatabaseTrait {
     let collection_name = collection.to_string();
 
     let mut db = MockDatabaseTrait::new();
@@ -111,5 +114,37 @@ pub fn mock_collection_aggregate_response_for_pipeline(
         );
         mock_collection
     });
+    db
+}
+
+/// Mocks the result of an aggregate call without a specified collection. Asserts that the pipeline
+/// that the aggregate call receives matches the given pipeline.
+pub fn mock_aggregate_response_for_pipeline(
+    expected_pipeline: Bson,
+    result: Bson,
+) -> MockDatabaseTrait {
+    let mut db = MockDatabaseTrait::new();
+    db.expect_aggregate()
+        .returning(move |pipeline, _: Option<AggregateOptions>| {
+            assert_eq!(
+                to_bson(&pipeline).unwrap(),
+                expected_pipeline,
+                "actual pipeline (left) did not match expected (right)"
+            );
+            let result_docs = {
+                let items = match result.clone() {
+                    Bson::Array(xs) => xs,
+                    _ => panic!("mock pipeline result should be an array of documents"),
+                };
+                items
+                    .into_iter()
+                    .map(|x| match x {
+                        Bson::Document(doc) => Ok(doc),
+                        _ => panic!("mock pipeline result should be an array of documents"),
+                    })
+                    .collect()
+            };
+            Ok(mock_stream(result_docs))
+        });
     db
 }

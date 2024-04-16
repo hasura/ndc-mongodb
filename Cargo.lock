@@ -1468,6 +1468,7 @@ dependencies = [
  "bytes",
  "configuration",
  "dc-api",
+ "dc-api-test-helpers",
  "dc-api-types",
  "enum-iterator",
  "futures",

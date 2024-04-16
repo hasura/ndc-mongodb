@@ -79,4 +79,209 @@ fn argument_to_mongodb_expression(
     }
 }
 
-// TODO: test
+#[cfg(test)]
+mod tests {
+    use configuration::{
+        native_query::NativeQuery,
+        schema::{ObjectField, ObjectType, Type},
+    };
+    use dc_api_test_helpers::{column, query, query_request};
+    use dc_api_types::{Argument, QueryResponse};
+    use mongodb::bson::{bson, doc};
+    use mongodb_support::BsonScalarType as S;
+    use pretty_assertions::assert_eq;
+    use serde_json::{from_value, json};
+
+    use crate::{
+        mongodb::test_helpers::mock_aggregate_response_for_pipeline,
+        query::{execute_query_request, QueryConfig},
+    };
+
+    #[tokio::test]
+    async fn executes_native_query() -> Result<(), anyhow::Error> {
+        let native_query = NativeQuery {
+            result_type: Type::Object("VectorResult".to_owned()),
+            arguments: [
+                (
+                    "filter".to_string(),
+                    ObjectField {
+                        r#type: Type::ExtendedJSON,
+                        description: None,
+                    },
+                ),
+                (
+                    "queryVector".to_string(),
+                    ObjectField {
+                        r#type: Type::ArrayOf(Box::new(Type::Scalar(S::Double))),
+                        description: None,
+                    },
+                ),
+                (
+                    "numCandidates".to_string(),
+                    ObjectField {
+                        r#type: Type::Scalar(S::Int),
+                        description: None,
+                    },
+                ),
+                (
+                    "limit".to_string(),
+                    ObjectField {
+                        r#type: Type::Scalar(S::Int),
+                        description: None,
+                    },
+                ),
+            ]
+            .into(),
+            pipeline: vec![doc! {
+              "$vectorSearch": {
+                "index": "movie-vector-index",
+                "path": "plot_embedding",
+                "filter": "{{ filter }}",
+                "queryVector": "{{ queryVector }}",
+                "numCandidates": "{{ numCandidates }}",
+                "limit": "{{ limit }}"
+              }
+            }],
+            object_types: [(
+                "VectorResult".to_owned(),
+                ObjectType {
+                    description: None,
+                    fields: [
+                        (
+                            "_id".to_owned(),
+                            ObjectField {
+                                r#type: Type::Scalar(S::ObjectId),
+                                description: None,
+                            },
+                        ),
+                        (
+                            "title".to_owned(),
+                            ObjectField {
+                                r#type: Type::Scalar(S::ObjectId),
+                                description: None,
+                            },
+                        ),
+                        (
+                            "genres".to_owned(),
+                            ObjectField {
+                                r#type: Type::ArrayOf(Box::new(Type::Scalar(S::String))),
+                                description: None,
+                            },
+                        ),
+                        (
+                            "year".to_owned(),
+                            ObjectField {
+                                r#type: Type::Scalar(S::Int),
+                                description: None,
+                            },
+                        ),
+                    ]
+                    .into(),
+                },
+            )]
+            .into(),
+            description: None,
+        };
+
+        let config = QueryConfig {
+            native_queries: &[("vectorSearch".to_owned(), native_query.clone())].into(),
+            object_types: &native_query.object_types,
+        };
+
+        let request = query_request()
+            .target_with_arguments(
+                ["vectorSearch"],
+                [
+                    (
+                        "filter",
+                        Argument::Literal {
+                            value: json!({
+                                "$and": [
+                                    {
+                                        "genres": {
+                                            "$nin": [
+                                                "Drama", "Western", "Crime"
+                                            ],
+                                            "$in": [
+                                                "Action", "Adventure", "Family"
+                                            ]
+                                        }
+                                    }, {
+                                        "year": { "$gte": 1960, "$lte": 2000 }
+                                    }
+                                ]
+                            }),
+                        },
+                    ),
+                    (
+                        "queryVector",
+                        Argument::Literal {
+                            value: json!([-0.020156775, -0.024996493, 0.010778184]),
+                        },
+                    ),
+                    ("numCandidates", Argument::Literal { value: json!(200) }),
+                    ("limit", Argument::Literal { value: json!(10) }),
+                ],
+            )
+            .query(query().fields([
+                column!("title": "String"),
+                column!("genres": "String"),
+                column!("year": "String"),
+            ]))
+            .into();
+
+        let expected_pipeline = bson!([
+            {
+                "$vectorSearch": {
+                    "index": "movie-vector-index",
+                    "path": "plot_embedding",
+                    "filter": {
+                        "$and": [
+                            {
+                                "genres": {
+                                    "$nin": [
+                                        "Drama", "Western", "Crime"
+                                    ],
+                                    "$in": [
+                                        "Action", "Adventure", "Family"
+                                    ]
+                                }
+                            }, {
+                                "year": { "$gte": 1960, "$lte": 2000 }
+                            }
+                        ]
+                    },
+                    "queryVector": [-0.020156775, -0.024996493, 0.010778184],
+                    "numCandidates": 200,
+                    "limit": 10,
+                }
+            },
+            {
+                "$replaceWith": {
+                    "title": { "$ifNull": ["$title", null] },
+                    "year": { "$ifNull": ["$year", null] },
+                    "genres": { "$ifNull": ["$genres", null] },
+                }
+            }
+        ]);
+
+        let expected_response: QueryResponse = from_value(json!({
+            "rows": [
+                { "title": "Beau Geste", "year": 1926, "genres": ["Action", "Adventure", "Drama"] },
+                { "title": "For Heaven's Sake", "year": 1926, "genres": ["Action", "Comedy", "Romance"] },
+            ],
+        }))?;
+
+        let db = mock_aggregate_response_for_pipeline(
+            expected_pipeline,
+            bson!([
+                { "title": "Beau Geste", "year": 1926, "genres": ["Action", "Adventure", "Drama"] },
+                { "title": "For Heaven's Sake", "year": 1926, "genres": ["Action", "Comedy", "Romance"] },
+            ]),
+        );
+
+        let result = execute_query_request(db, config, request).await?;
+        assert_eq!(expected_response, result);
+        Ok(())
+    }
+}
