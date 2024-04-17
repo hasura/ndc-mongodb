@@ -20,6 +20,8 @@ in
       # Run the container as the current user so when it writes to the snapshots directory it doesn't write as root
       service.user = builtins.toString config.host.uid;
       extra-volumes = [
+        # Mount the snapshots directory in the repo source tree into the container
+        # so that ndc-test can read/write in it
         "./snapshots:/snapshots:rw"
       ];
     };
