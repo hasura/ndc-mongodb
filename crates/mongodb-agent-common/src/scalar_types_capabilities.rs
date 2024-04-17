@@ -27,13 +27,13 @@ pub fn aggregate_functions(
     [(A::Count, S::Int)]
         .into_iter()
         .chain(iter_if(
-            is_ordered(scalar_type),
+            scalar_type.is_orderable(),
             [A::Min, A::Max]
                 .into_iter()
                 .map(move |op| (op, scalar_type)),
         ))
         .chain(iter_if(
-            is_numeric(scalar_type),
+            scalar_type.is_numeric(),
             [A::Avg, A::Sum]
                 .into_iter()
                 .map(move |op| (op, scalar_type)),
@@ -44,11 +44,11 @@ pub fn comparison_operators(
     scalar_type: BsonScalarType,
 ) -> impl Iterator<Item = (ComparisonFunction, BsonScalarType)> {
     iter_if(
-        is_comparable(scalar_type),
+        scalar_type.is_comparable(),
         [(C::Equal, scalar_type), (C::NotEqual, scalar_type)].into_iter(),
     )
     .chain(iter_if(
-        is_ordered(scalar_type),
+        scalar_type.is_orderable(),
         [
             C::LessThan,
             C::LessThanOrEqual,
@@ -81,32 +81,6 @@ fn capabilities(scalar_type: BsonScalarType) -> ScalarTypeCapabilities {
         },
         update_column_operators: None,
     }
-}
-
-fn numeric_types() -> [BsonScalarType; 4] {
-    [S::Double, S::Int, S::Long, S::Decimal]
-}
-
-fn is_numeric(scalar_type: BsonScalarType) -> bool {
-    numeric_types().contains(&scalar_type)
-}
-
-fn is_comparable(scalar_type: BsonScalarType) -> bool {
-    let not_comparable = [S::Regex, S::Javascript, S::JavascriptWithScope];
-    !not_comparable.contains(&scalar_type)
-}
-
-fn is_ordered(scalar_type: BsonScalarType) -> bool {
-    let ordered = [
-        S::Double,
-        S::Decimal,
-        S::Int,
-        S::Long,
-        S::String,
-        S::Date,
-        S::Timestamp,
-    ];
-    ordered.contains(&scalar_type)
 }
 
 /// If `condition` is true returns an iterator with the same items as the given `iter` input.
