@@ -142,10 +142,7 @@ impl BsonScalarType {
     }
 
     pub fn graphql_name(self) -> String {
-        match self.graphql_type() {
-            Some(gql_type) => gql_type.to_string(),
-            None => capitalize(self.bson_name()),
-        }
+        capitalize(self.bson_name())
     }
 
     pub fn graphql_type(self) -> Option<GraphQlType> {
