@@ -9,7 +9,10 @@ in
   services = {
     test = import ./service-connector.nix {
       inherit pkgs;
-      command = ["test" "--snapshots-dir" "/snapshots" "--seed" "1337_1337_1337_1337_1337_1337_13"];
+      command = ["test"];
+      # Record snapshots into the snapshots dir
+      # command = ["test" "--snapshots-dir" "/snapshots" "--seed" "1337_1337_1337_1337_1337_1337_13"];
+      # Replay and test the recorded snapshots
       # command = ["replay" "--snapshots-dir" "/snapshots"];
       configuration-dir = ../fixtures/connector/chinook;
       database-uri = "mongodb://mongodb:${mongodb-port}/chinook";
