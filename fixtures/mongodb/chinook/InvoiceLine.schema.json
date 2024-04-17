@@ -17,7 +17,7 @@
         "bsonType": "int"
       },
       "UnitPrice": {
-        "bsonType": "double"
+        "bsonType": "decimal"
       }
     },
     "required": ["InvoiceId", "InvoiceLineId", "Quantity", "TrackId", "UnitPrice"]

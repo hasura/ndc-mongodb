@@ -29,7 +29,7 @@
         "bsonType": "int"
       },
       "Total": {
-        "bsonType": "double"
+        "bsonType": "decimal"
       }
     },
     "required": ["CustomerId", "InvoiceDate", "InvoiceId", "Total"]

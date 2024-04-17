@@ -29,7 +29,7 @@
         "bsonType": "int"
       },
       "UnitPrice": {
-        "bsonType": "double"
+        "bsonType": "decimal"
       }
     },
     "required": ["MediaTypeId", "Milliseconds", "Name", "TrackId", "UnitPrice"]
