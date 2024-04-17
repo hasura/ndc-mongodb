@@ -89,7 +89,7 @@
         "ReportsTo": {
           "type": {
             "nullable": {
-              "scalar": "string"
+              "scalar": "int"
             }
           }
         },
