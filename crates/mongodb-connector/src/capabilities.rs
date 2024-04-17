@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 
 use mongodb_agent_common::{
-    aggregation_function::AggregationFunction, comparison_function::ComparisonFunction,
+    comparison_function::ComparisonFunction,
+    scalar_types_capabilities::{aggregate_functions, comparison_operators},
 };
 use mongodb_support::BsonScalarType;
 use ndc_sdk::models::{
@@ -86,27 +87,7 @@ fn bson_scalar_type_representation(bson_scalar_type: BsonScalarType) -> Option<T
 fn bson_aggregation_functions(
     bson_scalar_type: BsonScalarType,
 ) -> BTreeMap<String, AggregateFunctionDefinition> {
-    let orderable_functions = if bson_scalar_type.is_orderable() {
-        vec![
-            (AggregationFunction::Min, bson_scalar_type),
-            (AggregationFunction::Max, bson_scalar_type),
-        ]
-    } else {
-        vec![]
-    };
-    let numeric_functions = if bson_scalar_type.is_numeric() {
-        vec![
-            (AggregationFunction::Avg, bson_scalar_type),
-            (AggregationFunction::Sum, bson_scalar_type),
-        ]
-    } else {
-        vec![]
-    };
-
-    [(AggregationFunction::Count, BsonScalarType::Int)]
-        .into_iter()
-        .chain(orderable_functions)
-        .chain(numeric_functions)
+    aggregate_functions(bson_scalar_type)
         .map(|(fn_name, result_type)| {
             let aggregation_definition = AggregateFunctionDefinition {
                 result_type: bson_to_named_type(result_type),
@@ -119,76 +100,19 @@ fn bson_aggregation_functions(
 fn bson_comparison_operators(
     bson_scalar_type: BsonScalarType,
 ) -> BTreeMap<String, ComparisonOperatorDefinition> {
-    let comparable_operators = if bson_scalar_type.is_comparable() {
-        vec![
-            (
-                ComparisonFunction::Equal,
-                ComparisonOperatorDefinition::Equal,
-            ),
-            (
-                ComparisonFunction::NotEqual,
-                ComparisonOperatorDefinition::Custom {
-                    argument_type: bson_to_named_type(bson_scalar_type),
-                },
-            ),
-        ]
-    } else {
-        vec![]
-    };
-    let orderable_operators = if bson_scalar_type.is_orderable() {
-        vec![
-            (
-                ComparisonFunction::LessThan,
-                ComparisonOperatorDefinition::Custom {
-                    argument_type: bson_to_named_type(bson_scalar_type),
-                },
-            ),
-            (
-                ComparisonFunction::LessThanOrEqual,
-                ComparisonOperatorDefinition::Custom {
-                    argument_type: bson_to_named_type(bson_scalar_type),
-                },
-            ),
-            (
-                ComparisonFunction::GreaterThan,
-                ComparisonOperatorDefinition::Custom {
-                    argument_type: bson_to_named_type(bson_scalar_type),
-                },
-            ),
-            (
-                ComparisonFunction::GreaterThanOrEqual,
-                ComparisonOperatorDefinition::Custom {
-                    argument_type: bson_to_named_type(bson_scalar_type),
-                },
-            ),
-        ]
-    } else {
-        vec![]
-    };
-    let string_operators = if bson_scalar_type == BsonScalarType::String {
-        vec![
-            (
-                ComparisonFunction::Regex,
-                ComparisonOperatorDefinition::Custom {
-                    argument_type: bson_to_named_type(bson_scalar_type),
-                },
-            ),
-            (
-                ComparisonFunction::IRegex,
-                ComparisonOperatorDefinition::Custom {
-                    argument_type: bson_to_named_type(bson_scalar_type),
-                },
-            ),
-        ]
-    } else {
-        vec![]
-    };
-
-    comparable_operators
-        .into_iter()
-        .chain(orderable_operators)
-        .chain(string_operators)
-        .map(|(fn_name, definition)| (fn_name.graphql_name().to_owned(), definition))
+    comparison_operators(bson_scalar_type)
+        .map(|(comparison_fn, arg_type)| {
+            let fn_name = comparison_fn.graphql_name().to_owned();
+            match comparison_fn {
+                ComparisonFunction::Equal => (fn_name, ComparisonOperatorDefinition::Equal),
+                _ => (
+                    fn_name,
+                    ComparisonOperatorDefinition::Custom {
+                        argument_type: bson_to_named_type(arg_type),
+                    },
+                ),
+            }
+        })
         .collect()
 }
 
