@@ -167,6 +167,78 @@ impl BsonScalarType {
             all::<BsonScalarType>().find(|s| s.bson_name().eq_ignore_ascii_case(name));
         scalar_type.ok_or_else(|| Error::UnknownScalarType(name.to_owned()))
     }
+
+    pub fn is_orderable(self) -> bool {
+        match self {
+            S::Double => true,
+            S::Decimal => true,
+            S::Int => true,
+            S::Long => true,
+            S::String => true,
+            S::Date => true,
+            S::Timestamp => true,
+            S::BinData => false,
+            S::ObjectId => false,
+            S::Bool => false,
+            S::Null => false,
+            S::Regex => false,
+            S::Javascript => false,
+            S::JavascriptWithScope => false,
+            S::MinKey => false,
+            S::MaxKey => false,
+            S::Undefined => false,
+            S::DbPointer => false,
+            S::Symbol => false,
+        }
+    }
+
+    pub fn is_numeric(self) -> bool {
+        match self {
+            S::Double => true,
+            S::Decimal => true,
+            S::Int => true,
+            S::Long => true,
+            S::String => false,
+            S::Date => false,
+            S::Timestamp => false,
+            S::BinData => false,
+            S::ObjectId => false,
+            S::Bool => false,
+            S::Null => false,
+            S::Regex => false,
+            S::Javascript => false,
+            S::JavascriptWithScope => false,
+            S::MinKey => false,
+            S::MaxKey => false,
+            S::Undefined => false,
+            S::DbPointer => false,
+            S::Symbol => false,
+        }
+    }
+
+    pub fn is_comparable(self) -> bool {
+        match self {
+            S::Double => true,
+            S::Decimal => true,
+            S::Int => true,
+            S::Long => true,
+            S::String => true,
+            S::Date => true,
+            S::Timestamp => true,
+            S::BinData => true,
+            S::ObjectId => true,
+            S::Bool => true,
+            S::Null => true,
+            S::Regex => false,
+            S::Javascript => false,
+            S::JavascriptWithScope => false,
+            S::MinKey => true,
+            S::MaxKey => true,
+            S::Undefined => true,
+            S::DbPointer => true,
+            S::Symbol => true,
+        }
+    }
 }
 
 impl std::fmt::Display for BsonScalarType {
