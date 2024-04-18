@@ -85,7 +85,7 @@ mod tests {
             ]),
         );
 
-        let result = execute_query_request(db, Default::default(), query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -160,7 +160,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, Default::default(), query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -241,7 +241,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, Default::default(), query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -299,7 +299,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, Default::default(), query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -320,7 +320,7 @@ mod tests {
 
         let db = mock_collection_aggregate_response("comments", bson!([]));
 
-        let result = execute_query_request(db, Default::default(), query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }

@@ -12,7 +12,6 @@ use crate::{
 };
 
 #[derive(Clone, Debug, Default)]
-#[non_exhaustive]
 pub struct Configuration {
     /// Tracked collections from the configured MongoDB database. This includes real collections as
     /// well as virtual collections defined by native queries using

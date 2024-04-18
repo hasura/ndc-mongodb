@@ -94,8 +94,7 @@ mod tests {
     use serde_json::{from_value, json};
 
     use crate::{
-        mongodb::test_helpers::mock_aggregate_response_for_pipeline,
-        query::{execute_query_request, QueryConfig},
+        mongodb::test_helpers::mock_aggregate_response_for_pipeline, query::execute_query_request,
     };
 
     #[tokio::test]
@@ -133,7 +132,7 @@ mod tests {
                 ),
             ]
             .into(),
-            r#type: Type::Object("VectorResult".to_owned()),
+            r#type: "VectorResult".to_owned(),
             pipeline: vec![doc! {
               "$vectorSearch": {
                 "index": "movie-vector-index",
@@ -287,7 +286,7 @@ mod tests {
             ]),
         );
 
-        let result = execute_query_request(db, config, request).await?;
+        let result = execute_query_request(db, &config, request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }

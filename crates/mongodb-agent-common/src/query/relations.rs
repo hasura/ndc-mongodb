@@ -339,7 +339,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, Default::default(), query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -435,7 +435,7 @@ mod tests {
             ]),
         );
 
-        let result = execute_query_request(db, Default::default(), query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -531,7 +531,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, Default::default(), query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -701,7 +701,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, Default::default(), query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -805,7 +805,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, Default::default(), query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -937,7 +937,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, Default::default(), query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -1080,7 +1080,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, Default::default(), query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())

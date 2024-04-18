@@ -926,8 +926,8 @@ mod tests {
     use dc_api_test_helpers::{self as v2, source, table_relationships, target};
     use mongodb_support::BsonScalarType;
     use ndc_sdk::models::{
-        AggregateFunctionDefinition, ComparisonOperatorDefinition, OrderByElement, OrderByTarget,
-        OrderDirection, ScalarType, Type, TypeRepresentation,
+        self as v3, AggregateFunctionDefinition, ComparisonOperatorDefinition, OrderByElement,
+        OrderByTarget, OrderDirection, ScalarType, Type, TypeRepresentation,
     };
     use ndc_test_helpers::*;
     use pretty_assertions::assert_eq;
@@ -1324,21 +1324,29 @@ mod tests {
             collections: Cow::Owned(BTreeMap::from([
                 (
                     "authors".into(),
-                    schema::Collection {
+                    v3::CollectionInfo {
+                        name: "authors".to_owned(),
                         description: None,
-                        r#type: "Author".into(),
+                        collection_type: "Author".into(),
+                        arguments: Default::default(),
+                        uniqueness_constraints: make_primary_key_uniqueness_constraint("authors"),
+                        foreign_keys: Default::default(),
                     },
                 ),
                 (
                     "articles".into(),
-                    schema::Collection {
+                    v3::CollectionInfo {
+                        name: "articles".to_owned(),
                         description: None,
-                        r#type: "Article".into(),
+                        collection_type: "Article".into(),
+                        arguments: Default::default(),
+                        uniqueness_constraints: make_primary_key_uniqueness_constraint("articles"),
+                        foreign_keys: Default::default(),
                     },
                 ),
             ])),
             functions: Default::default(),
-            object_types: BTreeMap::from([
+            object_types: Cow::Owned(BTreeMap::from([
                 (
                     "Author".into(),
                     schema::ObjectType {
@@ -1392,7 +1400,7 @@ mod tests {
                         ]),
                     },
                 ),
-            ]),
+            ])),
             scalar_types: Cow::Owned(make_scalar_types()),
         }
     }
@@ -1401,13 +1409,17 @@ mod tests {
         QueryContext {
             collections: Cow::Owned(BTreeMap::from([(
                 "authors".into(),
-                schema::Collection {
+                v3::CollectionInfo {
+                    name: "authors".into(),
                     description: None,
-                    r#type: "Author".into(),
+                    collection_type: "Author".into(),
+                    arguments: Default::default(),
+                    uniqueness_constraints: make_primary_key_uniqueness_constraint("authors"),
+                    foreign_keys: Default::default(),
                 },
             )])),
             functions: Default::default(),
-            object_types: BTreeMap::from([
+            object_types: Cow::Owned(BTreeMap::from([
                 (
                     "Author".into(),
                     schema::ObjectType {
@@ -1467,8 +1479,20 @@ mod tests {
                         )]),
                     },
                 ),
-            ]),
+            ])),
             scalar_types: Cow::Owned(make_scalar_types()),
         }
+    }
+
+    fn make_primary_key_uniqueness_constraint(
+        collection_name: &str,
+    ) -> BTreeMap<String, v3::UniquenessConstraint> {
+        [(
+            format!("{collection_name}_id"),
+            v3::UniquenessConstraint {
+                unique_columns: vec!["_id".to_owned()],
+            },
+        )]
+        .into()
     }
 }
