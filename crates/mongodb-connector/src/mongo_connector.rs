@@ -129,11 +129,11 @@ impl Connector for MongoConnector {
 
     #[instrument(err, skip_all)]
     async fn mutation(
-        _configuration: &Self::Configuration,
+        configuration: &Self::Configuration,
         state: &Self::State,
         request: MutationRequest,
     ) -> Result<JsonResponse<MutationResponse>, MutationError> {
-        handle_mutation_request(state, request).await
+        handle_mutation_request(configuration, state, request).await
     }
 
     #[instrument(err, skip_all)]
@@ -144,7 +144,7 @@ impl Connector for MongoConnector {
     ) -> Result<JsonResponse<QueryResponse>, QueryError> {
         tracing::debug!(query_request = %serde_json::to_string(&request).unwrap(), "received query request");
         let v2_request = v3_to_v2_query_request(&get_query_context(configuration), request)?;
-        let response = handle_query_request(state, v2_request)
+        let response = handle_query_request(configuration, state, v2_request)
             .await
             .map_err(mongo_agent_error_to_query_error)?;
         Ok(v2_to_v3_query_response(response).into())

@@ -1,15 +1,7 @@
-use std::{borrow::Cow, collections::BTreeMap};
+use std::borrow::Cow;
 
-use crate::{
-    api_type_conversions::{ConversionError, QueryContext},
-    schema::SCALAR_TYPES,
-};
-use configuration::{
-    native_query::{NativeQuery, NativeQueryRepresentation},
-    schema as config, Configuration,
-};
-use mongodb_support::EXTENDED_JSON_TYPE_NAME;
-use ndc_sdk::models::{self as ndc, ArgumentInfo, FunctionInfo};
+use crate::{api_type_conversions::QueryContext, schema::SCALAR_TYPES};
+use configuration::Configuration;
 
 /// Produce a query context from the connector configuration to direct query request processing
 pub fn get_query_context(configuration: &Configuration) -> QueryContext<'_> {
