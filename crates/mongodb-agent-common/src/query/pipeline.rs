@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use configuration::Configuration;
 use dc_api_types::{Aggregate, Query, QueryRequest, VariableSet};
 use mongodb::bson::{self, doc, Bson};
 
@@ -15,7 +16,6 @@ use super::{
     make_selector, make_sort,
     native_query::pipeline_for_native_query,
     relations::pipeline_for_relations,
-    QueryConfig,
 };
 
 /// Signals the shape of data that will be returned by MongoDB.
@@ -48,7 +48,7 @@ pub fn is_response_faceted(query: &Query) -> bool {
 /// Returns a pipeline paired with a value that indicates whether the response requires
 /// post-processing in the agent.
 pub fn pipeline_for_query_request(
-    config: QueryConfig<'_>,
+    config: &Configuration,
     query_request: &QueryRequest,
 ) -> Result<(Pipeline, ResponseShape), MongoAgentError> {
     let foreach = foreach_variants(query_request);
@@ -65,7 +65,7 @@ pub fn pipeline_for_query_request(
 /// Returns a pipeline paired with a value that indicates whether the response requires
 /// post-processing in the agent.
 pub fn pipeline_for_non_foreach(
-    config: QueryConfig<'_>,
+    config: &Configuration,
     variables: Option<&VariableSet>,
     query_request: &QueryRequest,
 ) -> Result<(Pipeline, ResponseShape), MongoAgentError> {

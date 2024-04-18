@@ -9,7 +9,6 @@ use crate::{
 };
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
-#[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct Schema {
     #[serde(default)]

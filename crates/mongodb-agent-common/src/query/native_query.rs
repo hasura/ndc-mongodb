@@ -84,6 +84,7 @@ mod tests {
     use configuration::{
         native_query::{NativeQuery, NativeQueryRepresentation},
         schema::{ObjectField, ObjectType, Type},
+        Configuration,
     };
     use dc_api_test_helpers::{column, query, query_request};
     use dc_api_types::{Argument, QueryResponse};
@@ -143,50 +144,55 @@ mod tests {
                 "limit": "{{ limit }}"
               }
             }],
-            object_types: [(
-                "VectorResult".to_owned(),
-                ObjectType {
-                    description: None,
-                    fields: [
-                        (
-                            "_id".to_owned(),
-                            ObjectField {
-                                r#type: Type::Scalar(S::ObjectId),
-                                description: None,
-                            },
-                        ),
-                        (
-                            "title".to_owned(),
-                            ObjectField {
-                                r#type: Type::Scalar(S::ObjectId),
-                                description: None,
-                            },
-                        ),
-                        (
-                            "genres".to_owned(),
-                            ObjectField {
-                                r#type: Type::ArrayOf(Box::new(Type::Scalar(S::String))),
-                                description: None,
-                            },
-                        ),
-                        (
-                            "year".to_owned(),
-                            ObjectField {
-                                r#type: Type::Scalar(S::Int),
-                                description: None,
-                            },
-                        ),
-                    ]
-                    .into(),
-                },
-            )]
-            .into(),
             description: None,
         };
 
-        let config = QueryConfig {
-            native_queries: &[("vectorSearch".to_owned(), native_query.clone())].into(),
-            object_types: &native_query.object_types,
+        let object_types = [(
+            "VectorResult".to_owned(),
+            ObjectType {
+                description: None,
+                fields: [
+                    (
+                        "_id".to_owned(),
+                        ObjectField {
+                            r#type: Type::Scalar(S::ObjectId),
+                            description: None,
+                        },
+                    ),
+                    (
+                        "title".to_owned(),
+                        ObjectField {
+                            r#type: Type::Scalar(S::ObjectId),
+                            description: None,
+                        },
+                    ),
+                    (
+                        "genres".to_owned(),
+                        ObjectField {
+                            r#type: Type::ArrayOf(Box::new(Type::Scalar(S::String))),
+                            description: None,
+                        },
+                    ),
+                    (
+                        "year".to_owned(),
+                        ObjectField {
+                            r#type: Type::Scalar(S::Int),
+                            description: None,
+                        },
+                    ),
+                ]
+                .into(),
+            },
+        )]
+        .into();
+
+        let config = Configuration {
+            native_queries: [("vectorSearch".to_owned(), native_query.clone())].into(),
+            object_types,
+            collections: Default::default(),
+            functions: Default::default(),
+            procedures: Default::default(),
+            native_procedures: Default::default(),
         };
 
         let request = query_request()

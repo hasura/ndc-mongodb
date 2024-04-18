@@ -1,9 +1,7 @@
 use std::{collections::HashMap, fmt::Display};
 
-use configuration::native_query::NativeQuery;
+use configuration::{native_query::NativeQuery, Configuration};
 use dc_api_types::{Argument, QueryRequest};
-
-use super::QueryConfig;
 
 #[derive(Clone, Debug)]
 pub enum QueryTarget<'a> {
@@ -17,7 +15,7 @@ pub enum QueryTarget<'a> {
 
 impl QueryTarget<'_> {
     pub fn for_request<'a>(
-        config: QueryConfig<'a>,
+        config: &'a Configuration,
         query_request: &'a QueryRequest,
     ) -> QueryTarget<'a> {
         let target = &query_request.target;

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use anyhow::anyhow;
+use configuration::Configuration;
 use dc_api_types::comparison_column::ColumnSelector;
 use dc_api_types::relationship::ColumnMapping;
 use dc_api_types::{Field, QueryRequest, Relationship, VariableSet};
@@ -14,10 +15,9 @@ use crate::{
 };
 
 use super::pipeline::pipeline_for_non_foreach;
-use super::QueryConfig;
 
 pub fn pipeline_for_relations(
-    config: QueryConfig<'_>,
+    config: &Configuration,
     variables: Option<&VariableSet>,
     query_request: &QueryRequest,
 ) -> Result<Pipeline, MongoAgentError> {
@@ -53,7 +53,7 @@ pub fn pipeline_for_relations(
 
 /// Produces $lookup stages for any necessary joins
 fn lookups_for_fields(
-    config: QueryConfig<'_>,
+    config: &Configuration,
     query_request: &QueryRequest,
     variables: Option<&VariableSet>,
     relationships: &HashMap<String, Relationship>,
@@ -82,7 +82,7 @@ fn lookups_for_fields(
 
 /// Produces $lookup stages for any necessary joins
 fn lookups_for_field(
-    config: QueryConfig<'_>,
+    config: &Configuration,
     query_request: &QueryRequest,
     variables: Option<&VariableSet>,
     relationships: &HashMap<String, Relationship>,

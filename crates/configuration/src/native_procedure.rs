@@ -33,6 +33,3 @@ impl From<serialized::NativeProcedure> for NativeProcedure {
         }
     }
 }
-
-type Object = serde_json::Map<String, serde_json::Value>;
-type OptionalObject = Option<Object>;

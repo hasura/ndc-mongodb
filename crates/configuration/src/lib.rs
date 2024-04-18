@@ -10,4 +10,5 @@ pub use crate::configuration::Configuration;
 pub use crate::directory::list_existing_schemas;
 pub use crate::directory::read_directory;
 pub use crate::directory::write_schema_directory;
+pub use crate::serialized::Schema;
 pub use crate::with_name::{WithName, WithNameRef};
