@@ -1301,7 +1301,7 @@ mod tests {
             (
                 "Int".to_owned(),
                 ScalarType {
-                    representation: Some(TypeRepresentation::Integer),
+                    representation: Some(TypeRepresentation::Int32),
                     aggregate_functions: BTreeMap::from([(
                         "avg".into(),
                         AggregateFunctionDefinition {
