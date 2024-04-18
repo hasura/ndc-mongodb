@@ -249,8 +249,8 @@ fn native_query_to_function_info(
     }))
 }
 
-fn function_result_type<'a>(
-    object_types: &'a BTreeMap<String, schema::ObjectType>,
+fn function_result_type(
+    object_types: &BTreeMap<String, schema::ObjectType>,
     function_name: &str,
     object_type_name: &str,
 ) -> anyhow::Result<ndc::Type> {
@@ -291,9 +291,9 @@ fn arguments_to_ndc_arguments(
         .collect()
 }
 
-fn find_object_type<'a, 'b>(
+fn find_object_type<'a>(
     object_types: &'a BTreeMap<String, schema::ObjectType>,
-    object_type_name: &'b str,
+    object_type_name: &str,
 ) -> anyhow::Result<&'a schema::ObjectType> {
     object_types
         .get(object_type_name)
