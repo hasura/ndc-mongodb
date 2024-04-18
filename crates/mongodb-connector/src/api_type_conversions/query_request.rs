@@ -17,9 +17,9 @@ use super::{
 
 #[derive(Clone, Debug)]
 pub struct QueryContext<'a> {
-    pub collections: Cow<'a, BTreeMap<String, schema::Collection>>,
-    pub functions: BTreeMap<String, v3::FunctionInfo>,
-    pub object_types: BTreeMap<String, schema::ObjectType>,
+    pub collections: Cow<'a, BTreeMap<String, v3::CollectionInfo>>,
+    pub functions: Cow<'a, BTreeMap<String, v3::FunctionInfo>>,
+    pub object_types: Cow<'a, BTreeMap<String, schema::ObjectType>>,
     pub scalar_types: Cow<'a, BTreeMap<String, v3::ScalarType>>,
 }
 
