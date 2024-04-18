@@ -6,19 +6,22 @@ use configuration::{
 };
 use futures_util::TryStreamExt;
 use mongodb::bson::from_bson;
-use mongodb_agent_common::schema::{get_property_description, Property, ValidatorSchema};
+use mongodb_agent_common::{
+    schema::{get_property_description, Property, ValidatorSchema},
+    state::ConnectorState,
+};
 use mongodb_support::BsonScalarType;
 
-use mongodb_agent_common::interface_types::{MongoAgentError, MongoConfig};
+use mongodb_agent_common::interface_types::MongoAgentError;
 
 type Collection = WithName<schema::Collection>;
 type ObjectType = WithName<schema::ObjectType>;
 type ObjectField = WithName<schema::ObjectField>;
 
 pub async fn get_metadata_from_validation_schema(
-    config: &MongoConfig,
+    state: &ConnectorState,
 ) -> Result<BTreeMap<String, Schema>, MongoAgentError> {
-    let db = config.client.database(&config.database);
+    let db = state.database();
     let mut collections_cursor = db.list_collections(None, None).await?;
 
     let mut schemas: Vec<WithName<Schema>> = vec![];
