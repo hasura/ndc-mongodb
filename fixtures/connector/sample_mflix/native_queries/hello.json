@@ -5,9 +5,7 @@
   "arguments": {
     "name": { "type": { "scalar": "string" } }
   },
-  "resultType": {
-    "object": "Hello"
-  },
+  "type": "Hello",
   "objectTypes": {
     "Hello": {
       "fields": {
