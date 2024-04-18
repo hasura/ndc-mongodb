@@ -432,6 +432,7 @@ dependencies = [
  "itertools 0.12.1",
  "mongodb",
  "mongodb-support",
+ "ndc-models",
  "schemars",
  "serde",
  "serde_json",
@@ -1595,6 +1596,18 @@ dependencies = [
  "serde_json",
  "serde_with 2.3.3",
  "url",
+]
+
+[[package]]
+name = "ndc-models"
+version = "0.1.2"
+source = "git+http://github.com/hasura/ndc-spec.git#c59f824ff95e6a376c34f85816e80164bc1f3894"
+dependencies = [
+ "indexmap 2.2.5",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_with 2.3.3",
 ]
 
 [[package]]
