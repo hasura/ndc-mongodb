@@ -1594,18 +1594,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ndc-models"
-version = "0.1.2"
-source = "git+http://github.com/hasura/ndc-spec.git#c59f824ff95e6a376c34f85816e80164bc1f3894"
-dependencies = [
- "indexmap 2.2.5",
- "schemars",
- "serde",
- "serde_json",
- "serde_with 2.3.3",
-]
-
-[[package]]
 name = "ndc-sdk"
 version = "0.1.0"
 source = "git+https://github.com/hasura/ndc-sdk-rs.git#7409334d2ec2ca1d05fb341e69c9f07af520d8e0"
