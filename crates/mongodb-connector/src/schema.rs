@@ -13,8 +13,8 @@ lazy_static! {
 pub async fn get_schema(config: &Configuration) -> Result<ndc::SchemaResponse, SchemaError> {
     Ok(ndc::SchemaResponse {
         collections: config.collections.values().cloned().collect(),
-        functions: config.functions.clone(),
-        procedures: config.procedures.clone(),
+        functions: config.functions.values().cloned().collect(),
+        procedures: config.procedures.values().cloned().collect(),
         object_types: config.object_types.iter().map(object_type_to_ndc).collect(),
         scalar_types: SCALAR_TYPES.clone(),
     })

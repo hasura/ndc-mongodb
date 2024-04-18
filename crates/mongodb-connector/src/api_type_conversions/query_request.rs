@@ -27,7 +27,7 @@ impl QueryContext<'_> {
     fn find_collection(
         &self,
         collection_name: &str,
-    ) -> Result<Either<&schema::Collection, &v3::FunctionInfo>, ConversionError> {
+    ) -> Result<Either<&v3::CollectionInfo, &v3::FunctionInfo>, ConversionError> {
         if let Some(collection) = self.collections.get(collection_name) {
             return Ok(Either::Left(collection));
         }
@@ -45,7 +45,7 @@ impl QueryContext<'_> {
         collection_name: &str,
     ) -> Result<WithNameRef<schema::ObjectType>, ConversionError> {
         let type_name = match self.find_collection(collection_name)? {
-            Either::Left(collection) => Ok(&collection.r#type),
+            Either::Left(collection) => Ok(&collection.collection_type),
             Either::Right(function) => match &function.result_type {
                 v3::Type::Named { name } => Ok(name),
                 _ => Err(ConversionError::RootTypeIsNotObject(
