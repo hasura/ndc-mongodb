@@ -4,8 +4,8 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use configuration::Configuration;
 use mongodb_agent_common::{
-    explain::explain_query, health::check_health, interface_types::MongoConfig,
-    query::handle_query_request,
+    explain::explain_query, health::check_health, query::handle_query_request,
+    state::ConnectorState,
 };
 use ndc_sdk::{
     connector::{
@@ -55,10 +55,10 @@ impl ConnectorSetup for MongoConnector {
     // - `skip_all` omits arguments from the trace
     async fn try_init_state(
         &self,
-        configuration: &Configuration,
+        _configuration: &Configuration,
         _metrics: &mut prometheus::Registry,
-    ) -> Result<MongoConfig, InitializationError> {
-        let state = mongodb_agent_common::state::try_init_state(configuration).await?;
+    ) -> Result<ConnectorState, InitializationError> {
+        let state = mongodb_agent_common::state::try_init_state().await?;
         Ok(state)
     }
 }
@@ -67,7 +67,7 @@ impl ConnectorSetup for MongoConnector {
 #[async_trait]
 impl Connector for MongoConnector {
     type Configuration = Configuration;
-    type State = MongoConfig;
+    type State = ConnectorState;
 
     #[instrument(err, skip_all)]
     fn fetch_metrics(
@@ -110,7 +110,7 @@ impl Connector for MongoConnector {
         request: QueryRequest,
     ) -> Result<JsonResponse<ExplainResponse>, ExplainError> {
         let v2_request = v3_to_v2_query_request(&get_query_context(configuration), request)?;
-        let response = explain_query(state, v2_request)
+        let response = explain_query(configuration, state, v2_request)
             .await
             .map_err(mongo_agent_error_to_explain_error)?;
         Ok(v2_to_v3_explain_response(response).into())

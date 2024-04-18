@@ -6,7 +6,7 @@ use mongodb_support::BsonScalarType;
 use ndc_models as ndc;
 
 use crate::{
-    native_procedure::{self, NativeProcedure},
+    native_procedure::NativeProcedure,
     native_query::{NativeQuery, NativeQueryRepresentation},
     read_directory, schema, serialized,
 };
@@ -49,9 +49,9 @@ impl Configuration {
         native_procedures: BTreeMap<String, serialized::NativeProcedure>,
         native_queries: BTreeMap<String, serialized::NativeQuery>,
     ) -> anyhow::Result<Self> {
-        let object_types_iter = merge_object_types(&schema, &native_procedures, &native_queries);
+        let object_types_iter = || merge_object_types(&schema, &native_procedures, &native_queries);
         let object_type_errors = {
-            let duplicate_type_names: Vec<&str> = object_types_iter
+            let duplicate_type_names: Vec<&str> = object_types_iter()
                 .map(|(name, _)| name.as_ref())
                 .duplicates()
                 .collect();
@@ -64,7 +64,7 @@ impl Configuration {
                 ))
             }
         };
-        let object_types = object_types_iter
+        let object_types = object_types_iter()
             .map(|(name, ot)| (name.to_owned(), ot.clone()))
             .collect();
 
@@ -81,7 +81,7 @@ impl Configuration {
         let collections = {
             let regular_collections = schema.collections.into_iter().map(|(name, collection)| {
                 (
-                    name,
+                    name.clone(),
                     collection_to_collection_info(&object_types, name, collection),
                 )
             });
@@ -207,7 +207,7 @@ fn native_query_to_collection_info(
         name: name.to_owned(),
         collection_type: native_query.r#type.clone(),
         description: native_query.description.clone(),
-        arguments: arguments_to_ndc_arguments(native_query.arguments),
+        arguments: arguments_to_ndc_arguments(native_query.arguments.clone()),
         foreign_keys: Default::default(),
         uniqueness_constraints: BTreeMap::from_iter(pk_constraint),
     })
@@ -245,7 +245,7 @@ fn native_query_to_function_info(
     Ok(Some(ndc::FunctionInfo {
         name: name.to_owned(),
         description: native_query.description.clone(),
-        arguments: arguments_to_ndc_arguments(native_query.arguments),
+        arguments: arguments_to_ndc_arguments(native_query.arguments.clone()),
         result_type: function_result_type(object_types, name, &native_query.r#type)?,
     }))
 }
@@ -270,7 +270,7 @@ fn native_procedure_to_procedure_info(
     ndc::ProcedureInfo {
         name: procedure_name.to_owned(),
         description: procedure.description.clone(),
-        arguments: arguments_to_ndc_arguments(procedure.arguments),
+        arguments: arguments_to_ndc_arguments(procedure.arguments.clone()),
         result_type: type_to_ndc_type(&procedure.result_type),
     }
 }

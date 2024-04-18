@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use configuration::native_query::NativeQuery;
+use configuration::{native_query::NativeQuery, Configuration};
 use dc_api_types::{Argument, QueryRequest, VariableSet};
 use itertools::Itertools as _;
 
@@ -10,12 +10,12 @@ use crate::{
     procedure::{interpolated_command, ProcedureError},
 };
 
-use super::{arguments::resolve_arguments, query_target::QueryTarget, QueryConfig};
+use super::{arguments::resolve_arguments, query_target::QueryTarget};
 
 /// Returns either the pipeline defined by a native query with variable bindings for arguments, or
 /// an empty pipeline if the query request target is not a native query
 pub fn pipeline_for_native_query(
-    config: QueryConfig<'_>,
+    config: &Configuration,
     variables: Option<&VariableSet>,
     query_request: &QueryRequest,
 ) -> Result<Pipeline, MongoAgentError> {
@@ -30,7 +30,7 @@ pub fn pipeline_for_native_query(
 }
 
 fn make_pipeline(
-    config: QueryConfig<'_>,
+    config: &Configuration,
     variables: Option<&VariableSet>,
     native_query: &NativeQuery,
     arguments: &HashMap<String, Argument>,
@@ -46,7 +46,7 @@ fn make_pipeline(
         .try_collect()?;
 
     let bson_arguments =
-        resolve_arguments(config.object_types, &native_query.arguments, expressions)
+        resolve_arguments(&config.object_types, &native_query.arguments, expressions)
             .map_err(ProcedureError::UnresolvableArguments)?;
 
     // Replace argument placeholders with resolved expressions, convert document list to
@@ -132,7 +132,7 @@ mod tests {
                 ),
             ]
             .into(),
-            result_type: Type::Object("VectorResult".to_owned()),
+            r#type: Type::Object("VectorResult".to_owned()),
             pipeline: vec![doc! {
               "$vectorSearch": {
                 "index": "movie-vector-index",

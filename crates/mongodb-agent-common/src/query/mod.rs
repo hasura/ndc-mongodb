@@ -12,6 +12,7 @@ mod query_target;
 mod relations;
 pub mod serialization;
 
+use configuration::Configuration;
 use dc_api_types::{QueryRequest, QueryResponse};
 
 use self::execute_query_request::execute_query_request;
@@ -19,19 +20,19 @@ pub use self::{
     make_selector::make_selector,
     make_sort::make_sort,
     pipeline::{is_response_faceted, pipeline_for_non_foreach, pipeline_for_query_request},
-    query_config::QueryConfig,
     query_target::QueryTarget,
 };
-use crate::interface_types::{MongoAgentError, MongoConfig};
+use crate::{interface_types::MongoAgentError, state::ConnectorState};
 
 pub async fn handle_query_request(
-    config: &MongoConfig,
+    config: &Configuration,
+    state: &ConnectorState,
     query_request: QueryRequest,
 ) -> Result<QueryResponse, MongoAgentError> {
-    let database = config.client.database(&config.database);
+    let database = state.database();
     // This function delegates to another function which gives is a point to inject a mock database
     // implementation for testing.
-    execute_query_request(database, QueryConfig::from(config), query_request).await
+    execute_query_request(database, config, query_request).await
 }
 
 #[cfg(test)]

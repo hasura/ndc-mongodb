@@ -9,7 +9,7 @@ use std::{
 use tokio::fs;
 use tokio_stream::wrappers::ReadDirStream;
 
-use crate::{with_name::WithName, Configuration, Schema};
+use crate::{serialized::Schema, with_name::WithName, Configuration};
 
 pub const SCHEMA_DIRNAME: &str = "schema";
 pub const NATIVE_PROCEDURES_DIRNAME: &str = "native_procedures";

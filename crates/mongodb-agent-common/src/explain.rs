@@ -1,24 +1,26 @@
+use configuration::Configuration;
 use dc_api_types::{ExplainResponse, QueryRequest};
 use mongodb::bson::{doc, to_bson, Bson};
 
 use crate::{
-    interface_types::{MongoAgentError, MongoConfig},
-    query::{self, QueryConfig, QueryTarget},
+    interface_types::MongoAgentError,
+    query::{self, QueryTarget},
+    state::ConnectorState,
 };
 
 pub async fn explain_query(
-    config: &MongoConfig,
+    config: &Configuration,
+    state: &ConnectorState,
     query_request: QueryRequest,
 ) -> Result<ExplainResponse, MongoAgentError> {
     tracing::debug!(query_request = %serde_json::to_string(&query_request).unwrap());
 
-    let db = config.client.database(&config.database);
-    let query_config = QueryConfig::from(config);
+    let db = state.database();
 
-    let (pipeline, _) = query::pipeline_for_query_request(query_config, &query_request)?;
+    let (pipeline, _) = query::pipeline_for_query_request(config, &query_request)?;
     let pipeline_bson = to_bson(&pipeline)?;
 
-    let aggregate_target = match QueryTarget::for_request(query_config, &query_request) {
+    let aggregate_target = match QueryTarget::for_request(config, &query_request) {
         QueryTarget::Collection(collection_name) => Bson::String(collection_name),
         // 1 means aggregation without a collection target - as in `db.aggregate()` instead of
         // `db.<collection>.aggregate()`

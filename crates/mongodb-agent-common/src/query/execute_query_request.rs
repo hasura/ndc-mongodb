@@ -1,14 +1,12 @@
 use anyhow::anyhow;
+use configuration::Configuration;
 use dc_api_types::{QueryRequest, QueryResponse, RowSet};
 use futures::Stream;
 use futures_util::TryStreamExt;
 use itertools::Itertools as _;
 use mongodb::bson::{self, Document};
 
-use super::{
-    pipeline::{pipeline_for_query_request, ResponseShape},
-    QueryConfig,
-};
+use super::pipeline::{pipeline_for_query_request, ResponseShape};
 use crate::{
     interface_types::MongoAgentError,
     mongodb::{CollectionTrait as _, DatabaseTrait},
@@ -21,7 +19,7 @@ use crate::{
 /// testing.
 pub async fn execute_query_request(
     database: impl DatabaseTrait,
-    config: QueryConfig<'_>,
+    config: &Configuration,
     query_request: QueryRequest,
 ) -> Result<QueryResponse, MongoAgentError> {
     let target = QueryTarget::for_request(config, &query_request);
