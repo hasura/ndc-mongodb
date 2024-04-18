@@ -9,7 +9,7 @@ futures = "^0.3"
 itertools = "^0.12"
 mongodb = "2.8"
 mongodb-support = { path = "../mongodb-support" }
-ndc-models = { git = "http://github.com/hasura/ndc-spec.git" }
+ndc-models = { workspace = true }
 schemars = "^0.8.12"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
