@@ -34,21 +34,13 @@ pub async fn execute_query_request(
     // The target of a query request might be a collection, or it might be a native query. In the
     // latter case there is no collection to perform the aggregation against. So instead of sending
     // the MongoDB API call `db.<collection>.aggregate` we instead call `db.aggregate`.
-    let documents_result = match target {
+    let documents = match target {
         QueryTarget::Collection(collection_name) => {
             let collection = database.collection(&collection_name);
             collect_from_cursor(collection.aggregate(pipeline, None).await?).await
         }
         QueryTarget::NativeQuery { .. } => {
             collect_from_cursor(database.aggregate(pipeline, None).await?).await
-        }
-    };
-
-    let documents = match documents_result {
-        Ok(docs) => Ok(docs),
-        Err(error) => {
-            tracing::warn!(?error, "error response from MongoDB");
-            Err(error)
         }
     }?;
 
