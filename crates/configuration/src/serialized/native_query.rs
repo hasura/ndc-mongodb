@@ -48,8 +48,7 @@ pub struct NativeQuery {
     ///
     /// You may reference object types defined in the `object_types` list in this definition, or
     /// you may reference object types from `schema.json`.
-    #[serde(rename = "result_document_type")]
-    pub r#type: String,
+    pub result_document_type: String,
 
     /// You may define object types here to reference in `result_type`. Any types defined here will
     /// be merged with the definitions in `schema.json`. This allows you to maintain hand-written

@@ -223,12 +223,12 @@ fn native_query_to_collection_info(
     native_query: &NativeQuery,
 ) -> ndc::CollectionInfo {
     let pk_constraint =
-        get_primary_key_uniqueness_constraint(object_types, name, &native_query.r#type);
+        get_primary_key_uniqueness_constraint(object_types, name, &native_query.result_document_type);
 
     // TODO: recursively verify that all referenced object types exist
     ndc::CollectionInfo {
         name: name.to_owned(),
-        collection_type: native_query.r#type.clone(),
+        collection_type: native_query.result_document_type.clone(),
         description: native_query.description.clone(),
         arguments: arguments_to_ndc_arguments(native_query.arguments.clone()),
         foreign_keys: Default::default(),
@@ -265,7 +265,7 @@ fn native_query_to_function_info(
         name: name.to_owned(),
         description: native_query.description.clone(),
         arguments: arguments_to_ndc_arguments(native_query.arguments.clone()),
-        result_type: function_result_type(object_types, name, &native_query.r#type)?,
+        result_type: function_result_type(object_types, name, &native_query.result_document_type)?,
     })
 }
 

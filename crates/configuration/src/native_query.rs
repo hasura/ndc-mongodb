@@ -16,7 +16,7 @@ use crate::{schema::ObjectField, serialized};
 pub struct NativeQuery {
     pub representation: NativeQueryRepresentation,
     pub arguments: BTreeMap<String, ObjectField>,
-    pub r#type: String,
+    pub result_document_type: String,
     pub pipeline: Vec<bson::Document>,
     pub description: Option<String>,
 }
@@ -26,7 +26,7 @@ impl From<serialized::NativeQuery> for NativeQuery {
         NativeQuery {
             representation: value.representation,
             arguments: value.arguments,
-            r#type: value.r#type,
+            result_document_type: value.result_document_type,
             pipeline: value.pipeline,
             description: value.description,
         }

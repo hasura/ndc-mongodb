@@ -132,7 +132,7 @@ mod tests {
                 ),
             ]
             .into(),
-            r#type: "VectorResult".to_owned(),
+            result_document_type: "VectorResult".to_owned(),
             pipeline: vec![doc! {
               "$vectorSearch": {
                 "index": "movie-vector-index",
