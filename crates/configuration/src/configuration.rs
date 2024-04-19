@@ -196,7 +196,6 @@ fn merge_object_types<'a>(
     object_types_from_schema
         .chain(object_types_from_native_procedures)
         .chain(object_types_from_native_queries)
-    // .map(|(name, ot)| (name.to_owned(), ot.clone()))
 }
 
 fn collection_to_collection_info(
