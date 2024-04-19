@@ -1,0 +1,74 @@
+---
+source: crates/integration-tests/tests/remote_relationship.rs
+expression: response
+---
+data:
+  album:
+    - albumId: 156
+      movies:
+        - runtime: 156
+          title: The Song of Bernadette
+        - runtime: 156
+          title: Twenty-Four Eyes
+      title: "...And Justice For All"
+    - albumId: 257
+      movies:
+        - runtime: 257
+          title: Storm of the Century
+      title: "20th Century Masters - The Millennium Collection: The Best of Scorpions"
+    - albumId: 296
+      movies: []
+      title: "A Copland Celebration, Vol. I"
+    - albumId: 94
+      movies:
+        - runtime: 94
+          title: Sunrise
+        - runtime: 94
+          title: Zoo in Budapest
+      title: A Matter of Life and Death
+    - albumId: 95
+      movies:
+        - runtime: 95
+          title: He Who Gets Slapped
+        - runtime: 95
+          title: The Gold Rush
+      title: A Real Dead One
+    - albumId: 96
+      movies:
+        - runtime: 96
+          title: Under the Roofs of Paris
+        - runtime: 96
+          title: Moscow Laughs
+      title: A Real Live One
+    - albumId: 285
+      movies: []
+      title: A Soprano Inspired
+    - albumId: 139
+      movies:
+        - runtime: 139
+          title: The Egyptian
+        - runtime: 139
+          title: Solomon and Sheba
+      title: A TempestadeTempestade Ou O Livro Dos Dias
+    - albumId: 203
+      movies:
+        - runtime: 203
+          title: Michael the Brave
+        - runtime: 203
+          title: Prime Suspect 2
+      title: A-Sides
+    - albumId: 160
+      movies:
+        - runtime: 160
+          title: La Terra Trema
+        - runtime: 160
+          title: Raintree County
+      title: Ace Of Spades
+    - albumId: 232
+      movies:
+        - runtime: 232
+          title: Bratya Karamazovy
+        - runtime: 232
+          title: The New Country
+      title: Achtung Baby
+errors: ~

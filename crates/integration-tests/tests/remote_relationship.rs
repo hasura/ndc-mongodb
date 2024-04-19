@@ -1,0 +1,25 @@
+use insta::assert_yaml_snapshot;
+use integration_tests::query;
+use serde_json::json;
+
+#[tokio::test]
+async fn provides_source_and_target_for_remote_relationship() -> anyhow::Result<()> {
+    let q = r#"
+        query AlbumMovies($limit: Int, $movies_limit: Int) {
+          album(limit: $limit, order_by: { title: Asc }) {
+            title
+            movies(limit: $movies_limit) {
+              title
+              runtime
+            }
+            albumId
+          }
+        }
+    "#;
+    let response = query(q)
+        .variables(json!({ "limit": 11, "movies_limit": 2 }))
+        .run()
+        .await?;
+    assert_yaml_snapshot!(response);
+    Ok(())
+}

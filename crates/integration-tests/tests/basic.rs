@@ -1,9 +1,9 @@
 use insta::assert_yaml_snapshot;
-use integration_tests::run_query;
+use integration_tests::query;
 
 #[tokio::test]
 async fn runs_a_query() -> anyhow::Result<()> {
-    let query = r#"
+    let q = r#"
         query Movies {
           movies(limit: 10, order_by: { id: Asc }) {
             title
@@ -14,7 +14,7 @@ async fn runs_a_query() -> anyhow::Result<()> {
           }
         }
     "#;
-    let response = run_query(query).await?;
+    let response = query(q).run().await?;
     assert_yaml_snapshot!(response);
     Ok(())
 }
