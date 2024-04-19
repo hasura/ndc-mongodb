@@ -4,10 +4,12 @@
 default:
   @just --list
 
-test: test-unit test-ndc test-e2e
+test: test-unit test-integration
 
 test-unit:
   cargo test
+
+test-integration: (_arion "arion-compose/project-integration-tests.nix" "test")
 
 test-ndc: (_arion "arion-compose/project-ndc-test.nix" "test")
 

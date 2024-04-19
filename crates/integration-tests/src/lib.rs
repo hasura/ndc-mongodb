@@ -1,8 +1,6 @@
 use std::{collections::HashMap, env};
 
 use anyhow::anyhow;
-#[cfg(test)]
-use insta::assert_yaml_snapshot;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -60,22 +58,4 @@ pub async fn run_query(request: impl Into<GraphQLRequest>) -> anyhow::Result<Gra
 
 fn get_graphql_url() -> anyhow::Result<String> {
     env::var(ENGINE_GRAPHQL_URL).map_err(|_| anyhow!("please set {ENGINE_GRAPHQL_URL} to the GraphQL endpoint of a running GraphQL Engine server"))
-}
-
-#[tokio::test]
-async fn runs_a_query() -> anyhow::Result<()> {
-    let query = r#"
-        query Movies {
-          movies(limit: 10) {
-            title
-            imdb {
-              rating
-              votes
-            }
-          }
-        }
-    "#;
-    let response = run_query(query).await?;
-    assert_yaml_snapshot!(response);
-    Ok(())
 }
