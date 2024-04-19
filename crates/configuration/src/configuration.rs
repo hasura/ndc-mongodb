@@ -20,13 +20,12 @@ pub struct Configuration {
 
     /// Functions are based on native queries using [NativeQueryRepresentation::Function]
     /// representation.
-    pub functions: BTreeMap<String, ndc::FunctionInfo>,
-
+    ///
     /// In query requests functions and collections are treated as the same, but in schema
     /// responses they are separate concepts. So we want a set of [CollectionInfo] values for
     /// functions for query processing, and we want it separate from `collections` for the schema
     /// response.
-    pub function_collection_infos: BTreeMap<String, ndc::CollectionInfo>,
+    pub functions: BTreeMap<String, (ndc::FunctionInfo, ndc::CollectionInfo)>,
 
     /// Procedures are based on native procedures.
     pub procedures: BTreeMap<String, ndc::ProcedureInfo>,
@@ -114,29 +113,17 @@ impl Configuration {
                     Some((
                         name,
                         native_query_to_function_info(&object_types, name, native_query),
-                    ))
-                } else {
-                    None
-                }
-            })
-            .map(|(name, function_result)| {
-                Ok((name.to_owned(), function_result?)) as Result<_, anyhow::Error>
-            })
-            .partition_result();
-
-        let function_collection_infos = internal_native_queries
-            .iter()
-            .filter_map(|(name, native_query)| {
-                if native_query.representation == NativeQueryRepresentation::Function {
-                    Some((
-                        name.to_owned(),
                         native_query_to_collection_info(&object_types, name, native_query),
                     ))
                 } else {
                     None
                 }
             })
-            .collect();
+            .map(|(name, function_result, collection_info)| {
+                Ok((name.to_owned(), (function_result?, collection_info)))
+                    as Result<_, anyhow::Error>
+            })
+            .partition_result();
 
         let procedures = internal_native_procedures
             .iter()
@@ -162,7 +149,6 @@ impl Configuration {
         Ok(Configuration {
             collections,
             functions,
-            function_collection_infos,
             procedures,
             native_procedures: internal_native_procedures,
             native_queries: internal_native_queries,
@@ -221,8 +207,11 @@ fn native_query_to_collection_info(
     name: &str,
     native_query: &NativeQuery,
 ) -> ndc::CollectionInfo {
-    let pk_constraint =
-        get_primary_key_uniqueness_constraint(object_types, name, &native_query.result_document_type);
+    let pk_constraint = get_primary_key_uniqueness_constraint(
+        object_types,
+        name,
+        &native_query.result_document_type,
+    );
 
     // TODO: recursively verify that all referenced object types exist
     ndc::CollectionInfo {

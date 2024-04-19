@@ -18,7 +18,7 @@ use super::{
 #[derive(Clone, Debug)]
 pub struct QueryContext<'a> {
     pub collections: Cow<'a, BTreeMap<String, v3::CollectionInfo>>,
-    pub function_collection_infos: Cow<'a, BTreeMap<String, v3::CollectionInfo>>,
+    pub functions: Cow<'a, BTreeMap<String, (v3::FunctionInfo, v3::CollectionInfo)>>,
     pub object_types: Cow<'a, BTreeMap<String, schema::ObjectType>>,
     pub scalar_types: Cow<'a, BTreeMap<String, v3::ScalarType>>,
 }
@@ -31,7 +31,7 @@ impl QueryContext<'_> {
         if let Some(collection) = self.collections.get(collection_name) {
             return Ok(collection);
         }
-        if let Some(function) = self.function_collection_infos.get(collection_name) {
+        if let Some((_, function)) = self.functions.get(collection_name) {
             return Ok(function);
         }
 
@@ -1337,7 +1337,7 @@ mod tests {
                     },
                 ),
             ])),
-            function_collection_infos: Default::default(),
+            functions: Default::default(),
             object_types: Cow::Owned(BTreeMap::from([
                 (
                     "Author".into(),
@@ -1410,7 +1410,7 @@ mod tests {
                     foreign_keys: Default::default(),
                 },
             )])),
-            function_collection_infos: Default::default(),
+            functions: Default::default(),
             object_types: Cow::Owned(BTreeMap::from([
                 (
                     "Author".into(),

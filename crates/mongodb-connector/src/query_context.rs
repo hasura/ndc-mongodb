@@ -7,7 +7,7 @@ use configuration::Configuration;
 pub fn get_query_context(configuration: &Configuration) -> QueryContext<'_> {
     QueryContext {
         collections: Cow::Borrowed(&configuration.collections),
-        function_collection_infos: Cow::Borrowed(&configuration.function_collection_infos),
+        functions: Cow::Borrowed(&configuration.functions),
         object_types: Cow::Borrowed(&configuration.object_types),
         scalar_types: Cow::Borrowed(&SCALAR_TYPES),
     }
