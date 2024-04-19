@@ -155,7 +155,7 @@ impl Configuration {
             .collect();
         ensure!(
             errors.is_empty(),
-            "connector configuration has errrors:\n  {}",
+            "connector configuration has errrors:\n  - {}",
             errors.join("\n  - ")
         );
 
