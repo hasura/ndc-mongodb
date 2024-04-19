@@ -69,6 +69,32 @@ impl Type {
     }
 }
 
+impl From<Type> for ndc_models::Type {
+    fn from(t: Type) -> Self {
+        fn map_normalized_type(t: Type) -> ndc_models::Type {
+            match t {
+                // ExtendedJSON can respresent any BSON value, including null, so it is always nullable
+                Type::ExtendedJSON => ndc_models::Type::Nullable {
+                    underlying_type: Box::new(ndc_models::Type::Named {
+                        name: mongodb_support::EXTENDED_JSON_TYPE_NAME.to_owned(),
+                    }),
+                },
+                Type::Scalar(t) => ndc_models::Type::Named {
+                    name: t.graphql_name(),
+                },
+                Type::Object(t) => ndc_models::Type::Named { name: t.clone() },
+                Type::ArrayOf(t) => ndc_models::Type::Array {
+                    element_type: Box::new(map_normalized_type(*t)),
+                },
+                Type::Nullable(t) => ndc_models::Type::Nullable {
+                    underlying_type: Box::new(map_normalized_type(*t)),
+                },
+            }
+        }
+        map_normalized_type(t.normalize_type())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ObjectType {
@@ -91,6 +117,19 @@ impl ObjectType {
     }
 }
 
+impl From<ObjectType> for ndc_models::ObjectType {
+    fn from(object_type: ObjectType) -> Self {
+        ndc_models::ObjectType {
+            description: object_type.description,
+            fields: object_type
+                .fields
+                .into_iter()
+                .map(|(name, field)| (name, field.into()))
+                .collect(),
+        }
+    }
+}
+
 /// Information about an object type field.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -109,5 +148,14 @@ impl ObjectField {
                 description: Default::default(),
             },
         )
+    }
+}
+
+impl From<ObjectField> for ndc_models::ObjectField {
+    fn from(field: ObjectField) -> Self {
+        ndc_models::ObjectField {
+            description: field.description,
+            r#type: field.r#type.into(),
+        }
     }
 }

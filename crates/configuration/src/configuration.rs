@@ -22,6 +22,12 @@ pub struct Configuration {
     /// representation.
     pub functions: BTreeMap<String, ndc::FunctionInfo>,
 
+    /// In query requests functions and collections are treated as the same, but in schema
+    /// responses they are separate concepts. So we want a set of [CollectionInfo] values for
+    /// functions for query processing, and we want it separate from `collections` for the schema
+    /// response.
+    pub function_collection_infos: BTreeMap<String, ndc::CollectionInfo>,
+
     /// Procedures are based on native procedures.
     pub procedures: BTreeMap<String, ndc::ProcedureInfo>,
 
@@ -84,15 +90,18 @@ impl Configuration {
                     collection_to_collection_info(&object_types, name, collection),
                 )
             });
-            let native_query_collections =
-                internal_native_queries
-                    .iter()
-                    .filter_map(|(name, native_query)| {
+            let native_query_collections = internal_native_queries.iter().filter_map(
+                |(name, native_query): (&String, &NativeQuery)| {
+                    if native_query.representation == NativeQueryRepresentation::Collection {
                         Some((
                             name.to_owned(),
-                            native_query_to_collection_info(&object_types, name, native_query)?,
+                            native_query_to_collection_info(&object_types, name, native_query),
                         ))
-                    });
+                    } else {
+                        None
+                    }
+                },
+            );
             regular_collections
                 .chain(native_query_collections)
                 .collect()
@@ -101,15 +110,33 @@ impl Configuration {
         let (functions, function_errors): (BTreeMap<_, _>, Vec<_>) = internal_native_queries
             .iter()
             .filter_map(|(name, native_query)| {
-                Some((
-                    name,
-                    native_query_to_function_info(&object_types, name, native_query).transpose()?,
-                ))
+                if native_query.representation == NativeQueryRepresentation::Function {
+                    Some((
+                        name,
+                        native_query_to_function_info(&object_types, name, native_query),
+                    ))
+                } else {
+                    None
+                }
             })
             .map(|(name, function_result)| {
                 Ok((name.to_owned(), function_result?)) as Result<_, anyhow::Error>
             })
             .partition_result();
+
+        let function_collection_infos = internal_native_queries
+            .iter()
+            .filter_map(|(name, native_query)| {
+                if native_query.representation == NativeQueryRepresentation::Function {
+                    Some((
+                        name.to_owned(),
+                        native_query_to_collection_info(&object_types, name, native_query),
+                    ))
+                } else {
+                    None
+                }
+            })
+            .collect();
 
         let procedures = internal_native_procedures
             .iter()
@@ -135,6 +162,7 @@ impl Configuration {
         Ok(Configuration {
             collections,
             functions,
+            function_collection_infos,
             procedures,
             native_procedures: internal_native_procedures,
             native_queries: internal_native_queries,
@@ -193,23 +221,19 @@ fn native_query_to_collection_info(
     object_types: &BTreeMap<String, schema::ObjectType>,
     name: &str,
     native_query: &NativeQuery,
-) -> Option<ndc::CollectionInfo> {
-    if native_query.representation != NativeQueryRepresentation::Collection {
-        return None;
-    }
-
+) -> ndc::CollectionInfo {
     let pk_constraint =
         get_primary_key_uniqueness_constraint(object_types, name, &native_query.r#type);
 
     // TODO: recursively verify that all referenced object types exist
-    Some(ndc::CollectionInfo {
+    ndc::CollectionInfo {
         name: name.to_owned(),
         collection_type: native_query.r#type.clone(),
         description: native_query.description.clone(),
         arguments: arguments_to_ndc_arguments(native_query.arguments.clone()),
         foreign_keys: Default::default(),
         uniqueness_constraints: BTreeMap::from_iter(pk_constraint),
-    })
+    }
 }
 
 fn get_primary_key_uniqueness_constraint(
@@ -236,17 +260,13 @@ fn native_query_to_function_info(
     object_types: &BTreeMap<String, schema::ObjectType>,
     name: &str,
     native_query: &NativeQuery,
-) -> anyhow::Result<Option<ndc::FunctionInfo>> {
-    if native_query.representation != NativeQueryRepresentation::Function {
-        return Ok(None);
-    }
-
-    Ok(Some(ndc::FunctionInfo {
+) -> anyhow::Result<ndc::FunctionInfo> {
+    Ok(ndc::FunctionInfo {
         name: name.to_owned(),
         description: native_query.description.clone(),
         arguments: arguments_to_ndc_arguments(native_query.arguments.clone()),
         result_type: function_result_type(object_types, name, &native_query.r#type)?,
-    }))
+    })
 }
 
 fn function_result_type(
@@ -259,7 +279,7 @@ fn function_result_type(
         anyhow!("the type of the native query, {function_name}, is not valid: the type of a native query that is represented as a function must be an object type with a single field named \"__value\"")
 
     })?;
-    Ok(type_to_ndc_type(&value_field.r#type))
+    Ok(value_field.r#type.clone().into())
 }
 
 fn native_procedure_to_procedure_info(
@@ -270,7 +290,7 @@ fn native_procedure_to_procedure_info(
         name: procedure_name.to_owned(),
         description: procedure.description.clone(),
         arguments: arguments_to_ndc_arguments(procedure.arguments.clone()),
-        result_type: type_to_ndc_type(&procedure.result_type),
+        result_type: procedure.result_type.clone().into(),
     }
 }
 
@@ -283,7 +303,7 @@ fn arguments_to_ndc_arguments(
             (
                 name,
                 ndc::ArgumentInfo {
-                    argument_type: type_to_ndc_type(&field.r#type),
+                    argument_type: field.r#type.into(),
                     description: field.description,
                 },
             )
@@ -298,30 +318,6 @@ fn find_object_type<'a>(
     object_types
         .get(object_type_name)
         .ok_or_else(|| anyhow!("configuration references an object type named {object_type_name}, but it is not defined"))
-}
-
-fn type_to_ndc_type(t: &schema::Type) -> ndc::Type {
-    fn map_normalized_type(t: &schema::Type) -> ndc::Type {
-        match t {
-            // ExtendedJSON can respresent any BSON value, including null, so it is always nullable
-            schema::Type::ExtendedJSON => ndc::Type::Nullable {
-                underlying_type: Box::new(ndc::Type::Named {
-                    name: mongodb_support::EXTENDED_JSON_TYPE_NAME.to_owned(),
-                }),
-            },
-            schema::Type::Scalar(t) => ndc::Type::Named {
-                name: t.graphql_name(),
-            },
-            schema::Type::Object(t) => ndc::Type::Named { name: t.clone() },
-            schema::Type::ArrayOf(t) => ndc::Type::Array {
-                element_type: Box::new(map_normalized_type(t)),
-            },
-            schema::Type::Nullable(t) => ndc::Type::Nullable {
-                underlying_type: Box::new(map_normalized_type(t)),
-            },
-        }
-    }
-    map_normalized_type(&t.clone().normalize_type())
 }
 
 #[cfg(test)]

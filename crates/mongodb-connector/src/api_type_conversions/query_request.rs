@@ -6,7 +6,7 @@ use std::{
 use configuration::{schema, WithNameRef};
 use dc_api_types::{self as v2, ColumnSelector, Target};
 use indexmap::IndexMap;
-use itertools::{Either, Itertools as _};
+use itertools::Itertools as _;
 use ndc_sdk::models::{self as v3};
 
 use super::{
@@ -18,7 +18,7 @@ use super::{
 #[derive(Clone, Debug)]
 pub struct QueryContext<'a> {
     pub collections: Cow<'a, BTreeMap<String, v3::CollectionInfo>>,
-    pub functions: Cow<'a, BTreeMap<String, v3::FunctionInfo>>,
+    pub function_collection_infos: Cow<'a, BTreeMap<String, v3::CollectionInfo>>,
     pub object_types: Cow<'a, BTreeMap<String, schema::ObjectType>>,
     pub scalar_types: Cow<'a, BTreeMap<String, v3::ScalarType>>,
 }
@@ -27,12 +27,12 @@ impl QueryContext<'_> {
     fn find_collection(
         &self,
         collection_name: &str,
-    ) -> Result<Either<&v3::CollectionInfo, &v3::FunctionInfo>, ConversionError> {
+    ) -> Result<&v3::CollectionInfo, ConversionError> {
         if let Some(collection) = self.collections.get(collection_name) {
-            return Ok(Either::Left(collection));
+            return Ok(collection);
         }
-        if let Some(function) = self.functions.get(collection_name) {
-            return Ok(Either::Right(function));
+        if let Some(function) = self.function_collection_infos.get(collection_name) {
+            return Ok(function);
         }
 
         Err(ConversionError::UnknownCollection(
@@ -44,16 +44,8 @@ impl QueryContext<'_> {
         &self,
         collection_name: &str,
     ) -> Result<WithNameRef<schema::ObjectType>, ConversionError> {
-        let type_name = match self.find_collection(collection_name)? {
-            Either::Left(collection) => Ok(&collection.collection_type),
-            Either::Right(function) => match &function.result_type {
-                v3::Type::Named { name } => Ok(name),
-                _ => Err(ConversionError::RootTypeIsNotObject(
-                    collection_name.to_owned(),
-                )),
-            },
-        }?;
-        self.find_object_type(type_name)
+        let collection = self.find_collection(collection_name)?;
+        self.find_object_type(&collection.collection_type)
     }
 
     fn find_object_type<'a>(
@@ -1345,7 +1337,7 @@ mod tests {
                     },
                 ),
             ])),
-            functions: Default::default(),
+            function_collection_infos: Default::default(),
             object_types: Cow::Owned(BTreeMap::from([
                 (
                     "Author".into(),
@@ -1418,7 +1410,7 @@ mod tests {
                     foreign_keys: Default::default(),
                 },
             )])),
-            functions: Default::default(),
+            function_collection_infos: Default::default(),
             object_types: Cow::Owned(BTreeMap::from([
                 (
                     "Author".into(),

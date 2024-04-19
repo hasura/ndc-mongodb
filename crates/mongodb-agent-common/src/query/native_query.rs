@@ -190,6 +190,7 @@ mod tests {
             object_types,
             collections: Default::default(),
             functions: Default::default(),
+            function_collection_infos: Default::default(),
             procedures: Default::default(),
             native_procedures: Default::default(),
         };
