@@ -4,8 +4,8 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use configuration::Configuration;
 use mongodb_agent_common::{
-    explain::explain_query, health::check_health, interface_types::MongoConfig,
-    query::handle_query_request,
+    explain::explain_query, health::check_health, query::handle_query_request,
+    state::ConnectorState,
 };
 use ndc_sdk::{
     connector::{
@@ -22,10 +22,10 @@ use tracing::instrument;
 
 use crate::{
     api_type_conversions::{
-        v2_to_v3_explain_response, v2_to_v3_query_response, v3_to_v2_query_request, QueryContext,
+        v2_to_v3_explain_response, v2_to_v3_query_response, v3_to_v2_query_request,
     },
     error_mapping::{mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error},
-    schema,
+    query_context::get_query_context,
 };
 use crate::{capabilities::mongo_capabilities_response, mutation::handle_mutation_request};
 
@@ -55,10 +55,10 @@ impl ConnectorSetup for MongoConnector {
     // - `skip_all` omits arguments from the trace
     async fn try_init_state(
         &self,
-        configuration: &Configuration,
+        _configuration: &Configuration,
         _metrics: &mut prometheus::Registry,
-    ) -> Result<MongoConfig, InitializationError> {
-        let state = mongodb_agent_common::state::try_init_state(configuration).await?;
+    ) -> Result<ConnectorState, InitializationError> {
+        let state = mongodb_agent_common::state::try_init_state().await?;
         Ok(state)
     }
 }
@@ -67,7 +67,7 @@ impl ConnectorSetup for MongoConnector {
 #[async_trait]
 impl Connector for MongoConnector {
     type Configuration = Configuration;
-    type State = MongoConfig;
+    type State = ConnectorState;
 
     #[instrument(err, skip_all)]
     fn fetch_metrics(
@@ -109,15 +109,8 @@ impl Connector for MongoConnector {
         state: &Self::State,
         request: QueryRequest,
     ) -> Result<JsonResponse<ExplainResponse>, ExplainError> {
-        let v2_request = v3_to_v2_query_request(
-            &QueryContext {
-                functions: vec![],
-                scalar_types: &schema::SCALAR_TYPES,
-                schema: &configuration.schema,
-            },
-            request,
-        )?;
-        let response = explain_query(state, v2_request)
+        let v2_request = v3_to_v2_query_request(&get_query_context(configuration), request)?;
+        let response = explain_query(configuration, state, v2_request)
             .await
             .map_err(mongo_agent_error_to_explain_error)?;
         Ok(v2_to_v3_explain_response(response).into())
@@ -136,11 +129,11 @@ impl Connector for MongoConnector {
 
     #[instrument(err, skip_all)]
     async fn mutation(
-        _configuration: &Self::Configuration,
+        configuration: &Self::Configuration,
         state: &Self::State,
         request: MutationRequest,
     ) -> Result<JsonResponse<MutationResponse>, MutationError> {
-        handle_mutation_request(state, request).await
+        handle_mutation_request(configuration, state, request).await
     }
 
     #[instrument(err, skip_all)]
@@ -150,15 +143,8 @@ impl Connector for MongoConnector {
         request: QueryRequest,
     ) -> Result<JsonResponse<QueryResponse>, QueryError> {
         tracing::debug!(query_request = %serde_json::to_string(&request).unwrap(), "received query request");
-        let v2_request = v3_to_v2_query_request(
-            &QueryContext {
-                functions: vec![],
-                scalar_types: &schema::SCALAR_TYPES,
-                schema: &configuration.schema,
-            },
-            request,
-        )?;
-        let response = handle_query_request(state, v2_request)
+        let v2_request = v3_to_v2_query_request(&get_query_context(configuration), request)?;
+        let response = handle_query_request(configuration, state, v2_request)
             .await
             .map_err(mongo_agent_error_to_query_error)?;
         Ok(v2_to_v3_query_response(response).into())

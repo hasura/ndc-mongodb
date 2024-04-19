@@ -33,10 +33,11 @@ time = { version = "0.3.29", features = ["formatting", "parsing", "serde"] }
 tracing = "0.1"
 
 [dev-dependencies]
+dc-api-test-helpers = { path = "../dc-api-test-helpers" }
 mongodb-cli-plugin = { path = "../cli" }
 test-helpers = { path = "../test-helpers" }
 
-mockall = "0.11.4"
+mockall = "^0.12.1"
 pretty_assertions = "1"
 proptest = "1"
 tokio = { version = "1", features = ["full"] }

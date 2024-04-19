@@ -3,6 +3,7 @@ mod capabilities;
 mod error_mapping;
 mod mongo_connector;
 mod mutation;
+mod query_context;
 mod schema;
 
 use std::error::Error;

@@ -30,6 +30,9 @@ pub enum Accumulator {
     #[serde(rename = "$max")]
     Max(bson::Bson),
 
+    #[serde(rename = "$push")]
+    Push(bson::Bson),
+
     /// Returns a sum of numerical values. Ignores non-numeric values.
     ///
     /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/sum/#mongodb-group-grp.-sum

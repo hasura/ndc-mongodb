@@ -9,10 +9,11 @@ use std::{
 use tokio::fs;
 use tokio_stream::wrappers::ReadDirStream;
 
-use crate::{with_name::WithName, Configuration, Schema};
+use crate::{serialized::Schema, with_name::WithName, Configuration};
 
 pub const SCHEMA_DIRNAME: &str = "schema";
 pub const NATIVE_PROCEDURES_DIRNAME: &str = "native_procedures";
+pub const NATIVE_QUERIES_DIRNAME: &str = "native_queries";
 
 pub const CONFIGURATION_EXTENSIONS: [(&str, FileFormat); 3] =
     [("json", JSON), ("yaml", YAML), ("yml", YAML)];
@@ -42,7 +43,11 @@ pub async fn read_directory(
         .await?
         .unwrap_or_default();
 
-    Configuration::validate(schema, native_procedures)
+    let native_queries = read_subdir_configs(&dir.join(NATIVE_QUERIES_DIRNAME))
+        .await?
+        .unwrap_or_default();
+
+    Configuration::validate(schema, native_procedures, native_queries)
 }
 
 /// Parse all files in a directory with one of the allowed configuration extensions according to

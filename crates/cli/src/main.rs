@@ -45,10 +45,13 @@ pub async fn main() -> anyhow::Result<()> {
         Some(path) => path,
         None => env::current_dir()?,
     };
-    let mongo_config = try_init_state_from_uri(&args.connection_uri, &Default::default())
+    let connector_state = try_init_state_from_uri(&args.connection_uri)
         .await
         .map_err(|e| anyhow!("Error initializing MongoDB state {}", e))?;
-    let context = Context { path, mongo_config };
+    let context = Context {
+        path,
+        connector_state,
+    };
     run(args.subcommand, &context).await?;
     Ok(())
 }

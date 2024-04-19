@@ -1,11 +1,11 @@
 use std::collections::BTreeMap;
 
-use configuration::schema::ObjectType;
+use configuration::{schema::ObjectType, Configuration};
 use futures::future::try_join_all;
 use itertools::Itertools;
 use mongodb::Database;
 use mongodb_agent_common::{
-    interface_types::MongoConfig, procedure::Procedure, query::serialization::bson_to_json,
+    procedure::Procedure, query::serialization::bson_to_json, state::ConnectorState,
 };
 use ndc_sdk::{
     connector::MutationError,
@@ -14,11 +14,12 @@ use ndc_sdk::{
 };
 
 pub async fn handle_mutation_request(
-    config: &MongoConfig,
+    config: &Configuration,
+    state: &ConnectorState,
     mutation_request: MutationRequest,
 ) -> Result<JsonResponse<MutationResponse>, MutationError> {
     tracing::debug!(?config, mutation_request = %serde_json::to_string(&mutation_request).unwrap(), "executing mutation");
-    let database = config.client.database(&config.database);
+    let database = state.database();
     let jobs = look_up_procedures(config, mutation_request)?;
     let operation_results = try_join_all(
         jobs.into_iter()
@@ -31,7 +32,7 @@ pub async fn handle_mutation_request(
 /// Looks up procedures according to the names given in the mutation request, and pairs them with
 /// arguments and requested fields. Returns an error if any procedures cannot be found.
 fn look_up_procedures(
-    config: &MongoConfig,
+    config: &Configuration,
     mutation_request: MutationRequest,
 ) -> Result<Vec<Procedure<'_>>, MutationError> {
     let (procedures, not_found): (Vec<Procedure>, Vec<String>) = mutation_request

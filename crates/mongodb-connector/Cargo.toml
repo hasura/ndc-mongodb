@@ -18,7 +18,7 @@ lazy_static = "^1.4.0"
 mongodb = "2.8"
 mongodb-agent-common = { path = "../mongodb-agent-common" }
 mongodb-support = { path = "../mongodb-support" }
-ndc-sdk = { git = "https://github.com/hasura/ndc-sdk-rs.git" }
+ndc-sdk = { workspace = true }
 prometheus = "*" # share version from ndc-sdk
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["preserve_order"] }

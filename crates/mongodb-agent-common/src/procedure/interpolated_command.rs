@@ -135,7 +135,12 @@ fn parse_native_procedure(string: &str) -> Vec<NativeProcedurePart> {
 
 #[cfg(test)]
 mod tests {
-    use configuration::native_procedure::NativeProcedure;
+    use configuration::{
+        native_procedure::NativeProcedure,
+        schema::{ObjectField, ObjectType, Type},
+    };
+    use mongodb::bson::doc;
+    use mongodb_support::BsonScalarType as S;
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
@@ -148,20 +153,36 @@ mod tests {
 
     #[test]
     fn interpolates_non_string_type() -> anyhow::Result<()> {
-        let native_procedure_input = json!({
-            "resultType": { "object": "InsertArtist" },
-            "arguments": {
-                "id": { "type": { "scalar": "int" } },
-                "name": { "type": { "scalar": "string" } },
-            },
-            "command": {
+        let native_procedure = NativeProcedure {
+            result_type: Type::Object("InsertArtist".to_owned()),
+            arguments: [
+                (
+                    "id".to_owned(),
+                    ObjectField {
+                        r#type: Type::Scalar(S::Int),
+                        description: Default::default(),
+                    },
+                ),
+                (
+                    "name".to_owned(),
+                    ObjectField {
+                        r#type: Type::Scalar(S::String),
+                        description: Default::default(),
+                    },
+                ),
+            ]
+            .into(),
+            command: doc! {
                 "insert": "Artist",
                 "documents": [{
                     "ArtistId": "{{ id }}",
                     "Name": "{{name }}",
                 }],
             },
-        });
+            selection_criteria: Default::default(),
+            description: Default::default(),
+        };
+
         let input_arguments = [
             ("id".to_owned(), json!(1001)),
             ("name".to_owned(), json!("Regina Spektor")),
@@ -169,9 +190,8 @@ mod tests {
         .into_iter()
         .collect();
 
-        let native_procedure: NativeProcedure = serde_json::from_value(native_procedure_input)?;
         let arguments = resolve_arguments(
-            &native_procedure.object_types,
+            &Default::default(),
             &native_procedure.arguments,
             input_arguments,
         )?;
@@ -192,25 +212,49 @@ mod tests {
 
     #[test]
     fn interpolates_array_argument() -> anyhow::Result<()> {
-        let native_procedure_input = json!({
-            "name": "insertArtist",
-            "resultType": { "object": "InsertArtist" },
-            "objectTypes": {
-                "ArtistInput": {
-                    "fields": {
-                        "ArtistId": { "type": { "scalar": "int" } },
-                        "Name": { "type": { "scalar": "string" } },
-                    },
-                }
-            },
-            "arguments": {
-                "documents": { "type": { "arrayOf": { "object": "ArtistInput" } } },
-            },
-            "command": {
+        let native_procedure = NativeProcedure {
+            result_type: Type::Object("InsertArtist".to_owned()),
+            arguments: [(
+                "documents".to_owned(),
+                ObjectField {
+                    r#type: Type::ArrayOf(Box::new(Type::Object("ArtistInput".to_owned()))),
+                    description: Default::default(),
+                },
+            )]
+            .into(),
+            command: doc! {
                 "insert": "Artist",
                 "documents": "{{ documents }}",
             },
-        });
+            selection_criteria: Default::default(),
+            description: Default::default(),
+        };
+
+        let object_types = [(
+            "ArtistInput".to_owned(),
+            ObjectType {
+                fields: [
+                    (
+                        "ArtistId".to_owned(),
+                        ObjectField {
+                            r#type: Type::Scalar(S::Int),
+                            description: Default::default(),
+                        },
+                    ),
+                    (
+                        "Name".to_owned(),
+                        ObjectField {
+                            r#type: Type::Scalar(S::String),
+                            description: Default::default(),
+                        },
+                    ),
+                ]
+                .into(),
+                description: Default::default(),
+            },
+        )]
+        .into();
+
         let input_arguments = [(
             "documents".to_owned(),
             json!([
@@ -221,12 +265,8 @@ mod tests {
         .into_iter()
         .collect();
 
-        let native_procedure: NativeProcedure = serde_json::from_value(native_procedure_input)?;
-        let arguments = resolve_arguments(
-            &native_procedure.object_types,
-            &native_procedure.arguments,
-            input_arguments,
-        )?;
+        let arguments =
+            resolve_arguments(&object_types, &native_procedure.arguments, input_arguments)?;
         let command = interpolated_command(&native_procedure.command, &arguments)?;
 
         assert_eq!(
@@ -250,18 +290,33 @@ mod tests {
 
     #[test]
     fn interpolates_arguments_within_string() -> anyhow::Result<()> {
-        let native_procedure_input = json!({
-            "name": "insert",
-            "resultType": { "object": "Insert" },
-            "arguments": {
-                "prefix": { "type": { "scalar": "string" } },
-                "basename": { "type": { "scalar": "string" } },
-            },
-            "command": {
+        let native_procedure = NativeProcedure {
+            result_type: Type::Object("Insert".to_owned()),
+            arguments: [
+                (
+                    "prefix".to_owned(),
+                    ObjectField {
+                        r#type: Type::Scalar(S::String),
+                        description: Default::default(),
+                    },
+                ),
+                (
+                    "basename".to_owned(),
+                    ObjectField {
+                        r#type: Type::Scalar(S::String),
+                        description: Default::default(),
+                    },
+                ),
+            ]
+            .into(),
+            command: doc! {
                 "insert": "{{prefix}}-{{basename}}",
                 "empty": "",
             },
-        });
+            selection_criteria: Default::default(),
+            description: Default::default(),
+        };
+
         let input_arguments = [
             ("prefix".to_owned(), json!("current")),
             ("basename".to_owned(), json!("some-coll")),
@@ -269,9 +324,8 @@ mod tests {
         .into_iter()
         .collect();
 
-        let native_procedure: NativeProcedure = serde_json::from_value(native_procedure_input)?;
         let arguments = resolve_arguments(
-            &native_procedure.object_types,
+            &Default::default(),
             &native_procedure.arguments,
             input_arguments,
         )?;
