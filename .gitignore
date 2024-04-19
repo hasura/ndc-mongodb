@@ -14,3 +14,6 @@ target/
 
 # Ignore arion temporary files
 .tmp*
+
+# Ignore snapshot diffs from the Rust insta test framework
+*.snap.new

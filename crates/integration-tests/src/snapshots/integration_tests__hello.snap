@@ -1,0 +1,5 @@
+---
+source: crates/integration-tests/src/lib.rs
+expression: "\"hello\""
+---
+hello

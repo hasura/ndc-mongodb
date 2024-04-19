@@ -1,0 +1,47 @@
+---
+source: crates/integration-tests/src/lib.rs
+expression: response
+---
+data:
+  movies:
+    - imdb:
+        rating: 7.4
+        votes: 9847
+      title: The Great Train Robbery
+    - imdb:
+        rating: 6.6
+        votes: 1375
+      title: A Corner in Wheat
+    - imdb:
+        rating: 7.3
+        votes: 1837
+      title: Gertie the Dinosaur
+    - imdb:
+        rating: 5.9
+        votes: 247
+      title: Where Are My Children?
+    - imdb:
+        rating: 8
+        votes: 9880
+      title: "Intolerance: Love's Struggle Throughout the Ages"
+    - imdb:
+        rating: 7.8
+        votes: 4680
+      title: The Immigrant
+    - imdb:
+        rating: 6.9
+        votes: 884
+      title: The Poor Little Rich Girl
+    - imdb:
+        rating: 6.8
+        votes: 15715
+      title: The Birth of a Nation
+    - imdb:
+        rating: 6.9
+        votes: 388
+      title: Wild and Woolly
+    - imdb:
+        rating: 6.6
+        votes: 446
+      title: The Blue Bird
+errors: ~

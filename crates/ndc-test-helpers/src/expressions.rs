@@ -1,4 +1,4 @@
-use ndc_sdk::models::{
+use ndc_models::{
     ComparisonTarget, ComparisonValue, ExistsInCollection, Expression, UnaryComparisonOperator,
 };
 
