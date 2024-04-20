@@ -1,6 +1,6 @@
 ---
 source: crates/integration-tests/tests/remote_relationship.rs
-expression: response
+expression: "query(r#\"\n                query AlbumMovies($limit: Int, $movies_limit: Int) {\n                  album(limit: $limit, order_by: { title: Asc }) {\n                    title\n                    movies(limit: $movies_limit) {\n                      title\n                      runtime\n                    }\n                    albumId\n                  }\n                }\n            \"#).variables(json!({\n                        \"limit\": 11, \"movies_limit\": 2\n                    })).run().await?"
 ---
 data:
   album:
