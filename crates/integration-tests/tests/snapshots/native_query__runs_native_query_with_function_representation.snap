@@ -1,0 +1,7 @@
+---
+source: crates/integration-tests/tests/native_query.rs
+expression: "query(r#\"\n                query NativeQuery {\n                  hello(name: \"world\")\n                }\n            \"#).run().await?"
+---
+data:
+  hello: world
+errors: ~
