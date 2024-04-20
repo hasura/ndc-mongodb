@@ -22,9 +22,14 @@ pub async fn explain_query(
 
     let aggregate_target = match QueryTarget::for_request(config, &query_request) {
         QueryTarget::Collection(collection_name) => Bson::String(collection_name),
-        // 1 means aggregation without a collection target - as in `db.aggregate()` instead of
-        // `db.<collection>.aggregate()`
-        QueryTarget::NativeQuery { .. } => Bson::Int32(1),
+        QueryTarget::NativeQuery { native_query, .. } => {
+            match &native_query.input_collection {
+                Some(collection_name) => Bson::String(collection_name.to_string()),
+                // 1 means aggregation without a collection target - as in `db.aggregate()` instead of
+                // `db.<collection>.aggregate()`
+                None => Bson::Int32(1)
+            }
+        }
     };
 
     let query_command = doc! {
