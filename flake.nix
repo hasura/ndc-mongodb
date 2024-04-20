@@ -141,6 +141,7 @@
         });
 
         test = pkgs.craneLib.cargoNextest (pkgs.mongodb-connector-workspace.buildArgs // {
+          cargoNextestExtraArgs = "--lib --bins";
           partitions = 1;
           partitionType = "count";
           doInstallCargoArtifacts = false; # avoids "wrong ELF type" messages

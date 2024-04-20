@@ -7,7 +7,7 @@ default:
 test: test-unit test-integration
 
 test-unit:
-  cargo test
+  cargo test --lib --bins
 
 test-integration: (_arion "arion-compose/project-integration-tests.nix" "test")
 
