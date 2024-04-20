@@ -40,9 +40,9 @@ pub async fn execute_query_request(
             collect_from_cursor(collection.aggregate(pipeline, None).await?).await
         }
         QueryTarget::NativeQuery { native_query, .. } => {
-            match native_query.clone().collection_name {
-                Some(coll_name) => {
-                    let collection = database.collection(&coll_name.to_string());
+            match &native_query.input_collection {
+                Some(collection_name) => {
+                    let collection = database.collection(collection_name);
                     collect_from_cursor(collection.aggregate(pipeline, None).await?).await
                 },
                 None => collect_from_cursor(database.aggregate(pipeline, None).await?).await

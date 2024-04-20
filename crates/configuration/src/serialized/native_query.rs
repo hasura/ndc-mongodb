@@ -33,9 +33,9 @@ pub struct NativeQuery {
     /// a "function" in your ddn configuration.
     pub representation: NativeQueryRepresentation,
 
-    /// When using a `representation` of `collection` you can set the `collection_name` if you want
+    /// When using a `representation` of `collection` you can set the `input_collection` if you want
     /// the aggregation pipeline to start off of your collection.
-    pub collection_name: Option<String>,
+    pub input_collection: Option<String>,
 
     /// Arguments to be supplied for each query invocation. These will be available to the given
     /// pipeline as variables. For information about variables in MongoDB aggregation expressions

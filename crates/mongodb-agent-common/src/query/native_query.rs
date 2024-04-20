@@ -101,7 +101,7 @@ mod tests {
     async fn executes_native_query() -> Result<(), anyhow::Error> {
         let native_query = NativeQuery {
             representation: NativeQueryRepresentation::Collection,
-            collection_name: None,
+            input_collection: None,
             arguments: [
                 (
                     "filter".to_string(),
