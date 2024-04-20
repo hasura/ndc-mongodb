@@ -9,7 +9,10 @@ test: test-unit test-integration
 test-unit:
   cargo test --lib --bins
 
-test-integration: (_arion "arion-compose/project-integration-tests.nix" "test")
+# This leaves docker containers running - stop them by running `$ arion down`
+test-integration:
+  arion up -d
+  ENGINE_GRAPHQL_URL="http://localhost:7100/graphql" cargo test -p integration-tests
 
 test-ndc: (_arion "arion-compose/project-ndc-test.nix" "test")
 
