@@ -28,6 +28,6 @@ in
   };
 
   services = services // {
-    jaeger = import ./service-jaeger.nix { inherit pkgs; };
+    jaeger = import ./services/jaeger.nix { inherit pkgs; };
   };
 }

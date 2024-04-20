@@ -4,7 +4,7 @@
 # 
 # To start this project run:
 #
-#     arion -f arion-compose/project-integration-tests.nix up -d
+#     arion -f arion-compose/integration-tests.nix up -d
 #
 
 { pkgs, config, ... }:
@@ -20,7 +20,7 @@ in
   project.name = "mongodb-connector-integration-tests";
 
   services = services // {
-    test = import ./service-integration-tests.nix {
+    test = import ./services/integration-tests.nix {
       inherit pkgs;
       engine-graphql-url = "http://engine:${engine-port}/graphql";
       service.depends_on = {
@@ -28,6 +28,8 @@ in
         connector-chinook.condition = "service_healthy";
         engine.condition = "service_healthy";
       };
+      # Run the container as the current user so when it writes to the snapshots
+      # directory it doesn't write as root
       service.user = builtins.toString config.host.uid;
     };
   };

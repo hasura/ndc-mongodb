@@ -13,7 +13,7 @@
 , environment ? {}
 , volumes ? [
     # By default load fixtures in the mongo-connector repo
-    (import ./fixtures-mongodb.nix).chinook
+    (import ../fixtures/mongodb.nix).chinook
   ]
 }:
 

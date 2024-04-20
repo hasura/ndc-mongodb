@@ -3,7 +3,8 @@
 #
 # This expression defines a set of docker-compose services, but does not specify
 # a full docker-compose project by itself. It should be imported into a project
-# definition. See project-connector.nix and project-integration-tests.nix.
+# definition. See arion-compose/default.nix and
+# arion-compose/integration-tests.nix.
 
 { pkgs
 , map-host-ports ? false
@@ -18,7 +19,7 @@ let
   hostPort = port: if map-host-ports then port else null;
 in
 {
-  connector = import ./service-connector.nix {
+  connector = import ./services/connector.nix {
     inherit pkgs otlp-endpoint;
     configuration-dir = ../fixtures/connector/sample_mflix;
     database-uri = "mongodb://mongodb/sample_mflix";
@@ -29,7 +30,7 @@ in
     };
   };
 
-  connector-chinook = import ./service-connector.nix {
+  connector-chinook = import ./services/connector.nix {
     inherit pkgs otlp-endpoint;
     configuration-dir = ../fixtures/connector/chinook;
     database-uri = "mongodb://mongodb/chinook";
@@ -40,18 +41,18 @@ in
     };
   };
 
-  mongodb = import ./service-mongodb.nix {
+  mongodb = import ./services/mongodb.nix {
     inherit pkgs;
     port = mongodb-port;
     hostPort = hostPort mongodb-port;
     volumes = [
-      (import ./fixtures-mongodb.nix).all-fixtures
+      (import ./fixtures/mongodb.nix).all-fixtures
     ] ++ pkgs.lib.optionals (mongodb-volume != null) [
       "${mongodb-volume}:/data/db"
     ];
   };
 
-  engine = import ./service-engine.nix {
+  engine = import ./services/engine.nix {
     inherit pkgs otlp-endpoint;
     port = engine-port;
     hostPort = hostPort engine-port;
@@ -70,5 +71,5 @@ in
     };
   };
 
-  auth-hook = import ./service-dev-auth-webhook.nix { inherit pkgs; };
+  auth-hook = import ./services/dev-auth-webhook.nix { inherit pkgs; };
 }
