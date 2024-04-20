@@ -1,3 +1,11 @@
+// Conditionally compile tests based on the "test" and "integration" features. Requiring
+// "integration" causes these tests to be skipped when running a workspace-wide `cargo test` which
+// is helpful because the integration tests only work with a set of running services.
+//
+// To run integration tests run, `cargo test --features integration`
+#[cfg(all(test, feature = "integration"))]
+mod tests;
+
 use std::env;
 
 use anyhow::anyhow;

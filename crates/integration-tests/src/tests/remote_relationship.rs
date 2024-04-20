@@ -1,5 +1,5 @@
+use crate::query;
 use insta::assert_yaml_snapshot;
-use integration_tests::query;
 use serde_json::json;
 
 #[tokio::test]

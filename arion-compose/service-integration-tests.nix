@@ -4,6 +4,8 @@
 }:
 
 let
+  repo-source-mount-point = "/src";
+
   integration-tests-service = {
     useHostStore = true;
     command = [
@@ -11,7 +13,11 @@ let
     ];
     environment = {
       ENGINE_GRAPHQL_URL = engine-graphql-url;
+      INSTA_WORKSPACE_ROOT = repo-source-mount-point;
     };
+    volumes = [
+      "${builtins.getEnv "PWD"}:${repo-source-mount-point}:rw"
+    ];
   };
 in
 {

@@ -1,5 +1,5 @@
 ---
-source: crates/integration-tests/tests/basic.rs
+source: crates/integration-tests/src/tests/basic.rs
 expression: "query(r#\"\n                query Movies {\n                  movies(limit: 10, order_by: { id: Asc }) {\n                    title\n                    imdb {\n                      rating\n                      votes\n                    }\n                  }\n                }\n            \"#).run().await?"
 ---
 data:

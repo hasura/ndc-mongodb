@@ -1,54 +1,17 @@
-# Dependencies and build configuration for the integration-tests crate
-#
-# To add runtime library dependencies, add packge names to the argument set
-# here, and add the same name to the `buildInputs` list below.
-#
-# To add buildtime dependencies, add packge names to the argument set
-# here, and add the same name to the `nativeBuildInputs` list below.
-#
-# To add environment variables add attributes to `buildArgs`.
-#
-# To set Cargo options, or other configuration see the Crane documentation,
-# https://crane.dev/API.html#cranelibbuildpackage
-#
 { callPackage
 , craneLib
 , jq
 , makeWrapper
-, openssl
-, pkg-config
 }:
 
 let
-  boilerplate = callPackage ./cargo-boilerplate.nix { };
-  recursiveMerge = callPackage ./recursiveMerge.nix { };
-
-  buildArgs = recursiveMerge [
-    boilerplate.buildArgs
-    {
-      # Filters source directory to select only files required to build Rust crates.
-      # This avoids unnecessary rebuilds when other files in the repo change. 
-      src = craneLib.cleanCargoSource (craneLib.path ./..);
-
-      pname = "mongodb-connector-integration-tests";
-
-      buildInputs = [
-        openssl
-      ];
-
-      nativeBuildInputs = [
-        pkg-config
-      ];
-
-      doCheck = false;
-    }
-  ];
-
-  cargoArtifacts = craneLib.buildDepsOnly buildArgs;
+  workspace = callPackage ./mongodb-connector-workspace.nix { };
 in
 craneLib.buildPackage
-  (buildArgs // {
-    inherit cargoArtifacts;
+  (workspace.buildArgs // {
+    pname = "mongodb-connector-integration-tests";
+
+    doCheck = false;
 
     # craneLib passes `--locked` by default - this is necessary for
     # repdroducible builds.
@@ -56,12 +19,15 @@ craneLib.buildPackage
     # `--tests` builds an executable to run tests instead of compiling
     # `main.rs`
     #
+    # Integration tests are disabled by default - `--features integration`
+    # enables them.
+    #
     # We only want the integration tests so we're limiting to building the test
     # runner for that crate.
-    cargoExtraArgs = "--locked --test '*' --package integration-tests";
+    cargoExtraArgs = "--locked --tests --package integration-tests --features integration";
 
     # Add programs we need for postInstall hook to nativeBuildInputs
-    nativeBuildInputs = buildArgs.nativeBuildInputs ++ [
+    nativeBuildInputs = workspace.buildArgs.nativeBuildInputs ++ [
       jq
       makeWrapper
     ];
@@ -82,8 +48,7 @@ craneLib.buildPackage
       # Set environment variable to point to source workspace so that `insta`
       # (the Rust snapshot test library) can find snapshot files.
       wrapProgram "$bin" \
-        --set-default INSTA_WORKSPACE_ROOT "${./..}" \
-        --set-default CI true
+        --set-default INSTA_WORKSPACE_ROOT "${./..}"
     '';
   })
 

@@ -7,14 +7,9 @@ default:
 test: test-unit test-integration
 
 test-unit:
-  cargo test --lib --bins
+  cargo test
 
-test-integration:
-  arion --file arion-compose/project-integration-tests.nix up -d
-  ENGINE_GRAPHQL_URL="http://localhost:7200/graphql" cargo test -p integration-tests
-  status=$?
-  arion --file arion-compose/project-integration-tests.nix down
-  exit $status
+test-integration: (_arion "arion-compose/project-integration-tests.nix" "test")
 
 test-ndc: (_arion "arion-compose/project-ndc-test.nix" "test")
 

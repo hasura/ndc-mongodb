@@ -3,6 +3,9 @@ name = "integration-tests"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+integration = []
+
 [dependencies]
 anyhow = "1"
 insta = { version = "^1.38", features = ["yaml"] }

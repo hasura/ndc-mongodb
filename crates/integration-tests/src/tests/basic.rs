@@ -1,5 +1,5 @@
+use crate::query;
 use insta::assert_yaml_snapshot;
-use integration_tests::query;
 
 #[tokio::test]
 async fn runs_a_query() -> anyhow::Result<()> {
