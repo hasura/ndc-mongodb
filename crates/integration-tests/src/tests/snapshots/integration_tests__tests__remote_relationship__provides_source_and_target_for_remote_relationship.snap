@@ -1,15 +1,15 @@
 ---
 source: crates/integration-tests/src/tests/remote_relationship.rs
-expression: "query(r#\"\n                query AlbumMovies($limit: Int, $movies_limit: Int) {\n                  album(limit: $limit, order_by: { title: Asc }) {\n                    title\n                    movies(limit: $movies_limit) {\n                      title\n                      runtime\n                    }\n                    albumId\n                  }\n                }\n            \"#).variables(json!({\n                        \"limit\": 11, \"movies_limit\": 2\n                    })).run().await?"
+expression: "query(r#\"\n                query AlbumMovies($limit: Int, $movies_limit: Int) {\n                  album(limit: $limit, order_by: { title: Asc }) {\n                    title\n                    movies(limit: $movies_limit, order_by: { title: Asc }) {\n                      title\n                      runtime\n                    }\n                    albumId\n                  }\n                }\n            \"#).variables(json!({\n                        \"limit\": 11, \"movies_limit\": 2\n                    })).run().await?"
 ---
 data:
   album:
     - albumId: 156
       movies:
         - runtime: 156
-          title: The Song of Bernadette
+          title: "20th Century Boys 3: Redemption"
         - runtime: 156
-          title: Twenty-Four Eyes
+          title: A Majority of One
       title: "...And Justice For All"
     - albumId: 257
       movies:
@@ -22,23 +22,23 @@ data:
     - albumId: 94
       movies:
         - runtime: 94
-          title: Sunrise
+          title: 100 Girls
         - runtime: 94
-          title: Zoo in Budapest
+          title: 12 and Holding
       title: A Matter of Life and Death
     - albumId: 95
       movies:
         - runtime: 95
-          title: He Who Gets Slapped
+          title: (500) Days of Summer
         - runtime: 95
-          title: The Gold Rush
+          title: "1"
       title: A Real Dead One
     - albumId: 96
       movies:
         - runtime: 96
-          title: Under the Roofs of Paris
+          title: "'Doc'"
         - runtime: 96
-          title: Moscow Laughs
+          title: "'night, Mother"
       title: A Real Live One
     - albumId: 285
       movies: []
@@ -46,29 +46,29 @@ data:
     - albumId: 139
       movies:
         - runtime: 139
-          title: The Egyptian
+          title: "20th Century Boys 2: The Last Hope"
         - runtime: 139
-          title: Solomon and Sheba
+          title: 42 Up
       title: A TempestadeTempestade Ou O Livro Dos Dias
     - albumId: 203
       movies:
         - runtime: 203
           title: Michael the Brave
         - runtime: 203
-          title: Prime Suspect 2
+          title: Michael the Brave
       title: A-Sides
     - albumId: 160
       movies:
         - runtime: 160
-          title: La Terra Trema
+          title: "2001: A Space Odyssey"
         - runtime: 160
-          title: Raintree County
+          title: 7 Aum Arivu
       title: Ace Of Spades
     - albumId: 232
       movies:
         - runtime: 232
           title: Bratya Karamazovy
         - runtime: 232
-          title: The New Country
+          title: Gormenghast
       title: Achtung Baby
 errors: ~

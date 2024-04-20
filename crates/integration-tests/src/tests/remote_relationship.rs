@@ -10,7 +10,7 @@ async fn provides_source_and_target_for_remote_relationship() -> anyhow::Result<
                 query AlbumMovies($limit: Int, $movies_limit: Int) {
                   album(limit: $limit, order_by: { title: Asc }) {
                     title
-                    movies(limit: $movies_limit) {
+                    movies(limit: $movies_limit, order_by: { title: Asc }) {
                       title
                       runtime
                     }
