@@ -15,6 +15,13 @@ test-ndc: (_arion "arion-compose/ndc-test.nix" "test")
 
 test-e2e: (_arion "arion-compose/e2e-testing.nix" "test")
 
+# Run `just test-integration` on several MongoDB versions
+test-mongodb-versions:
+  MONGODB_IMAGE=mongo:4 just test-integration
+  # MONGODB_IMAGE=mongo:5 just test-integration # there's a problem with the native query example in v5
+  MONGODB_IMAGE=mongo:6 just test-integration
+  MONGODB_IMAGE=mongo:7 just test-integration
+
 # Runs a specified service in a specified project config using arion (a nix
 # frontend for docker-compose). Propagates the exit status from that service.
 _arion project service:
