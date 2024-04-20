@@ -33,8 +33,8 @@ pub struct NativeQuery {
     /// a "function" in your ddn configuration.
     pub representation: NativeQueryRepresentation,
 
-    /// When using a `representation` of `collection` you can set the `input_collection` if you want
-    /// the aggregation pipeline to start off of your collection.
+    /// Use `input_collection` when you want to start an aggregation pipeline off of the specified
+    /// `input_collection` db.<input_collection>.aggregate.
     pub input_collection: Option<String>,
 
     /// Arguments to be supplied for each query invocation. These will be available to the given
