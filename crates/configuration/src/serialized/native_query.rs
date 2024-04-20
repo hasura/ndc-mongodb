@@ -33,6 +33,10 @@ pub struct NativeQuery {
     /// a "function" in your ddn configuration.
     pub representation: NativeQueryRepresentation,
 
+    /// Use `input_collection` when you want to start an aggregation pipeline off of the specified
+    /// `input_collection` db.<input_collection>.aggregate.
+    pub input_collection: Option<String>,
+
     /// Arguments to be supplied for each query invocation. These will be available to the given
     /// pipeline as variables. For information about variables in MongoDB aggregation expressions
     /// see https://www.mongodb.com/docs/manual/reference/aggregation-variables/
