@@ -5,47 +5,46 @@ mod execute_query_request;
 mod foreach;
 mod make_selector;
 mod make_sort;
+mod native_query;
 mod pipeline;
+mod query_target;
 mod relations;
 pub mod serialization;
 
-use dc_api_types::{QueryRequest, QueryResponse, Target};
-use mongodb::bson::Document;
+use configuration::Configuration;
+use dc_api_types::{QueryRequest, QueryResponse};
 
 use self::execute_query_request::execute_query_request;
 pub use self::{
     make_selector::make_selector,
     make_sort::make_sort,
     pipeline::{is_response_faceted, pipeline_for_non_foreach, pipeline_for_query_request},
+    query_target::QueryTarget,
 };
-use crate::interface_types::{MongoAgentError, MongoConfig};
-
-pub fn collection_name(query_request_target: &Target) -> String {
-    query_request_target.name().join(".")
-}
+use crate::{interface_types::MongoAgentError, state::ConnectorState};
 
 pub async fn handle_query_request(
-    config: &MongoConfig,
+    config: &Configuration,
+    state: &ConnectorState,
     query_request: QueryRequest,
 ) -> Result<QueryResponse, MongoAgentError> {
-    let database = config.client.database(&config.database);
-    let collection = database.collection::<Document>(&collection_name(&query_request.target));
-
-    execute_query_request(&collection, query_request).await
+    let database = state.database();
+    // This function delegates to another function which gives is a point to inject a mock database
+    // implementation for testing.
+    execute_query_request(database, config, query_request).await
 }
 
 #[cfg(test)]
 mod tests {
     use dc_api_types::{QueryRequest, QueryResponse, RowSet};
-    use mongodb::{
-        bson::{self, bson, doc, from_document, to_bson},
-        options::AggregateOptions,
-    };
+    use mongodb::bson::{self, bson};
     use pretty_assertions::assert_eq;
-    use serde_json::{from_value, json, to_value};
+    use serde_json::{from_value, json};
 
     use super::execute_query_request;
-    use crate::mongodb::{test_helpers::mock_stream, MockCollectionTrait};
+    use crate::mongodb::test_helpers::{
+        mock_collection_aggregate_response, mock_collection_aggregate_response_for_pipeline,
+    };
 
     #[tokio::test]
     async fn executes_query() -> Result<(), anyhow::Error> {
@@ -72,23 +71,21 @@ mod tests {
             ],
         }))?;
 
-        let expected_pipeline = json!([
+        let expected_pipeline = bson!([
             { "$match": { "gpa": { "$lt": 4.0 } } },
             { "$replaceWith": { "student_gpa": { "$ifNull": ["$gpa", null] } } },
         ]);
 
-        let mut collection = MockCollectionTrait::new();
-        collection
-            .expect_aggregate()
-            .returning(move |pipeline, _: Option<AggregateOptions>| {
-                assert_eq!(expected_pipeline, to_value(pipeline).unwrap());
-                Ok(mock_stream(vec![
-                    Ok(from_document(doc! { "student_gpa": 3.1, })?),
-                    Ok(from_document(doc! { "student_gpa": 3.6, })?),
-                ]))
-            });
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "students",
+            expected_pipeline,
+            bson!([
+                { "student_gpa": 3.1, },
+                { "student_gpa": 3.6, },
+            ]),
+        );
 
-        let result = execute_query_request(&collection, query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -122,7 +119,7 @@ mod tests {
             }
         }))?;
 
-        let expected_pipeline = json!([
+        let expected_pipeline = bson!([
             {
                 "$facet": {
                     "avg": [
@@ -152,20 +149,18 @@ mod tests {
             },
         ]);
 
-        let mut collection = MockCollectionTrait::new();
-        collection
-            .expect_aggregate()
-            .returning(move |pipeline, _: Option<AggregateOptions>| {
-                assert_eq!(expected_pipeline, to_value(pipeline).unwrap());
-                Ok(mock_stream(vec![Ok(from_document(doc! {
-                    "aggregates": {
-                        "count": 11,
-                        "avg": 3,
-                    },
-                })?)]))
-            });
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "students",
+            expected_pipeline,
+            bson!([{
+                "aggregates": {
+                    "count": 11,
+                    "avg": 3,
+                },
+            }]),
+        );
 
-        let result = execute_query_request(&collection, query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -205,7 +200,7 @@ mod tests {
             }],
         }))?;
 
-        let expected_pipeline = json!([
+        let expected_pipeline = bson!([
             { "$match": { "gpa": { "$lt": 4.0 } } },
             {
                 "$facet": {
@@ -233,22 +228,20 @@ mod tests {
             },
         ]);
 
-        let mut collection = MockCollectionTrait::new();
-        collection
-            .expect_aggregate()
-            .returning(move |pipeline, _: Option<AggregateOptions>| {
-                assert_eq!(expected_pipeline, to_value(pipeline).unwrap());
-                Ok(mock_stream(vec![Ok(from_document(doc! {
-                    "aggregates": {
-                        "avg": 3.1,
-                    },
-                    "rows": [{
-                        "gpa": 3.1,
-                    }],
-                })?)]))
-            });
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "students",
+            expected_pipeline,
+            bson!([{
+                "aggregates": {
+                    "avg": 3.1,
+                },
+                "rows": [{
+                    "gpa": 3.1,
+                }],
+            }]),
+        );
 
-        let result = execute_query_request(&collection, query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -298,17 +291,15 @@ mod tests {
             },
         ]);
 
-        let mut collection = MockCollectionTrait::new();
-        collection
-            .expect_aggregate()
-            .returning(move |pipeline, _: Option<AggregateOptions>| {
-                assert_eq!(expected_pipeline, to_bson(&pipeline).unwrap());
-                Ok(mock_stream(vec![Ok(from_document(doc! {
-                    "date": "2018-08-14T15:05:03.142Z",
-                })?)]))
-            });
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "comments",
+            expected_pipeline,
+            bson!([{
+                "date": "2018-08-14T15:05:03.142Z",
+            }]),
+        );
 
-        let result = execute_query_request(&collection, query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
@@ -327,12 +318,9 @@ mod tests {
 
         let expected_response = QueryResponse::Single(RowSet::Rows { rows: vec![] });
 
-        let mut collection = MockCollectionTrait::new();
-        collection
-            .expect_aggregate()
-            .returning(move |_pipeline, _: Option<AggregateOptions>| Ok(mock_stream(vec![])));
+        let db = mock_collection_aggregate_response("comments", bson!([]));
 
-        let result = execute_query_request(&collection, query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }

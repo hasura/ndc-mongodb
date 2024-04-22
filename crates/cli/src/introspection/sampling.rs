@@ -7,7 +7,7 @@ use configuration::{
 };
 use futures_util::TryStreamExt;
 use mongodb::bson::{doc, Bson, Document};
-use mongodb_agent_common::interface_types::MongoConfig;
+use mongodb_agent_common::state::ConnectorState;
 use mongodb_support::BsonScalarType::{self, *};
 
 type ObjectField = WithName<schema::ObjectField>;
@@ -19,18 +19,18 @@ type ObjectType = WithName<schema::ObjectType>;
 /// are not unifiable.
 pub async fn sample_schema_from_db(
     sample_size: u32,
-    config: &MongoConfig,
+    state: &ConnectorState,
     existing_schemas: &HashSet<std::string::String>,
 ) -> anyhow::Result<BTreeMap<std::string::String, Schema>> {
     let mut schemas = BTreeMap::new();
-    let db = config.client.database(&config.database);
+    let db = state.database();
     let mut collections_cursor = db.list_collections(None, None).await?;
 
     while let Some(collection_spec) = collections_cursor.try_next().await? {
         let collection_name = collection_spec.name;
         if !existing_schemas.contains(&collection_name) {
             let collection_schema =
-                sample_schema_from_collection(&collection_name, sample_size, config).await?;
+                sample_schema_from_collection(&collection_name, sample_size, state).await?;
             schemas.insert(collection_name, collection_schema);
         }
     }
@@ -40,9 +40,9 @@ pub async fn sample_schema_from_db(
 async fn sample_schema_from_collection(
     collection_name: &str,
     sample_size: u32,
-    config: &MongoConfig,
+    state: &ConnectorState,
 ) -> anyhow::Result<Schema> {
-    let db = config.client.database(&config.database);
+    let db = state.database();
     let options = None;
     let mut cursor = db
         .collection::<Document>(collection_name)

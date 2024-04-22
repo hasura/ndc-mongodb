@@ -76,6 +76,7 @@ pub fn source(name: &str) -> Vec<String> {
 pub fn target(name: &str) -> Target {
     Target::TTable {
         name: vec![name.to_owned()],
+        arguments: Default::default(),
     }
 }
 

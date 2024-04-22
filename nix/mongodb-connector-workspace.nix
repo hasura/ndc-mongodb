@@ -51,13 +51,20 @@ let
   # for a `musl` target.
   inherit (boilerplate) craneLib;
 
-  src =
-    let
-      jsonFilter = path: _type: builtins.match ".*json" path != null;
-      cargoOrJson = path: type:
-        (jsonFilter path type) || (craneLib.filterCargoSources path type);
-    in
-    lib.cleanSourceWith { src = craneLib.path ./..; filter = cargoOrJson; };
+  # Filters source directory to select only files required to build Rust crates.
+  # This avoids unnecessary rebuilds when other files in the repo change. 
+  src = craneLib.cleanCargoSource (craneLib.path ./..);
+
+  # If you need modify the filter to include some files that are being filtered
+  # out you can change the assignment of `src` to something like this:
+  #
+  #     let src = let
+  #         jsonFilter = path: _type: builtins.match ".*json" path != null;
+  #         cargoOrJson = path: type:
+  #           (jsonFilter path type) || (craneLib.filterCargoSources path type);
+  #       in
+  #       lib.cleanSourceWith { src = craneLib.path ./..; filter = cargoOrJson; };
+  #
 
   buildArgs = recursiveMerge [
     boilerplate.buildArgs

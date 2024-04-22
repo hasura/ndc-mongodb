@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use configuration::Configuration;
 use dc_api_types::{Aggregate, Query, QueryRequest, VariableSet};
 use mongodb::bson::{self, doc, Bson};
 
@@ -13,6 +14,7 @@ use super::{
     constants::{RESULT_FIELD, ROWS_FIELD},
     foreach::{foreach_variants, pipeline_for_foreach},
     make_selector, make_sort,
+    native_query::pipeline_for_native_query,
     relations::pipeline_for_relations,
 };
 
@@ -46,13 +48,14 @@ pub fn is_response_faceted(query: &Query) -> bool {
 /// Returns a pipeline paired with a value that indicates whether the response requires
 /// post-processing in the agent.
 pub fn pipeline_for_query_request(
+    config: &Configuration,
     query_request: &QueryRequest,
 ) -> Result<(Pipeline, ResponseShape), MongoAgentError> {
     let foreach = foreach_variants(query_request);
     if let Some(foreach) = foreach {
-        pipeline_for_foreach(foreach, query_request)
+        pipeline_for_foreach(foreach, config, query_request)
     } else {
-        pipeline_for_non_foreach(None, query_request)
+        pipeline_for_non_foreach(config, None, query_request)
     }
 }
 
@@ -62,6 +65,7 @@ pub fn pipeline_for_query_request(
 /// Returns a pipeline paired with a value that indicates whether the response requires
 /// post-processing in the agent.
 pub fn pipeline_for_non_foreach(
+    config: &Configuration,
     variables: Option<&VariableSet>,
     query_request: &QueryRequest,
 ) -> Result<(Pipeline, ResponseShape), MongoAgentError> {
@@ -72,8 +76,13 @@ pub fn pipeline_for_non_foreach(
         r#where,
         ..
     } = query;
+    let mut pipeline = Pipeline::empty();
+
+    // If this is a native query then we start with the native query's pipeline
+    pipeline.append(pipeline_for_native_query(config, variables, query_request)?);
+
     // Stages common to aggregate and row queries.
-    let mut pipeline = pipeline_for_relations(variables, query_request)?;
+    pipeline.append(pipeline_for_relations(config, variables, query_request)?);
 
     let match_stage = r#where
         .as_ref()

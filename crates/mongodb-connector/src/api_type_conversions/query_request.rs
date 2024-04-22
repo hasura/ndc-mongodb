@@ -1,9 +1,12 @@
-use std::collections::{BTreeMap, HashMap};
+use std::{
+    borrow::Cow,
+    collections::{BTreeMap, HashMap},
+};
 
-use configuration::{schema, Schema, WithNameRef};
+use configuration::{schema, WithNameRef};
 use dc_api_types::{self as v2, ColumnSelector, Target};
 use indexmap::IndexMap;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use ndc_sdk::models::{self as v3};
 
 use super::{
@@ -14,20 +17,35 @@ use super::{
 
 #[derive(Clone, Debug)]
 pub struct QueryContext<'a> {
-    pub functions: Vec<v3::FunctionInfo>,
-    pub scalar_types: &'a BTreeMap<String, v3::ScalarType>,
-    pub schema: &'a Schema,
+    pub collections: Cow<'a, BTreeMap<String, v3::CollectionInfo>>,
+    pub functions: Cow<'a, BTreeMap<String, (v3::FunctionInfo, v3::CollectionInfo)>>,
+    pub object_types: Cow<'a, BTreeMap<String, schema::ObjectType>>,
+    pub scalar_types: Cow<'a, BTreeMap<String, v3::ScalarType>>,
 }
 
 impl QueryContext<'_> {
     fn find_collection(
         &self,
         collection_name: &str,
-    ) -> Result<&schema::Collection, ConversionError> {
-        self.schema
-            .collections
-            .get(collection_name)
-            .ok_or_else(|| ConversionError::UnknownCollection(collection_name.to_string()))
+    ) -> Result<&v3::CollectionInfo, ConversionError> {
+        if let Some(collection) = self.collections.get(collection_name) {
+            return Ok(collection);
+        }
+        if let Some((_, function)) = self.functions.get(collection_name) {
+            return Ok(function);
+        }
+
+        Err(ConversionError::UnknownCollection(
+            collection_name.to_string(),
+        ))
+    }
+
+    fn find_collection_object_type(
+        &self,
+        collection_name: &str,
+    ) -> Result<WithNameRef<schema::ObjectType>, ConversionError> {
+        let collection = self.find_collection(collection_name)?;
+        self.find_object_type(&collection.collection_type)
     }
 
     fn find_object_type<'a>(
@@ -35,7 +53,6 @@ impl QueryContext<'_> {
         object_type_name: &'a str,
     ) -> Result<WithNameRef<schema::ObjectType>, ConversionError> {
         let object_type = self
-            .schema
             .object_types
             .get(object_type_name)
             .ok_or_else(|| ConversionError::UnknownObjectType(object_type_name.to_string()))?;
@@ -96,13 +113,13 @@ pub fn v3_to_v2_query_request(
     context: &QueryContext,
     request: v3::QueryRequest,
 ) -> Result<v2::QueryRequest, ConversionError> {
-    let collection = context.find_collection(&request.collection)?;
-    let collection_object_type = context.find_object_type(&collection.r#type)?;
+    let collection_object_type = context.find_collection_object_type(&request.collection)?;
 
     Ok(v2::QueryRequest {
         relationships: v3_to_v2_relationships(&request)?,
         target: Target::TTable {
             name: vec![request.collection],
+            arguments: v3_to_v2_arguments(request.arguments.clone()),
         },
         query: Box::new(v3_to_v2_query(
             context,
@@ -325,8 +342,8 @@ fn v3_to_v2_field(
             arguments: _,
         } => {
             let v3_relationship = lookup_relationship(collection_relationships, &relationship)?;
-            let collection = context.find_collection(&v3_relationship.target_collection)?;
-            let collection_object_type = context.find_object_type(&collection.r#type)?;
+            let collection_object_type =
+                context.find_collection_object_type(&v3_relationship.target_collection)?;
             Ok(v2::Field::Relationship {
                 query: Box::new(v3_to_v2_query(
                     context,
@@ -427,9 +444,7 @@ fn v3_to_v2_order_by_element(
                         collection_relationships,
                         &last_path_element.relationship,
                     )?;
-                    let target_collection =
-                        context.find_collection(&relationship.target_collection)?;
-                    context.find_object_type(&target_collection.r#type)
+                    context.find_collection_object_type(&relationship.target_collection)
                 })
                 .transpose()?;
             let target_object_type = end_of_relationship_path_object_type
@@ -502,9 +517,8 @@ fn v3_to_v2_target_path_step<T: IntoIterator<Item = v3::PathElement>>(
             .map(|expression| {
                 let v3_relationship =
                     lookup_relationship(collection_relationships, &path_element.relationship)?;
-                let target_collection =
-                    context.find_collection(&v3_relationship.target_collection)?;
-                let target_object_type = context.find_object_type(&target_collection.r#type)?;
+                let target_object_type =
+                    context.find_collection_object_type(&v3_relationship.target_collection)?;
                 let v2_expression = v3_to_v2_expression(
                     context,
                     collection_relationships,
@@ -571,16 +585,17 @@ fn v3_to_v2_relationships(
                 }) => Some((collection, relationship, arguments)),
                 _ => None,
             })
-            .map_ok(|(collection_name, relationship_name, _arguments)| {
+            .map_ok(|(collection_name, relationship_name, arguments)| {
                 let v3_relationship = lookup_relationship(
                     &query_request.collection_relationships,
                     relationship_name,
                 )?;
 
-                // TODO: Add an `arguments` field to v2::Relationship and populate it here. (MVC-3)
-                // I think it's possible that the same relationship might appear multiple time with
-                // different arguments, so we may want to make some change to relationship names to
-                // avoid overwriting in such a case. -Jesse
+                // TODO: Functions (native queries) may be referenced multiple times in a query
+                // request with different arguments. To accommodate that we will need to record
+                // separate v2 relations for each reference with different names. In the current
+                // implementation one set of arguments will override arguments to all occurrences of
+                // a given function. MDB-106
                 let v2_relationship = v2::Relationship {
                     column_mapping: v2::ColumnMapping(
                         v3_relationship
@@ -600,6 +615,7 @@ fn v3_to_v2_relationships(
                     },
                     target: v2::Target::TTable {
                         name: vec![v3_relationship.target_collection.clone()],
+                        arguments: v3_to_v2_relationship_arguments(arguments.clone()),
                     },
                 };
 
@@ -713,9 +729,8 @@ fn v3_to_v2_expression(
                 } => {
                     let v3_relationship =
                         lookup_relationship(collection_relationships, &relationship)?;
-                    let v3_collection =
-                        context.find_collection(&v3_relationship.target_collection)?;
-                    let collection_object_type = context.find_object_type(&v3_collection.r#type)?;
+                    let collection_object_type =
+                        context.find_collection_object_type(&v3_relationship.target_collection)?;
                     let in_table = v2::ExistsInTable::RelatedTable { relationship };
                     Ok((in_table, collection_object_type))
                 }
@@ -723,8 +738,8 @@ fn v3_to_v2_expression(
                     collection,
                     arguments: _,
                 } => {
-                    let v3_collection = context.find_collection(&collection)?;
-                    let collection_object_type = context.find_object_type(&v3_collection.r#type)?;
+                    let collection_object_type =
+                        context.find_collection_object_type(&collection)?;
                     let in_table = v2::ExistsInTable::UnrelatedTable {
                         table: vec![collection],
                     };
@@ -863,16 +878,48 @@ where
     n.map(|input| Some(input.into()))
 }
 
+fn v3_to_v2_arguments(arguments: BTreeMap<String, v3::Argument>) -> HashMap<String, v2::Argument> {
+    arguments
+        .into_iter()
+        .map(|(argument_name, argument)| match argument {
+            v3::Argument::Variable { name } => (argument_name, v2::Argument::Variable { name }),
+            v3::Argument::Literal { value } => (argument_name, v2::Argument::Literal { value }),
+        })
+        .collect()
+}
+
+fn v3_to_v2_relationship_arguments(
+    arguments: BTreeMap<String, v3::RelationshipArgument>,
+) -> HashMap<String, v2::Argument> {
+    arguments
+        .into_iter()
+        .map(|(argument_name, argument)| match argument {
+            v3::RelationshipArgument::Variable { name } => {
+                (argument_name, v2::Argument::Variable { name })
+            }
+            v3::RelationshipArgument::Literal { value } => {
+                (argument_name, v2::Argument::Literal { value })
+            }
+            v3::RelationshipArgument::Column { name } => {
+                (argument_name, v2::Argument::Column { name })
+            }
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
-    use std::collections::{BTreeMap, HashMap};
+    use std::{
+        borrow::Cow,
+        collections::{BTreeMap, HashMap},
+    };
 
-    use configuration::{schema, Schema};
+    use configuration::schema;
     use dc_api_test_helpers::{self as v2, source, table_relationships, target};
     use mongodb_support::BsonScalarType;
     use ndc_sdk::models::{
-        AggregateFunctionDefinition, ComparisonOperatorDefinition, OrderByElement, OrderByTarget,
-        OrderDirection, ScalarType, Type, TypeRepresentation,
+        self as v3, AggregateFunctionDefinition, ComparisonOperatorDefinition, OrderByElement,
+        OrderByTarget, OrderDirection, ScalarType, Type, TypeRepresentation,
     };
     use ndc_test_helpers::*;
     use pretty_assertions::assert_eq;
@@ -1022,13 +1069,7 @@ mod tests {
 
     #[test]
     fn translates_root_column_references() -> Result<(), anyhow::Error> {
-        let scalar_types = make_scalar_types();
-        let schema = make_flat_schema();
-        let query_context = QueryContext {
-            functions: vec![],
-            scalar_types: &scalar_types,
-            schema: &schema,
-        };
+        let query_context = make_flat_schema();
         let query = query_request()
             .collection("authors")
             .query(query().fields([field!("last_name")]).predicate(exists(
@@ -1069,13 +1110,7 @@ mod tests {
 
     #[test]
     fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
-        let scalar_types = make_scalar_types();
-        let schema = make_flat_schema();
-        let query_context = QueryContext {
-            functions: vec![],
-            scalar_types: &scalar_types,
-            schema: &schema,
-        };
+        let query_context = make_flat_schema();
         let query = query_request()
             .collection("authors")
             .query(query().aggregates([
@@ -1101,13 +1136,7 @@ mod tests {
 
     #[test]
     fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), anyhow::Error> {
-        let scalar_types = make_scalar_types();
-        let schema = make_flat_schema();
-        let query_context = QueryContext {
-            functions: vec![],
-            scalar_types: &scalar_types,
-            schema: &schema,
-        };
+        let query_context = make_flat_schema();
         let query = query_request()
             .collection("authors")
             .query(
@@ -1217,13 +1246,7 @@ mod tests {
 
     #[test]
     fn translates_nested_fields() -> Result<(), anyhow::Error> {
-        let scalar_types = make_scalar_types();
-        let schema = make_nested_schema();
-        let query_context = QueryContext {
-            functions: vec![],
-            scalar_types: &scalar_types,
-            schema: &schema,
-        };
+        let query_context = make_nested_schema();
         let query_request = query_request()
             .collection("authors")
             .query(query().fields([
@@ -1288,25 +1311,34 @@ mod tests {
         ])
     }
 
-    fn make_flat_schema() -> Schema {
-        Schema {
-            collections: BTreeMap::from([
+    fn make_flat_schema() -> QueryContext<'static> {
+        QueryContext {
+            collections: Cow::Owned(BTreeMap::from([
                 (
                     "authors".into(),
-                    schema::Collection {
+                    v3::CollectionInfo {
+                        name: "authors".to_owned(),
                         description: None,
-                        r#type: "Author".into(),
+                        collection_type: "Author".into(),
+                        arguments: Default::default(),
+                        uniqueness_constraints: make_primary_key_uniqueness_constraint("authors"),
+                        foreign_keys: Default::default(),
                     },
                 ),
                 (
                     "articles".into(),
-                    schema::Collection {
+                    v3::CollectionInfo {
+                        name: "articles".to_owned(),
                         description: None,
-                        r#type: "Article".into(),
+                        collection_type: "Article".into(),
+                        arguments: Default::default(),
+                        uniqueness_constraints: make_primary_key_uniqueness_constraint("articles"),
+                        foreign_keys: Default::default(),
                     },
                 ),
-            ]),
-            object_types: BTreeMap::from([
+            ])),
+            functions: Default::default(),
+            object_types: Cow::Owned(BTreeMap::from([
                 (
                     "Author".into(),
                     schema::ObjectType {
@@ -1360,20 +1392,26 @@ mod tests {
                         ]),
                     },
                 ),
-            ]),
+            ])),
+            scalar_types: Cow::Owned(make_scalar_types()),
         }
     }
 
-    fn make_nested_schema() -> Schema {
-        Schema {
-            collections: BTreeMap::from([(
+    fn make_nested_schema() -> QueryContext<'static> {
+        QueryContext {
+            collections: Cow::Owned(BTreeMap::from([(
                 "authors".into(),
-                schema::Collection {
+                v3::CollectionInfo {
+                    name: "authors".into(),
                     description: None,
-                    r#type: "Author".into(),
+                    collection_type: "Author".into(),
+                    arguments: Default::default(),
+                    uniqueness_constraints: make_primary_key_uniqueness_constraint("authors"),
+                    foreign_keys: Default::default(),
                 },
-            )]),
-            object_types: BTreeMap::from([
+            )])),
+            functions: Default::default(),
+            object_types: Cow::Owned(BTreeMap::from([
                 (
                     "Author".into(),
                     schema::ObjectType {
@@ -1433,7 +1471,20 @@ mod tests {
                         )]),
                     },
                 ),
-            ]),
+            ])),
+            scalar_types: Cow::Owned(make_scalar_types()),
         }
+    }
+
+    fn make_primary_key_uniqueness_constraint(
+        collection_name: &str,
+    ) -> BTreeMap<String, v3::UniquenessConstraint> {
+        [(
+            format!("{collection_name}_id"),
+            v3::UniquenessConstraint {
+                unique_columns: vec!["_id".to_owned()],
+            },
+        )]
+        .into()
     }
 }

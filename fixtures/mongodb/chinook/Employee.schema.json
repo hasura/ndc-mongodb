@@ -41,7 +41,7 @@
         "bsonType": "string"
       },
       "ReportsTo": {
-        "bsonType": "string"
+        "bsonType": "int"
       },
       "State": {
         "bsonType": "string"

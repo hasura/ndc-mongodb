@@ -1,0 +1,35 @@
+[{
+  "_id": {
+    "$oid": "66135f66eed2c00176f6fd7a"
+  },
+  "MediaTypeId": 1,
+  "Name": "MPEG audio file"
+},
+{
+  "_id": {
+    "$oid": "66135f66eed2c00176f6fd7b"
+  },
+  "MediaTypeId": 2,
+  "Name": "Protected AAC audio file"
+},
+{
+  "_id": {
+    "$oid": "66135f66eed2c00176f6fd7c"
+  },
+  "MediaTypeId": 3,
+  "Name": "Protected MPEG-4 video file"
+},
+{
+  "_id": {
+    "$oid": "66135f66eed2c00176f6fd7d"
+  },
+  "MediaTypeId": 4,
+  "Name": "Purchased AAC audio file"
+},
+{
+  "_id": {
+    "$oid": "66135f66eed2c00176f6fd7e"
+  },
+  "MediaTypeId": 5,
+  "Name": "AAC audio file"
+}]

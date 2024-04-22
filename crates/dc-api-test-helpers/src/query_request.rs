@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use dc_api_types::{Query, QueryRequest, ScalarValue, TableRelationships, Target, VariableSet};
+use dc_api_types::{
+    Argument, Query, QueryRequest, ScalarValue, TableRelationships, Target, VariableSet,
+};
 
 #[derive(Clone, Debug, Default)]
 pub struct QueryRequestBuilder {
@@ -23,6 +25,23 @@ impl QueryRequestBuilder {
     {
         self.target = Some(Target::TTable {
             name: name.into_iter().map(|v| v.to_string()).collect(),
+            arguments: Default::default(),
+        });
+        self
+    }
+
+    pub fn target_with_arguments<I, S, Args>(mut self, name: I, arguments: Args) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: ToString,
+        Args: IntoIterator<Item = (S, Argument)>,
+    {
+        self.target = Some(Target::TTable {
+            name: name.into_iter().map(|v| v.to_string()).collect(),
+            arguments: arguments
+                .into_iter()
+                .map(|(name, arg)| (name.to_string(), arg))
+                .collect(),
         });
         self
     }

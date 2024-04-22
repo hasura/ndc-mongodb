@@ -256,6 +256,7 @@ mod tests {
             variables: None,
             target: Target::TTable {
                 name: vec!["test".to_owned()],
+                arguments: Default::default(),
             },
             relationships: vec![],
         };

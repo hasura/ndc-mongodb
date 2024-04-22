@@ -1,52 +1,163 @@
 use std::{collections::BTreeMap, path::Path};
 
-use anyhow::ensure;
+use anyhow::{anyhow, ensure};
 use itertools::Itertools;
-use schemars::JsonSchema;
-use serde::Deserialize;
+use mongodb_support::BsonScalarType;
+use ndc_models as ndc;
 
-use crate::{native_procedure::NativeProcedure, read_directory, schema::ObjectType, Schema};
+use crate::{
+    native_procedure::NativeProcedure,
+    native_query::{NativeQuery, NativeQueryRepresentation},
+    read_directory, schema, serialized,
+};
 
-#[derive(Clone, Debug, Default, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug, Default)]
 pub struct Configuration {
-    /// Descriptions of collections and types used in the database
-    pub schema: Schema,
+    /// Tracked collections from the configured MongoDB database. This includes real collections as
+    /// well as virtual collections defined by native queries using
+    /// [NativeQueryRepresentation::Collection] representation.
+    pub collections: BTreeMap<String, ndc::CollectionInfo>,
+
+    /// Functions are based on native queries using [NativeQueryRepresentation::Function]
+    /// representation.
+    ///
+    /// In query requests functions and collections are treated as the same, but in schema
+    /// responses they are separate concepts. So we want a set of [CollectionInfo] values for
+    /// functions for query processing, and we want it separate from `collections` for the schema
+    /// response.
+    pub functions: BTreeMap<String, (ndc::FunctionInfo, ndc::CollectionInfo)>,
+
+    /// Procedures are based on native procedures.
+    pub procedures: BTreeMap<String, ndc::ProcedureInfo>,
 
     /// Native procedures allow arbitrary MongoDB commands where types of results are
     /// specified via user configuration.
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub native_procedures: BTreeMap<String, NativeProcedure>,
+
+    /// Native queries allow arbitrary aggregation pipelines that can be included in a query plan.
+    pub native_queries: BTreeMap<String, NativeQuery>,
+
+    /// Object types defined for this connector include types of documents in each collection,
+    /// types for objects inside collection documents, types for native query and native procedure
+    /// arguments and results.
+    ///
+    /// The object types here combine object type defined in files in the `schema/`,
+    /// `native_queries/`, and `native_procedures/` subdirectories in the connector configuration
+    /// directory.
+    pub object_types: BTreeMap<String, schema::ObjectType>,
 }
 
 impl Configuration {
     pub fn validate(
-        schema: Schema,
-        native_procedures: BTreeMap<String, NativeProcedure>,
+        schema: serialized::Schema,
+        native_procedures: BTreeMap<String, serialized::NativeProcedure>,
+        native_queries: BTreeMap<String, serialized::NativeQuery>,
     ) -> anyhow::Result<Self> {
-        let config = Configuration {
-            schema,
-            native_procedures,
-        };
-
-        {
-            let duplicate_type_names: Vec<&str> = config
-                .object_types()
+        let object_types_iter = || merge_object_types(&schema, &native_procedures, &native_queries);
+        let object_type_errors = {
+            let duplicate_type_names: Vec<&str> = object_types_iter()
                 .map(|(name, _)| name.as_ref())
                 .duplicates()
                 .collect();
-            ensure!(
-                duplicate_type_names.is_empty(),
-                "configuration contains multiple definitions for these object type names: {}",
-                duplicate_type_names.join(", ")
-            );
-        }
+            if duplicate_type_names.is_empty() {
+                None
+            } else {
+                Some(anyhow!(
+                    "configuration contains multiple definitions for these object type names: {}",
+                    duplicate_type_names.join(", ")
+                ))
+            }
+        };
+        let object_types = object_types_iter()
+            .map(|(name, ot)| (name.to_owned(), ot.clone()))
+            .collect();
 
-        Ok(config)
+        let internal_native_queries: BTreeMap<_, _> = native_queries
+            .into_iter()
+            .map(|(name, nq)| (name, nq.into()))
+            .collect();
+
+        let internal_native_procedures: BTreeMap<_, _> = native_procedures
+            .into_iter()
+            .map(|(name, np)| (name, np.into()))
+            .collect();
+
+        let collections = {
+            let regular_collections = schema.collections.into_iter().map(|(name, collection)| {
+                (
+                    name.clone(),
+                    collection_to_collection_info(&object_types, name, collection),
+                )
+            });
+            let native_query_collections = internal_native_queries.iter().filter_map(
+                |(name, native_query): (&String, &NativeQuery)| {
+                    if native_query.representation == NativeQueryRepresentation::Collection {
+                        Some((
+                            name.to_owned(),
+                            native_query_to_collection_info(&object_types, name, native_query),
+                        ))
+                    } else {
+                        None
+                    }
+                },
+            );
+            regular_collections
+                .chain(native_query_collections)
+                .collect()
+        };
+
+        let (functions, function_errors): (BTreeMap<_, _>, Vec<_>) = internal_native_queries
+            .iter()
+            .filter_map(|(name, native_query)| {
+                if native_query.representation == NativeQueryRepresentation::Function {
+                    Some((
+                        name,
+                        native_query_to_function_info(&object_types, name, native_query),
+                        native_query_to_collection_info(&object_types, name, native_query),
+                    ))
+                } else {
+                    None
+                }
+            })
+            .map(|(name, function_result, collection_info)| {
+                Ok((name.to_owned(), (function_result?, collection_info)))
+                    as Result<_, anyhow::Error>
+            })
+            .partition_result();
+
+        let procedures = internal_native_procedures
+            .iter()
+            .map(|(name, native_procedure)| {
+                (
+                    name.to_owned(),
+                    native_procedure_to_procedure_info(name, native_procedure),
+                )
+            })
+            .collect();
+
+        let errors: Vec<String> = object_type_errors
+            .into_iter()
+            .chain(function_errors)
+            .map(|e| e.to_string())
+            .collect();
+        ensure!(
+            errors.is_empty(),
+            "connector configuration has errrors:\n  - {}",
+            errors.join("\n  - ")
+        );
+
+        Ok(Configuration {
+            collections,
+            functions,
+            procedures,
+            native_procedures: internal_native_procedures,
+            native_queries: internal_native_queries,
+            object_types,
+        })
     }
 
-    pub fn from_schema(schema: Schema) -> anyhow::Result<Self> {
-        Self::validate(schema, Default::default())
+    pub fn from_schema(schema: serialized::Schema) -> anyhow::Result<Self> {
+        Self::validate(schema, Default::default(), Default::default())
     }
 
     pub async fn parse_configuration(
@@ -54,16 +165,147 @@ impl Configuration {
     ) -> anyhow::Result<Self> {
         read_directory(configuration_dir).await
     }
+}
 
-    /// Returns object types collected from schema and native procedures
-    pub fn object_types(&self) -> impl Iterator<Item = (&String, &ObjectType)> {
-        let object_types_from_schema = self.schema.object_types.iter();
-        let object_types_from_native_procedures = self
-            .native_procedures
-            .values()
-            .flat_map(|native_procedure| &native_procedure.object_types);
-        object_types_from_schema.chain(object_types_from_native_procedures)
+fn merge_object_types<'a>(
+    schema: &'a serialized::Schema,
+    native_procedures: &'a BTreeMap<String, serialized::NativeProcedure>,
+    native_queries: &'a BTreeMap<String, serialized::NativeQuery>,
+) -> impl Iterator<Item = (&'a String, &'a schema::ObjectType)> {
+    let object_types_from_schema = schema.object_types.iter();
+    let object_types_from_native_procedures = native_procedures
+        .values()
+        .flat_map(|native_procedure| &native_procedure.object_types);
+    let object_types_from_native_queries = native_queries
+        .values()
+        .flat_map(|native_query| &native_query.object_types);
+    object_types_from_schema
+        .chain(object_types_from_native_procedures)
+        .chain(object_types_from_native_queries)
+}
+
+fn collection_to_collection_info(
+    object_types: &BTreeMap<String, schema::ObjectType>,
+    name: String,
+    collection: schema::Collection,
+) -> ndc::CollectionInfo {
+    let pk_constraint =
+        get_primary_key_uniqueness_constraint(object_types, &name, &collection.r#type);
+
+    ndc::CollectionInfo {
+        name,
+        collection_type: collection.r#type,
+        description: collection.description,
+        arguments: Default::default(),
+        foreign_keys: Default::default(),
+        uniqueness_constraints: BTreeMap::from_iter(pk_constraint),
     }
+}
+
+fn native_query_to_collection_info(
+    object_types: &BTreeMap<String, schema::ObjectType>,
+    name: &str,
+    native_query: &NativeQuery,
+) -> ndc::CollectionInfo {
+    let pk_constraint = get_primary_key_uniqueness_constraint(
+        object_types,
+        name,
+        &native_query.result_document_type,
+    );
+
+    // TODO: recursively verify that all referenced object types exist
+    ndc::CollectionInfo {
+        name: name.to_owned(),
+        collection_type: native_query.result_document_type.clone(),
+        description: native_query.description.clone(),
+        arguments: arguments_to_ndc_arguments(native_query.arguments.clone()),
+        foreign_keys: Default::default(),
+        uniqueness_constraints: BTreeMap::from_iter(pk_constraint),
+    }
+}
+
+fn get_primary_key_uniqueness_constraint(
+    object_types: &BTreeMap<String, schema::ObjectType>,
+    name: &str,
+    collection_type: &str,
+) -> Option<(String, ndc::UniquenessConstraint)> {
+    // Check to make sure our collection's object type contains the _id objectid field
+    // If it doesn't (should never happen, all collections need an _id column), don't generate the constraint
+    let object_type = object_types.get(collection_type)?;
+    let id_field = object_type.fields.get("_id")?;
+    match &id_field.r#type {
+        schema::Type::Scalar(BsonScalarType::ObjectId) => Some(()),
+        _ => None,
+    }?;
+    let uniqueness_constraint = ndc::UniquenessConstraint {
+        unique_columns: vec!["_id".into()],
+    };
+    let constraint_name = format!("{}_id", name);
+    Some((constraint_name, uniqueness_constraint))
+}
+
+fn native_query_to_function_info(
+    object_types: &BTreeMap<String, schema::ObjectType>,
+    name: &str,
+    native_query: &NativeQuery,
+) -> anyhow::Result<ndc::FunctionInfo> {
+    Ok(ndc::FunctionInfo {
+        name: name.to_owned(),
+        description: native_query.description.clone(),
+        arguments: arguments_to_ndc_arguments(native_query.arguments.clone()),
+        result_type: function_result_type(object_types, name, &native_query.result_document_type)?,
+    })
+}
+
+fn function_result_type(
+    object_types: &BTreeMap<String, schema::ObjectType>,
+    function_name: &str,
+    object_type_name: &str,
+) -> anyhow::Result<ndc::Type> {
+    let object_type = find_object_type(object_types, object_type_name)?;
+    let value_field = object_type.fields.get("__value").ok_or_else(|| {
+        anyhow!("the type of the native query, {function_name}, is not valid: the type of a native query that is represented as a function must be an object type with a single field named \"__value\"")
+
+    })?;
+    Ok(value_field.r#type.clone().into())
+}
+
+fn native_procedure_to_procedure_info(
+    procedure_name: &str,
+    procedure: &NativeProcedure,
+) -> ndc::ProcedureInfo {
+    ndc::ProcedureInfo {
+        name: procedure_name.to_owned(),
+        description: procedure.description.clone(),
+        arguments: arguments_to_ndc_arguments(procedure.arguments.clone()),
+        result_type: procedure.result_type.clone().into(),
+    }
+}
+
+fn arguments_to_ndc_arguments(
+    configured_arguments: BTreeMap<String, schema::ObjectField>,
+) -> BTreeMap<String, ndc::ArgumentInfo> {
+    configured_arguments
+        .into_iter()
+        .map(|(name, field)| {
+            (
+                name,
+                ndc::ArgumentInfo {
+                    argument_type: field.r#type.into(),
+                    description: field.description,
+                },
+            )
+        })
+        .collect()
+}
+
+fn find_object_type<'a>(
+    object_types: &'a BTreeMap<String, schema::ObjectType>,
+    object_type_name: &str,
+) -> anyhow::Result<&'a schema::ObjectType> {
+    object_types
+        .get(object_type_name)
+        .ok_or_else(|| anyhow!("configuration references an object type named {object_type_name}, but it is not defined"))
 }
 
 #[cfg(test)]
@@ -71,7 +313,7 @@ mod tests {
     use mongodb::bson::doc;
 
     use super::*;
-    use crate::{schema::Type, Schema};
+    use crate::{schema::Type, serialized::Schema};
 
     #[test]
     fn fails_with_duplicate_object_types() {
@@ -79,7 +321,7 @@ mod tests {
             collections: Default::default(),
             object_types: [(
                 "Album".to_owned(),
-                ObjectType {
+                schema::ObjectType {
                     fields: Default::default(),
                     description: Default::default(),
                 },
@@ -89,10 +331,10 @@ mod tests {
         };
         let native_procedures = [(
             "hello".to_owned(),
-            NativeProcedure {
+            serialized::NativeProcedure {
                 object_types: [(
                     "Album".to_owned(),
-                    ObjectType {
+                    schema::ObjectType {
                         fields: Default::default(),
                         description: Default::default(),
                     },
@@ -108,7 +350,7 @@ mod tests {
         )]
         .into_iter()
         .collect();
-        let result = Configuration::validate(schema, native_procedures);
+        let result = Configuration::validate(schema, native_procedures, Default::default());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("multiple definitions"));
         assert!(error_msg.contains("Album"));

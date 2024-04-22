@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use anyhow::anyhow;
+use configuration::Configuration;
 use dc_api_types::comparison_column::ColumnSelector;
 use dc_api_types::relationship::ColumnMapping;
 use dc_api_types::{Field, QueryRequest, Relationship, VariableSet};
@@ -16,6 +17,7 @@ use crate::{
 use super::pipeline::pipeline_for_non_foreach;
 
 pub fn pipeline_for_relations(
+    config: &Configuration,
     variables: Option<&VariableSet>,
     query_request: &QueryRequest,
 ) -> Result<Pipeline, MongoAgentError> {
@@ -45,12 +47,13 @@ pub fn pipeline_for_relations(
         })
         .unwrap_or(&empty_relation_map);
 
-    let stages = lookups_for_fields(query_request, variables, relationships, &[], fields)?;
+    let stages = lookups_for_fields(config, query_request, variables, relationships, &[], fields)?;
     Ok(Pipeline::new(stages))
 }
 
 /// Produces $lookup stages for any necessary joins
 fn lookups_for_fields(
+    config: &Configuration,
     query_request: &QueryRequest,
     variables: Option<&VariableSet>,
     relationships: &HashMap<String, Relationship>,
@@ -61,6 +64,7 @@ fn lookups_for_fields(
         .iter()
         .map(|(field_name, field)| {
             lookups_for_field(
+                config,
                 query_request,
                 variables,
                 relationships,
@@ -78,6 +82,7 @@ fn lookups_for_fields(
 
 /// Produces $lookup stages for any necessary joins
 fn lookups_for_field(
+    config: &Configuration,
     query_request: &QueryRequest,
     variables: Option<&VariableSet>,
     relationships: &HashMap<String, Relationship>,
@@ -91,6 +96,7 @@ fn lookups_for_field(
             let nested_parent_columns = append_to_path(parent_columns, column);
             let fields = query.fields.clone().flatten().unwrap_or_default();
             lookups_for_fields(
+                config,
                 query_request,
                 variables,
                 relationships,
@@ -107,6 +113,7 @@ fn lookups_for_field(
             offset: _,
             r#where: _,
         } => lookups_for_field(
+            config,
             query_request,
             variables,
             relationships,
@@ -132,6 +139,7 @@ fn lookups_for_field(
 
             // Recursively build pipeline according to relation query
             let (lookup_pipeline, _) = pipeline_for_non_foreach(
+                config,
                 variables,
                 &QueryRequest {
                     query: query.clone(),
@@ -236,12 +244,12 @@ where
 #[cfg(test)]
 mod tests {
     use dc_api_types::{QueryRequest, QueryResponse};
-    use mongodb::{bson::doc, options::AggregateOptions};
+    use mongodb::bson::{bson, Bson};
     use pretty_assertions::assert_eq;
-    use serde_json::{from_value, json, to_value};
+    use serde_json::{from_value, json};
 
     use super::super::execute_query_request;
-    use crate::mongodb::{test_helpers::mock_stream, MockCollectionTrait};
+    use crate::mongodb::test_helpers::mock_collection_aggregate_response_for_pipeline;
 
     #[tokio::test]
     async fn looks_up_an_array_relation() -> Result<(), anyhow::Error> {
@@ -285,7 +293,7 @@ mod tests {
             ],
         }))?;
 
-        let expected_pipeline = json!([
+        let expected_pipeline = bson!([
             {
                 "$lookup": {
                     "from": "students",
@@ -319,21 +327,19 @@ mod tests {
             },
         ]);
 
-        let mut collection = MockCollectionTrait::new();
-        collection
-            .expect_aggregate()
-            .returning(move |pipeline, _: Option<AggregateOptions>| {
-                assert_eq!(expected_pipeline, to_value(pipeline).unwrap());
-                Ok(mock_stream(vec![Ok(doc! {
-                    "class_title": "MongoDB 101",
-                    "students": [
-                        { "student_name": "Alice" },
-                        { "student_name": "Bob" },
-                    ],
-                })]))
-            });
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "classes",
+            expected_pipeline,
+            bson!([{
+                "class_title": "MongoDB 101",
+                "students": [
+                    { "student_name": "Alice" },
+                    { "student_name": "Bob" },
+                ],
+            }]),
+        );
 
-        let result = execute_query_request(&collection, query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -382,7 +388,7 @@ mod tests {
             ],
         }))?;
 
-        let expected_pipeline = json!([
+        let expected_pipeline = bson!([
             {
                 "$lookup": {
                     "from": "classes",
@@ -414,24 +420,22 @@ mod tests {
             },
         ]);
 
-        let mut collection = MockCollectionTrait::new();
-        collection
-            .expect_aggregate()
-            .returning(move |pipeline, _: Option<AggregateOptions>| {
-                assert_eq!(expected_pipeline, to_value(pipeline).unwrap());
-                Ok(mock_stream(vec![
-                    Ok(doc! {
-                        "student_name": "Alice",
-                        "class": { "class_title": "MongoDB 101" },
-                    }),
-                    Ok(doc! {
-                        "student_name": "Bob",
-                        "class": { "class_title": "MongoDB 101" },
-                    }),
-                ]))
-            });
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "students",
+            expected_pipeline,
+            bson!([
+                {
+                    "student_name": "Alice",
+                    "class": { "class_title": "MongoDB 101" },
+                },
+                {
+                    "student_name": "Bob",
+                    "class": { "class_title": "MongoDB 101" },
+                },
+            ]),
+        );
 
-        let result = execute_query_request(&collection, query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -479,7 +483,7 @@ mod tests {
             ],
         }))?;
 
-        let expected_pipeline = json!([
+        let expected_pipeline = bson!([
             {
                 "$lookup": {
                     "from": "students",
@@ -515,21 +519,19 @@ mod tests {
             },
         ]);
 
-        let mut collection = MockCollectionTrait::new();
-        collection
-            .expect_aggregate()
-            .returning(move |pipeline, _: Option<AggregateOptions>| {
-                assert_eq!(expected_pipeline, to_value(pipeline).unwrap());
-                Ok(mock_stream(vec![Ok(doc! {
-                    "class_title": "MongoDB 101",
-                    "students": [
-                    { "student_name": "Alice" },
-                    { "student_name": "Bob" },
-                ],
-                })]))
-            });
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "classes",
+            expected_pipeline,
+            bson!([{
+                "class_title": "MongoDB 101",
+                "students": [
+                { "student_name": "Alice" },
+                { "student_name": "Bob" },
+            ],
+            }]),
+        );
 
-        let result = execute_query_request(&collection, query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -610,7 +612,7 @@ mod tests {
             ],
         }))?;
 
-        let expected_pipeline = json!([
+        let expected_pipeline = bson!([
             {
                 "$lookup": {
                     "from": "students",
@@ -670,38 +672,36 @@ mod tests {
             },
         ]);
 
-        let mut collection = MockCollectionTrait::new();
-        collection
-            .expect_aggregate()
-            .returning(move |pipeline, _: Option<AggregateOptions>| {
-                assert_eq!(expected_pipeline, to_value(pipeline).unwrap());
-                Ok(mock_stream(vec![Ok(doc! {
-                    "class_title": "MongoDB 101",
-                    "students": {
-                        "rows": [
-                            {
-                                "student_name": "Alice",
-                                "assignments": {
-                                    "rows": [
-                                        { "assignment_title": "read chapter 2" },
-                                    ],
-                                }
-                            },
-                            {
-                                "student_name": "Bob",
-                                "assignments": {
-                                    "rows": [
-                                        { "assignment_title": "JSON Basics" },
-                                        { "assignment_title": "read chapter 2" },
-                                    ],
-                                }
-                            },
-                        ]
-                    },
-                })]))
-            });
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "classes",
+            expected_pipeline,
+            bson!([{
+                "class_title": "MongoDB 101",
+                "students": {
+                    "rows": [
+                        {
+                            "student_name": "Alice",
+                            "assignments": {
+                                "rows": [
+                                    { "assignment_title": "read chapter 2" },
+                                ],
+                            }
+                        },
+                        {
+                            "student_name": "Bob",
+                            "assignments": {
+                                "rows": [
+                                    { "assignment_title": "JSON Basics" },
+                                    { "assignment_title": "read chapter 2" },
+                                ],
+                            }
+                        },
+                    ]
+                },
+            }]),
+        );
 
-        let result = execute_query_request(&collection, query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -748,7 +748,7 @@ mod tests {
             ],
         }))?;
 
-        let expected_pipeline = json!([
+        let expected_pipeline = bson!([
             {
                 "$lookup": {
                     "from": "students",
@@ -793,21 +793,19 @@ mod tests {
             },
         ]);
 
-        let mut collection = MockCollectionTrait::new();
-        collection
-            .expect_aggregate()
-            .returning(move |pipeline, _: Option<AggregateOptions>| {
-                assert_eq!(expected_pipeline, to_value(pipeline).unwrap());
-                Ok(mock_stream(vec![Ok(doc! {
-                    "students_aggregate": {
-                        "aggregates": {
-                            "aggregate_count": 2,
-                        },
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "classes",
+            expected_pipeline,
+            bson!([{
+                "students_aggregate": {
+                    "aggregates": {
+                        "aggregate_count": 2,
                     },
-                })]))
-            });
+                },
+            }]),
+        );
 
-        let result = execute_query_request(&collection, query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -880,7 +878,7 @@ mod tests {
           }]
         }))?;
 
-        let expected_pipeline = json!([
+        let expected_pipeline = bson!([
           {
             "$lookup": {
               "from": "movies",
@@ -911,7 +909,7 @@ mod tests {
             }
           },
           {
-            "$limit": 50
+            "$limit": Bson::Int64(50),
           },
           {
             "$replaceWith": {
@@ -927,21 +925,19 @@ mod tests {
           },
         ]);
 
-        let mut collection = MockCollectionTrait::new();
-        collection
-            .expect_aggregate()
-            .returning(move |pipeline, _: Option<AggregateOptions>| {
-                assert_eq!(expected_pipeline, to_value(pipeline).unwrap());
-                Ok(mock_stream(vec![Ok(doc! {
-                    "name": "Mercedes Tyler",
-                    "movie": { "rows": [{
-                        "title": "The Land Beyond the Sunset",
-                        "year": 1912
-                    }] },
-                })]))
-            });
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "comments",
+            expected_pipeline,
+            bson!([{
+                "name": "Mercedes Tyler",
+                "movie": { "rows": [{
+                    "title": "The Land Beyond the Sunset",
+                    "year": 1912
+                }] },
+            }]),
+        );
 
-        let result = execute_query_request(&collection, query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -1019,7 +1015,7 @@ mod tests {
             }]
         }))?;
 
-        let expected_pipeline = json!([
+        let expected_pipeline = bson!([
             {
                 "$lookup": {
                     "from": "movies",
@@ -1055,7 +1051,7 @@ mod tests {
                 }
             },
             {
-                "$limit": 50
+                "$limit": Bson::Int64(50),
             },
             {
                 "$replaceWith": {
@@ -1071,22 +1067,20 @@ mod tests {
             },
         ]);
 
-        let mut collection = MockCollectionTrait::new();
-        collection
-            .expect_aggregate()
-            .returning(move |pipeline, _: Option<AggregateOptions>| {
-                assert_eq!(expected_pipeline, to_value(pipeline).unwrap());
-                Ok(mock_stream(vec![Ok(doc! {
-                    "name": "Beric Dondarrion",
-                    "movie": { "rows": [{
-                        "credits": {
-                            "director": "Martin Scorsese"
-                        }
-                    }] },
-                })]))
-            });
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "comments",
+            expected_pipeline,
+            bson!([{
+                "name": "Beric Dondarrion",
+                "movie": { "rows": [{
+                    "credits": {
+                        "director": "Martin Scorsese"
+                    }
+                }] },
+            }]),
+        );
 
-        let result = execute_query_request(&collection, query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())

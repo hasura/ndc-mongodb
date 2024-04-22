@@ -1,0 +1,6362 @@
+[{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbdb"
+  },
+  "InvoiceId": 1,
+  "CustomerId": 2,
+  "InvoiceDate": "2009-01-01 00:00:00",
+  "BillingAddress": "Theodor-Heuss-Straße 34",
+  "BillingCity": "Stuttgart",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "70174",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbdc"
+  },
+  "InvoiceId": 2,
+  "CustomerId": 4,
+  "InvoiceDate": "2009-01-02 00:00:00",
+  "BillingAddress": "Ullevålsveien 14",
+  "BillingCity": "Oslo",
+  "BillingCountry": "Norway",
+  "BillingPostalCode": "0171",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbdd"
+  },
+  "InvoiceId": 3,
+  "CustomerId": 8,
+  "InvoiceDate": "2009-01-03 00:00:00",
+  "BillingAddress": "Grétrystraat 63",
+  "BillingCity": "Brussels",
+  "BillingCountry": "Belgium",
+  "BillingPostalCode": "1000",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbde"
+  },
+  "InvoiceId": 4,
+  "CustomerId": 14,
+  "InvoiceDate": "2009-01-06 00:00:00",
+  "BillingAddress": "8210 111 ST NW",
+  "BillingCity": "Edmonton",
+  "BillingState": "AB",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "T6G 2C7",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbdf"
+  },
+  "InvoiceId": 5,
+  "CustomerId": 23,
+  "InvoiceDate": "2009-01-11 00:00:00",
+  "BillingAddress": "69 Salem Street",
+  "BillingCity": "Boston",
+  "BillingState": "MA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "2113",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbe0"
+  },
+  "InvoiceId": 6,
+  "CustomerId": 37,
+  "InvoiceDate": "2009-01-19 00:00:00",
+  "BillingAddress": "Berger Straße 10",
+  "BillingCity": "Frankfurt",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "60316",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbe1"
+  },
+  "InvoiceId": 7,
+  "CustomerId": 38,
+  "InvoiceDate": "2009-02-01 00:00:00",
+  "BillingAddress": "Barbarossastraße 19",
+  "BillingCity": "Berlin",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "10779",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbe2"
+  },
+  "InvoiceId": 8,
+  "CustomerId": 40,
+  "InvoiceDate": "2009-02-01 00:00:00",
+  "BillingAddress": "8, Rue Hanovre",
+  "BillingCity": "Paris",
+  "BillingCountry": "France",
+  "BillingPostalCode": "75002",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbe3"
+  },
+  "InvoiceId": 9,
+  "CustomerId": 42,
+  "InvoiceDate": "2009-02-02 00:00:00",
+  "BillingAddress": "9, Place Louis Barthou",
+  "BillingCity": "Bordeaux",
+  "BillingCountry": "France",
+  "BillingPostalCode": "33000",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbe4"
+  },
+  "InvoiceId": 10,
+  "CustomerId": 46,
+  "InvoiceDate": "2009-02-03 00:00:00",
+  "BillingAddress": "3 Chatham Street",
+  "BillingCity": "Dublin",
+  "BillingState": "Dublin",
+  "BillingCountry": "Ireland",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbe5"
+  },
+  "InvoiceId": 11,
+  "CustomerId": 52,
+  "InvoiceDate": "2009-02-06 00:00:00",
+  "BillingAddress": "202 Hoxton Street",
+  "BillingCity": "London",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "N1 5LH",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbe6"
+  },
+  "InvoiceId": 12,
+  "CustomerId": 2,
+  "InvoiceDate": "2009-02-11 00:00:00",
+  "BillingAddress": "Theodor-Heuss-Straße 34",
+  "BillingCity": "Stuttgart",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "70174",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbe7"
+  },
+  "InvoiceId": 13,
+  "CustomerId": 16,
+  "InvoiceDate": "2009-02-19 00:00:00",
+  "BillingAddress": "1600 Amphitheatre Parkway",
+  "BillingCity": "Mountain View",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "94043-1351",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbe8"
+  },
+  "InvoiceId": 14,
+  "CustomerId": 17,
+  "InvoiceDate": "2009-03-04 00:00:00",
+  "BillingAddress": "1 Microsoft Way",
+  "BillingCity": "Redmond",
+  "BillingState": "WA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "98052-8300",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbe9"
+  },
+  "InvoiceId": 15,
+  "CustomerId": 19,
+  "InvoiceDate": "2009-03-04 00:00:00",
+  "BillingAddress": "1 Infinite Loop",
+  "BillingCity": "Cupertino",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "95014",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbea"
+  },
+  "InvoiceId": 16,
+  "CustomerId": 21,
+  "InvoiceDate": "2009-03-05 00:00:00",
+  "BillingAddress": "801 W 4th Street",
+  "BillingCity": "Reno",
+  "BillingState": "NV",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "89503",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbeb"
+  },
+  "InvoiceId": 17,
+  "CustomerId": 25,
+  "InvoiceDate": "2009-03-06 00:00:00",
+  "BillingAddress": "319 N. Frances Street",
+  "BillingCity": "Madison",
+  "BillingState": "WI",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "53703",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbec"
+  },
+  "InvoiceId": 18,
+  "CustomerId": 31,
+  "InvoiceDate": "2009-03-09 00:00:00",
+  "BillingAddress": "194A Chain Lake Drive",
+  "BillingCity": "Halifax",
+  "BillingState": "NS",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "B3S 1C5",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbed"
+  },
+  "InvoiceId": 19,
+  "CustomerId": 40,
+  "InvoiceDate": "2009-03-14 00:00:00",
+  "BillingAddress": "8, Rue Hanovre",
+  "BillingCity": "Paris",
+  "BillingCountry": "France",
+  "BillingPostalCode": "75002",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbee"
+  },
+  "InvoiceId": 20,
+  "CustomerId": 54,
+  "InvoiceDate": "2009-03-22 00:00:00",
+  "BillingAddress": "110 Raeburn Pl",
+  "BillingCity": "Edinburgh ",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "EH4 1HH",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbef"
+  },
+  "InvoiceId": 21,
+  "CustomerId": 55,
+  "InvoiceDate": "2009-04-04 00:00:00",
+  "BillingAddress": "421 Bourke Street",
+  "BillingCity": "Sidney",
+  "BillingState": "NSW",
+  "BillingCountry": "Australia",
+  "BillingPostalCode": "2010",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbf0"
+  },
+  "InvoiceId": 22,
+  "CustomerId": 57,
+  "InvoiceDate": "2009-04-04 00:00:00",
+  "BillingAddress": "Calle Lira, 198",
+  "BillingCity": "Santiago",
+  "BillingCountry": "Chile",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbf1"
+  },
+  "InvoiceId": 23,
+  "CustomerId": 59,
+  "InvoiceDate": "2009-04-05 00:00:00",
+  "BillingAddress": "3,Raj Bhavan Road",
+  "BillingCity": "Bangalore",
+  "BillingCountry": "India",
+  "BillingPostalCode": "560001",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbf2"
+  },
+  "InvoiceId": 24,
+  "CustomerId": 4,
+  "InvoiceDate": "2009-04-06 00:00:00",
+  "BillingAddress": "Ullevålsveien 14",
+  "BillingCity": "Oslo",
+  "BillingCountry": "Norway",
+  "BillingPostalCode": "0171",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbf3"
+  },
+  "InvoiceId": 25,
+  "CustomerId": 10,
+  "InvoiceDate": "2009-04-09 00:00:00",
+  "BillingAddress": "Rua Dr. Falcão Filho, 155",
+  "BillingCity": "São Paulo",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "01007-010",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbf4"
+  },
+  "InvoiceId": 26,
+  "CustomerId": 19,
+  "InvoiceDate": "2009-04-14 00:00:00",
+  "BillingAddress": "1 Infinite Loop",
+  "BillingCity": "Cupertino",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "95014",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbf5"
+  },
+  "InvoiceId": 27,
+  "CustomerId": 33,
+  "InvoiceDate": "2009-04-22 00:00:00",
+  "BillingAddress": "5112 48 Street",
+  "BillingCity": "Yellowknife",
+  "BillingState": "NT",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "X1A 1N6",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbf6"
+  },
+  "InvoiceId": 28,
+  "CustomerId": 34,
+  "InvoiceDate": "2009-05-05 00:00:00",
+  "BillingAddress": "Rua da Assunção 53",
+  "BillingCity": "Lisbon",
+  "BillingCountry": "Portugal",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbf7"
+  },
+  "InvoiceId": 29,
+  "CustomerId": 36,
+  "InvoiceDate": "2009-05-05 00:00:00",
+  "BillingAddress": "Tauentzienstraße 8",
+  "BillingCity": "Berlin",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "10789",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbf8"
+  },
+  "InvoiceId": 30,
+  "CustomerId": 38,
+  "InvoiceDate": "2009-05-06 00:00:00",
+  "BillingAddress": "Barbarossastraße 19",
+  "BillingCity": "Berlin",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "10779",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbf9"
+  },
+  "InvoiceId": 31,
+  "CustomerId": 42,
+  "InvoiceDate": "2009-05-07 00:00:00",
+  "BillingAddress": "9, Place Louis Barthou",
+  "BillingCity": "Bordeaux",
+  "BillingCountry": "France",
+  "BillingPostalCode": "33000",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbfa"
+  },
+  "InvoiceId": 32,
+  "CustomerId": 48,
+  "InvoiceDate": "2009-05-10 00:00:00",
+  "BillingAddress": "Lijnbaansgracht 120bg",
+  "BillingCity": "Amsterdam",
+  "BillingState": "VV",
+  "BillingCountry": "Netherlands",
+  "BillingPostalCode": "1016",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbfb"
+  },
+  "InvoiceId": 33,
+  "CustomerId": 57,
+  "InvoiceDate": "2009-05-15 00:00:00",
+  "BillingAddress": "Calle Lira, 198",
+  "BillingCity": "Santiago",
+  "BillingCountry": "Chile",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbfc"
+  },
+  "InvoiceId": 34,
+  "CustomerId": 12,
+  "InvoiceDate": "2009-05-23 00:00:00",
+  "BillingAddress": "Praça Pio X, 119",
+  "BillingCity": "Rio de Janeiro",
+  "BillingState": "RJ",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "20040-020",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbfd"
+  },
+  "InvoiceId": 35,
+  "CustomerId": 13,
+  "InvoiceDate": "2009-06-05 00:00:00",
+  "BillingAddress": "Qe 7 Bloco G",
+  "BillingCity": "Brasília",
+  "BillingState": "DF",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "71020-677",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbfe"
+  },
+  "InvoiceId": 36,
+  "CustomerId": 15,
+  "InvoiceDate": "2009-06-05 00:00:00",
+  "BillingAddress": "700 W Pender Street",
+  "BillingCity": "Vancouver",
+  "BillingState": "BC",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "V6C 1G8",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fbff"
+  },
+  "InvoiceId": 37,
+  "CustomerId": 17,
+  "InvoiceDate": "2009-06-06 00:00:00",
+  "BillingAddress": "1 Microsoft Way",
+  "BillingCity": "Redmond",
+  "BillingState": "WA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "98052-8300",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc00"
+  },
+  "InvoiceId": 38,
+  "CustomerId": 21,
+  "InvoiceDate": "2009-06-07 00:00:00",
+  "BillingAddress": "801 W 4th Street",
+  "BillingCity": "Reno",
+  "BillingState": "NV",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "89503",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc01"
+  },
+  "InvoiceId": 39,
+  "CustomerId": 27,
+  "InvoiceDate": "2009-06-10 00:00:00",
+  "BillingAddress": "1033 N Park Ave",
+  "BillingCity": "Tucson",
+  "BillingState": "AZ",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "85719",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc02"
+  },
+  "InvoiceId": 40,
+  "CustomerId": 36,
+  "InvoiceDate": "2009-06-15 00:00:00",
+  "BillingAddress": "Tauentzienstraße 8",
+  "BillingCity": "Berlin",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "10789",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc03"
+  },
+  "InvoiceId": 41,
+  "CustomerId": 50,
+  "InvoiceDate": "2009-06-23 00:00:00",
+  "BillingAddress": "C/ San Bernardo 85",
+  "BillingCity": "Madrid",
+  "BillingCountry": "Spain",
+  "BillingPostalCode": "28015",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc04"
+  },
+  "InvoiceId": 42,
+  "CustomerId": 51,
+  "InvoiceDate": "2009-07-06 00:00:00",
+  "BillingAddress": "Celsiusg. 9",
+  "BillingCity": "Stockholm",
+  "BillingCountry": "Sweden",
+  "BillingPostalCode": "11230",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc05"
+  },
+  "InvoiceId": 43,
+  "CustomerId": 53,
+  "InvoiceDate": "2009-07-06 00:00:00",
+  "BillingAddress": "113 Lupus St",
+  "BillingCity": "London",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "SW1V 3EN",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc06"
+  },
+  "InvoiceId": 44,
+  "CustomerId": 55,
+  "InvoiceDate": "2009-07-07 00:00:00",
+  "BillingAddress": "421 Bourke Street",
+  "BillingCity": "Sidney",
+  "BillingState": "NSW",
+  "BillingCountry": "Australia",
+  "BillingPostalCode": "2010",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc07"
+  },
+  "InvoiceId": 45,
+  "CustomerId": 59,
+  "InvoiceDate": "2009-07-08 00:00:00",
+  "BillingAddress": "3,Raj Bhavan Road",
+  "BillingCity": "Bangalore",
+  "BillingCountry": "India",
+  "BillingPostalCode": "560001",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc08"
+  },
+  "InvoiceId": 46,
+  "CustomerId": 6,
+  "InvoiceDate": "2009-07-11 00:00:00",
+  "BillingAddress": "Rilská 3174/6",
+  "BillingCity": "Prague",
+  "BillingCountry": "Czech Republic",
+  "BillingPostalCode": "14300",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc09"
+  },
+  "InvoiceId": 47,
+  "CustomerId": 15,
+  "InvoiceDate": "2009-07-16 00:00:00",
+  "BillingAddress": "700 W Pender Street",
+  "BillingCity": "Vancouver",
+  "BillingState": "BC",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "V6C 1G8",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc0a"
+  },
+  "InvoiceId": 48,
+  "CustomerId": 29,
+  "InvoiceDate": "2009-07-24 00:00:00",
+  "BillingAddress": "796 Dundas Street West",
+  "BillingCity": "Toronto",
+  "BillingState": "ON",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "M6J 1V1",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc0b"
+  },
+  "InvoiceId": 49,
+  "CustomerId": 30,
+  "InvoiceDate": "2009-08-06 00:00:00",
+  "BillingAddress": "230 Elgin Street",
+  "BillingCity": "Ottawa",
+  "BillingState": "ON",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "K2P 1L7",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc0c"
+  },
+  "InvoiceId": 50,
+  "CustomerId": 32,
+  "InvoiceDate": "2009-08-06 00:00:00",
+  "BillingAddress": "696 Osborne Street",
+  "BillingCity": "Winnipeg",
+  "BillingState": "MB",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "R3L 2B9",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc0d"
+  },
+  "InvoiceId": 51,
+  "CustomerId": 34,
+  "InvoiceDate": "2009-08-07 00:00:00",
+  "BillingAddress": "Rua da Assunção 53",
+  "BillingCity": "Lisbon",
+  "BillingCountry": "Portugal",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc0e"
+  },
+  "InvoiceId": 52,
+  "CustomerId": 38,
+  "InvoiceDate": "2009-08-08 00:00:00",
+  "BillingAddress": "Barbarossastraße 19",
+  "BillingCity": "Berlin",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "10779",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc0f"
+  },
+  "InvoiceId": 53,
+  "CustomerId": 44,
+  "InvoiceDate": "2009-08-11 00:00:00",
+  "BillingAddress": "Porthaninkatu 9",
+  "BillingCity": "Helsinki",
+  "BillingCountry": "Finland",
+  "BillingPostalCode": "00530",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc10"
+  },
+  "InvoiceId": 54,
+  "CustomerId": 53,
+  "InvoiceDate": "2009-08-16 00:00:00",
+  "BillingAddress": "113 Lupus St",
+  "BillingCity": "London",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "SW1V 3EN",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc11"
+  },
+  "InvoiceId": 55,
+  "CustomerId": 8,
+  "InvoiceDate": "2009-08-24 00:00:00",
+  "BillingAddress": "Grétrystraat 63",
+  "BillingCity": "Brussels",
+  "BillingCountry": "Belgium",
+  "BillingPostalCode": "1000",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc12"
+  },
+  "InvoiceId": 56,
+  "CustomerId": 9,
+  "InvoiceDate": "2009-09-06 00:00:00",
+  "BillingAddress": "Sønder Boulevard 51",
+  "BillingCity": "Copenhagen",
+  "BillingCountry": "Denmark",
+  "BillingPostalCode": "1720",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc13"
+  },
+  "InvoiceId": 57,
+  "CustomerId": 11,
+  "InvoiceDate": "2009-09-06 00:00:00",
+  "BillingAddress": "Av. Paulista, 2022",
+  "BillingCity": "São Paulo",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "01310-200",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc14"
+  },
+  "InvoiceId": 58,
+  "CustomerId": 13,
+  "InvoiceDate": "2009-09-07 00:00:00",
+  "BillingAddress": "Qe 7 Bloco G",
+  "BillingCity": "Brasília",
+  "BillingState": "DF",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "71020-677",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc15"
+  },
+  "InvoiceId": 59,
+  "CustomerId": 17,
+  "InvoiceDate": "2009-09-08 00:00:00",
+  "BillingAddress": "1 Microsoft Way",
+  "BillingCity": "Redmond",
+  "BillingState": "WA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "98052-8300",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc16"
+  },
+  "InvoiceId": 60,
+  "CustomerId": 23,
+  "InvoiceDate": "2009-09-11 00:00:00",
+  "BillingAddress": "69 Salem Street",
+  "BillingCity": "Boston",
+  "BillingState": "MA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "2113",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc17"
+  },
+  "InvoiceId": 61,
+  "CustomerId": 32,
+  "InvoiceDate": "2009-09-16 00:00:00",
+  "BillingAddress": "696 Osborne Street",
+  "BillingCity": "Winnipeg",
+  "BillingState": "MB",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "R3L 2B9",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc18"
+  },
+  "InvoiceId": 62,
+  "CustomerId": 46,
+  "InvoiceDate": "2009-09-24 00:00:00",
+  "BillingAddress": "3 Chatham Street",
+  "BillingCity": "Dublin",
+  "BillingState": "Dublin",
+  "BillingCountry": "Ireland",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc19"
+  },
+  "InvoiceId": 63,
+  "CustomerId": 47,
+  "InvoiceDate": "2009-10-07 00:00:00",
+  "BillingAddress": "Via Degli Scipioni, 43",
+  "BillingCity": "Rome",
+  "BillingState": "RM",
+  "BillingCountry": "Italy",
+  "BillingPostalCode": "00192",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc1a"
+  },
+  "InvoiceId": 64,
+  "CustomerId": 49,
+  "InvoiceDate": "2009-10-07 00:00:00",
+  "BillingAddress": "Ordynacka 10",
+  "BillingCity": "Warsaw",
+  "BillingCountry": "Poland",
+  "BillingPostalCode": "00-358",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc1b"
+  },
+  "InvoiceId": 65,
+  "CustomerId": 51,
+  "InvoiceDate": "2009-10-08 00:00:00",
+  "BillingAddress": "Celsiusg. 9",
+  "BillingCity": "Stockholm",
+  "BillingCountry": "Sweden",
+  "BillingPostalCode": "11230",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc1c"
+  },
+  "InvoiceId": 66,
+  "CustomerId": 55,
+  "InvoiceDate": "2009-10-09 00:00:00",
+  "BillingAddress": "421 Bourke Street",
+  "BillingCity": "Sidney",
+  "BillingState": "NSW",
+  "BillingCountry": "Australia",
+  "BillingPostalCode": "2010",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc1d"
+  },
+  "InvoiceId": 67,
+  "CustomerId": 2,
+  "InvoiceDate": "2009-10-12 00:00:00",
+  "BillingAddress": "Theodor-Heuss-Straße 34",
+  "BillingCity": "Stuttgart",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "70174",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc1e"
+  },
+  "InvoiceId": 68,
+  "CustomerId": 11,
+  "InvoiceDate": "2009-10-17 00:00:00",
+  "BillingAddress": "Av. Paulista, 2022",
+  "BillingCity": "São Paulo",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "01310-200",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc1f"
+  },
+  "InvoiceId": 69,
+  "CustomerId": 25,
+  "InvoiceDate": "2009-10-25 00:00:00",
+  "BillingAddress": "319 N. Frances Street",
+  "BillingCity": "Madison",
+  "BillingState": "WI",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "53703",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc20"
+  },
+  "InvoiceId": 70,
+  "CustomerId": 26,
+  "InvoiceDate": "2009-11-07 00:00:00",
+  "BillingAddress": "2211 W Berry Street",
+  "BillingCity": "Fort Worth",
+  "BillingState": "TX",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "76110",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc21"
+  },
+  "InvoiceId": 71,
+  "CustomerId": 28,
+  "InvoiceDate": "2009-11-07 00:00:00",
+  "BillingAddress": "302 S 700 E",
+  "BillingCity": "Salt Lake City",
+  "BillingState": "UT",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "84102",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc22"
+  },
+  "InvoiceId": 72,
+  "CustomerId": 30,
+  "InvoiceDate": "2009-11-08 00:00:00",
+  "BillingAddress": "230 Elgin Street",
+  "BillingCity": "Ottawa",
+  "BillingState": "ON",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "K2P 1L7",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc23"
+  },
+  "InvoiceId": 73,
+  "CustomerId": 34,
+  "InvoiceDate": "2009-11-09 00:00:00",
+  "BillingAddress": "Rua da Assunção 53",
+  "BillingCity": "Lisbon",
+  "BillingCountry": "Portugal",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc24"
+  },
+  "InvoiceId": 74,
+  "CustomerId": 40,
+  "InvoiceDate": "2009-11-12 00:00:00",
+  "BillingAddress": "8, Rue Hanovre",
+  "BillingCity": "Paris",
+  "BillingCountry": "France",
+  "BillingPostalCode": "75002",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc25"
+  },
+  "InvoiceId": 75,
+  "CustomerId": 49,
+  "InvoiceDate": "2009-11-17 00:00:00",
+  "BillingAddress": "Ordynacka 10",
+  "BillingCity": "Warsaw",
+  "BillingCountry": "Poland",
+  "BillingPostalCode": "00-358",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc26"
+  },
+  "InvoiceId": 76,
+  "CustomerId": 4,
+  "InvoiceDate": "2009-11-25 00:00:00",
+  "BillingAddress": "Ullevålsveien 14",
+  "BillingCity": "Oslo",
+  "BillingCountry": "Norway",
+  "BillingPostalCode": "0171",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc27"
+  },
+  "InvoiceId": 77,
+  "CustomerId": 5,
+  "InvoiceDate": "2009-12-08 00:00:00",
+  "BillingAddress": "Klanova 9/506",
+  "BillingCity": "Prague",
+  "BillingCountry": "Czech Republic",
+  "BillingPostalCode": "14700",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc28"
+  },
+  "InvoiceId": 78,
+  "CustomerId": 7,
+  "InvoiceDate": "2009-12-08 00:00:00",
+  "BillingAddress": "Rotenturmstraße 4, 1010 Innere Stadt",
+  "BillingCity": "Vienne",
+  "BillingCountry": "Austria",
+  "BillingPostalCode": "1010",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc29"
+  },
+  "InvoiceId": 79,
+  "CustomerId": 9,
+  "InvoiceDate": "2009-12-09 00:00:00",
+  "BillingAddress": "Sønder Boulevard 51",
+  "BillingCity": "Copenhagen",
+  "BillingCountry": "Denmark",
+  "BillingPostalCode": "1720",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc2a"
+  },
+  "InvoiceId": 80,
+  "CustomerId": 13,
+  "InvoiceDate": "2009-12-10 00:00:00",
+  "BillingAddress": "Qe 7 Bloco G",
+  "BillingCity": "Brasília",
+  "BillingState": "DF",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "71020-677",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc2b"
+  },
+  "InvoiceId": 81,
+  "CustomerId": 19,
+  "InvoiceDate": "2009-12-13 00:00:00",
+  "BillingAddress": "1 Infinite Loop",
+  "BillingCity": "Cupertino",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "95014",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc2c"
+  },
+  "InvoiceId": 82,
+  "CustomerId": 28,
+  "InvoiceDate": "2009-12-18 00:00:00",
+  "BillingAddress": "302 S 700 E",
+  "BillingCity": "Salt Lake City",
+  "BillingState": "UT",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "84102",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc2d"
+  },
+  "InvoiceId": 83,
+  "CustomerId": 42,
+  "InvoiceDate": "2009-12-26 00:00:00",
+  "BillingAddress": "9, Place Louis Barthou",
+  "BillingCity": "Bordeaux",
+  "BillingCountry": "France",
+  "BillingPostalCode": "33000",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc2e"
+  },
+  "InvoiceId": 84,
+  "CustomerId": 43,
+  "InvoiceDate": "2010-01-08 00:00:00",
+  "BillingAddress": "68, Rue Jouvence",
+  "BillingCity": "Dijon",
+  "BillingCountry": "France",
+  "BillingPostalCode": "21000",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc2f"
+  },
+  "InvoiceId": 85,
+  "CustomerId": 45,
+  "InvoiceDate": "2010-01-08 00:00:00",
+  "BillingAddress": "Erzsébet krt. 58.",
+  "BillingCity": "Budapest",
+  "BillingCountry": "Hungary",
+  "BillingPostalCode": "H-1073",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc30"
+  },
+  "InvoiceId": 86,
+  "CustomerId": 47,
+  "InvoiceDate": "2010-01-09 00:00:00",
+  "BillingAddress": "Via Degli Scipioni, 43",
+  "BillingCity": "Rome",
+  "BillingState": "RM",
+  "BillingCountry": "Italy",
+  "BillingPostalCode": "00192",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc31"
+  },
+  "InvoiceId": 87,
+  "CustomerId": 51,
+  "InvoiceDate": "2010-01-10 00:00:00",
+  "BillingAddress": "Celsiusg. 9",
+  "BillingCity": "Stockholm",
+  "BillingCountry": "Sweden",
+  "BillingPostalCode": "11230",
+  "Total": {
+    "$numberDecimal": "6.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc32"
+  },
+  "InvoiceId": 88,
+  "CustomerId": 57,
+  "InvoiceDate": "2010-01-13 00:00:00",
+  "BillingAddress": "Calle Lira, 198",
+  "BillingCity": "Santiago",
+  "BillingCountry": "Chile",
+  "Total": {
+    "$numberDecimal": "17.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc33"
+  },
+  "InvoiceId": 89,
+  "CustomerId": 7,
+  "InvoiceDate": "2010-01-18 00:00:00",
+  "BillingAddress": "Rotenturmstraße 4, 1010 Innere Stadt",
+  "BillingCity": "Vienne",
+  "BillingCountry": "Austria",
+  "BillingPostalCode": "1010",
+  "Total": {
+    "$numberDecimal": "18.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc34"
+  },
+  "InvoiceId": 90,
+  "CustomerId": 21,
+  "InvoiceDate": "2010-01-26 00:00:00",
+  "BillingAddress": "801 W 4th Street",
+  "BillingCity": "Reno",
+  "BillingState": "NV",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "89503",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc35"
+  },
+  "InvoiceId": 91,
+  "CustomerId": 22,
+  "InvoiceDate": "2010-02-08 00:00:00",
+  "BillingAddress": "120 S Orange Ave",
+  "BillingCity": "Orlando",
+  "BillingState": "FL",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "32801",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc36"
+  },
+  "InvoiceId": 92,
+  "CustomerId": 24,
+  "InvoiceDate": "2010-02-08 00:00:00",
+  "BillingAddress": "162 E Superior Street",
+  "BillingCity": "Chicago",
+  "BillingState": "IL",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "60611",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc37"
+  },
+  "InvoiceId": 93,
+  "CustomerId": 26,
+  "InvoiceDate": "2010-02-09 00:00:00",
+  "BillingAddress": "2211 W Berry Street",
+  "BillingCity": "Fort Worth",
+  "BillingState": "TX",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "76110",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc38"
+  },
+  "InvoiceId": 94,
+  "CustomerId": 30,
+  "InvoiceDate": "2010-02-10 00:00:00",
+  "BillingAddress": "230 Elgin Street",
+  "BillingCity": "Ottawa",
+  "BillingState": "ON",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "K2P 1L7",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc39"
+  },
+  "InvoiceId": 95,
+  "CustomerId": 36,
+  "InvoiceDate": "2010-02-13 00:00:00",
+  "BillingAddress": "Tauentzienstraße 8",
+  "BillingCity": "Berlin",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "10789",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc3a"
+  },
+  "InvoiceId": 96,
+  "CustomerId": 45,
+  "InvoiceDate": "2010-02-18 00:00:00",
+  "BillingAddress": "Erzsébet krt. 58.",
+  "BillingCity": "Budapest",
+  "BillingCountry": "Hungary",
+  "BillingPostalCode": "H-1073",
+  "Total": {
+    "$numberDecimal": "21.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc3b"
+  },
+  "InvoiceId": 97,
+  "CustomerId": 59,
+  "InvoiceDate": "2010-02-26 00:00:00",
+  "BillingAddress": "3,Raj Bhavan Road",
+  "BillingCity": "Bangalore",
+  "BillingCountry": "India",
+  "BillingPostalCode": "560001",
+  "Total": {
+    "$numberDecimal": "1.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc3c"
+  },
+  "InvoiceId": 98,
+  "CustomerId": 1,
+  "InvoiceDate": "2010-03-11 00:00:00",
+  "BillingAddress": "Av. Brigadeiro Faria Lima, 2170",
+  "BillingCity": "São José dos Campos",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "12227-000",
+  "Total": {
+    "$numberDecimal": "3.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc3d"
+  },
+  "InvoiceId": 99,
+  "CustomerId": 3,
+  "InvoiceDate": "2010-03-11 00:00:00",
+  "BillingAddress": "1498 rue Bélanger",
+  "BillingCity": "Montréal",
+  "BillingState": "QC",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "H2G 1A7",
+  "Total": {
+    "$numberDecimal": "3.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc3e"
+  },
+  "InvoiceId": 100,
+  "CustomerId": 5,
+  "InvoiceDate": "2010-03-12 00:00:00",
+  "BillingAddress": "Klanova 9/506",
+  "BillingCity": "Prague",
+  "BillingCountry": "Czech Republic",
+  "BillingPostalCode": "14700",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc3f"
+  },
+  "InvoiceId": 101,
+  "CustomerId": 9,
+  "InvoiceDate": "2010-03-13 00:00:00",
+  "BillingAddress": "Sønder Boulevard 51",
+  "BillingCity": "Copenhagen",
+  "BillingCountry": "Denmark",
+  "BillingPostalCode": "1720",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc40"
+  },
+  "InvoiceId": 102,
+  "CustomerId": 15,
+  "InvoiceDate": "2010-03-16 00:00:00",
+  "BillingAddress": "700 W Pender Street",
+  "BillingCity": "Vancouver",
+  "BillingState": "BC",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "V6C 1G8",
+  "Total": {
+    "$numberDecimal": "9.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc41"
+  },
+  "InvoiceId": 103,
+  "CustomerId": 24,
+  "InvoiceDate": "2010-03-21 00:00:00",
+  "BillingAddress": "162 E Superior Street",
+  "BillingCity": "Chicago",
+  "BillingState": "IL",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "60611",
+  "Total": {
+    "$numberDecimal": "15.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc42"
+  },
+  "InvoiceId": 104,
+  "CustomerId": 38,
+  "InvoiceDate": "2010-03-29 00:00:00",
+  "BillingAddress": "Barbarossastraße 19",
+  "BillingCity": "Berlin",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "10779",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc43"
+  },
+  "InvoiceId": 105,
+  "CustomerId": 39,
+  "InvoiceDate": "2010-04-11 00:00:00",
+  "BillingAddress": "4, Rue Milton",
+  "BillingCity": "Paris",
+  "BillingCountry": "France",
+  "BillingPostalCode": "75009",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc44"
+  },
+  "InvoiceId": 106,
+  "CustomerId": 41,
+  "InvoiceDate": "2010-04-11 00:00:00",
+  "BillingAddress": "11, Place Bellecour",
+  "BillingCity": "Lyon",
+  "BillingCountry": "France",
+  "BillingPostalCode": "69002",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc45"
+  },
+  "InvoiceId": 107,
+  "CustomerId": 43,
+  "InvoiceDate": "2010-04-12 00:00:00",
+  "BillingAddress": "68, Rue Jouvence",
+  "BillingCity": "Dijon",
+  "BillingCountry": "France",
+  "BillingPostalCode": "21000",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc46"
+  },
+  "InvoiceId": 108,
+  "CustomerId": 47,
+  "InvoiceDate": "2010-04-13 00:00:00",
+  "BillingAddress": "Via Degli Scipioni, 43",
+  "BillingCity": "Rome",
+  "BillingState": "RM",
+  "BillingCountry": "Italy",
+  "BillingPostalCode": "00192",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc47"
+  },
+  "InvoiceId": 109,
+  "CustomerId": 53,
+  "InvoiceDate": "2010-04-16 00:00:00",
+  "BillingAddress": "113 Lupus St",
+  "BillingCity": "London",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "SW1V 3EN",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc48"
+  },
+  "InvoiceId": 110,
+  "CustomerId": 3,
+  "InvoiceDate": "2010-04-21 00:00:00",
+  "BillingAddress": "1498 rue Bélanger",
+  "BillingCity": "Montréal",
+  "BillingState": "QC",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "H2G 1A7",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc49"
+  },
+  "InvoiceId": 111,
+  "CustomerId": 17,
+  "InvoiceDate": "2010-04-29 00:00:00",
+  "BillingAddress": "1 Microsoft Way",
+  "BillingCity": "Redmond",
+  "BillingState": "WA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "98052-8300",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc4a"
+  },
+  "InvoiceId": 112,
+  "CustomerId": 18,
+  "InvoiceDate": "2010-05-12 00:00:00",
+  "BillingAddress": "627 Broadway",
+  "BillingCity": "New York",
+  "BillingState": "NY",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "10012-2612",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc4b"
+  },
+  "InvoiceId": 113,
+  "CustomerId": 20,
+  "InvoiceDate": "2010-05-12 00:00:00",
+  "BillingAddress": "541 Del Medio Avenue",
+  "BillingCity": "Mountain View",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "94040-111",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc4c"
+  },
+  "InvoiceId": 114,
+  "CustomerId": 22,
+  "InvoiceDate": "2010-05-13 00:00:00",
+  "BillingAddress": "120 S Orange Ave",
+  "BillingCity": "Orlando",
+  "BillingState": "FL",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "32801",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc4d"
+  },
+  "InvoiceId": 115,
+  "CustomerId": 26,
+  "InvoiceDate": "2010-05-14 00:00:00",
+  "BillingAddress": "2211 W Berry Street",
+  "BillingCity": "Fort Worth",
+  "BillingState": "TX",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "76110",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc4e"
+  },
+  "InvoiceId": 116,
+  "CustomerId": 32,
+  "InvoiceDate": "2010-05-17 00:00:00",
+  "BillingAddress": "696 Osborne Street",
+  "BillingCity": "Winnipeg",
+  "BillingState": "MB",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "R3L 2B9",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc4f"
+  },
+  "InvoiceId": 117,
+  "CustomerId": 41,
+  "InvoiceDate": "2010-05-22 00:00:00",
+  "BillingAddress": "11, Place Bellecour",
+  "BillingCity": "Lyon",
+  "BillingCountry": "France",
+  "BillingPostalCode": "69002",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc50"
+  },
+  "InvoiceId": 118,
+  "CustomerId": 55,
+  "InvoiceDate": "2010-05-30 00:00:00",
+  "BillingAddress": "421 Bourke Street",
+  "BillingCity": "Sidney",
+  "BillingState": "NSW",
+  "BillingCountry": "Australia",
+  "BillingPostalCode": "2010",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc51"
+  },
+  "InvoiceId": 119,
+  "CustomerId": 56,
+  "InvoiceDate": "2010-06-12 00:00:00",
+  "BillingAddress": "307 Macacha Güemes",
+  "BillingCity": "Buenos Aires",
+  "BillingCountry": "Argentina",
+  "BillingPostalCode": "1106",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc52"
+  },
+  "InvoiceId": 120,
+  "CustomerId": 58,
+  "InvoiceDate": "2010-06-12 00:00:00",
+  "BillingAddress": "12,Community Centre",
+  "BillingCity": "Delhi",
+  "BillingCountry": "India",
+  "BillingPostalCode": "110017",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc53"
+  },
+  "InvoiceId": 121,
+  "CustomerId": 1,
+  "InvoiceDate": "2010-06-13 00:00:00",
+  "BillingAddress": "Av. Brigadeiro Faria Lima, 2170",
+  "BillingCity": "São José dos Campos",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "12227-000",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc54"
+  },
+  "InvoiceId": 122,
+  "CustomerId": 5,
+  "InvoiceDate": "2010-06-14 00:00:00",
+  "BillingAddress": "Klanova 9/506",
+  "BillingCity": "Prague",
+  "BillingCountry": "Czech Republic",
+  "BillingPostalCode": "14700",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc55"
+  },
+  "InvoiceId": 123,
+  "CustomerId": 11,
+  "InvoiceDate": "2010-06-17 00:00:00",
+  "BillingAddress": "Av. Paulista, 2022",
+  "BillingCity": "São Paulo",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "01310-200",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc56"
+  },
+  "InvoiceId": 124,
+  "CustomerId": 20,
+  "InvoiceDate": "2010-06-22 00:00:00",
+  "BillingAddress": "541 Del Medio Avenue",
+  "BillingCity": "Mountain View",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "94040-111",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc57"
+  },
+  "InvoiceId": 125,
+  "CustomerId": 34,
+  "InvoiceDate": "2010-06-30 00:00:00",
+  "BillingAddress": "Rua da Assunção 53",
+  "BillingCity": "Lisbon",
+  "BillingCountry": "Portugal",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc58"
+  },
+  "InvoiceId": 126,
+  "CustomerId": 35,
+  "InvoiceDate": "2010-07-13 00:00:00",
+  "BillingAddress": "Rua dos Campeões Europeus de Viena, 4350",
+  "BillingCity": "Porto",
+  "BillingCountry": "Portugal",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc59"
+  },
+  "InvoiceId": 127,
+  "CustomerId": 37,
+  "InvoiceDate": "2010-07-13 00:00:00",
+  "BillingAddress": "Berger Straße 10",
+  "BillingCity": "Frankfurt",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "60316",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc5a"
+  },
+  "InvoiceId": 128,
+  "CustomerId": 39,
+  "InvoiceDate": "2010-07-14 00:00:00",
+  "BillingAddress": "4, Rue Milton",
+  "BillingCity": "Paris",
+  "BillingCountry": "France",
+  "BillingPostalCode": "75009",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc5b"
+  },
+  "InvoiceId": 129,
+  "CustomerId": 43,
+  "InvoiceDate": "2010-07-15 00:00:00",
+  "BillingAddress": "68, Rue Jouvence",
+  "BillingCity": "Dijon",
+  "BillingCountry": "France",
+  "BillingPostalCode": "21000",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc5c"
+  },
+  "InvoiceId": 130,
+  "CustomerId": 49,
+  "InvoiceDate": "2010-07-18 00:00:00",
+  "BillingAddress": "Ordynacka 10",
+  "BillingCity": "Warsaw",
+  "BillingCountry": "Poland",
+  "BillingPostalCode": "00-358",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc5d"
+  },
+  "InvoiceId": 131,
+  "CustomerId": 58,
+  "InvoiceDate": "2010-07-23 00:00:00",
+  "BillingAddress": "12,Community Centre",
+  "BillingCity": "Delhi",
+  "BillingCountry": "India",
+  "BillingPostalCode": "110017",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc5e"
+  },
+  "InvoiceId": 132,
+  "CustomerId": 13,
+  "InvoiceDate": "2010-07-31 00:00:00",
+  "BillingAddress": "Qe 7 Bloco G",
+  "BillingCity": "Brasília",
+  "BillingState": "DF",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "71020-677",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc5f"
+  },
+  "InvoiceId": 133,
+  "CustomerId": 14,
+  "InvoiceDate": "2010-08-13 00:00:00",
+  "BillingAddress": "8210 111 ST NW",
+  "BillingCity": "Edmonton",
+  "BillingState": "AB",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "T6G 2C7",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc60"
+  },
+  "InvoiceId": 134,
+  "CustomerId": 16,
+  "InvoiceDate": "2010-08-13 00:00:00",
+  "BillingAddress": "1600 Amphitheatre Parkway",
+  "BillingCity": "Mountain View",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "94043-1351",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc61"
+  },
+  "InvoiceId": 135,
+  "CustomerId": 18,
+  "InvoiceDate": "2010-08-14 00:00:00",
+  "BillingAddress": "627 Broadway",
+  "BillingCity": "New York",
+  "BillingState": "NY",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "10012-2612",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc62"
+  },
+  "InvoiceId": 136,
+  "CustomerId": 22,
+  "InvoiceDate": "2010-08-15 00:00:00",
+  "BillingAddress": "120 S Orange Ave",
+  "BillingCity": "Orlando",
+  "BillingState": "FL",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "32801",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc63"
+  },
+  "InvoiceId": 137,
+  "CustomerId": 28,
+  "InvoiceDate": "2010-08-18 00:00:00",
+  "BillingAddress": "302 S 700 E",
+  "BillingCity": "Salt Lake City",
+  "BillingState": "UT",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "84102",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc64"
+  },
+  "InvoiceId": 138,
+  "CustomerId": 37,
+  "InvoiceDate": "2010-08-23 00:00:00",
+  "BillingAddress": "Berger Straße 10",
+  "BillingCity": "Frankfurt",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "60316",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc65"
+  },
+  "InvoiceId": 139,
+  "CustomerId": 51,
+  "InvoiceDate": "2010-08-31 00:00:00",
+  "BillingAddress": "Celsiusg. 9",
+  "BillingCity": "Stockholm",
+  "BillingCountry": "Sweden",
+  "BillingPostalCode": "11230",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc66"
+  },
+  "InvoiceId": 140,
+  "CustomerId": 52,
+  "InvoiceDate": "2010-09-13 00:00:00",
+  "BillingAddress": "202 Hoxton Street",
+  "BillingCity": "London",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "N1 5LH",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc67"
+  },
+  "InvoiceId": 141,
+  "CustomerId": 54,
+  "InvoiceDate": "2010-09-13 00:00:00",
+  "BillingAddress": "110 Raeburn Pl",
+  "BillingCity": "Edinburgh ",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "EH4 1HH",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc68"
+  },
+  "InvoiceId": 142,
+  "CustomerId": 56,
+  "InvoiceDate": "2010-09-14 00:00:00",
+  "BillingAddress": "307 Macacha Güemes",
+  "BillingCity": "Buenos Aires",
+  "BillingCountry": "Argentina",
+  "BillingPostalCode": "1106",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc69"
+  },
+  "InvoiceId": 143,
+  "CustomerId": 1,
+  "InvoiceDate": "2010-09-15 00:00:00",
+  "BillingAddress": "Av. Brigadeiro Faria Lima, 2170",
+  "BillingCity": "São José dos Campos",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "12227-000",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc6a"
+  },
+  "InvoiceId": 144,
+  "CustomerId": 7,
+  "InvoiceDate": "2010-09-18 00:00:00",
+  "BillingAddress": "Rotenturmstraße 4, 1010 Innere Stadt",
+  "BillingCity": "Vienne",
+  "BillingCountry": "Austria",
+  "BillingPostalCode": "1010",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc6b"
+  },
+  "InvoiceId": 145,
+  "CustomerId": 16,
+  "InvoiceDate": "2010-09-23 00:00:00",
+  "BillingAddress": "1600 Amphitheatre Parkway",
+  "BillingCity": "Mountain View",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "94043-1351",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc6c"
+  },
+  "InvoiceId": 146,
+  "CustomerId": 30,
+  "InvoiceDate": "2010-10-01 00:00:00",
+  "BillingAddress": "230 Elgin Street",
+  "BillingCity": "Ottawa",
+  "BillingState": "ON",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "K2P 1L7",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc6d"
+  },
+  "InvoiceId": 147,
+  "CustomerId": 31,
+  "InvoiceDate": "2010-10-14 00:00:00",
+  "BillingAddress": "194A Chain Lake Drive",
+  "BillingCity": "Halifax",
+  "BillingState": "NS",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "B3S 1C5",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc6e"
+  },
+  "InvoiceId": 148,
+  "CustomerId": 33,
+  "InvoiceDate": "2010-10-14 00:00:00",
+  "BillingAddress": "5112 48 Street",
+  "BillingCity": "Yellowknife",
+  "BillingState": "NT",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "X1A 1N6",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc6f"
+  },
+  "InvoiceId": 149,
+  "CustomerId": 35,
+  "InvoiceDate": "2010-10-15 00:00:00",
+  "BillingAddress": "Rua dos Campeões Europeus de Viena, 4350",
+  "BillingCity": "Porto",
+  "BillingCountry": "Portugal",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc70"
+  },
+  "InvoiceId": 150,
+  "CustomerId": 39,
+  "InvoiceDate": "2010-10-16 00:00:00",
+  "BillingAddress": "4, Rue Milton",
+  "BillingCity": "Paris",
+  "BillingCountry": "France",
+  "BillingPostalCode": "75009",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc71"
+  },
+  "InvoiceId": 151,
+  "CustomerId": 45,
+  "InvoiceDate": "2010-10-19 00:00:00",
+  "BillingAddress": "Erzsébet krt. 58.",
+  "BillingCity": "Budapest",
+  "BillingCountry": "Hungary",
+  "BillingPostalCode": "H-1073",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc72"
+  },
+  "InvoiceId": 152,
+  "CustomerId": 54,
+  "InvoiceDate": "2010-10-24 00:00:00",
+  "BillingAddress": "110 Raeburn Pl",
+  "BillingCity": "Edinburgh ",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "EH4 1HH",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc73"
+  },
+  "InvoiceId": 153,
+  "CustomerId": 9,
+  "InvoiceDate": "2010-11-01 00:00:00",
+  "BillingAddress": "Sønder Boulevard 51",
+  "BillingCity": "Copenhagen",
+  "BillingCountry": "Denmark",
+  "BillingPostalCode": "1720",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc74"
+  },
+  "InvoiceId": 154,
+  "CustomerId": 10,
+  "InvoiceDate": "2010-11-14 00:00:00",
+  "BillingAddress": "Rua Dr. Falcão Filho, 155",
+  "BillingCity": "São Paulo",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "01007-010",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc75"
+  },
+  "InvoiceId": 155,
+  "CustomerId": 12,
+  "InvoiceDate": "2010-11-14 00:00:00",
+  "BillingAddress": "Praça Pio X, 119",
+  "BillingCity": "Rio de Janeiro",
+  "BillingState": "RJ",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "20040-020",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc76"
+  },
+  "InvoiceId": 156,
+  "CustomerId": 14,
+  "InvoiceDate": "2010-11-15 00:00:00",
+  "BillingAddress": "8210 111 ST NW",
+  "BillingCity": "Edmonton",
+  "BillingState": "AB",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "T6G 2C7",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc77"
+  },
+  "InvoiceId": 157,
+  "CustomerId": 18,
+  "InvoiceDate": "2010-11-16 00:00:00",
+  "BillingAddress": "627 Broadway",
+  "BillingCity": "New York",
+  "BillingState": "NY",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "10012-2612",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc78"
+  },
+  "InvoiceId": 158,
+  "CustomerId": 24,
+  "InvoiceDate": "2010-11-19 00:00:00",
+  "BillingAddress": "162 E Superior Street",
+  "BillingCity": "Chicago",
+  "BillingState": "IL",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "60611",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc79"
+  },
+  "InvoiceId": 159,
+  "CustomerId": 33,
+  "InvoiceDate": "2010-11-24 00:00:00",
+  "BillingAddress": "5112 48 Street",
+  "BillingCity": "Yellowknife",
+  "BillingState": "NT",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "X1A 1N6",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc7a"
+  },
+  "InvoiceId": 160,
+  "CustomerId": 47,
+  "InvoiceDate": "2010-12-02 00:00:00",
+  "BillingAddress": "Via Degli Scipioni, 43",
+  "BillingCity": "Rome",
+  "BillingState": "RM",
+  "BillingCountry": "Italy",
+  "BillingPostalCode": "00192",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc7b"
+  },
+  "InvoiceId": 161,
+  "CustomerId": 48,
+  "InvoiceDate": "2010-12-15 00:00:00",
+  "BillingAddress": "Lijnbaansgracht 120bg",
+  "BillingCity": "Amsterdam",
+  "BillingState": "VV",
+  "BillingCountry": "Netherlands",
+  "BillingPostalCode": "1016",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc7c"
+  },
+  "InvoiceId": 162,
+  "CustomerId": 50,
+  "InvoiceDate": "2010-12-15 00:00:00",
+  "BillingAddress": "C/ San Bernardo 85",
+  "BillingCity": "Madrid",
+  "BillingCountry": "Spain",
+  "BillingPostalCode": "28015",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc7d"
+  },
+  "InvoiceId": 163,
+  "CustomerId": 52,
+  "InvoiceDate": "2010-12-16 00:00:00",
+  "BillingAddress": "202 Hoxton Street",
+  "BillingCity": "London",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "N1 5LH",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc7e"
+  },
+  "InvoiceId": 164,
+  "CustomerId": 56,
+  "InvoiceDate": "2010-12-17 00:00:00",
+  "BillingAddress": "307 Macacha Güemes",
+  "BillingCity": "Buenos Aires",
+  "BillingCountry": "Argentina",
+  "BillingPostalCode": "1106",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc7f"
+  },
+  "InvoiceId": 165,
+  "CustomerId": 3,
+  "InvoiceDate": "2010-12-20 00:00:00",
+  "BillingAddress": "1498 rue Bélanger",
+  "BillingCity": "Montréal",
+  "BillingState": "QC",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "H2G 1A7",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc80"
+  },
+  "InvoiceId": 166,
+  "CustomerId": 12,
+  "InvoiceDate": "2010-12-25 00:00:00",
+  "BillingAddress": "Praça Pio X, 119",
+  "BillingCity": "Rio de Janeiro",
+  "BillingState": "RJ",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "20040-020",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc81"
+  },
+  "InvoiceId": 167,
+  "CustomerId": 26,
+  "InvoiceDate": "2011-01-02 00:00:00",
+  "BillingAddress": "2211 W Berry Street",
+  "BillingCity": "Fort Worth",
+  "BillingState": "TX",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "76110",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc82"
+  },
+  "InvoiceId": 168,
+  "CustomerId": 27,
+  "InvoiceDate": "2011-01-15 00:00:00",
+  "BillingAddress": "1033 N Park Ave",
+  "BillingCity": "Tucson",
+  "BillingState": "AZ",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "85719",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc83"
+  },
+  "InvoiceId": 169,
+  "CustomerId": 29,
+  "InvoiceDate": "2011-01-15 00:00:00",
+  "BillingAddress": "796 Dundas Street West",
+  "BillingCity": "Toronto",
+  "BillingState": "ON",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "M6J 1V1",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc84"
+  },
+  "InvoiceId": 170,
+  "CustomerId": 31,
+  "InvoiceDate": "2011-01-16 00:00:00",
+  "BillingAddress": "194A Chain Lake Drive",
+  "BillingCity": "Halifax",
+  "BillingState": "NS",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "B3S 1C5",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc85"
+  },
+  "InvoiceId": 171,
+  "CustomerId": 35,
+  "InvoiceDate": "2011-01-17 00:00:00",
+  "BillingAddress": "Rua dos Campeões Europeus de Viena, 4350",
+  "BillingCity": "Porto",
+  "BillingCountry": "Portugal",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc86"
+  },
+  "InvoiceId": 172,
+  "CustomerId": 41,
+  "InvoiceDate": "2011-01-20 00:00:00",
+  "BillingAddress": "11, Place Bellecour",
+  "BillingCity": "Lyon",
+  "BillingCountry": "France",
+  "BillingPostalCode": "69002",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc87"
+  },
+  "InvoiceId": 173,
+  "CustomerId": 50,
+  "InvoiceDate": "2011-01-25 00:00:00",
+  "BillingAddress": "C/ San Bernardo 85",
+  "BillingCity": "Madrid",
+  "BillingCountry": "Spain",
+  "BillingPostalCode": "28015",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc88"
+  },
+  "InvoiceId": 174,
+  "CustomerId": 5,
+  "InvoiceDate": "2011-02-02 00:00:00",
+  "BillingAddress": "Klanova 9/506",
+  "BillingCity": "Prague",
+  "BillingCountry": "Czech Republic",
+  "BillingPostalCode": "14700",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc89"
+  },
+  "InvoiceId": 175,
+  "CustomerId": 6,
+  "InvoiceDate": "2011-02-15 00:00:00",
+  "BillingAddress": "Rilská 3174/6",
+  "BillingCity": "Prague",
+  "BillingCountry": "Czech Republic",
+  "BillingPostalCode": "14300",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc8a"
+  },
+  "InvoiceId": 176,
+  "CustomerId": 8,
+  "InvoiceDate": "2011-02-15 00:00:00",
+  "BillingAddress": "Grétrystraat 63",
+  "BillingCity": "Brussels",
+  "BillingCountry": "Belgium",
+  "BillingPostalCode": "1000",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc8b"
+  },
+  "InvoiceId": 177,
+  "CustomerId": 10,
+  "InvoiceDate": "2011-02-16 00:00:00",
+  "BillingAddress": "Rua Dr. Falcão Filho, 155",
+  "BillingCity": "São Paulo",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "01007-010",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc8c"
+  },
+  "InvoiceId": 178,
+  "CustomerId": 14,
+  "InvoiceDate": "2011-02-17 00:00:00",
+  "BillingAddress": "8210 111 ST NW",
+  "BillingCity": "Edmonton",
+  "BillingState": "AB",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "T6G 2C7",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc8d"
+  },
+  "InvoiceId": 179,
+  "CustomerId": 20,
+  "InvoiceDate": "2011-02-20 00:00:00",
+  "BillingAddress": "541 Del Medio Avenue",
+  "BillingCity": "Mountain View",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "94040-111",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc8e"
+  },
+  "InvoiceId": 180,
+  "CustomerId": 29,
+  "InvoiceDate": "2011-02-25 00:00:00",
+  "BillingAddress": "796 Dundas Street West",
+  "BillingCity": "Toronto",
+  "BillingState": "ON",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "M6J 1V1",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc8f"
+  },
+  "InvoiceId": 181,
+  "CustomerId": 43,
+  "InvoiceDate": "2011-03-05 00:00:00",
+  "BillingAddress": "68, Rue Jouvence",
+  "BillingCity": "Dijon",
+  "BillingCountry": "France",
+  "BillingPostalCode": "21000",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc90"
+  },
+  "InvoiceId": 182,
+  "CustomerId": 44,
+  "InvoiceDate": "2011-03-18 00:00:00",
+  "BillingAddress": "Porthaninkatu 9",
+  "BillingCity": "Helsinki",
+  "BillingCountry": "Finland",
+  "BillingPostalCode": "00530",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc91"
+  },
+  "InvoiceId": 183,
+  "CustomerId": 46,
+  "InvoiceDate": "2011-03-18 00:00:00",
+  "BillingAddress": "3 Chatham Street",
+  "BillingCity": "Dublin",
+  "BillingState": "Dublin",
+  "BillingCountry": "Ireland",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc92"
+  },
+  "InvoiceId": 184,
+  "CustomerId": 48,
+  "InvoiceDate": "2011-03-19 00:00:00",
+  "BillingAddress": "Lijnbaansgracht 120bg",
+  "BillingCity": "Amsterdam",
+  "BillingState": "VV",
+  "BillingCountry": "Netherlands",
+  "BillingPostalCode": "1016",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc93"
+  },
+  "InvoiceId": 185,
+  "CustomerId": 52,
+  "InvoiceDate": "2011-03-20 00:00:00",
+  "BillingAddress": "202 Hoxton Street",
+  "BillingCity": "London",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "N1 5LH",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc94"
+  },
+  "InvoiceId": 186,
+  "CustomerId": 58,
+  "InvoiceDate": "2011-03-23 00:00:00",
+  "BillingAddress": "12,Community Centre",
+  "BillingCity": "Delhi",
+  "BillingCountry": "India",
+  "BillingPostalCode": "110017",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc95"
+  },
+  "InvoiceId": 187,
+  "CustomerId": 8,
+  "InvoiceDate": "2011-03-28 00:00:00",
+  "BillingAddress": "Grétrystraat 63",
+  "BillingCity": "Brussels",
+  "BillingCountry": "Belgium",
+  "BillingPostalCode": "1000",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc96"
+  },
+  "InvoiceId": 188,
+  "CustomerId": 22,
+  "InvoiceDate": "2011-04-05 00:00:00",
+  "BillingAddress": "120 S Orange Ave",
+  "BillingCity": "Orlando",
+  "BillingState": "FL",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "32801",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc97"
+  },
+  "InvoiceId": 189,
+  "CustomerId": 23,
+  "InvoiceDate": "2011-04-18 00:00:00",
+  "BillingAddress": "69 Salem Street",
+  "BillingCity": "Boston",
+  "BillingState": "MA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "2113",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc98"
+  },
+  "InvoiceId": 190,
+  "CustomerId": 25,
+  "InvoiceDate": "2011-04-18 00:00:00",
+  "BillingAddress": "319 N. Frances Street",
+  "BillingCity": "Madison",
+  "BillingState": "WI",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "53703",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc99"
+  },
+  "InvoiceId": 191,
+  "CustomerId": 27,
+  "InvoiceDate": "2011-04-19 00:00:00",
+  "BillingAddress": "1033 N Park Ave",
+  "BillingCity": "Tucson",
+  "BillingState": "AZ",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "85719",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc9a"
+  },
+  "InvoiceId": 192,
+  "CustomerId": 31,
+  "InvoiceDate": "2011-04-20 00:00:00",
+  "BillingAddress": "194A Chain Lake Drive",
+  "BillingCity": "Halifax",
+  "BillingState": "NS",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "B3S 1C5",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc9b"
+  },
+  "InvoiceId": 193,
+  "CustomerId": 37,
+  "InvoiceDate": "2011-04-23 00:00:00",
+  "BillingAddress": "Berger Straße 10",
+  "BillingCity": "Frankfurt",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "60316",
+  "Total": {
+    "$numberDecimal": "14.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc9c"
+  },
+  "InvoiceId": 194,
+  "CustomerId": 46,
+  "InvoiceDate": "2011-04-28 00:00:00",
+  "BillingAddress": "3 Chatham Street",
+  "BillingCity": "Dublin",
+  "BillingState": "Dublin",
+  "BillingCountry": "Ireland",
+  "Total": {
+    "$numberDecimal": "21.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc9d"
+  },
+  "InvoiceId": 195,
+  "CustomerId": 1,
+  "InvoiceDate": "2011-05-06 00:00:00",
+  "BillingAddress": "Av. Brigadeiro Faria Lima, 2170",
+  "BillingCity": "São José dos Campos",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "12227-000",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc9e"
+  },
+  "InvoiceId": 196,
+  "CustomerId": 2,
+  "InvoiceDate": "2011-05-19 00:00:00",
+  "BillingAddress": "Theodor-Heuss-Straße 34",
+  "BillingCity": "Stuttgart",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "70174",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fc9f"
+  },
+  "InvoiceId": 197,
+  "CustomerId": 4,
+  "InvoiceDate": "2011-05-19 00:00:00",
+  "BillingAddress": "Ullevålsveien 14",
+  "BillingCity": "Oslo",
+  "BillingCountry": "Norway",
+  "BillingPostalCode": "0171",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fca0"
+  },
+  "InvoiceId": 198,
+  "CustomerId": 6,
+  "InvoiceDate": "2011-05-20 00:00:00",
+  "BillingAddress": "Rilská 3174/6",
+  "BillingCity": "Prague",
+  "BillingCountry": "Czech Republic",
+  "BillingPostalCode": "14300",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fca1"
+  },
+  "InvoiceId": 199,
+  "CustomerId": 10,
+  "InvoiceDate": "2011-05-21 00:00:00",
+  "BillingAddress": "Rua Dr. Falcão Filho, 155",
+  "BillingCity": "São Paulo",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "01007-010",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fca2"
+  },
+  "InvoiceId": 200,
+  "CustomerId": 16,
+  "InvoiceDate": "2011-05-24 00:00:00",
+  "BillingAddress": "1600 Amphitheatre Parkway",
+  "BillingCity": "Mountain View",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "94043-1351",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fca3"
+  },
+  "InvoiceId": 201,
+  "CustomerId": 25,
+  "InvoiceDate": "2011-05-29 00:00:00",
+  "BillingAddress": "319 N. Frances Street",
+  "BillingCity": "Madison",
+  "BillingState": "WI",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "53703",
+  "Total": {
+    "$numberDecimal": "18.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fca4"
+  },
+  "InvoiceId": 202,
+  "CustomerId": 39,
+  "InvoiceDate": "2011-06-06 00:00:00",
+  "BillingAddress": "4, Rue Milton",
+  "BillingCity": "Paris",
+  "BillingCountry": "France",
+  "BillingPostalCode": "75009",
+  "Total": {
+    "$numberDecimal": "1.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fca5"
+  },
+  "InvoiceId": 203,
+  "CustomerId": 40,
+  "InvoiceDate": "2011-06-19 00:00:00",
+  "BillingAddress": "8, Rue Hanovre",
+  "BillingCity": "Paris",
+  "BillingCountry": "France",
+  "BillingPostalCode": "75002",
+  "Total": {
+    "$numberDecimal": "2.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fca6"
+  },
+  "InvoiceId": 204,
+  "CustomerId": 42,
+  "InvoiceDate": "2011-06-19 00:00:00",
+  "BillingAddress": "9, Place Louis Barthou",
+  "BillingCity": "Bordeaux",
+  "BillingCountry": "France",
+  "BillingPostalCode": "33000",
+  "Total": {
+    "$numberDecimal": "3.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fca7"
+  },
+  "InvoiceId": 205,
+  "CustomerId": 44,
+  "InvoiceDate": "2011-06-20 00:00:00",
+  "BillingAddress": "Porthaninkatu 9",
+  "BillingCity": "Helsinki",
+  "BillingCountry": "Finland",
+  "BillingPostalCode": "00530",
+  "Total": {
+    "$numberDecimal": "7.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fca8"
+  },
+  "InvoiceId": 206,
+  "CustomerId": 48,
+  "InvoiceDate": "2011-06-21 00:00:00",
+  "BillingAddress": "Lijnbaansgracht 120bg",
+  "BillingCity": "Amsterdam",
+  "BillingState": "VV",
+  "BillingCountry": "Netherlands",
+  "BillingPostalCode": "1016",
+  "Total": {
+    "$numberDecimal": "8.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fca9"
+  },
+  "InvoiceId": 207,
+  "CustomerId": 54,
+  "InvoiceDate": "2011-06-24 00:00:00",
+  "BillingAddress": "110 Raeburn Pl",
+  "BillingCity": "Edinburgh ",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "EH4 1HH",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcaa"
+  },
+  "InvoiceId": 208,
+  "CustomerId": 4,
+  "InvoiceDate": "2011-06-29 00:00:00",
+  "BillingAddress": "Ullevålsveien 14",
+  "BillingCity": "Oslo",
+  "BillingCountry": "Norway",
+  "BillingPostalCode": "0171",
+  "Total": {
+    "$numberDecimal": "15.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcab"
+  },
+  "InvoiceId": 209,
+  "CustomerId": 18,
+  "InvoiceDate": "2011-07-07 00:00:00",
+  "BillingAddress": "627 Broadway",
+  "BillingCity": "New York",
+  "BillingState": "NY",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "10012-2612",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcac"
+  },
+  "InvoiceId": 210,
+  "CustomerId": 19,
+  "InvoiceDate": "2011-07-20 00:00:00",
+  "BillingAddress": "1 Infinite Loop",
+  "BillingCity": "Cupertino",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "95014",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcad"
+  },
+  "InvoiceId": 211,
+  "CustomerId": 21,
+  "InvoiceDate": "2011-07-20 00:00:00",
+  "BillingAddress": "801 W 4th Street",
+  "BillingCity": "Reno",
+  "BillingState": "NV",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "89503",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcae"
+  },
+  "InvoiceId": 212,
+  "CustomerId": 23,
+  "InvoiceDate": "2011-07-21 00:00:00",
+  "BillingAddress": "69 Salem Street",
+  "BillingCity": "Boston",
+  "BillingState": "MA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "2113",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcaf"
+  },
+  "InvoiceId": 213,
+  "CustomerId": 27,
+  "InvoiceDate": "2011-07-22 00:00:00",
+  "BillingAddress": "1033 N Park Ave",
+  "BillingCity": "Tucson",
+  "BillingState": "AZ",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "85719",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcb0"
+  },
+  "InvoiceId": 214,
+  "CustomerId": 33,
+  "InvoiceDate": "2011-07-25 00:00:00",
+  "BillingAddress": "5112 48 Street",
+  "BillingCity": "Yellowknife",
+  "BillingState": "NT",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "X1A 1N6",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcb1"
+  },
+  "InvoiceId": 215,
+  "CustomerId": 42,
+  "InvoiceDate": "2011-07-30 00:00:00",
+  "BillingAddress": "9, Place Louis Barthou",
+  "BillingCity": "Bordeaux",
+  "BillingCountry": "France",
+  "BillingPostalCode": "33000",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcb2"
+  },
+  "InvoiceId": 216,
+  "CustomerId": 56,
+  "InvoiceDate": "2011-08-07 00:00:00",
+  "BillingAddress": "307 Macacha Güemes",
+  "BillingCity": "Buenos Aires",
+  "BillingCountry": "Argentina",
+  "BillingPostalCode": "1106",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcb3"
+  },
+  "InvoiceId": 217,
+  "CustomerId": 57,
+  "InvoiceDate": "2011-08-20 00:00:00",
+  "BillingAddress": "Calle Lira, 198",
+  "BillingCity": "Santiago",
+  "BillingCountry": "Chile",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcb4"
+  },
+  "InvoiceId": 218,
+  "CustomerId": 59,
+  "InvoiceDate": "2011-08-20 00:00:00",
+  "BillingAddress": "3,Raj Bhavan Road",
+  "BillingCity": "Bangalore",
+  "BillingCountry": "India",
+  "BillingPostalCode": "560001",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcb5"
+  },
+  "InvoiceId": 219,
+  "CustomerId": 2,
+  "InvoiceDate": "2011-08-21 00:00:00",
+  "BillingAddress": "Theodor-Heuss-Straße 34",
+  "BillingCity": "Stuttgart",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "70174",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcb6"
+  },
+  "InvoiceId": 220,
+  "CustomerId": 6,
+  "InvoiceDate": "2011-08-22 00:00:00",
+  "BillingAddress": "Rilská 3174/6",
+  "BillingCity": "Prague",
+  "BillingCountry": "Czech Republic",
+  "BillingPostalCode": "14300",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcb7"
+  },
+  "InvoiceId": 221,
+  "CustomerId": 12,
+  "InvoiceDate": "2011-08-25 00:00:00",
+  "BillingAddress": "Praça Pio X, 119",
+  "BillingCity": "Rio de Janeiro",
+  "BillingState": "RJ",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "20040-020",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcb8"
+  },
+  "InvoiceId": 222,
+  "CustomerId": 21,
+  "InvoiceDate": "2011-08-30 00:00:00",
+  "BillingAddress": "801 W 4th Street",
+  "BillingCity": "Reno",
+  "BillingState": "NV",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "89503",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcb9"
+  },
+  "InvoiceId": 223,
+  "CustomerId": 35,
+  "InvoiceDate": "2011-09-07 00:00:00",
+  "BillingAddress": "Rua dos Campeões Europeus de Viena, 4350",
+  "BillingCity": "Porto",
+  "BillingCountry": "Portugal",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcba"
+  },
+  "InvoiceId": 224,
+  "CustomerId": 36,
+  "InvoiceDate": "2011-09-20 00:00:00",
+  "BillingAddress": "Tauentzienstraße 8",
+  "BillingCity": "Berlin",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "10789",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcbb"
+  },
+  "InvoiceId": 225,
+  "CustomerId": 38,
+  "InvoiceDate": "2011-09-20 00:00:00",
+  "BillingAddress": "Barbarossastraße 19",
+  "BillingCity": "Berlin",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "10779",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcbc"
+  },
+  "InvoiceId": 226,
+  "CustomerId": 40,
+  "InvoiceDate": "2011-09-21 00:00:00",
+  "BillingAddress": "8, Rue Hanovre",
+  "BillingCity": "Paris",
+  "BillingCountry": "France",
+  "BillingPostalCode": "75002",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcbd"
+  },
+  "InvoiceId": 227,
+  "CustomerId": 44,
+  "InvoiceDate": "2011-09-22 00:00:00",
+  "BillingAddress": "Porthaninkatu 9",
+  "BillingCity": "Helsinki",
+  "BillingCountry": "Finland",
+  "BillingPostalCode": "00530",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcbe"
+  },
+  "InvoiceId": 228,
+  "CustomerId": 50,
+  "InvoiceDate": "2011-09-25 00:00:00",
+  "BillingAddress": "C/ San Bernardo 85",
+  "BillingCity": "Madrid",
+  "BillingCountry": "Spain",
+  "BillingPostalCode": "28015",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcbf"
+  },
+  "InvoiceId": 229,
+  "CustomerId": 59,
+  "InvoiceDate": "2011-09-30 00:00:00",
+  "BillingAddress": "3,Raj Bhavan Road",
+  "BillingCity": "Bangalore",
+  "BillingCountry": "India",
+  "BillingPostalCode": "560001",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcc0"
+  },
+  "InvoiceId": 230,
+  "CustomerId": 14,
+  "InvoiceDate": "2011-10-08 00:00:00",
+  "BillingAddress": "8210 111 ST NW",
+  "BillingCity": "Edmonton",
+  "BillingState": "AB",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "T6G 2C7",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcc1"
+  },
+  "InvoiceId": 231,
+  "CustomerId": 15,
+  "InvoiceDate": "2011-10-21 00:00:00",
+  "BillingAddress": "700 W Pender Street",
+  "BillingCity": "Vancouver",
+  "BillingState": "BC",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "V6C 1G8",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcc2"
+  },
+  "InvoiceId": 232,
+  "CustomerId": 17,
+  "InvoiceDate": "2011-10-21 00:00:00",
+  "BillingAddress": "1 Microsoft Way",
+  "BillingCity": "Redmond",
+  "BillingState": "WA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "98052-8300",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcc3"
+  },
+  "InvoiceId": 233,
+  "CustomerId": 19,
+  "InvoiceDate": "2011-10-22 00:00:00",
+  "BillingAddress": "1 Infinite Loop",
+  "BillingCity": "Cupertino",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "95014",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcc4"
+  },
+  "InvoiceId": 234,
+  "CustomerId": 23,
+  "InvoiceDate": "2011-10-23 00:00:00",
+  "BillingAddress": "69 Salem Street",
+  "BillingCity": "Boston",
+  "BillingState": "MA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "2113",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcc5"
+  },
+  "InvoiceId": 235,
+  "CustomerId": 29,
+  "InvoiceDate": "2011-10-26 00:00:00",
+  "BillingAddress": "796 Dundas Street West",
+  "BillingCity": "Toronto",
+  "BillingState": "ON",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "M6J 1V1",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcc6"
+  },
+  "InvoiceId": 236,
+  "CustomerId": 38,
+  "InvoiceDate": "2011-10-31 00:00:00",
+  "BillingAddress": "Barbarossastraße 19",
+  "BillingCity": "Berlin",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "10779",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcc7"
+  },
+  "InvoiceId": 237,
+  "CustomerId": 52,
+  "InvoiceDate": "2011-11-08 00:00:00",
+  "BillingAddress": "202 Hoxton Street",
+  "BillingCity": "London",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "N1 5LH",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcc8"
+  },
+  "InvoiceId": 238,
+  "CustomerId": 53,
+  "InvoiceDate": "2011-11-21 00:00:00",
+  "BillingAddress": "113 Lupus St",
+  "BillingCity": "London",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "SW1V 3EN",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcc9"
+  },
+  "InvoiceId": 239,
+  "CustomerId": 55,
+  "InvoiceDate": "2011-11-21 00:00:00",
+  "BillingAddress": "421 Bourke Street",
+  "BillingCity": "Sidney",
+  "BillingState": "NSW",
+  "BillingCountry": "Australia",
+  "BillingPostalCode": "2010",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcca"
+  },
+  "InvoiceId": 240,
+  "CustomerId": 57,
+  "InvoiceDate": "2011-11-22 00:00:00",
+  "BillingAddress": "Calle Lira, 198",
+  "BillingCity": "Santiago",
+  "BillingCountry": "Chile",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fccb"
+  },
+  "InvoiceId": 241,
+  "CustomerId": 2,
+  "InvoiceDate": "2011-11-23 00:00:00",
+  "BillingAddress": "Theodor-Heuss-Straße 34",
+  "BillingCity": "Stuttgart",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "70174",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fccc"
+  },
+  "InvoiceId": 242,
+  "CustomerId": 8,
+  "InvoiceDate": "2011-11-26 00:00:00",
+  "BillingAddress": "Grétrystraat 63",
+  "BillingCity": "Brussels",
+  "BillingCountry": "Belgium",
+  "BillingPostalCode": "1000",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fccd"
+  },
+  "InvoiceId": 243,
+  "CustomerId": 17,
+  "InvoiceDate": "2011-12-01 00:00:00",
+  "BillingAddress": "1 Microsoft Way",
+  "BillingCity": "Redmond",
+  "BillingState": "WA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "98052-8300",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcce"
+  },
+  "InvoiceId": 244,
+  "CustomerId": 31,
+  "InvoiceDate": "2011-12-09 00:00:00",
+  "BillingAddress": "194A Chain Lake Drive",
+  "BillingCity": "Halifax",
+  "BillingState": "NS",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "B3S 1C5",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fccf"
+  },
+  "InvoiceId": 245,
+  "CustomerId": 32,
+  "InvoiceDate": "2011-12-22 00:00:00",
+  "BillingAddress": "696 Osborne Street",
+  "BillingCity": "Winnipeg",
+  "BillingState": "MB",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "R3L 2B9",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcd0"
+  },
+  "InvoiceId": 246,
+  "CustomerId": 34,
+  "InvoiceDate": "2011-12-22 00:00:00",
+  "BillingAddress": "Rua da Assunção 53",
+  "BillingCity": "Lisbon",
+  "BillingCountry": "Portugal",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcd1"
+  },
+  "InvoiceId": 247,
+  "CustomerId": 36,
+  "InvoiceDate": "2011-12-23 00:00:00",
+  "BillingAddress": "Tauentzienstraße 8",
+  "BillingCity": "Berlin",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "10789",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcd2"
+  },
+  "InvoiceId": 248,
+  "CustomerId": 40,
+  "InvoiceDate": "2011-12-24 00:00:00",
+  "BillingAddress": "8, Rue Hanovre",
+  "BillingCity": "Paris",
+  "BillingCountry": "France",
+  "BillingPostalCode": "75002",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcd3"
+  },
+  "InvoiceId": 249,
+  "CustomerId": 46,
+  "InvoiceDate": "2011-12-27 00:00:00",
+  "BillingAddress": "3 Chatham Street",
+  "BillingCity": "Dublin",
+  "BillingState": "Dublin",
+  "BillingCountry": "Ireland",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcd4"
+  },
+  "InvoiceId": 250,
+  "CustomerId": 55,
+  "InvoiceDate": "2012-01-01 00:00:00",
+  "BillingAddress": "421 Bourke Street",
+  "BillingCity": "Sidney",
+  "BillingState": "NSW",
+  "BillingCountry": "Australia",
+  "BillingPostalCode": "2010",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcd5"
+  },
+  "InvoiceId": 251,
+  "CustomerId": 10,
+  "InvoiceDate": "2012-01-09 00:00:00",
+  "BillingAddress": "Rua Dr. Falcão Filho, 155",
+  "BillingCity": "São Paulo",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "01007-010",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcd6"
+  },
+  "InvoiceId": 252,
+  "CustomerId": 11,
+  "InvoiceDate": "2012-01-22 00:00:00",
+  "BillingAddress": "Av. Paulista, 2022",
+  "BillingCity": "São Paulo",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "01310-200",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcd7"
+  },
+  "InvoiceId": 253,
+  "CustomerId": 13,
+  "InvoiceDate": "2012-01-22 00:00:00",
+  "BillingAddress": "Qe 7 Bloco G",
+  "BillingCity": "Brasília",
+  "BillingState": "DF",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "71020-677",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcd8"
+  },
+  "InvoiceId": 254,
+  "CustomerId": 15,
+  "InvoiceDate": "2012-01-23 00:00:00",
+  "BillingAddress": "700 W Pender Street",
+  "BillingCity": "Vancouver",
+  "BillingState": "BC",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "V6C 1G8",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcd9"
+  },
+  "InvoiceId": 255,
+  "CustomerId": 19,
+  "InvoiceDate": "2012-01-24 00:00:00",
+  "BillingAddress": "1 Infinite Loop",
+  "BillingCity": "Cupertino",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "95014",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcda"
+  },
+  "InvoiceId": 256,
+  "CustomerId": 25,
+  "InvoiceDate": "2012-01-27 00:00:00",
+  "BillingAddress": "319 N. Frances Street",
+  "BillingCity": "Madison",
+  "BillingState": "WI",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "53703",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcdb"
+  },
+  "InvoiceId": 257,
+  "CustomerId": 34,
+  "InvoiceDate": "2012-02-01 00:00:00",
+  "BillingAddress": "Rua da Assunção 53",
+  "BillingCity": "Lisbon",
+  "BillingCountry": "Portugal",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcdc"
+  },
+  "InvoiceId": 258,
+  "CustomerId": 48,
+  "InvoiceDate": "2012-02-09 00:00:00",
+  "BillingAddress": "Lijnbaansgracht 120bg",
+  "BillingCity": "Amsterdam",
+  "BillingState": "VV",
+  "BillingCountry": "Netherlands",
+  "BillingPostalCode": "1016",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcdd"
+  },
+  "InvoiceId": 259,
+  "CustomerId": 49,
+  "InvoiceDate": "2012-02-22 00:00:00",
+  "BillingAddress": "Ordynacka 10",
+  "BillingCity": "Warsaw",
+  "BillingCountry": "Poland",
+  "BillingPostalCode": "00-358",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcde"
+  },
+  "InvoiceId": 260,
+  "CustomerId": 51,
+  "InvoiceDate": "2012-02-22 00:00:00",
+  "BillingAddress": "Celsiusg. 9",
+  "BillingCity": "Stockholm",
+  "BillingCountry": "Sweden",
+  "BillingPostalCode": "11230",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcdf"
+  },
+  "InvoiceId": 261,
+  "CustomerId": 53,
+  "InvoiceDate": "2012-02-23 00:00:00",
+  "BillingAddress": "113 Lupus St",
+  "BillingCity": "London",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "SW1V 3EN",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fce0"
+  },
+  "InvoiceId": 262,
+  "CustomerId": 57,
+  "InvoiceDate": "2012-02-24 00:00:00",
+  "BillingAddress": "Calle Lira, 198",
+  "BillingCity": "Santiago",
+  "BillingCountry": "Chile",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fce1"
+  },
+  "InvoiceId": 263,
+  "CustomerId": 4,
+  "InvoiceDate": "2012-02-27 00:00:00",
+  "BillingAddress": "Ullevålsveien 14",
+  "BillingCity": "Oslo",
+  "BillingCountry": "Norway",
+  "BillingPostalCode": "0171",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fce2"
+  },
+  "InvoiceId": 264,
+  "CustomerId": 13,
+  "InvoiceDate": "2012-03-03 00:00:00",
+  "BillingAddress": "Qe 7 Bloco G",
+  "BillingCity": "Brasília",
+  "BillingState": "DF",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "71020-677",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fce3"
+  },
+  "InvoiceId": 265,
+  "CustomerId": 27,
+  "InvoiceDate": "2012-03-11 00:00:00",
+  "BillingAddress": "1033 N Park Ave",
+  "BillingCity": "Tucson",
+  "BillingState": "AZ",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "85719",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fce4"
+  },
+  "InvoiceId": 266,
+  "CustomerId": 28,
+  "InvoiceDate": "2012-03-24 00:00:00",
+  "BillingAddress": "302 S 700 E",
+  "BillingCity": "Salt Lake City",
+  "BillingState": "UT",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "84102",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fce5"
+  },
+  "InvoiceId": 267,
+  "CustomerId": 30,
+  "InvoiceDate": "2012-03-24 00:00:00",
+  "BillingAddress": "230 Elgin Street",
+  "BillingCity": "Ottawa",
+  "BillingState": "ON",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "K2P 1L7",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fce6"
+  },
+  "InvoiceId": 268,
+  "CustomerId": 32,
+  "InvoiceDate": "2012-03-25 00:00:00",
+  "BillingAddress": "696 Osborne Street",
+  "BillingCity": "Winnipeg",
+  "BillingState": "MB",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "R3L 2B9",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fce7"
+  },
+  "InvoiceId": 269,
+  "CustomerId": 36,
+  "InvoiceDate": "2012-03-26 00:00:00",
+  "BillingAddress": "Tauentzienstraße 8",
+  "BillingCity": "Berlin",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "10789",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fce8"
+  },
+  "InvoiceId": 270,
+  "CustomerId": 42,
+  "InvoiceDate": "2012-03-29 00:00:00",
+  "BillingAddress": "9, Place Louis Barthou",
+  "BillingCity": "Bordeaux",
+  "BillingCountry": "France",
+  "BillingPostalCode": "33000",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fce9"
+  },
+  "InvoiceId": 271,
+  "CustomerId": 51,
+  "InvoiceDate": "2012-04-03 00:00:00",
+  "BillingAddress": "Celsiusg. 9",
+  "BillingCity": "Stockholm",
+  "BillingCountry": "Sweden",
+  "BillingPostalCode": "11230",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcea"
+  },
+  "InvoiceId": 272,
+  "CustomerId": 6,
+  "InvoiceDate": "2012-04-11 00:00:00",
+  "BillingAddress": "Rilská 3174/6",
+  "BillingCity": "Prague",
+  "BillingCountry": "Czech Republic",
+  "BillingPostalCode": "14300",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fceb"
+  },
+  "InvoiceId": 273,
+  "CustomerId": 7,
+  "InvoiceDate": "2012-04-24 00:00:00",
+  "BillingAddress": "Rotenturmstraße 4, 1010 Innere Stadt",
+  "BillingCity": "Vienne",
+  "BillingCountry": "Austria",
+  "BillingPostalCode": "1010",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcec"
+  },
+  "InvoiceId": 274,
+  "CustomerId": 9,
+  "InvoiceDate": "2012-04-24 00:00:00",
+  "BillingAddress": "Sønder Boulevard 51",
+  "BillingCity": "Copenhagen",
+  "BillingCountry": "Denmark",
+  "BillingPostalCode": "1720",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fced"
+  },
+  "InvoiceId": 275,
+  "CustomerId": 11,
+  "InvoiceDate": "2012-04-25 00:00:00",
+  "BillingAddress": "Av. Paulista, 2022",
+  "BillingCity": "São Paulo",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "01310-200",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcee"
+  },
+  "InvoiceId": 276,
+  "CustomerId": 15,
+  "InvoiceDate": "2012-04-26 00:00:00",
+  "BillingAddress": "700 W Pender Street",
+  "BillingCity": "Vancouver",
+  "BillingState": "BC",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "V6C 1G8",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcef"
+  },
+  "InvoiceId": 277,
+  "CustomerId": 21,
+  "InvoiceDate": "2012-04-29 00:00:00",
+  "BillingAddress": "801 W 4th Street",
+  "BillingCity": "Reno",
+  "BillingState": "NV",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "89503",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcf0"
+  },
+  "InvoiceId": 278,
+  "CustomerId": 30,
+  "InvoiceDate": "2012-05-04 00:00:00",
+  "BillingAddress": "230 Elgin Street",
+  "BillingCity": "Ottawa",
+  "BillingState": "ON",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "K2P 1L7",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcf1"
+  },
+  "InvoiceId": 279,
+  "CustomerId": 44,
+  "InvoiceDate": "2012-05-12 00:00:00",
+  "BillingAddress": "Porthaninkatu 9",
+  "BillingCity": "Helsinki",
+  "BillingCountry": "Finland",
+  "BillingPostalCode": "00530",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcf2"
+  },
+  "InvoiceId": 280,
+  "CustomerId": 45,
+  "InvoiceDate": "2012-05-25 00:00:00",
+  "BillingAddress": "Erzsébet krt. 58.",
+  "BillingCity": "Budapest",
+  "BillingCountry": "Hungary",
+  "BillingPostalCode": "H-1073",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcf3"
+  },
+  "InvoiceId": 281,
+  "CustomerId": 47,
+  "InvoiceDate": "2012-05-25 00:00:00",
+  "BillingAddress": "Via Degli Scipioni, 43",
+  "BillingCity": "Rome",
+  "BillingState": "RM",
+  "BillingCountry": "Italy",
+  "BillingPostalCode": "00192",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcf4"
+  },
+  "InvoiceId": 282,
+  "CustomerId": 49,
+  "InvoiceDate": "2012-05-26 00:00:00",
+  "BillingAddress": "Ordynacka 10",
+  "BillingCity": "Warsaw",
+  "BillingCountry": "Poland",
+  "BillingPostalCode": "00-358",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcf5"
+  },
+  "InvoiceId": 283,
+  "CustomerId": 53,
+  "InvoiceDate": "2012-05-27 00:00:00",
+  "BillingAddress": "113 Lupus St",
+  "BillingCity": "London",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "SW1V 3EN",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcf6"
+  },
+  "InvoiceId": 284,
+  "CustomerId": 59,
+  "InvoiceDate": "2012-05-30 00:00:00",
+  "BillingAddress": "3,Raj Bhavan Road",
+  "BillingCity": "Bangalore",
+  "BillingCountry": "India",
+  "BillingPostalCode": "560001",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcf7"
+  },
+  "InvoiceId": 285,
+  "CustomerId": 9,
+  "InvoiceDate": "2012-06-04 00:00:00",
+  "BillingAddress": "Sønder Boulevard 51",
+  "BillingCity": "Copenhagen",
+  "BillingCountry": "Denmark",
+  "BillingPostalCode": "1720",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcf8"
+  },
+  "InvoiceId": 286,
+  "CustomerId": 23,
+  "InvoiceDate": "2012-06-12 00:00:00",
+  "BillingAddress": "69 Salem Street",
+  "BillingCity": "Boston",
+  "BillingState": "MA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "2113",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcf9"
+  },
+  "InvoiceId": 287,
+  "CustomerId": 24,
+  "InvoiceDate": "2012-06-25 00:00:00",
+  "BillingAddress": "162 E Superior Street",
+  "BillingCity": "Chicago",
+  "BillingState": "IL",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "60611",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcfa"
+  },
+  "InvoiceId": 288,
+  "CustomerId": 26,
+  "InvoiceDate": "2012-06-25 00:00:00",
+  "BillingAddress": "2211 W Berry Street",
+  "BillingCity": "Fort Worth",
+  "BillingState": "TX",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "76110",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcfb"
+  },
+  "InvoiceId": 289,
+  "CustomerId": 28,
+  "InvoiceDate": "2012-06-26 00:00:00",
+  "BillingAddress": "302 S 700 E",
+  "BillingCity": "Salt Lake City",
+  "BillingState": "UT",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "84102",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcfc"
+  },
+  "InvoiceId": 290,
+  "CustomerId": 32,
+  "InvoiceDate": "2012-06-27 00:00:00",
+  "BillingAddress": "696 Osborne Street",
+  "BillingCity": "Winnipeg",
+  "BillingState": "MB",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "R3L 2B9",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcfd"
+  },
+  "InvoiceId": 291,
+  "CustomerId": 38,
+  "InvoiceDate": "2012-06-30 00:00:00",
+  "BillingAddress": "Barbarossastraße 19",
+  "BillingCity": "Berlin",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "10779",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcfe"
+  },
+  "InvoiceId": 292,
+  "CustomerId": 47,
+  "InvoiceDate": "2012-07-05 00:00:00",
+  "BillingAddress": "Via Degli Scipioni, 43",
+  "BillingCity": "Rome",
+  "BillingState": "RM",
+  "BillingCountry": "Italy",
+  "BillingPostalCode": "00192",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fcff"
+  },
+  "InvoiceId": 293,
+  "CustomerId": 2,
+  "InvoiceDate": "2012-07-13 00:00:00",
+  "BillingAddress": "Theodor-Heuss-Straße 34",
+  "BillingCity": "Stuttgart",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "70174",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd00"
+  },
+  "InvoiceId": 294,
+  "CustomerId": 3,
+  "InvoiceDate": "2012-07-26 00:00:00",
+  "BillingAddress": "1498 rue Bélanger",
+  "BillingCity": "Montréal",
+  "BillingState": "QC",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "H2G 1A7",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd01"
+  },
+  "InvoiceId": 295,
+  "CustomerId": 5,
+  "InvoiceDate": "2012-07-26 00:00:00",
+  "BillingAddress": "Klanova 9/506",
+  "BillingCity": "Prague",
+  "BillingCountry": "Czech Republic",
+  "BillingPostalCode": "14700",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd02"
+  },
+  "InvoiceId": 296,
+  "CustomerId": 7,
+  "InvoiceDate": "2012-07-27 00:00:00",
+  "BillingAddress": "Rotenturmstraße 4, 1010 Innere Stadt",
+  "BillingCity": "Vienne",
+  "BillingCountry": "Austria",
+  "BillingPostalCode": "1010",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd03"
+  },
+  "InvoiceId": 297,
+  "CustomerId": 11,
+  "InvoiceDate": "2012-07-28 00:00:00",
+  "BillingAddress": "Av. Paulista, 2022",
+  "BillingCity": "São Paulo",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "01310-200",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd04"
+  },
+  "InvoiceId": 298,
+  "CustomerId": 17,
+  "InvoiceDate": "2012-07-31 00:00:00",
+  "BillingAddress": "1 Microsoft Way",
+  "BillingCity": "Redmond",
+  "BillingState": "WA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "98052-8300",
+  "Total": {
+    "$numberDecimal": "10.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd05"
+  },
+  "InvoiceId": 299,
+  "CustomerId": 26,
+  "InvoiceDate": "2012-08-05 00:00:00",
+  "BillingAddress": "2211 W Berry Street",
+  "BillingCity": "Fort Worth",
+  "BillingState": "TX",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "76110",
+  "Total": {
+    "$numberDecimal": "23.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd06"
+  },
+  "InvoiceId": 300,
+  "CustomerId": 40,
+  "InvoiceDate": "2012-08-13 00:00:00",
+  "BillingAddress": "8, Rue Hanovre",
+  "BillingCity": "Paris",
+  "BillingCountry": "France",
+  "BillingPostalCode": "75002",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd07"
+  },
+  "InvoiceId": 301,
+  "CustomerId": 41,
+  "InvoiceDate": "2012-08-26 00:00:00",
+  "BillingAddress": "11, Place Bellecour",
+  "BillingCity": "Lyon",
+  "BillingCountry": "France",
+  "BillingPostalCode": "69002",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd08"
+  },
+  "InvoiceId": 302,
+  "CustomerId": 43,
+  "InvoiceDate": "2012-08-26 00:00:00",
+  "BillingAddress": "68, Rue Jouvence",
+  "BillingCity": "Dijon",
+  "BillingCountry": "France",
+  "BillingPostalCode": "21000",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd09"
+  },
+  "InvoiceId": 303,
+  "CustomerId": 45,
+  "InvoiceDate": "2012-08-27 00:00:00",
+  "BillingAddress": "Erzsébet krt. 58.",
+  "BillingCity": "Budapest",
+  "BillingCountry": "Hungary",
+  "BillingPostalCode": "H-1073",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd0a"
+  },
+  "InvoiceId": 304,
+  "CustomerId": 49,
+  "InvoiceDate": "2012-08-28 00:00:00",
+  "BillingAddress": "Ordynacka 10",
+  "BillingCity": "Warsaw",
+  "BillingCountry": "Poland",
+  "BillingPostalCode": "00-358",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd0b"
+  },
+  "InvoiceId": 305,
+  "CustomerId": 55,
+  "InvoiceDate": "2012-08-31 00:00:00",
+  "BillingAddress": "421 Bourke Street",
+  "BillingCity": "Sidney",
+  "BillingState": "NSW",
+  "BillingCountry": "Australia",
+  "BillingPostalCode": "2010",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd0c"
+  },
+  "InvoiceId": 306,
+  "CustomerId": 5,
+  "InvoiceDate": "2012-09-05 00:00:00",
+  "BillingAddress": "Klanova 9/506",
+  "BillingCity": "Prague",
+  "BillingCountry": "Czech Republic",
+  "BillingPostalCode": "14700",
+  "Total": {
+    "$numberDecimal": "16.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd0d"
+  },
+  "InvoiceId": 307,
+  "CustomerId": 19,
+  "InvoiceDate": "2012-09-13 00:00:00",
+  "BillingAddress": "1 Infinite Loop",
+  "BillingCity": "Cupertino",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "95014",
+  "Total": {
+    "$numberDecimal": "1.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd0e"
+  },
+  "InvoiceId": 308,
+  "CustomerId": 20,
+  "InvoiceDate": "2012-09-26 00:00:00",
+  "BillingAddress": "541 Del Medio Avenue",
+  "BillingCity": "Mountain View",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "94040-111",
+  "Total": {
+    "$numberDecimal": "3.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd0f"
+  },
+  "InvoiceId": 309,
+  "CustomerId": 22,
+  "InvoiceDate": "2012-09-26 00:00:00",
+  "BillingAddress": "120 S Orange Ave",
+  "BillingCity": "Orlando",
+  "BillingState": "FL",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "32801",
+  "Total": {
+    "$numberDecimal": "3.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd10"
+  },
+  "InvoiceId": 310,
+  "CustomerId": 24,
+  "InvoiceDate": "2012-09-27 00:00:00",
+  "BillingAddress": "162 E Superior Street",
+  "BillingCity": "Chicago",
+  "BillingState": "IL",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "60611",
+  "Total": {
+    "$numberDecimal": "7.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd11"
+  },
+  "InvoiceId": 311,
+  "CustomerId": 28,
+  "InvoiceDate": "2012-09-28 00:00:00",
+  "BillingAddress": "302 S 700 E",
+  "BillingCity": "Salt Lake City",
+  "BillingState": "UT",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "84102",
+  "Total": {
+    "$numberDecimal": "11.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd12"
+  },
+  "InvoiceId": 312,
+  "CustomerId": 34,
+  "InvoiceDate": "2012-10-01 00:00:00",
+  "BillingAddress": "Rua da Assunção 53",
+  "BillingCity": "Lisbon",
+  "BillingCountry": "Portugal",
+  "Total": {
+    "$numberDecimal": "10.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd13"
+  },
+  "InvoiceId": 313,
+  "CustomerId": 43,
+  "InvoiceDate": "2012-10-06 00:00:00",
+  "BillingAddress": "68, Rue Jouvence",
+  "BillingCity": "Dijon",
+  "BillingCountry": "France",
+  "BillingPostalCode": "21000",
+  "Total": {
+    "$numberDecimal": "16.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd14"
+  },
+  "InvoiceId": 314,
+  "CustomerId": 57,
+  "InvoiceDate": "2012-10-14 00:00:00",
+  "BillingAddress": "Calle Lira, 198",
+  "BillingCity": "Santiago",
+  "BillingCountry": "Chile",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd15"
+  },
+  "InvoiceId": 315,
+  "CustomerId": 58,
+  "InvoiceDate": "2012-10-27 00:00:00",
+  "BillingAddress": "12,Community Centre",
+  "BillingCity": "Delhi",
+  "BillingCountry": "India",
+  "BillingPostalCode": "110017",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd16"
+  },
+  "InvoiceId": 316,
+  "CustomerId": 1,
+  "InvoiceDate": "2012-10-27 00:00:00",
+  "BillingAddress": "Av. Brigadeiro Faria Lima, 2170",
+  "BillingCity": "São José dos Campos",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "12227-000",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd17"
+  },
+  "InvoiceId": 317,
+  "CustomerId": 3,
+  "InvoiceDate": "2012-10-28 00:00:00",
+  "BillingAddress": "1498 rue Bélanger",
+  "BillingCity": "Montréal",
+  "BillingState": "QC",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "H2G 1A7",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd18"
+  },
+  "InvoiceId": 318,
+  "CustomerId": 7,
+  "InvoiceDate": "2012-10-29 00:00:00",
+  "BillingAddress": "Rotenturmstraße 4, 1010 Innere Stadt",
+  "BillingCity": "Vienne",
+  "BillingCountry": "Austria",
+  "BillingPostalCode": "1010",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd19"
+  },
+  "InvoiceId": 319,
+  "CustomerId": 13,
+  "InvoiceDate": "2012-11-01 00:00:00",
+  "BillingAddress": "Qe 7 Bloco G",
+  "BillingCity": "Brasília",
+  "BillingState": "DF",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "71020-677",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd1a"
+  },
+  "InvoiceId": 320,
+  "CustomerId": 22,
+  "InvoiceDate": "2012-11-06 00:00:00",
+  "BillingAddress": "120 S Orange Ave",
+  "BillingCity": "Orlando",
+  "BillingState": "FL",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "32801",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd1b"
+  },
+  "InvoiceId": 321,
+  "CustomerId": 36,
+  "InvoiceDate": "2012-11-14 00:00:00",
+  "BillingAddress": "Tauentzienstraße 8",
+  "BillingCity": "Berlin",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "10789",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd1c"
+  },
+  "InvoiceId": 322,
+  "CustomerId": 37,
+  "InvoiceDate": "2012-11-27 00:00:00",
+  "BillingAddress": "Berger Straße 10",
+  "BillingCity": "Frankfurt",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "60316",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd1d"
+  },
+  "InvoiceId": 323,
+  "CustomerId": 39,
+  "InvoiceDate": "2012-11-27 00:00:00",
+  "BillingAddress": "4, Rue Milton",
+  "BillingCity": "Paris",
+  "BillingCountry": "France",
+  "BillingPostalCode": "75009",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd1e"
+  },
+  "InvoiceId": 324,
+  "CustomerId": 41,
+  "InvoiceDate": "2012-11-28 00:00:00",
+  "BillingAddress": "11, Place Bellecour",
+  "BillingCity": "Lyon",
+  "BillingCountry": "France",
+  "BillingPostalCode": "69002",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd1f"
+  },
+  "InvoiceId": 325,
+  "CustomerId": 45,
+  "InvoiceDate": "2012-11-29 00:00:00",
+  "BillingAddress": "Erzsébet krt. 58.",
+  "BillingCity": "Budapest",
+  "BillingCountry": "Hungary",
+  "BillingPostalCode": "H-1073",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd20"
+  },
+  "InvoiceId": 326,
+  "CustomerId": 51,
+  "InvoiceDate": "2012-12-02 00:00:00",
+  "BillingAddress": "Celsiusg. 9",
+  "BillingCity": "Stockholm",
+  "BillingCountry": "Sweden",
+  "BillingPostalCode": "11230",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd21"
+  },
+  "InvoiceId": 327,
+  "CustomerId": 1,
+  "InvoiceDate": "2012-12-07 00:00:00",
+  "BillingAddress": "Av. Brigadeiro Faria Lima, 2170",
+  "BillingCity": "São José dos Campos",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "12227-000",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd22"
+  },
+  "InvoiceId": 328,
+  "CustomerId": 15,
+  "InvoiceDate": "2012-12-15 00:00:00",
+  "BillingAddress": "700 W Pender Street",
+  "BillingCity": "Vancouver",
+  "BillingState": "BC",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "V6C 1G8",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd23"
+  },
+  "InvoiceId": 329,
+  "CustomerId": 16,
+  "InvoiceDate": "2012-12-28 00:00:00",
+  "BillingAddress": "1600 Amphitheatre Parkway",
+  "BillingCity": "Mountain View",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "94043-1351",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd24"
+  },
+  "InvoiceId": 330,
+  "CustomerId": 18,
+  "InvoiceDate": "2012-12-28 00:00:00",
+  "BillingAddress": "627 Broadway",
+  "BillingCity": "New York",
+  "BillingState": "NY",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "10012-2612",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd25"
+  },
+  "InvoiceId": 331,
+  "CustomerId": 20,
+  "InvoiceDate": "2012-12-29 00:00:00",
+  "BillingAddress": "541 Del Medio Avenue",
+  "BillingCity": "Mountain View",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "94040-111",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd26"
+  },
+  "InvoiceId": 332,
+  "CustomerId": 24,
+  "InvoiceDate": "2012-12-30 00:00:00",
+  "BillingAddress": "162 E Superior Street",
+  "BillingCity": "Chicago",
+  "BillingState": "IL",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "60611",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd27"
+  },
+  "InvoiceId": 333,
+  "CustomerId": 30,
+  "InvoiceDate": "2013-01-02 00:00:00",
+  "BillingAddress": "230 Elgin Street",
+  "BillingCity": "Ottawa",
+  "BillingState": "ON",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "K2P 1L7",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd28"
+  },
+  "InvoiceId": 334,
+  "CustomerId": 39,
+  "InvoiceDate": "2013-01-07 00:00:00",
+  "BillingAddress": "4, Rue Milton",
+  "BillingCity": "Paris",
+  "BillingCountry": "France",
+  "BillingPostalCode": "75009",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd29"
+  },
+  "InvoiceId": 335,
+  "CustomerId": 53,
+  "InvoiceDate": "2013-01-15 00:00:00",
+  "BillingAddress": "113 Lupus St",
+  "BillingCity": "London",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "SW1V 3EN",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd2a"
+  },
+  "InvoiceId": 336,
+  "CustomerId": 54,
+  "InvoiceDate": "2013-01-28 00:00:00",
+  "BillingAddress": "110 Raeburn Pl",
+  "BillingCity": "Edinburgh ",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "EH4 1HH",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd2b"
+  },
+  "InvoiceId": 337,
+  "CustomerId": 56,
+  "InvoiceDate": "2013-01-28 00:00:00",
+  "BillingAddress": "307 Macacha Güemes",
+  "BillingCity": "Buenos Aires",
+  "BillingCountry": "Argentina",
+  "BillingPostalCode": "1106",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd2c"
+  },
+  "InvoiceId": 338,
+  "CustomerId": 58,
+  "InvoiceDate": "2013-01-29 00:00:00",
+  "BillingAddress": "12,Community Centre",
+  "BillingCity": "Delhi",
+  "BillingCountry": "India",
+  "BillingPostalCode": "110017",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd2d"
+  },
+  "InvoiceId": 339,
+  "CustomerId": 3,
+  "InvoiceDate": "2013-01-30 00:00:00",
+  "BillingAddress": "1498 rue Bélanger",
+  "BillingCity": "Montréal",
+  "BillingState": "QC",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "H2G 1A7",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd2e"
+  },
+  "InvoiceId": 340,
+  "CustomerId": 9,
+  "InvoiceDate": "2013-02-02 00:00:00",
+  "BillingAddress": "Sønder Boulevard 51",
+  "BillingCity": "Copenhagen",
+  "BillingCountry": "Denmark",
+  "BillingPostalCode": "1720",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd2f"
+  },
+  "InvoiceId": 341,
+  "CustomerId": 18,
+  "InvoiceDate": "2013-02-07 00:00:00",
+  "BillingAddress": "627 Broadway",
+  "BillingCity": "New York",
+  "BillingState": "NY",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "10012-2612",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd30"
+  },
+  "InvoiceId": 342,
+  "CustomerId": 32,
+  "InvoiceDate": "2013-02-15 00:00:00",
+  "BillingAddress": "696 Osborne Street",
+  "BillingCity": "Winnipeg",
+  "BillingState": "MB",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "R3L 2B9",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd31"
+  },
+  "InvoiceId": 343,
+  "CustomerId": 33,
+  "InvoiceDate": "2013-02-28 00:00:00",
+  "BillingAddress": "5112 48 Street",
+  "BillingCity": "Yellowknife",
+  "BillingState": "NT",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "X1A 1N6",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd32"
+  },
+  "InvoiceId": 344,
+  "CustomerId": 35,
+  "InvoiceDate": "2013-02-28 00:00:00",
+  "BillingAddress": "Rua dos Campeões Europeus de Viena, 4350",
+  "BillingCity": "Porto",
+  "BillingCountry": "Portugal",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd33"
+  },
+  "InvoiceId": 345,
+  "CustomerId": 37,
+  "InvoiceDate": "2013-03-01 00:00:00",
+  "BillingAddress": "Berger Straße 10",
+  "BillingCity": "Frankfurt",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "60316",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd34"
+  },
+  "InvoiceId": 346,
+  "CustomerId": 41,
+  "InvoiceDate": "2013-03-02 00:00:00",
+  "BillingAddress": "11, Place Bellecour",
+  "BillingCity": "Lyon",
+  "BillingCountry": "France",
+  "BillingPostalCode": "69002",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd35"
+  },
+  "InvoiceId": 347,
+  "CustomerId": 47,
+  "InvoiceDate": "2013-03-05 00:00:00",
+  "BillingAddress": "Via Degli Scipioni, 43",
+  "BillingCity": "Rome",
+  "BillingState": "RM",
+  "BillingCountry": "Italy",
+  "BillingPostalCode": "00192",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd36"
+  },
+  "InvoiceId": 348,
+  "CustomerId": 56,
+  "InvoiceDate": "2013-03-10 00:00:00",
+  "BillingAddress": "307 Macacha Güemes",
+  "BillingCity": "Buenos Aires",
+  "BillingCountry": "Argentina",
+  "BillingPostalCode": "1106",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd37"
+  },
+  "InvoiceId": 349,
+  "CustomerId": 11,
+  "InvoiceDate": "2013-03-18 00:00:00",
+  "BillingAddress": "Av. Paulista, 2022",
+  "BillingCity": "São Paulo",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "01310-200",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd38"
+  },
+  "InvoiceId": 350,
+  "CustomerId": 12,
+  "InvoiceDate": "2013-03-31 00:00:00",
+  "BillingAddress": "Praça Pio X, 119",
+  "BillingCity": "Rio de Janeiro",
+  "BillingState": "RJ",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "20040-020",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd39"
+  },
+  "InvoiceId": 351,
+  "CustomerId": 14,
+  "InvoiceDate": "2013-03-31 00:00:00",
+  "BillingAddress": "8210 111 ST NW",
+  "BillingCity": "Edmonton",
+  "BillingState": "AB",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "T6G 2C7",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd3a"
+  },
+  "InvoiceId": 352,
+  "CustomerId": 16,
+  "InvoiceDate": "2013-04-01 00:00:00",
+  "BillingAddress": "1600 Amphitheatre Parkway",
+  "BillingCity": "Mountain View",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "94043-1351",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd3b"
+  },
+  "InvoiceId": 353,
+  "CustomerId": 20,
+  "InvoiceDate": "2013-04-02 00:00:00",
+  "BillingAddress": "541 Del Medio Avenue",
+  "BillingCity": "Mountain View",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "94040-111",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd3c"
+  },
+  "InvoiceId": 354,
+  "CustomerId": 26,
+  "InvoiceDate": "2013-04-05 00:00:00",
+  "BillingAddress": "2211 W Berry Street",
+  "BillingCity": "Fort Worth",
+  "BillingState": "TX",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "76110",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd3d"
+  },
+  "InvoiceId": 355,
+  "CustomerId": 35,
+  "InvoiceDate": "2013-04-10 00:00:00",
+  "BillingAddress": "Rua dos Campeões Europeus de Viena, 4350",
+  "BillingCity": "Porto",
+  "BillingCountry": "Portugal",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd3e"
+  },
+  "InvoiceId": 356,
+  "CustomerId": 49,
+  "InvoiceDate": "2013-04-18 00:00:00",
+  "BillingAddress": "Ordynacka 10",
+  "BillingCity": "Warsaw",
+  "BillingCountry": "Poland",
+  "BillingPostalCode": "00-358",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd3f"
+  },
+  "InvoiceId": 357,
+  "CustomerId": 50,
+  "InvoiceDate": "2013-05-01 00:00:00",
+  "BillingAddress": "C/ San Bernardo 85",
+  "BillingCity": "Madrid",
+  "BillingCountry": "Spain",
+  "BillingPostalCode": "28015",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd40"
+  },
+  "InvoiceId": 358,
+  "CustomerId": 52,
+  "InvoiceDate": "2013-05-01 00:00:00",
+  "BillingAddress": "202 Hoxton Street",
+  "BillingCity": "London",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "N1 5LH",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd41"
+  },
+  "InvoiceId": 359,
+  "CustomerId": 54,
+  "InvoiceDate": "2013-05-02 00:00:00",
+  "BillingAddress": "110 Raeburn Pl",
+  "BillingCity": "Edinburgh ",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "EH4 1HH",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd42"
+  },
+  "InvoiceId": 360,
+  "CustomerId": 58,
+  "InvoiceDate": "2013-05-03 00:00:00",
+  "BillingAddress": "12,Community Centre",
+  "BillingCity": "Delhi",
+  "BillingCountry": "India",
+  "BillingPostalCode": "110017",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd43"
+  },
+  "InvoiceId": 361,
+  "CustomerId": 5,
+  "InvoiceDate": "2013-05-06 00:00:00",
+  "BillingAddress": "Klanova 9/506",
+  "BillingCity": "Prague",
+  "BillingCountry": "Czech Republic",
+  "BillingPostalCode": "14700",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd44"
+  },
+  "InvoiceId": 362,
+  "CustomerId": 14,
+  "InvoiceDate": "2013-05-11 00:00:00",
+  "BillingAddress": "8210 111 ST NW",
+  "BillingCity": "Edmonton",
+  "BillingState": "AB",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "T6G 2C7",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd45"
+  },
+  "InvoiceId": 363,
+  "CustomerId": 28,
+  "InvoiceDate": "2013-05-19 00:00:00",
+  "BillingAddress": "302 S 700 E",
+  "BillingCity": "Salt Lake City",
+  "BillingState": "UT",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "84102",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd46"
+  },
+  "InvoiceId": 364,
+  "CustomerId": 29,
+  "InvoiceDate": "2013-06-01 00:00:00",
+  "BillingAddress": "796 Dundas Street West",
+  "BillingCity": "Toronto",
+  "BillingState": "ON",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "M6J 1V1",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd47"
+  },
+  "InvoiceId": 365,
+  "CustomerId": 31,
+  "InvoiceDate": "2013-06-01 00:00:00",
+  "BillingAddress": "194A Chain Lake Drive",
+  "BillingCity": "Halifax",
+  "BillingState": "NS",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "B3S 1C5",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd48"
+  },
+  "InvoiceId": 366,
+  "CustomerId": 33,
+  "InvoiceDate": "2013-06-02 00:00:00",
+  "BillingAddress": "5112 48 Street",
+  "BillingCity": "Yellowknife",
+  "BillingState": "NT",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "X1A 1N6",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd49"
+  },
+  "InvoiceId": 367,
+  "CustomerId": 37,
+  "InvoiceDate": "2013-06-03 00:00:00",
+  "BillingAddress": "Berger Straße 10",
+  "BillingCity": "Frankfurt",
+  "BillingCountry": "Germany",
+  "BillingPostalCode": "60316",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd4a"
+  },
+  "InvoiceId": 368,
+  "CustomerId": 43,
+  "InvoiceDate": "2013-06-06 00:00:00",
+  "BillingAddress": "68, Rue Jouvence",
+  "BillingCity": "Dijon",
+  "BillingCountry": "France",
+  "BillingPostalCode": "21000",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd4b"
+  },
+  "InvoiceId": 369,
+  "CustomerId": 52,
+  "InvoiceDate": "2013-06-11 00:00:00",
+  "BillingAddress": "202 Hoxton Street",
+  "BillingCity": "London",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "N1 5LH",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd4c"
+  },
+  "InvoiceId": 370,
+  "CustomerId": 7,
+  "InvoiceDate": "2013-06-19 00:00:00",
+  "BillingAddress": "Rotenturmstraße 4, 1010 Innere Stadt",
+  "BillingCity": "Vienne",
+  "BillingCountry": "Austria",
+  "BillingPostalCode": "1010",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd4d"
+  },
+  "InvoiceId": 371,
+  "CustomerId": 8,
+  "InvoiceDate": "2013-07-02 00:00:00",
+  "BillingAddress": "Grétrystraat 63",
+  "BillingCity": "Brussels",
+  "BillingCountry": "Belgium",
+  "BillingPostalCode": "1000",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd4e"
+  },
+  "InvoiceId": 372,
+  "CustomerId": 10,
+  "InvoiceDate": "2013-07-02 00:00:00",
+  "BillingAddress": "Rua Dr. Falcão Filho, 155",
+  "BillingCity": "São Paulo",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "01007-010",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd4f"
+  },
+  "InvoiceId": 373,
+  "CustomerId": 12,
+  "InvoiceDate": "2013-07-03 00:00:00",
+  "BillingAddress": "Praça Pio X, 119",
+  "BillingCity": "Rio de Janeiro",
+  "BillingState": "RJ",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "20040-020",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd50"
+  },
+  "InvoiceId": 374,
+  "CustomerId": 16,
+  "InvoiceDate": "2013-07-04 00:00:00",
+  "BillingAddress": "1600 Amphitheatre Parkway",
+  "BillingCity": "Mountain View",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "94043-1351",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd51"
+  },
+  "InvoiceId": 375,
+  "CustomerId": 22,
+  "InvoiceDate": "2013-07-07 00:00:00",
+  "BillingAddress": "120 S Orange Ave",
+  "BillingCity": "Orlando",
+  "BillingState": "FL",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "32801",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd52"
+  },
+  "InvoiceId": 376,
+  "CustomerId": 31,
+  "InvoiceDate": "2013-07-12 00:00:00",
+  "BillingAddress": "194A Chain Lake Drive",
+  "BillingCity": "Halifax",
+  "BillingState": "NS",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "B3S 1C5",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd53"
+  },
+  "InvoiceId": 377,
+  "CustomerId": 45,
+  "InvoiceDate": "2013-07-20 00:00:00",
+  "BillingAddress": "Erzsébet krt. 58.",
+  "BillingCity": "Budapest",
+  "BillingCountry": "Hungary",
+  "BillingPostalCode": "H-1073",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd54"
+  },
+  "InvoiceId": 378,
+  "CustomerId": 46,
+  "InvoiceDate": "2013-08-02 00:00:00",
+  "BillingAddress": "3 Chatham Street",
+  "BillingCity": "Dublin",
+  "BillingState": "Dublin",
+  "BillingCountry": "Ireland",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd55"
+  },
+  "InvoiceId": 379,
+  "CustomerId": 48,
+  "InvoiceDate": "2013-08-02 00:00:00",
+  "BillingAddress": "Lijnbaansgracht 120bg",
+  "BillingCity": "Amsterdam",
+  "BillingState": "VV",
+  "BillingCountry": "Netherlands",
+  "BillingPostalCode": "1016",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd56"
+  },
+  "InvoiceId": 380,
+  "CustomerId": 50,
+  "InvoiceDate": "2013-08-03 00:00:00",
+  "BillingAddress": "C/ San Bernardo 85",
+  "BillingCity": "Madrid",
+  "BillingCountry": "Spain",
+  "BillingPostalCode": "28015",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd57"
+  },
+  "InvoiceId": 381,
+  "CustomerId": 54,
+  "InvoiceDate": "2013-08-04 00:00:00",
+  "BillingAddress": "110 Raeburn Pl",
+  "BillingCity": "Edinburgh ",
+  "BillingCountry": "United Kingdom",
+  "BillingPostalCode": "EH4 1HH",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd58"
+  },
+  "InvoiceId": 382,
+  "CustomerId": 1,
+  "InvoiceDate": "2013-08-07 00:00:00",
+  "BillingAddress": "Av. Brigadeiro Faria Lima, 2170",
+  "BillingCity": "São José dos Campos",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "12227-000",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd59"
+  },
+  "InvoiceId": 383,
+  "CustomerId": 10,
+  "InvoiceDate": "2013-08-12 00:00:00",
+  "BillingAddress": "Rua Dr. Falcão Filho, 155",
+  "BillingCity": "São Paulo",
+  "BillingState": "SP",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "01007-010",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd5a"
+  },
+  "InvoiceId": 384,
+  "CustomerId": 24,
+  "InvoiceDate": "2013-08-20 00:00:00",
+  "BillingAddress": "162 E Superior Street",
+  "BillingCity": "Chicago",
+  "BillingState": "IL",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "60611",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd5b"
+  },
+  "InvoiceId": 385,
+  "CustomerId": 25,
+  "InvoiceDate": "2013-09-02 00:00:00",
+  "BillingAddress": "319 N. Frances Street",
+  "BillingCity": "Madison",
+  "BillingState": "WI",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "53703",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd5c"
+  },
+  "InvoiceId": 386,
+  "CustomerId": 27,
+  "InvoiceDate": "2013-09-02 00:00:00",
+  "BillingAddress": "1033 N Park Ave",
+  "BillingCity": "Tucson",
+  "BillingState": "AZ",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "85719",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd5d"
+  },
+  "InvoiceId": 387,
+  "CustomerId": 29,
+  "InvoiceDate": "2013-09-03 00:00:00",
+  "BillingAddress": "796 Dundas Street West",
+  "BillingCity": "Toronto",
+  "BillingState": "ON",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "M6J 1V1",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd5e"
+  },
+  "InvoiceId": 388,
+  "CustomerId": 33,
+  "InvoiceDate": "2013-09-04 00:00:00",
+  "BillingAddress": "5112 48 Street",
+  "BillingCity": "Yellowknife",
+  "BillingState": "NT",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "X1A 1N6",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd5f"
+  },
+  "InvoiceId": 389,
+  "CustomerId": 39,
+  "InvoiceDate": "2013-09-07 00:00:00",
+  "BillingAddress": "4, Rue Milton",
+  "BillingCity": "Paris",
+  "BillingCountry": "France",
+  "BillingPostalCode": "75009",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd60"
+  },
+  "InvoiceId": 390,
+  "CustomerId": 48,
+  "InvoiceDate": "2013-09-12 00:00:00",
+  "BillingAddress": "Lijnbaansgracht 120bg",
+  "BillingCity": "Amsterdam",
+  "BillingState": "VV",
+  "BillingCountry": "Netherlands",
+  "BillingPostalCode": "1016",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd61"
+  },
+  "InvoiceId": 391,
+  "CustomerId": 3,
+  "InvoiceDate": "2013-09-20 00:00:00",
+  "BillingAddress": "1498 rue Bélanger",
+  "BillingCity": "Montréal",
+  "BillingState": "QC",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "H2G 1A7",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd62"
+  },
+  "InvoiceId": 392,
+  "CustomerId": 4,
+  "InvoiceDate": "2013-10-03 00:00:00",
+  "BillingAddress": "Ullevålsveien 14",
+  "BillingCity": "Oslo",
+  "BillingCountry": "Norway",
+  "BillingPostalCode": "0171",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd63"
+  },
+  "InvoiceId": 393,
+  "CustomerId": 6,
+  "InvoiceDate": "2013-10-03 00:00:00",
+  "BillingAddress": "Rilská 3174/6",
+  "BillingCity": "Prague",
+  "BillingCountry": "Czech Republic",
+  "BillingPostalCode": "14300",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd64"
+  },
+  "InvoiceId": 394,
+  "CustomerId": 8,
+  "InvoiceDate": "2013-10-04 00:00:00",
+  "BillingAddress": "Grétrystraat 63",
+  "BillingCity": "Brussels",
+  "BillingCountry": "Belgium",
+  "BillingPostalCode": "1000",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd65"
+  },
+  "InvoiceId": 395,
+  "CustomerId": 12,
+  "InvoiceDate": "2013-10-05 00:00:00",
+  "BillingAddress": "Praça Pio X, 119",
+  "BillingCity": "Rio de Janeiro",
+  "BillingState": "RJ",
+  "BillingCountry": "Brazil",
+  "BillingPostalCode": "20040-020",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd66"
+  },
+  "InvoiceId": 396,
+  "CustomerId": 18,
+  "InvoiceDate": "2013-10-08 00:00:00",
+  "BillingAddress": "627 Broadway",
+  "BillingCity": "New York",
+  "BillingState": "NY",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "10012-2612",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd67"
+  },
+  "InvoiceId": 397,
+  "CustomerId": 27,
+  "InvoiceDate": "2013-10-13 00:00:00",
+  "BillingAddress": "1033 N Park Ave",
+  "BillingCity": "Tucson",
+  "BillingState": "AZ",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "85719",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd68"
+  },
+  "InvoiceId": 398,
+  "CustomerId": 41,
+  "InvoiceDate": "2013-10-21 00:00:00",
+  "BillingAddress": "11, Place Bellecour",
+  "BillingCity": "Lyon",
+  "BillingCountry": "France",
+  "BillingPostalCode": "69002",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd69"
+  },
+  "InvoiceId": 399,
+  "CustomerId": 42,
+  "InvoiceDate": "2013-11-03 00:00:00",
+  "BillingAddress": "9, Place Louis Barthou",
+  "BillingCity": "Bordeaux",
+  "BillingCountry": "France",
+  "BillingPostalCode": "33000",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd6a"
+  },
+  "InvoiceId": 400,
+  "CustomerId": 44,
+  "InvoiceDate": "2013-11-03 00:00:00",
+  "BillingAddress": "Porthaninkatu 9",
+  "BillingCity": "Helsinki",
+  "BillingCountry": "Finland",
+  "BillingPostalCode": "00530",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd6b"
+  },
+  "InvoiceId": 401,
+  "CustomerId": 46,
+  "InvoiceDate": "2013-11-04 00:00:00",
+  "BillingAddress": "3 Chatham Street",
+  "BillingCity": "Dublin",
+  "BillingState": "Dublin",
+  "BillingCountry": "Ireland",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd6c"
+  },
+  "InvoiceId": 402,
+  "CustomerId": 50,
+  "InvoiceDate": "2013-11-05 00:00:00",
+  "BillingAddress": "C/ San Bernardo 85",
+  "BillingCity": "Madrid",
+  "BillingCountry": "Spain",
+  "BillingPostalCode": "28015",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd6d"
+  },
+  "InvoiceId": 403,
+  "CustomerId": 56,
+  "InvoiceDate": "2013-11-08 00:00:00",
+  "BillingAddress": "307 Macacha Güemes",
+  "BillingCity": "Buenos Aires",
+  "BillingCountry": "Argentina",
+  "BillingPostalCode": "1106",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd6e"
+  },
+  "InvoiceId": 404,
+  "CustomerId": 6,
+  "InvoiceDate": "2013-11-13 00:00:00",
+  "BillingAddress": "Rilská 3174/6",
+  "BillingCity": "Prague",
+  "BillingCountry": "Czech Republic",
+  "BillingPostalCode": "14300",
+  "Total": {
+    "$numberDecimal": "25.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd6f"
+  },
+  "InvoiceId": 405,
+  "CustomerId": 20,
+  "InvoiceDate": "2013-11-21 00:00:00",
+  "BillingAddress": "541 Del Medio Avenue",
+  "BillingCity": "Mountain View",
+  "BillingState": "CA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "94040-111",
+  "Total": {
+    "$numberDecimal": "0.99"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd70"
+  },
+  "InvoiceId": 406,
+  "CustomerId": 21,
+  "InvoiceDate": "2013-12-04 00:00:00",
+  "BillingAddress": "801 W 4th Street",
+  "BillingCity": "Reno",
+  "BillingState": "NV",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "89503",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd71"
+  },
+  "InvoiceId": 407,
+  "CustomerId": 23,
+  "InvoiceDate": "2013-12-04 00:00:00",
+  "BillingAddress": "69 Salem Street",
+  "BillingCity": "Boston",
+  "BillingState": "MA",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "2113",
+  "Total": {
+    "$numberDecimal": "1.98"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd72"
+  },
+  "InvoiceId": 408,
+  "CustomerId": 25,
+  "InvoiceDate": "2013-12-05 00:00:00",
+  "BillingAddress": "319 N. Frances Street",
+  "BillingCity": "Madison",
+  "BillingState": "WI",
+  "BillingCountry": "USA",
+  "BillingPostalCode": "53703",
+  "Total": {
+    "$numberDecimal": "3.96"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd73"
+  },
+  "InvoiceId": 409,
+  "CustomerId": 29,
+  "InvoiceDate": "2013-12-06 00:00:00",
+  "BillingAddress": "796 Dundas Street West",
+  "BillingCity": "Toronto",
+  "BillingState": "ON",
+  "BillingCountry": "Canada",
+  "BillingPostalCode": "M6J 1V1",
+  "Total": {
+    "$numberDecimal": "5.94"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd74"
+  },
+  "InvoiceId": 410,
+  "CustomerId": 35,
+  "InvoiceDate": "2013-12-09 00:00:00",
+  "BillingAddress": "Rua dos Campeões Europeus de Viena, 4350",
+  "BillingCity": "Porto",
+  "BillingCountry": "Portugal",
+  "Total": {
+    "$numberDecimal": "8.91"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd75"
+  },
+  "InvoiceId": 411,
+  "CustomerId": 44,
+  "InvoiceDate": "2013-12-14 00:00:00",
+  "BillingAddress": "Porthaninkatu 9",
+  "BillingCity": "Helsinki",
+  "BillingCountry": "Finland",
+  "BillingPostalCode": "00530",
+  "Total": {
+    "$numberDecimal": "13.86"
+  }
+},
+{
+  "_id": {
+    "$oid": "66135e86eed2c00176f6fd76"
+  },
+  "InvoiceId": 412,
+  "CustomerId": 58,
+  "InvoiceDate": "2013-12-22 00:00:00",
+  "BillingAddress": "12,Community Centre",
+  "BillingCity": "Delhi",
+  "BillingCountry": "India",
+  "BillingPostalCode": "110017",
+  "Total": {
+    "$numberDecimal": "1.99"
+  }
+}]

@@ -19,6 +19,14 @@ impl Pipeline {
         self.stages.append(&mut other.stages);
     }
 
+    pub fn empty() -> Pipeline {
+        Pipeline { stages: vec![] }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.stages.is_empty()
+    }
+
     pub fn push(&mut self, stage: Stage) {
         self.stages.push(stage);
     }

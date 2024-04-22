@@ -13,14 +13,8 @@ use mockall::automock;
 
 use super::Pipeline;
 
-// In MockCollectionTrait the cursor types are implemented using `Iter` which is a struct that
-// wraps around and iterator, and implements `Stream` (and by extension implements `TryStreamExt`).
-// I didn't know how to allow any Iterator type here, so I specified the type that is produced when
-// calling `into_iter` on a `Vec`. - Jesse H.
-//
-// To produce a mock stream use the `mock_stream` function in the `test_helpers` module.
 #[cfg(test)]
-type MockCursor<T> = futures::stream::Iter<<Vec<Result<T, Error>> as IntoIterator>::IntoIter>;
+use super::test_helpers::MockCursor;
 
 /// Abstract MongoDB collection methods. This lets us mock a database connection in tests. The
 /// automock attribute generates a struct called MockCollectionTrait that implements this trait.

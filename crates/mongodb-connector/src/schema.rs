@@ -1,145 +1,25 @@
 use lazy_static::lazy_static;
-use mongodb_support::BsonScalarType;
 use std::collections::BTreeMap;
 
-use configuration::{native_procedure::NativeProcedure, schema, Configuration};
-use ndc_sdk::{connector, models};
+use configuration::Configuration;
+use ndc_sdk::{connector::SchemaError, models as ndc};
 
 use crate::capabilities;
 
 lazy_static! {
-    pub static ref SCALAR_TYPES: BTreeMap<String, models::ScalarType> =
-        capabilities::scalar_types();
+    pub static ref SCALAR_TYPES: BTreeMap<String, ndc::ScalarType> = capabilities::scalar_types();
 }
 
-pub async fn get_schema(
-    config: &Configuration,
-) -> Result<models::SchemaResponse, connector::SchemaError> {
-    let schema = &config.schema;
-    let object_types = config.object_types().map(map_object_type).collect();
-    let collections = schema.collections.iter().map(|(collection_name, collection)| map_collection(&object_types, collection_name, collection)).collect();
-
-    let procedures = config
-        .native_procedures
-        .iter()
-        .map(native_procedure_to_procedure)
-        .collect();
-
-    Ok(models::SchemaResponse {
-        collections,
-        object_types,
+pub async fn get_schema(config: &Configuration) -> Result<ndc::SchemaResponse, SchemaError> {
+    Ok(ndc::SchemaResponse {
+        collections: config.collections.values().cloned().collect(),
+        functions: config.functions.values().map(|(f, _)| f).cloned().collect(),
+        procedures: config.procedures.values().cloned().collect(),
+        object_types: config
+            .object_types
+            .iter()
+            .map(|(name, object_type)| (name.clone(), object_type.clone().into()))
+            .collect(),
         scalar_types: SCALAR_TYPES.clone(),
-        functions: Default::default(),
-        procedures,
     })
-}
-
-fn map_object_type(
-    (name, object_type): (&String, &schema::ObjectType),
-) -> (String, models::ObjectType) {
-    (
-        name.clone(),
-        models::ObjectType {
-            fields: map_field_infos(&object_type.fields),
-            description: object_type.description.clone(),
-        },
-    )
-}
-
-fn map_field_infos(
-    fields: &BTreeMap<String, schema::ObjectField>,
-) -> BTreeMap<String, models::ObjectField> {
-    fields
-        .iter()
-        .map(|(name, field)| {
-            (
-                name.clone(),
-                models::ObjectField {
-                    r#type: map_type(&field.r#type),
-                    description: field.description.clone(),
-                },
-            )
-        })
-        .collect()
-}
-
-fn map_type(t: &schema::Type) -> models::Type {
-    fn map_normalized_type(t: &schema::Type) -> models::Type {
-        match t {
-            // ExtendedJSON can respresent any BSON value, including null, so it is always nullable
-            schema::Type::ExtendedJSON => models::Type::Nullable {
-                underlying_type: Box::new(models::Type::Named {
-                    name: mongodb_support::EXTENDED_JSON_TYPE_NAME.to_owned(),
-                }),
-            },
-            schema::Type::Scalar(t) => models::Type::Named {
-                name: t.graphql_name(),
-            },
-            schema::Type::Object(t) => models::Type::Named { name: t.clone() },
-            schema::Type::ArrayOf(t) => models::Type::Array {
-                element_type: Box::new(map_normalized_type(t)),
-            },
-            schema::Type::Nullable(t) => models::Type::Nullable {
-                underlying_type: Box::new(map_normalized_type(t)),
-            },
-        }
-    }
-    map_normalized_type(&t.clone().normalize_type())
-}
-
-fn get_primary_key_uniqueness_constraint(object_types: &BTreeMap<String, models::ObjectType>, name: &str, collection: &schema::Collection) -> Option<(String, models::UniquenessConstraint)> {
-    // Check to make sure our collection's object type contains the _id objectid field
-    // If it doesn't (should never happen, all collections need an _id column), don't generate the constraint
-    let object_type = object_types.get(&collection.r#type)?;
-    let id_field = object_type.fields.get("_id")?;
-    match &id_field.r#type {
-        models::Type::Named { name } => {
-            if *name == BsonScalarType::ObjectId.graphql_name() { Some(()) } else { None }
-        },
-        models::Type::Nullable { .. } => None,
-        models::Type::Array { .. } => None,
-        models::Type::Predicate { .. } => None,
-    }?;
-    let uniqueness_constraint = models::UniquenessConstraint {
-        unique_columns: vec!["_id".into()]
-    };
-    let constraint_name = format!("{}_id", name);
-    Some((constraint_name, uniqueness_constraint))
-}
-
-fn map_collection(object_types: &BTreeMap<String, models::ObjectType>, name: &str, collection: &schema::Collection) -> models::CollectionInfo {
-    let pk_constraint = get_primary_key_uniqueness_constraint(object_types, name, collection);
-
-    models::CollectionInfo {
-        name: name.to_owned(),
-        collection_type: collection.r#type.clone(),
-        description: collection.description.clone(),
-        arguments: Default::default(),
-        foreign_keys: Default::default(),
-        uniqueness_constraints: BTreeMap::from_iter(pk_constraint),
-    }
-}
-
-fn native_procedure_to_procedure(
-    (procedure_name, procedure): (&String, &NativeProcedure),
-) -> models::ProcedureInfo {
-    let arguments = procedure
-        .arguments
-        .iter()
-        .map(|(name, field)| {
-            (
-                name.clone(),
-                models::ArgumentInfo {
-                    argument_type: map_type(&field.r#type),
-                    description: field.description.clone(),
-                },
-            )
-        })
-        .collect();
-    models::ProcedureInfo {
-        name: procedure_name.clone(),
-        description: procedure.description.clone(),
-        arguments,
-        result_type: map_type(&procedure.result_type),
-    }
 }

@@ -6,6 +6,9 @@ pub enum ConversionError {
     #[error("The connector does not yet support {0}")]
     NotImplemented(&'static str),
 
+    #[error("The target of the query, {0}, is a function whose result type is not an object type")]
+    RootTypeIsNotObject(String),
+
     #[error("{0}")]
     TypeMismatch(String),
 

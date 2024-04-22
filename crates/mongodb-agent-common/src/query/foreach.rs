@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use configuration::Configuration;
 use dc_api_types::comparison_column::ColumnSelector;
 use dc_api_types::{
     BinaryComparisonOperator, ComparisonColumn, ComparisonValue, Expression, QueryRequest,
@@ -54,6 +55,7 @@ pub fn foreach_variants(query_request: &QueryRequest) -> Option<Vec<ForeachVaria
 /// indicates whether the response requires post-processing in the agent.
 pub fn pipeline_for_foreach(
     foreach: Vec<ForeachVariant>,
+    config: &Configuration,
     query_request: &QueryRequest,
 ) -> Result<(Pipeline, ResponseShape), MongoAgentError> {
     let pipelines_with_response_shapes: Vec<(String, (Pipeline, ResponseShape))> = foreach
@@ -74,7 +76,8 @@ pub fn pipeline_for_foreach(
                 .into();
             }
 
-            let pipeline_with_response_shape = pipeline_for_non_foreach(variables.as_ref(), &q)?;
+            let pipeline_with_response_shape =
+                pipeline_for_non_foreach(config, variables.as_ref(), &q)?;
             Ok((facet_name(index), pipeline_with_response_shape))
         })
         .collect::<Result<_, MongoAgentError>>()?;
@@ -136,15 +139,12 @@ mod tests {
     use dc_api_types::{
         BinaryComparisonOperator, ComparisonColumn, Field, Query, QueryRequest, QueryResponse,
     };
-    use mongodb::{
-        bson::{doc, from_document},
-        options::AggregateOptions,
-    };
+    use mongodb::bson::{bson, Bson};
     use pretty_assertions::assert_eq;
-    use serde_json::{from_value, json, to_value};
+    use serde_json::{from_value, json};
 
     use crate::{
-        mongodb::{test_helpers::mock_stream, MockCollectionTrait},
+        mongodb::test_helpers::mock_collection_aggregate_response_for_pipeline,
         query::execute_query_request::execute_query_request,
     };
 
@@ -173,7 +173,7 @@ mod tests {
             ]
         }))?;
 
-        let expected_pipeline = json!([
+        let expected_pipeline = bson!([
             {
                 "$facet": {
                     "__FACET___0": [
@@ -223,34 +223,32 @@ mod tests {
             ]
         }))?;
 
-        let mut collection = MockCollectionTrait::new();
-        collection
-            .expect_aggregate()
-            .returning(move |pipeline, _: Option<AggregateOptions>| {
-                assert_eq!(expected_pipeline, to_value(pipeline).unwrap());
-                Ok(mock_stream(vec![Ok(from_document(doc! {
-                    "rows": [
-                        {
-                            "query": {
-                                "rows": [
-                                    { "albumId": 1, "title": "For Those About To Rock We Salute You" },
-                                    { "albumId": 4, "title": "Let There Be Rock" }
-                                ]
-                            }
-                        },
-                        {
-                            "query": {
-                                "rows": [
-                                    { "albumId": 2, "title": "Balls to the Wall" },
-                                    { "albumId": 3, "title": "Restless and Wild" }
-                                ]
-                            }
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "tracks",
+            expected_pipeline,
+            bson!([{
+                "rows": [
+                    {
+                        "query": {
+                            "rows": [
+                                { "albumId": 1, "title": "For Those About To Rock We Salute You" },
+                                { "albumId": 4, "title": "Let There Be Rock" }
+                            ]
                         }
-                    ],
-                })?)]))
-            });
+                    },
+                    {
+                        "query": {
+                            "rows": [
+                                { "albumId": 2, "title": "Balls to the Wall" },
+                                { "albumId": 3, "title": "Restless and Wild" }
+                            ]
+                        }
+                    }
+                ],
+            }]),
+        );
 
-        let result = execute_query_request(&collection, query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -284,7 +282,7 @@ mod tests {
             ]
         }))?;
 
-        let expected_pipeline = json!([
+        let expected_pipeline = bson!([
             {
                 "$facet": {
                     "__FACET___0": [
@@ -364,40 +362,38 @@ mod tests {
             ]
         }))?;
 
-        let mut collection = MockCollectionTrait::new();
-        collection
-            .expect_aggregate()
-            .returning(move |pipeline, _: Option<AggregateOptions>| {
-                assert_eq!(expected_pipeline, to_value(pipeline).unwrap());
-                Ok(mock_stream(vec![Ok(from_document(doc! {
-                    "rows": [
-                        {
-                            "query": {
-                                "aggregates": {
-                                    "count": 2,
-                                },
-                                "rows": [
-                                    { "albumId": 1, "title": "For Those About To Rock We Salute You" },
-                                    { "albumId": 4, "title": "Let There Be Rock" }
-                                ]
-                            }
-                        },
-                        {
-                            "query": {
-                                "aggregates": {
-                                    "count": 2,
-                                },
-                                "rows": [
-                                    { "albumId": 2, "title": "Balls to the Wall" },
-                                    { "albumId": 3, "title": "Restless and Wild" }
-                                ]
-                            }
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "tracks",
+            expected_pipeline,
+            bson!([{
+                "rows": [
+                    {
+                        "query": {
+                            "aggregates": {
+                                "count": 2,
+                            },
+                            "rows": [
+                                { "albumId": 1, "title": "For Those About To Rock We Salute You" },
+                                { "albumId": 4, "title": "Let There Be Rock" }
+                            ]
                         }
-                    ],
-                })?)]))
-            });
+                    },
+                    {
+                        "query": {
+                            "aggregates": {
+                                "count": 2,
+                            },
+                            "rows": [
+                                { "albumId": 2, "title": "Balls to the Wall" },
+                                { "albumId": 3, "title": "Restless and Wild" }
+                            ]
+                        }
+                    }
+                ]
+            }]),
+        );
 
-        let result = execute_query_request(&collection, query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -414,6 +410,7 @@ mod tests {
             ),
             target: dc_api_types::Target::TTable {
                 name: vec!["tracks".to_owned()],
+                arguments: Default::default(),
             },
             relationships: Default::default(),
             query: Box::new(Query {
@@ -454,8 +451,8 @@ mod tests {
             }),
         };
 
-        fn facet(artist_id: i32) -> serde_json::Value {
-            json!([
+        fn facet(artist_id: i32) -> Bson {
+            bson!([
                 { "$match": { "artistId": {"$eq": artist_id } } },
                 { "$replaceWith": {
                     "albumId": { "$ifNull": ["$albumId", null] },
@@ -464,7 +461,7 @@ mod tests {
             ])
         }
 
-        let expected_pipeline = json!([
+        let expected_pipeline = bson!([
             {
                 "$facet": {
                     "__FACET___0": facet(1),
@@ -531,47 +528,45 @@ mod tests {
             ]
         }))?;
 
-        let mut collection = MockCollectionTrait::new();
-        collection
-            .expect_aggregate()
-            .returning(move |pipeline, _: Option<AggregateOptions>| {
-                assert_eq!(expected_pipeline, to_value(pipeline).unwrap());
-                Ok(mock_stream(vec![Ok(from_document(doc! {
-                    "rows": [
-                        {
-                            "query": {
-                                "rows": [
-                                    { "albumId": 1, "title": "For Those About To Rock We Salute You" },
-                                    { "albumId": 4, "title": "Let There Be Rock" }
-                                ]
-                            }
-                        },
-                        {
-                            "query": {
-                                "rows": []
-                            }
-                        },
-                        {
-                            "query": {
-                                "rows": [
-                                    { "albumId": 2, "title": "Balls to the Wall" },
-                                    { "albumId": 3, "title": "Restless and Wild" }
-                                ]
-                            }
-                        },
-                        { "query": { "rows": [] } },
-                        { "query": { "rows": [] } },
-                        { "query": { "rows": [] } },
-                        { "query": { "rows": [] } },
-                        { "query": { "rows": [] } },
-                        { "query": { "rows": [] } },
-                        { "query": { "rows": [] } },
-                        { "query": { "rows": [] } },
-                    ],
-                })?)]))
-            });
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "tracks",
+            expected_pipeline,
+            bson!([{
+                "rows": [
+                    {
+                        "query": {
+                            "rows": [
+                                { "albumId": 1, "title": "For Those About To Rock We Salute You" },
+                                { "albumId": 4, "title": "Let There Be Rock" }
+                            ]
+                        }
+                    },
+                    {
+                        "query": {
+                            "rows": []
+                        }
+                    },
+                    {
+                        "query": {
+                            "rows": [
+                                { "albumId": 2, "title": "Balls to the Wall" },
+                                { "albumId": 3, "title": "Restless and Wild" }
+                            ]
+                        }
+                    },
+                    { "query": { "rows": [] } },
+                    { "query": { "rows": [] } },
+                    { "query": { "rows": [] } },
+                    { "query": { "rows": [] } },
+                    { "query": { "rows": [] } },
+                    { "query": { "rows": [] } },
+                    { "query": { "rows": [] } },
+                    { "query": { "rows": [] } },
+                ],
+            }]),
+        );
 
-        let result = execute_query_request(&collection, query_request).await?;
+        let result = execute_query_request(db, &Default::default(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())

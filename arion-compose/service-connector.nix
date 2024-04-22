@@ -11,11 +11,12 @@
 , port ? "7130"
 , profile ? "dev" # Rust crate profile, usually either "dev" or "release"
 , hostPort ? null
-, command ? "serve"
+, command ? ["serve"]
 , configuration-dir ? ../fixtures/connector/sample_mflix
 , database-uri ? "mongodb://mongodb/sample_mflix"
 , service ? { } # additional options to customize this service configuration
 , otlp-endpoint ? null
+, extra-volumes ? [],
 }:
 
 let
@@ -26,8 +27,7 @@ let
     command = [
       # mongodb-connector is added to pkgs via an overlay in flake.nix
       "${connector-pkg}/bin/mongodb-connector"
-      command
-    ];
+    ] ++ command;
     ports = pkgs.lib.optionals (hostPort != null) [
       "${hostPort}:${port}" # host:container
     ];
@@ -41,7 +41,7 @@ let
     };
     volumes = [
       "${configuration-dir}:/configuration:ro"
-    ];
+    ] ++ extra-volumes;
     healthcheck = {
       test = [ "CMD" "${pkgs.pkgsCross.linux.curl}/bin/curl" "-f" "http://localhost:${port}/health" ];
       start_period = "5s";
