@@ -83,12 +83,9 @@ pub fn pipeline_for_foreach(
         .collect::<Result<_, MongoAgentError>>()?;
 
     let selection = Selection(doc! {
-        "rows": pipelines_with_response_shapes.iter().map(|(key, (_, response_shape))| doc! {
-            "query": match response_shape {
-                ResponseShape::ListOfRows => doc! { "rows": format!("${key}") }.into(),
-                ResponseShape::SingleObject => Bson::String(format!("${key}")),
-            }
-        }).collect::<Vec<_>>()
+        "row_sets": pipelines_with_response_shapes.iter().map(|(key, (_, response_shape))|
+            Bson::String(format!("${key}")),
+        ).collect::<Vec<_>>()
     });
 
     let queries = pipelines_with_response_shapes

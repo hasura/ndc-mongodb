@@ -21,11 +21,10 @@ use ndc_sdk::{
 use tracing::instrument;
 
 use crate::{
-    api_type_conversions::{
-        v2_to_v3_explain_response, v2_to_v3_query_response, v3_to_v2_query_request,
-    },
+    api_type_conversions::{v2_to_v3_explain_response, v3_to_v2_query_request},
     error_mapping::{mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error},
     query_context::get_query_context,
+    query_response::serialize_query_response,
 };
 use crate::{capabilities::mongo_capabilities_response, mutation::handle_mutation_request};
 
@@ -143,10 +142,11 @@ impl Connector for MongoConnector {
         request: QueryRequest,
     ) -> Result<JsonResponse<QueryResponse>, QueryError> {
         tracing::debug!(query_request = %serde_json::to_string(&request).unwrap(), "received query request");
-        let v2_request = v3_to_v2_query_request(&get_query_context(configuration), request)?;
-        let response = handle_query_request(configuration, state, v2_request)
+        let v2_request =
+            v3_to_v2_query_request(&get_query_context(configuration), request.clone())?;
+        let response_documents = handle_query_request(configuration, state, v2_request)
             .await
             .map_err(mongo_agent_error_to_query_error)?;
-        Ok(v2_to_v3_query_response(response).into())
+        Ok(serialize_query_response(configuration, &request, response_documents)?.into())
     }
 }

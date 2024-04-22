@@ -8,5 +8,5 @@ mod query_traversal;
 pub use self::{
     conversion_error::ConversionError,
     query_request::{v3_to_v2_query_request, QueryContext},
-    query_response::{v2_to_v3_explain_response, v2_to_v3_query_response},
+    query_response::v2_to_v3_explain_response,
 };

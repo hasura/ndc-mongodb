@@ -4,6 +4,7 @@ mod error_mapping;
 mod mongo_connector;
 mod mutation;
 mod query_context;
+mod query_response;
 mod schema;
 
 use std::error::Error;

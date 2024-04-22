@@ -12,7 +12,8 @@ mod relations;
 pub mod serialization;
 
 use configuration::Configuration;
-use dc_api_types::{QueryRequest, QueryResponse};
+use dc_api_types::QueryRequest;
+use mongodb::bson;
 
 use self::execute_query_request::execute_query_request;
 pub use self::{
@@ -27,7 +28,7 @@ pub async fn handle_query_request(
     config: &Configuration,
     state: &ConnectorState,
     query_request: QueryRequest,
-) -> Result<QueryResponse, MongoAgentError> {
+) -> Result<Vec<bson::Document>, MongoAgentError> {
     let database = state.database();
     // This function delegates to another function which gives is a point to inject a mock database
     // implementation for testing.
@@ -37,7 +38,7 @@ pub async fn handle_query_request(
 #[cfg(test)]
 mod tests {
     use dc_api_types::{QueryRequest, QueryResponse, RowSet};
-    use mongodb::bson::{self, bson};
+    use mongodb::bson::{self, bson, doc};
     use pretty_assertions::assert_eq;
     use serde_json::{from_value, json};
 
@@ -64,12 +65,12 @@ mod tests {
             "relationships": [],
         }))?;
 
-        let expected_response: QueryResponse = from_value(json!({
+        let expected_response = doc! {
             "rows": [
                 { "student_gpa": 3.1 },
                 { "student_gpa": 3.6 },
             ],
-        }))?;
+        };
 
         let expected_pipeline = bson!([
             { "$match": { "gpa": { "$lt": 4.0 } } },
