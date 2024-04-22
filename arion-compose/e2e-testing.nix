@@ -9,7 +9,7 @@ in
   project.name = "mongodb-e2e-testing";
 
   services = {
-    test = import ./service-e2e-testing.nix {
+    test = import ./services/e2e-testing.nix {
       inherit pkgs;
       engine-graphql-url = "http://engine:${engine-port}/graphql";
       service.depends_on = {
@@ -18,7 +18,7 @@ in
       };
     };
 
-    connector = import ./service-connector.nix {
+    connector = import ./services/connector.nix {
       inherit pkgs;
       configuration-dir = ../fixtures/connector/chinook;
       database-uri = "mongodb://mongodb/chinook";
@@ -26,15 +26,15 @@ in
       service.depends_on.mongodb.condition = "service_healthy";
     };
 
-    mongodb = import ./service-mongodb.nix {
+    mongodb = import ./services/mongodb.nix {
       inherit pkgs;
       port = mongodb-port;
       volumes = [
-        (import ./fixtures-mongodb.nix).chinook
+        (import ./fixtures/mongodb.nix).chinook
       ];
     };
 
-    engine = import ./service-engine.nix {
+    engine = import ./services/engine.nix {
       inherit pkgs;
       port = engine-port;
       connectors.chinook = "http://connector:${connector-port}";
@@ -44,6 +44,6 @@ in
       };
     };
 
-    auth-hook = import ./service-dev-auth-webhook.nix { inherit pkgs; };
+    auth-hook = import ./services/dev-auth-webhook.nix { inherit pkgs; };
   };
 }

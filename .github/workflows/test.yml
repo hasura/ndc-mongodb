@@ -8,8 +8,8 @@ on:
   pull_request:
 
 jobs:
-  unit_tests:
-    name: Unit Tests
+  tests:
+    name: Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout 🛎️
@@ -32,3 +32,6 @@ jobs:
 
       - name: audit for reported security problems 🔨
         run: nix build .#checks.x86_64-linux.audit --print-build-logs
+
+      - name: run integration tests 📋
+        run: nix develop --command just test-mongodb-versions

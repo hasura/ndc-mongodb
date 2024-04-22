@@ -6,6 +6,13 @@ set -euo pipefail
 FIXTURES=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 DATABASE_NAME=chinook
 
+# In v6 and later the bundled MongoDB client shell is called "mongosh". In
+# earlier versions it's called "mongo".
+MONGO_SH=mongosh
+if ! command -v mongosh &> /dev/null; then
+  MONGO_SH=mongo
+fi
+
 echo "📡 Importing Chinook into database $DATABASE_NAME..."
 
 importCollection() {
@@ -13,7 +20,7 @@ importCollection() {
   local schema_file="$FIXTURES/$collection.schema.json"
   local data_file="$FIXTURES/$collection.data.json"
   echo "🔐 Applying validation for ${collection}..."
-    mongosh --eval "
+    $MONGO_SH --eval "
         var schema = $(cat "${schema_file}");
         db.createCollection('${collection}', { validator: schema });
     " "$DATABASE_NAME"

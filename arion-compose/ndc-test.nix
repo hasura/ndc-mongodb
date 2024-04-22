@@ -7,7 +7,7 @@ in
   project.name = "mongodb-ndc-test";
 
   services = {
-    test = import ./service-connector.nix {
+    test = import ./services/connector.nix {
       inherit pkgs;
       command = ["test"];
       # Record snapshots into the snapshots dir
@@ -26,11 +26,11 @@ in
       ];
     };
 
-    mongodb = import ./service-mongodb.nix {
+    mongodb = import ./services/mongodb.nix {
       inherit pkgs;
       port = mongodb-port;
       volumes = [
-        (import ./fixtures-mongodb.nix).chinook
+        (import ./fixtures/mongodb.nix).chinook
       ];
     };
   };

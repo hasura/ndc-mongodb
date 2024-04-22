@@ -11,7 +11,7 @@ let
     rev = "325240c938c253a21f2fe54161b0c94e54f1a3a5";
   };
 
-  v3-e2e-testing = pkgs.pkgsCross.linux.callPackage ../nix/v3-e2e-testing.nix { src = v3-e2e-testing-source; database-to-test = "mongodb"; };
+  v3-e2e-testing = pkgs.pkgsCross.linux.callPackage ../../nix/v3-e2e-testing.nix { src = v3-e2e-testing-source; database-to-test = "mongodb"; };
 
   e2e-testing-service = {
     useHostStore = true;

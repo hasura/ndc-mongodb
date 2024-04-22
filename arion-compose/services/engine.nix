@@ -6,7 +6,7 @@
   # a `DataConnectorLink.definition.name` value in one of the given `ddn-dirs`
   # to correctly match up configuration to connector instances.
 , connectors ? { sample_mflix = "http://connector:7130"; }
-, ddn-dirs ? [ ../fixtures/ddn/subgraphs/sample_mflix ]
+, ddn-dirs ? [ ../../fixtures/ddn/subgraphs/sample_mflix ]
 , auth-webhook ? { url = "http://auth-hook:3050/validate-request"; }
 , otlp-endpoint ? "http://jaeger:4317"
 , service ? { } # additional options to customize this service configuration

@@ -17,11 +17,11 @@ macro_rules! target {
     };
 }
 
-pub fn root<S>(name: S) -> ndc_sdk::models::ComparisonTarget
+pub fn root<S>(name: S) -> ndc_models::ComparisonTarget
 where
     S: ToString,
 {
-    ndc_sdk::models::ComparisonTarget::RootCollectionColumn {
+    ndc_models::ComparisonTarget::RootCollectionColumn {
         name: name.to_string(),
     }
 }
