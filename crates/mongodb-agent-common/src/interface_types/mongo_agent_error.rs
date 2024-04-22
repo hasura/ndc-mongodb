@@ -15,6 +15,7 @@ pub enum MongoAgentError {
     BadCollectionSchema(String, bson::Bson, bson::de::Error),
     BadQuery(anyhow::Error),
     InvalidVariableName(String),
+    InvalidScalarTypeName(String),
     MongoDB(#[from] mongodb::error::Error),
     MongoDBDeserialization(#[from] mongodb::bson::de::Error),
     MongoDBSerialization(#[from] mongodb::bson::ser::Error),
@@ -63,6 +64,10 @@ impl MongoAgentError {
             InvalidVariableName(name) => (
                 StatusCode::BAD_REQUEST,
                 ErrorResponse::new(&format!("Column identifier includes characters that are not permitted in a MongoDB variable name: {name}"))
+            ),
+            InvalidScalarTypeName(name) => (
+                StatusCode::BAD_REQUEST,
+                ErrorResponse::new(&format!("Scalar value includes invalid type name: {name}"))
             ),
             MongoDB(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(&err)),
             MongoDBDeserialization(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(&err)),

@@ -21,13 +21,14 @@ fn bson_from_scalar_value(
     value: &serde_json::Value,
     value_type: &str,
 ) -> Result<bson::Bson, MongoAgentError> {
-    // TODO: fail on unrecognized types
     let bson_type = BsonScalarType::from_bson_name(value_type).ok();
     match bson_type {
         Some(t) => {
             json_to_bson_scalar(t, value.clone()).map_err(|e| MongoAgentError::BadQuery(anyhow!(e)))
         }
-        None => bson::to_bson(value).map_err(|e| MongoAgentError::BadQuery(anyhow!(e))),
+        None => Err(MongoAgentError::InvalidScalarTypeName(
+            value_type.to_owned(),
+        )),
     }
 }
 
