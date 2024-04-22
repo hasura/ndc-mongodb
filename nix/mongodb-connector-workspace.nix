@@ -71,7 +71,7 @@ let
     ({
       inherit src;
 
-      pname = if package != null then package else "mongodb-connector-workspace";
+      pname = "mongodb-connector-workspace";
 
       # buildInputs are compiled for the target platform that we are compiling for
       buildInputs = [
@@ -84,12 +84,6 @@ let
         pkg-config # required for non-static builds
         protobuf # required by opentelemetry-proto, a dependency of axum-tracing-opentelemetry
       ];
-
-      CARGO_PROFILE = profile;
-      cargoExtraArgs =
-        if package == null
-        then "--locked"
-        else "--locked --package ${package}";
 
     } // lib.optionalAttrs staticallyLinked {
       # Configure openssl-sys for static linking. The build script for the
@@ -110,6 +104,15 @@ let
   crate = craneLib.buildPackage
     (buildArgs // {
       inherit cargoArtifacts; # Hook up cached dependencies
+
+      pname = if package != null then package else "mongodb-connector-workspace";
+
+      CARGO_PROFILE = profile;
+      cargoExtraArgs =
+        if package == null
+        then "--locked"
+        else "--locked --package ${package}";
+
       doCheck = false;
     });
 in

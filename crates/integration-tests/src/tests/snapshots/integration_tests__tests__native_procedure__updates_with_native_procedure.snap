@@ -1,0 +1,12 @@
+---
+source: crates/integration-tests/src/tests/native_procedure.rs
+expression: "query(r#\"\n                query {\n                  artist1: artist(where: { artistId: { _eq: 5471 } }, limit: 1) {\n                    artistId\n                    name\n                  }\n                  artist2: artist(where: { artistId: { _eq: 5472 } }, limit: 1) {\n                    artistId\n                    name\n                  }\n                }\n            \"#).run().await?"
+---
+data:
+  artist1:
+    - artistId: 5471
+      name: Regina Spektor
+  artist2:
+    - artistId: 5472
+      name: Ok Go
+errors: ~

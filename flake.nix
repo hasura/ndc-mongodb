@@ -92,6 +92,7 @@
           mongodb-connector = final.mongodb-connector-workspace.override { package = "mongodb-connector"; }; # override `package` to build one specific crate
           mongodb-cli-plugin = final.mongodb-connector-workspace.override { package = "mongodb-cli-plugin"; };
           graphql-engine = final.callPackage ./nix/graphql-engine.nix { src = "${graphql-engine-source}/v3"; package = "engine"; };
+          integration-tests = final.callPackage ./nix/integration-tests.nix { };
           dev-auth-webhook = final.callPackage ./nix/dev-auth-webhook.nix { src = "${dev-auth-webhook-source}/v3/crates/hasura-authn-webhook/dev-auth-webhook"; };
 
           # Provide cross-compiled versions of each of our packages under
@@ -201,7 +202,8 @@
         default = pkgs.mkShell {
           inputsFrom = builtins.attrValues self.checks.${pkgs.buildPlatform.system};
           nativeBuildInputs = with pkgs; [
-            arion.packages.${pkgs.buildPlatform.system}.default
+            arion.packages.${pkgs.system}.default
+            cargo-insta
             just
             mongosh
             pkg-config

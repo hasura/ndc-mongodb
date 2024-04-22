@@ -8,6 +8,7 @@ members = [
   "crates/dc-api",
   "crates/dc-api-test-helpers",
   "crates/dc-api-types",
+  "crates/integration-tests",
   "crates/mongodb-agent-common",
   "crates/mongodb-connector",
   "crates/mongodb-support",
@@ -28,3 +29,8 @@ ndc-models = { git = "http://github.com/hasura/ndc-spec.git", tag = "v0.1.2" }
 [patch.crates-io.mongodb]
 git = "https://github.com/hasura/mongo-rust-driver.git"
 branch = "time-series-fix"
+
+# Set opt levels according to recommendations in insta documentation
+[profile.dev.package]
+insta.opt-level = 3
+similar.opt-level = 3

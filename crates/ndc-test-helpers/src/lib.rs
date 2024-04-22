@@ -11,7 +11,7 @@ mod field;
 use std::collections::BTreeMap;
 
 use indexmap::IndexMap;
-use ndc_sdk::models::{
+use ndc_models::{
     Aggregate, Argument, Expression, Field, OrderBy, OrderByElement, PathElement, Query,
     QueryRequest, Relationship, RelationshipArgument, RelationshipType,
 };
@@ -155,7 +155,7 @@ impl QueryBuilder {
             aggregates
                 .into_iter()
                 .map(|(name, aggregate)| (name.to_owned(), aggregate))
-                .collect()
+                .collect(),
         );
         self
     }

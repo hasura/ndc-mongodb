@@ -1,0 +1,47 @@
+---
+source: crates/integration-tests/src/tests/basic.rs
+expression: "query(r#\"\n                query Movies {\n                  movies(limit: 10, order_by: { id: Asc }) {\n                    title\n                    imdb {\n                      rating\n                      votes\n                    }\n                  }\n                }\n            \"#).run().await?"
+---
+data:
+  movies:
+    - imdb:
+        rating: 6.2
+        votes: 1189
+      title: Blacksmith Scene
+    - imdb:
+        rating: 7.4
+        votes: 9847
+      title: The Great Train Robbery
+    - imdb:
+        rating: 7.1
+        votes: 448
+      title: The Land Beyond the Sunset
+    - imdb:
+        rating: 6.6
+        votes: 1375
+      title: A Corner in Wheat
+    - imdb:
+        rating: 7.3
+        votes: 1034
+      title: "Winsor McCay, the Famous Cartoonist of the N.Y. Herald and His Moving Comics"
+    - imdb:
+        rating: 6
+        votes: 371
+      title: Traffic in Souls
+    - imdb:
+        rating: 7.3
+        votes: 1837
+      title: Gertie the Dinosaur
+    - imdb:
+        rating: 5.8
+        votes: 223
+      title: In the Land of the Head Hunters
+    - imdb:
+        rating: 7.6
+        votes: 744
+      title: The Perils of Pauline
+    - imdb:
+        rating: 6.8
+        votes: 15715
+      title: The Birth of a Nation
+errors: ~
