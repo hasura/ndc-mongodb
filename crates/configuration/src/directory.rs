@@ -164,7 +164,14 @@ where
 {
     let path = default_file_path(configuration_dir, basename);
     let bytes = serde_json::to_vec_pretty(value)?;
-    fs::write(path.clone(), bytes)
+
+    // Don't write the file if it hasn't changed.
+    if let Ok(existing_bytes) = fs::read(&path).await {
+        if bytes == existing_bytes {
+            return Ok(())
+        }
+    }
+    fs::write(&path, bytes)
         .await
         .with_context(|| format!("error writing {:?}", path))
 }
