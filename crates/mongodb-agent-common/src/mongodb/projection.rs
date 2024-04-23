@@ -63,7 +63,7 @@ fn project_field_as(parent_columns: &[&str], field: &Field) -> ProjectAs {
         }
         Field::NestedObject { column, query } => {
             let nested_parent_columns = append_to_path(parent_columns, column);
-            let fields = query.fields.clone().flatten().unwrap_or_default();
+            let fields = query.fields.clone().unwrap_or_default();
             ProjectAs::Nested(for_field_selection_helper(&nested_parent_columns, fields))
         }
         Field::NestedArray {
@@ -81,7 +81,7 @@ fn project_field_as(parent_columns: &[&str], field: &Field) -> ProjectAs {
             // TODO: Need to determine whether the relation type is "object" or "array" and project
             // accordingly
             let nested_parent_columns = append_to_path(parent_columns, relationship);
-            let fields = query.fields.clone().flatten().unwrap_or_default();
+            let fields = query.fields.clone().unwrap_or_default();
             ProjectAs::Nested(for_field_selection_helper(&nested_parent_columns, fields))
         }
     }

@@ -29,7 +29,7 @@ impl Selection {
     pub fn from_query_request(query_request: &QueryRequest) -> Result<Selection, MongoAgentError> {
         // let fields = (&query_request.query.fields).flatten().unwrap_or_default();
         let empty_map = HashMap::new();
-        let fields = if let Some(Some(fs)) = &query_request.query.fields {
+        let fields = if let Some(fs) = &query_request.query.fields {
             fs
         } else {
             &empty_map
@@ -92,7 +92,7 @@ fn selection_for_field(
         Field::NestedObject { column, query } => {
             let nested_parent_columns = append_to_path(parent_columns, column);
             let nested_parent_col_path = format!("${}", nested_parent_columns.join("."));
-            let fields = query.fields.clone().flatten().unwrap_or_default();
+            let fields = query.fields.clone().unwrap_or_default();
             let nested_selection =
                 from_query_request_helper(table_relationships, &nested_parent_columns, &fields)?;
             Ok(doc! {"$cond": {"if": nested_parent_col_path, "then": nested_selection, "else": Bson::Null}}.into())
@@ -126,7 +126,7 @@ fn selection_for_array(
         Field::NestedObject { column, query } => {
             let nested_parent_columns = append_to_path(parent_columns, column);
             let nested_parent_col_path = format!("${}", nested_parent_columns.join("."));
-            let fields = query.fields.clone().flatten().unwrap_or_default();
+            let fields = query.fields.clone().unwrap_or_default();
             let mut nested_selection =
                 from_query_request_helper(table_relationships, &["$this"], &fields)?;
             for _ in 0..array_nesting_level {

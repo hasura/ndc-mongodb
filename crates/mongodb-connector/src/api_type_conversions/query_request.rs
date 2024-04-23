@@ -40,7 +40,7 @@ impl QueryContext<'_> {
         ))
     }
 
-    fn find_collection_object_type(
+    pub fn find_collection_object_type(
         &self,
         collection_name: &str,
     ) -> Result<WithNameRef<schema::ObjectType>, ConversionError> {
@@ -144,7 +144,7 @@ fn v3_to_v2_query(
     query: v3::Query,
     collection_object_type: &WithNameRef<schema::ObjectType>,
 ) -> Result<v2::Query, ConversionError> {
-    let aggregates: Option<Option<HashMap<String, v2::Aggregate>>> = query
+    let aggregates: Option<HashMap<String, v2::Aggregate>> = query
         .aggregates
         .map(|aggregates| -> Result<_, ConversionError> {
             aggregates
@@ -157,8 +157,7 @@ fn v3_to_v2_query(
                 })
                 .collect()
         })
-        .transpose()?
-        .map(Some);
+        .transpose()?;
 
     let fields = v3_to_v2_fields(
         context,
@@ -168,7 +167,7 @@ fn v3_to_v2_query(
         query.fields,
     )?;
 
-    let order_by: Option<Option<v2::OrderBy>> = query
+    let order_by: Option<v2::OrderBy> = query
         .order_by
         .map(|order_by| -> Result<_, ConversionError> {
             let (elements, relations) = order_by
@@ -201,8 +200,7 @@ fn v3_to_v2_query(
                 relations,
             })
         })
-        .transpose()?
-        .map(Some);
+        .transpose()?;
 
     let limit = optional_32bit_number_to_64bit(query.limit);
     let offset = optional_32bit_number_to_64bit(query.offset);
@@ -293,8 +291,8 @@ fn v3_to_v2_fields(
     root_collection_object_type: &WithNameRef<schema::ObjectType>,
     object_type: &WithNameRef<schema::ObjectType>,
     v3_fields: Option<IndexMap<String, v3::Field>>,
-) -> Result<Option<Option<HashMap<String, v2::Field>>>, ConversionError> {
-    let v2_fields: Option<Option<HashMap<String, v2::Field>>> = v3_fields
+) -> Result<Option<HashMap<String, v2::Field>>, ConversionError> {
+    let v2_fields: Option<HashMap<String, v2::Field>> = v3_fields
         .map(|fields| {
             fields
                 .into_iter()
@@ -312,8 +310,7 @@ fn v3_to_v2_fields(
                 })
                 .collect::<Result<_, ConversionError>>()
         })
-        .transpose()?
-        .map(Some);
+        .transpose()?;
     Ok(v2_fields)
 }
 
@@ -871,11 +868,11 @@ fn v3_to_v2_comparison_value(
 }
 
 #[inline]
-fn optional_32bit_number_to_64bit<A, B>(n: Option<A>) -> Option<Option<B>>
+fn optional_32bit_number_to_64bit<A, B>(n: Option<A>) -> Option<B>
 where
     B: From<A>,
 {
-    n.map(|input| Some(input.into()))
+    n.map(|input| input.into())
 }
 
 fn v3_to_v2_arguments(arguments: BTreeMap<String, v3::Argument>) -> HashMap<String, v2::Argument> {

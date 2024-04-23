@@ -29,7 +29,7 @@ pub fn pipeline_for_relations(
     } = query_request;
 
     let empty_field_map = HashMap::new();
-    let fields = if let Some(Some(fs)) = &query.fields {
+    let fields = if let Some(fs) = &query.fields {
         fs
     } else {
         &empty_field_map
@@ -94,7 +94,7 @@ fn lookups_for_field(
         Field::Column { .. } => Ok(vec![]),
         Field::NestedObject { column, query } => {
             let nested_parent_columns = append_to_path(parent_columns, column);
-            let fields = query.fields.clone().flatten().unwrap_or_default();
+            let fields = query.fields.clone().unwrap_or_default();
             lookups_for_fields(
                 config,
                 query_request,

@@ -38,7 +38,7 @@ pub enum ResponseShape {
 /// can instead be appended to `pipeline`.
 pub fn is_response_faceted(query: &Query) -> bool {
     match &query.aggregates {
-        Some(Some(aggregates)) => !aggregates.is_empty(),
+        Some(aggregates) => !aggregates.is_empty(),
         _ => false,
     }
 }
@@ -89,12 +89,8 @@ pub fn pipeline_for_non_foreach(
         .map(|expression| make_selector(variables, expression))
         .transpose()?
         .map(Stage::Match);
-    let sort_stage: Option<Stage> = order_by
-        .iter()
-        .flatten()
-        .map(|o| Stage::Sort(make_sort(o)))
-        .next();
-    let skip_stage = offset.flatten().map(Stage::Skip);
+    let sort_stage: Option<Stage> = order_by.iter().map(|o| Stage::Sort(make_sort(o))).next();
+    let skip_stage = offset.map(Stage::Skip);
 
     [match_stage, sort_stage, skip_stage]
         .into_iter()
@@ -128,7 +124,7 @@ pub fn pipeline_for_fields_facet(
 ) -> Result<Pipeline, MongoAgentError> {
     let Query { limit, .. } = &*query_request.query;
 
-    let limit_stage = limit.flatten().map(Stage::Limit);
+    let limit_stage = limit.map(Stage::Limit);
     let replace_with_stage: Stage =
         Stage::ReplaceWith(Selection::from_query_request(query_request)?);
 
@@ -155,16 +151,15 @@ fn facet_pipelines_for_query(
     let mut facet_pipelines = aggregates
         .iter()
         .flatten()
-        .flatten()
         .map(|(key, aggregate)| {
             Ok((
                 key.clone(),
-                pipeline_for_aggregate(aggregate.clone(), aggregates_limit.flatten())?,
+                pipeline_for_aggregate(aggregate.clone(), *aggregates_limit)?,
             ))
         })
         .collect::<Result<BTreeMap<_, _>, MongoAgentError>>()?;
 
-    if let Some(Some(_)) = fields {
+    if let Some(_) = fields {
         let fields_pipeline = pipeline_for_fields_facet(query_request)?;
         facet_pipelines.insert(ROWS_FIELD.to_owned(), fields_pipeline);
     }
@@ -173,7 +168,6 @@ fn facet_pipelines_for_query(
     // aggregation results.
     let aggregate_selections: bson::Document = aggregates
         .iter()
-        .flatten()
         .flatten()
         .map(|(key, _aggregate)| {
             // The facet result for each aggregate is an array containing a single document which
@@ -201,7 +195,7 @@ fn facet_pipelines_for_query(
     };
 
     let select_rows = match fields {
-        Some(Some(_)) => Some(("rows".to_owned(), Bson::String(format!("${ROWS_FIELD}")))),
+        Some(_) => Some(("rows".to_owned(), Bson::String(format!("${ROWS_FIELD}")))),
         _ => None,
     };
 
