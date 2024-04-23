@@ -1,0 +1,90 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: TitleWordFrequency
+  fields:
+    - name: word
+      type: String!
+    - name: count
+      type: Int!
+  graphql:
+    typeName: TitleWordFrequency
+    inputTypeName: TitleWordFrequencyInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: TitleWordFrequency
+      fieldMapping:
+        word:
+          column:
+            name: _id
+        count:
+          column:
+            name: count
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: TitleWordFrequency
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - word
+          - count
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: TitleWordFrequencyBoolExp
+  objectType: TitleWordFrequency
+  dataConnectorName: sample_mflix
+  dataConnectorObjectType: TitleWordFrequency
+  comparableFields:
+    - fieldName: word
+      operators:
+        enableAll: true
+    - fieldName: count
+      operators:
+        enableAll: true
+  graphql:
+    typeName: TitleWordFrequencyBoolExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: TitleWordFrequency
+  objectType: TitleWordFrequency
+  source:
+    dataConnectorName: sample_mflix
+    collection: title_word_frequency
+  filterExpressionType: TitleWordFrequencyBoolExp
+  orderableFields:
+    - fieldName: word
+      orderByDirections:
+        enableAll: true
+    - fieldName: count
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: title_word_frequencies
+    selectUniques:
+      - queryRootField: title_word_frequency
+        uniqueIdentifier:
+          - word
+    orderByExpressionType: TitleWordFrequencyOrderBy
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: TitleWordFrequency
+  permissions:
+    - role: admin
+      select:
+        filter: null
+

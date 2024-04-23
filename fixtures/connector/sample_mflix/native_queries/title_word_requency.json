@@ -1,0 +1,30 @@
+{
+  "name": "title_word_frequency",
+  "representation": "collection",
+  "inputCollection": "movies",
+  "description": "words appearing in movie titles with counts",
+  "resultDocumentType": "TitleWordFrequency",
+  "objectTypes": {
+    "TitleWordFrequency": {
+      "fields": {
+        "_id": { "type": { "scalar": "string" } },
+        "count": { "type": { "scalar": "int" } }
+      }
+    }
+  },
+  "pipeline": [
+    { 
+      "$replaceWith": {
+        "title_words": { "$split": ["$title", " "] }
+      }
+    },
+    { "$unwind": { "path": "$title_words" } },
+    { 
+      "$group": {
+        "_id": "$title_words",
+        "count": { "$count": {} }
+      }
+    }
+  ]
+}
+

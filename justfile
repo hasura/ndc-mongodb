@@ -25,4 +25,4 @@ test-mongodb-versions:
 # Runs a specified service in a specified project config using arion (a nix
 # frontend for docker-compose). Propagates the exit status from that service.
 _arion project service:
-  arion --file {{project}} run --rm {{service}}; status=$?; arion --file {{project}} down; exit $status
+  arion --file {{project}} run --rm {{service}} --force-recreate; status=$?; arion --file {{project}} down; exit $status
