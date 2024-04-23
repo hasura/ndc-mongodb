@@ -7,7 +7,7 @@ use anyhow::anyhow;
 use std::env;
 use std::path::PathBuf;
 
-use clap::Parser;
+use clap::{Parser, ValueHint};
 use mongodb_agent_common::state::{try_init_state_from_uri, DATABASE_URI_ENV_VAR};
 use mongodb_cli_plugin::{run, Command, Context};
 
@@ -18,17 +18,18 @@ pub struct Args {
     #[arg(
         long = "context-path",
         env = "HASURA_PLUGIN_CONNECTOR_CONTEXT_PATH",
-        value_name = "DIRECTORY"
+        value_name = "DIRECTORY",
+        value_hint = ValueHint::DirPath
     )]
     pub context_path: Option<PathBuf>,
 
     #[arg(
         long = "connection-uri",
         env = DATABASE_URI_ENV_VAR,
-        required = true,
-        value_name = "URI"
+        value_name = "URI",
+        value_hint = ValueHint::Url
     )]
-    pub connection_uri: String,
+    pub connection_uri: Option<String>,
 
     /// The command to invoke.
     #[command(subcommand)]
@@ -45,7 +46,11 @@ pub async fn main() -> anyhow::Result<()> {
         Some(path) => path,
         None => env::current_dir()?,
     };
-    let connector_state = try_init_state_from_uri(&args.connection_uri)
+    let connection_uri = args.connection_uri.ok_or(anyhow!(
+        "Missing environment variable {}",
+        DATABASE_URI_ENV_VAR
+    ))?;
+    let connector_state = try_init_state_from_uri(&connection_uri)
         .await
         .map_err(|e| anyhow!("Error initializing MongoDB state {}", e))?;
     let context = Context {
