@@ -1,7 +1,7 @@
 use configuration::Configuration;
 use dc_api_types::QueryRequest;
 use futures::Stream;
-use futures_util::TryStreamExt;
+use futures_util::TryStreamExt as _;
 use mongodb::bson;
 
 use super::pipeline::pipeline_for_query_request;
