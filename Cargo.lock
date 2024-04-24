@@ -618,7 +618,7 @@ name = "dc-api-test-helpers"
 version = "0.1.0"
 dependencies = [
  "dc-api-types",
- "itertools 0.10.5",
+ "itertools 0.12.1",
 ]
 
 [[package]]
@@ -626,7 +626,7 @@ name = "dc-api-types"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "itertools 0.10.5",
+ "itertools 0.12.1",
  "mongodb",
  "nonempty",
  "once_cell",
@@ -1635,7 +1635,7 @@ dependencies = [
  "http 0.2.9",
  "indent",
  "indexmap 1.9.3",
- "itertools 0.10.5",
+ "itertools 0.12.1",
  "mockall",
  "mongodb",
  "mongodb-cli-plugin",
@@ -1690,7 +1690,7 @@ dependencies = [
  "futures",
  "http 0.2.9",
  "indexmap 2.2.5",
- "itertools 0.10.5",
+ "itertools 0.12.1",
  "lazy_static",
  "mongodb",
  "mongodb-agent-common",
@@ -1808,7 +1808,7 @@ name = "ndc-test-helpers"
 version = "0.1.0"
 dependencies = [
  "indexmap 2.2.5",
- "itertools 0.10.5",
+ "itertools 0.12.1",
  "ndc-models",
  "serde_json",
 ]

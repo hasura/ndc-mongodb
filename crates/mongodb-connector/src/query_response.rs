@@ -1,12 +1,13 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
-use configuration::schema::Type;
+use configuration::schema::{ObjectField, ObjectType, Type};
 use indexmap::IndexMap;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use mongodb::bson::{self, from_bson, Bson};
 use mongodb_agent_common::query::serialization::{bson_to_json, BsonToJsonError};
 use ndc_sdk::models::{
-    self as ndc, Aggregate, Field, Query, QueryRequest, QueryResponse, RowFieldValue, RowSet,
+    self as ndc, Aggregate, Field, NestedField, NestedObject, Query, QueryRequest, QueryResponse,
+    RowFieldValue, RowSet,
 };
 use serde::Deserialize;
 use thiserror::Error;
@@ -20,6 +21,12 @@ pub enum QueryResponseError {
 
     #[error("{0}")]
     Conversion(#[from] ConversionError),
+
+    #[error("expected an array at path {}", path.join("."))]
+    ExpectedArray { path: Vec<String> },
+
+    #[error("expected an object at path {}", path.join("."))]
+    ExpectedObject { path: Vec<String> },
 
     #[error("expected a single response document from MongoDB, but did not get one")]
     ExpectedSingleDocument,
@@ -73,13 +80,20 @@ pub fn serialize_query_response(
             .row_sets
             .into_iter()
             .map(|docs| {
-                serialize_row_set(query_context, collection_name, &query_request.query, docs)
+                serialize_row_set(
+                    query_context,
+                    &vec![],
+                    collection_name,
+                    &query_request.query,
+                    docs,
+                )
             })
             .try_collect()
     } else {
         // TODO: in an aggregation response we expect one document instead of a list of documents
         Ok(vec![serialize_row_set(
             query_context,
+            &vec![],
             collection_name,
             &query_request.query,
             response_documents,
@@ -92,6 +106,7 @@ pub fn serialize_query_response(
 
 fn serialize_row_set(
     query_context: &QueryContext<'_>,
+    path: &[&str],
     collection_name: &str,
     query: &Query,
     docs: Vec<bson::Document>,
@@ -106,7 +121,7 @@ fn serialize_row_set(
         let rows = query
             .fields
             .as_ref()
-            .map(|fields| serialize_rows(query_context, collection_name, fields, docs))
+            .map(|fields| serialize_rows(query_context, path, collection_name, fields, docs))
             .transpose()?;
         Ok(RowSet {
             aggregates: None,
@@ -126,7 +141,9 @@ fn serialize_row_set(
         let rows = query
             .fields
             .as_ref()
-            .map(|fields| serialize_rows(query_context, collection_name, fields, row_set.rows))
+            .map(|fields| {
+                serialize_rows(query_context, path, collection_name, fields, row_set.rows)
+            })
             .transpose()?;
 
         Ok(RowSet { aggregates, rows })
@@ -154,17 +171,19 @@ fn serialize_aggregates(
 
 fn serialize_rows(
     query_context: &QueryContext<'_>,
+    path: &[&str],
     collection_name: &str,
     query_fields: &IndexMap<String, Field>,
     docs: Vec<bson::Document>,
 ) -> Result<Vec<IndexMap<String, RowFieldValue>>> {
     docs.into_iter()
-        .map(|doc| serialize_single_row(query_context, collection_name, query_fields, doc))
+        .map(|doc| serialize_single_row(query_context, path, collection_name, query_fields, doc))
         .try_collect()
 }
 
 fn serialize_single_row(
     query_context: &QueryContext<'_>,
+    path: &[&str],
     collection_name: &str,
     query_fields: &IndexMap<String, Field>,
     mut doc: bson::Document,
@@ -174,6 +193,7 @@ fn serialize_single_row(
         .map(|(field_name, field_definition)| {
             let value = serialize_field_value(
                 query_context,
+                path,
                 collection_name,
                 field_definition,
                 field_name,
@@ -186,23 +206,34 @@ fn serialize_single_row(
 
 fn serialize_field_value(
     query_context: &QueryContext<'_>,
+    path: &[&str],
     collection_name: &str,
     field_definition: &ndc::Field,
     field_name: &str,
     input: &mut bson::Document,
 ) -> Result<serde_json::Value> {
-    let (bson, field_type) = match field_definition {
+    let (bson, field_type, object_types) = match field_definition {
         ndc::Field::Column { column, fields } => {
-            // TODO: if `field_type` is an object type, build a new object type by filtering down to
-            // the filds listed in `fields`
-            let field_type = find_field_type(query_context, collection_name, column)?;
+            let field_type = find_field_type(query_context, path, collection_name, column)?;
+
+            let (requested_type, temp_object_types) =
+                prune_type_to_field_selection(query_context, path, field_type, fields.as_ref())?;
+
+            let object_types = if temp_object_types.is_empty() {
+                query_context.object_types.clone() // We're cloning a Cow, not a BTreeMap
+            } else {
+                let mut configured_types = query_context.object_types.clone().into_owned();
+                configured_types.extend(temp_object_types);
+                Cow::Owned(configured_types)
+            };
+
             let value = value_from_option(
                 collection_name,
                 column,
-                &field_type,
+                &requested_type,
                 input.remove(field_name),
             )?;
-            (value, field_type)
+            (value, field_type, object_types)
         }
         ndc::Field::Relationship {
             query,
@@ -210,12 +241,13 @@ fn serialize_field_value(
             arguments,
         } => todo!(),
     };
-    let json = bson_to_json(field_type, &query_context.object_types, bson)?;
+    let json = bson_to_json(field_type, &object_types, bson)?;
     Ok(json)
 }
 
 fn find_field_type<'a>(
     query_context: &'a QueryContext<'a>,
+    path: &[&str],
     collection_name: &str,
     column: &str,
 ) -> Result<&'a Type> {
@@ -224,21 +256,118 @@ fn find_field_type<'a>(
         ConversionError::UnknownObjectTypeField {
             object_type: object_type.name.to_string(),
             field_name: column.to_string(),
+            path: path_to_owned(path),
         }
     })?;
     Ok(&field_type.r#type)
 }
 
-fn parse_single_document<T>(documents: Vec<bson::Document>) -> Result<T>
-where
-    T: for<'de> serde::Deserialize<'de>,
-{
-    let document = documents
-        .into_iter()
-        .next()
-        .ok_or(QueryResponseError::ExpectedSingleDocument)?;
-    let value = bson::from_document(document).map_err(|_| QueryResponseError::TODORemoveMe)?;
-    Ok(value)
+// TODO: test response with nested ExtendedJSON
+fn prune_type_to_field_selection<'a>(
+    query_context: &QueryContext<'_>,
+    path: &[&str],
+    field_type: &'a Type,
+    fields: Option<&NestedField>,
+) -> Result<(Type, Vec<(String, ObjectType)>)> {
+    match (field_type, fields) {
+        (t, None) => Ok((t.clone(), Default::default())),
+        (t @ Type::Scalar(_) | t @ Type::ExtendedJSON, _) => Ok((t.clone(), Default::default())),
+
+        (Type::Nullable(t), _) => {
+            let (underlying_type, object_types) =
+                prune_type_to_field_selection(query_context, path, t, fields)?;
+            Ok((Type::Nullable(Box::new(underlying_type)), object_types))
+        }
+        (Type::ArrayOf(t), Some(NestedField::Array(nested))) => {
+            let (element_type, object_types) =
+                prune_type_to_field_selection(query_context, path, t, Some(&nested.fields))?;
+            Ok((Type::ArrayOf(Box::new(element_type)), object_types))
+        }
+        (Type::Object(t), Some(NestedField::Object(nested))) => {
+            object_type_for_field_subset(query_context, path, t, nested)
+        }
+
+        (_, Some(NestedField::Array(_))) => Err(QueryResponseError::ExpectedArray {
+            path: path_to_owned(path),
+        }),
+        (_, Some(NestedField::Object(_))) => Err(QueryResponseError::ExpectedObject {
+            path: path_to_owned(path),
+        }),
+    }
+}
+
+// TODO: test query with aliased name for nested field
+fn object_type_for_field_subset(
+    query_context: &QueryContext<'_>,
+    path: &[&str],
+    object_type_name: &str,
+    requested_fields: &NestedObject,
+) -> Result<(Type, Vec<(String, ObjectType)>)> {
+    let object_type = query_context.find_object_type(object_type_name)?.value;
+    let (fields, object_type_sets): (_, Vec<Vec<_>>) = requested_fields
+        .fields
+        .iter()
+        .map(|(name, requested_field)| {
+            let (object_field, object_types) = requested_field_definition(
+                query_context,
+                &append_to_path(path, [name.as_ref()]),
+                object_type_name,
+                object_type,
+                requested_field,
+            )?;
+            Ok(((name.clone(), object_field), object_types))
+        })
+        .process_results::<_, _, QueryResponseError, _>(|iter| iter.unzip())?;
+
+    let pruned_object_type = ObjectType {
+        fields,
+        description: None,
+    };
+    let pruned_object_type_name = path.into_iter().join("_");
+    let pruned_type = Type::Object(pruned_object_type_name);
+
+    let object_types = object_type_sets.into_iter().flatten().collect();
+
+    Ok((pruned_type, object_types))
+}
+
+/// Given an object type for a value, and a requested field from that value, produce an updated
+/// object field definition to match the request. This must take into account aliasing where the
+/// name of the requested field maps to a different name on the underlying type.
+fn requested_field_definition(
+    query_context: &QueryContext<'_>,
+    path: &[&str],
+    object_type_name: &str,
+    object_type: &ObjectType,
+    requested_field: &Field,
+) -> Result<(ObjectField, Vec<(String, ObjectType)>)> {
+    match requested_field {
+        Field::Column { column, fields } => {
+            let field_def = object_type.fields.get(column).ok_or_else(|| {
+                ConversionError::UnknownObjectTypeField {
+                    object_type: object_type_name.to_owned(),
+                    field_name: column.to_owned(),
+                    path: path_to_owned(path),
+                }
+            })?;
+            let (field_type, object_types) = prune_type_to_field_selection(
+                query_context,
+                path,
+                &field_def.r#type,
+                fields.as_ref(),
+            )?;
+            let pruned_field = ObjectField {
+                r#type: field_type,
+                description: None,
+            };
+            Ok((pruned_field, object_types))
+        }
+        Field::Relationship {
+            query,
+            relationship,
+            arguments,
+        } => todo!(),
+    }
 }
 
 /// Check option result for a BSON value. If the value is missing but the expected type is nullable
@@ -258,4 +387,24 @@ fn value_from_option(
             expected_type: expected_type.clone(),
         }),
     }
+}
+
+fn parse_single_document<T>(documents: Vec<bson::Document>) -> Result<T>
+where
+    T: for<'de> serde::Deserialize<'de>,
+{
+    let document = documents
+        .into_iter()
+        .next()
+        .ok_or(QueryResponseError::ExpectedSingleDocument)?;
+    let value = bson::from_document(document).map_err(|_| QueryResponseError::TODORemoveMe)?;
+    Ok(value)
+}
+
+fn append_to_path<'a>(path: &[&'a str], elems: impl IntoIterator<Item = &'a str>) -> Vec<&'a str> {
+    path.into_iter().map(|x| *x).chain(elems).collect()
+}
+
+fn path_to_owned(path: &[&str]) -> Vec<String> {
+    path.into_iter().map(|x| (*x).to_owned()).collect()
 }

@@ -21,8 +21,15 @@ pub enum ConversionError {
     #[error("Unknown object type, \"{0}\"")]
     UnknownObjectType(String),
 
-    #[error("Unknown field \"{field_name}\" in object type \"{object_type}\"")]
-    UnknownObjectTypeField { object_type: String, field_name: String },
+    #[error(
+        "Unknown field \"{field_name}\" in object type \"{object_type}\"{}",
+        if path.is_empty() { "".to_owned() } else { format!(" at path {}", path.join(".")) }
+    )]
+    UnknownObjectTypeField {
+        object_type: String,
+        field_name: String,
+        path: Vec<String>,
+    },
 
     #[error("Unknown collection, \"{0}\"")]
     UnknownCollection(String),
@@ -30,8 +37,13 @@ pub enum ConversionError {
     #[error("Unknown relationship, \"{0}\"")]
     UnknownRelationship(String),
 
-    #[error("Unknown aggregate function, \"{aggregate_function}\" in scalar type \"{scalar_type}\"")]
-    UnknownAggregateFunction { scalar_type: String, aggregate_function: String },
+    #[error(
+        "Unknown aggregate function, \"{aggregate_function}\" in scalar type \"{scalar_type}\""
+    )]
+    UnknownAggregateFunction {
+        scalar_type: String,
+        aggregate_function: String,
+    },
 
     #[error("Query referenced a function, \"{0}\", but it has not been defined")]
     UnspecifiedFunction(String),

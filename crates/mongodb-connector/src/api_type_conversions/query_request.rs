@@ -48,7 +48,7 @@ impl QueryContext<'_> {
         self.find_object_type(&collection.collection_type)
     }
 
-    fn find_object_type<'a>(
+    pub fn find_object_type<'a>(
         &'a self,
         object_type_name: &'a str,
     ) -> Result<WithNameRef<schema::ObjectType>, ConversionError> {
@@ -105,6 +105,7 @@ fn find_object_field<'a>(
         ConversionError::UnknownObjectTypeField {
             object_type: object_type.name.to_string(),
             field_name: field_name.to_string(),
+            path: Default::default(), // TODO: set a path for more helpful error reporting
         }
     })
 }

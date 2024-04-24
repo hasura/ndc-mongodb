@@ -23,6 +23,8 @@ resolver = "2"
 ndc-sdk = { git = "https://github.com/hasura/ndc-sdk-rs.git" }
 ndc-models = { git = "http://github.com/hasura/ndc-spec.git", tag = "v0.1.2" }
 
+itertools = "^0.12.1"
+
 # We have a fork of the mongodb driver with a fix for reading metadata from time
 # series collections.
 # See the upstream PR: https://github.com/mongodb/mongo-rust-driver/pull/1003
