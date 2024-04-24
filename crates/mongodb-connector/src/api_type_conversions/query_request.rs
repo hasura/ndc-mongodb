@@ -24,7 +24,7 @@ pub struct QueryContext<'a> {
 }
 
 impl QueryContext<'_> {
-    fn find_collection(
+    pub fn find_collection(
         &self,
         collection_name: &str,
     ) -> Result<&v3::CollectionInfo, ConversionError> {

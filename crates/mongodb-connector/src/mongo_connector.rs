@@ -142,11 +142,19 @@ impl Connector for MongoConnector {
         request: QueryRequest,
     ) -> Result<JsonResponse<QueryResponse>, QueryError> {
         tracing::debug!(query_request = %serde_json::to_string(&request).unwrap(), "received query request");
-        let v2_request =
-            v3_to_v2_query_request(&get_query_context(configuration), request.clone())?;
+        let query_context = get_query_context(configuration);
+        let v2_request = v3_to_v2_query_request(&query_context, request.clone())?;
         let response_documents = handle_query_request(configuration, state, v2_request)
             .await
             .map_err(mongo_agent_error_to_query_error)?;
-        Ok(serialize_query_response(configuration, &request, response_documents)?.into())
+        Ok(
+            serialize_query_response(&query_context, &request, response_documents)
+                .map_err(|err| {
+                    QueryError::UnprocessableContent(format!(
+                        "error converting MongoDB response to JSON: {err}"
+                    ))
+                })?
+                .into(),
+        )
     }
 }

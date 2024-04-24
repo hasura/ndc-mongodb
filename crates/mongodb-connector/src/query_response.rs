@@ -1,32 +1,34 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
-use anyhow::anyhow;
-use configuration::{schema::Type, Configuration};
-use dc_api_types::{Aggregate, Field, QueryRequest};
+use configuration::schema::Type;
 use indexmap::IndexMap;
 use itertools::Itertools;
 use mongodb::bson::{self, from_bson, Bson};
-use mongodb_agent_common::query::{serialization::bson_to_json, QueryTarget};
-use mongodb_support::BsonScalarType;
-use ndc_sdk::{
-    connector::QueryError,
-    models::{self as ndc, QueryResponse, RowFieldValue, RowSet},
+use mongodb_agent_common::query::serialization::{bson_to_json, BsonToJsonError};
+use ndc_sdk::models::{
+    self as ndc, Aggregate, Field, Query, QueryRequest, QueryResponse, RowFieldValue, RowSet,
 };
 use serde::Deserialize;
 use thiserror::Error;
 
 use crate::api_type_conversions::{ConversionError, QueryContext};
 
-#[derive(Clone, Debug, Error)]
+#[derive(Debug, Error)]
 pub enum QueryResponseError {
+    #[error("{0}")]
+    BsonToJson(#[from] BsonToJsonError),
+
     #[error("{0}")]
     Conversion(#[from] ConversionError),
 
     #[error("expected a single response document from MongoDB, but did not get one")]
     ExpectedSingleDocument,
 
+    #[error("missing aggregate value in response: {0}")]
+    MissingAggregateValue(String),
+
     #[error("expected {collection_name} to have a field named {column} of type {expected_type:?}, but value is missing from database response")]
-    MissingValue {
+    MissingColumnValue {
         collection_name: String,
         column: String,
         expected_type: Type,
@@ -54,11 +56,15 @@ struct BsonRowSet {
 }
 
 pub fn serialize_query_response(
-    config: &Configuration,
+    query_context: &QueryContext<'_>,
     query_request: &QueryRequest,
     response_documents: Vec<bson::Document>,
-) -> Result<QueryResponse, QueryError> {
+) -> Result<QueryResponse> {
     tracing::debug!(response_documents = %serde_json::to_string(&response_documents).unwrap(), "response from MongoDB");
+
+    let collection_info = query_context.find_collection(&query_request.collection)?;
+    let collection_name = &collection_info.name;
+
     // If the query request specified variable sets then we should have gotten a single document
     // from MongoDB with fields for multiple sets of results - one for each set of variables.
     let row_sets = if query_request.variables.is_some() {
@@ -66,11 +72,15 @@ pub fn serialize_query_response(
         responses
             .row_sets
             .into_iter()
-            .map(|docs| serialize_row_set(&query_request.query, docs))
+            .map(|docs| {
+                serialize_row_set(query_context, collection_name, &query_request.query, docs)
+            })
             .try_collect()
     } else {
         // TODO: in an aggregation response we expect one document instead of a list of documents
         Ok(vec![serialize_row_set(
+            query_context,
+            collection_name,
             &query_request.query,
             response_documents,
         )?])
@@ -80,7 +90,12 @@ pub fn serialize_query_response(
     Ok(response)
 }
 
-fn serialize_row_set(query: &Query, docs: Vec<bson::Document>) -> Result<RowSet, QueryError> {
+fn serialize_row_set(
+    query_context: &QueryContext<'_>,
+    collection_name: &str,
+    query: &Query,
+    docs: Vec<bson::Document>,
+) -> Result<RowSet> {
     if query
         .aggregates
         .as_ref()
@@ -90,7 +105,8 @@ fn serialize_row_set(query: &Query, docs: Vec<bson::Document>) -> Result<RowSet,
         // When there are no aggregates we expect a list of rows
         let rows = query
             .fields
-            .map(|fields| serialize_rows(fields, docs))
+            .as_ref()
+            .map(|fields| serialize_rows(query_context, collection_name, fields, docs))
             .transpose()?;
         Ok(RowSet {
             aggregates: None,
@@ -103,12 +119,14 @@ fn serialize_row_set(query: &Query, docs: Vec<bson::Document>) -> Result<RowSet,
 
         let aggregates = query
             .aggregates
+            .as_ref()
             .map(|aggregates| serialize_aggregates(aggregates, row_set.aggregates))
             .transpose()?;
 
         let rows = query
             .fields
-            .map(|fields| serialize_rows(fields, row_set.rows))
+            .as_ref()
+            .map(|fields| serialize_rows(query_context, collection_name, fields, row_set.rows))
             .transpose()?;
 
         Ok(RowSet { aggregates, rows })
@@ -116,9 +134,9 @@ fn serialize_row_set(query: &Query, docs: Vec<bson::Document>) -> Result<RowSet,
 }
 
 fn serialize_aggregates(
-    query_aggregates: &HashMap<String, Aggregate>,
+    query_aggregates: &IndexMap<String, Aggregate>,
     mut aggregate_values: BTreeMap<String, Bson>,
-) -> Result<IndexMap<String, serde_json::Value>, QueryError> {
+) -> Result<IndexMap<String, serde_json::Value>> {
     query_aggregates
         .iter()
         .map(
@@ -126,67 +144,57 @@ fn serialize_aggregates(
                 Some((owned_key, value)) => Ok((
                     owned_key,
                     // TODO: bson_to_json
-                    from_bson(value).map_err(|err| QueryError::Other(err.into()))?,
+                    from_bson(value).map_err(|_| QueryResponseError::TODORemoveMe)?,
                 )),
-                None => Err(QueryError::Other(
-                    anyhow!("missing aggregate value in response: {key}").into(),
-                )),
+                None => Err(QueryResponseError::MissingAggregateValue(key.clone())),
             },
         )
         .try_collect()
 }
 
 fn serialize_rows(
-    query_target: QueryTarget<'_>,
+    query_context: &QueryContext<'_>,
+    collection_name: &str,
     query_fields: &IndexMap<String, Field>,
     docs: Vec<bson::Document>,
 ) -> Result<Vec<IndexMap<String, RowFieldValue>>> {
     docs.into_iter()
-        .map(|doc| serialize_single_row(query_fields, doc))
+        .map(|doc| serialize_single_row(query_context, collection_name, query_fields, doc))
         .try_collect()
-        .map_err(|err| QueryError::Other(err.into()))
 }
 
 fn serialize_single_row(
-    query_context: QueryContext<'_>,
-    query_target: QueryTarget<'_>,
+    query_context: &QueryContext<'_>,
+    collection_name: &str,
     query_fields: &IndexMap<String, Field>,
     mut doc: bson::Document,
 ) -> Result<IndexMap<String, RowFieldValue>> {
     query_fields
         .iter()
         .map(|(field_name, field_definition)| {
-            // let
-            let value = doc.remove(field_name);
+            let value = serialize_field_value(
+                query_context,
+                collection_name,
+                field_definition,
+                field_name,
+                &mut doc,
+            )?;
+            Ok((field_name.clone(), RowFieldValue(value)))
         })
         .try_collect()
-
-    // doc.into_iter()
-    //     .map(|(key, value)| {
-    //         let json_value =
-    //                 bson_to_json(expected_type, object_types, value)
-    //                 // use UnprocessableContent so the user sees the error message
-    //                     .map_err(|err|
-    //                     QueryError::UnprocessableContent(format!("type mismatch found in MongoDB query response: {}\n\nYou may need to alter your connector configuration to change a collection schema, or a native query definition.", err.to_string())))?;
-    //         Ok((
-    //             key,
-    //             RowFieldValue(
-    //                 json_value
-    //             ),
-    //         ))
-    //     })
-    //     .try_collect()
 }
 
-fn value_and_type_from_field(
-    query_context: QueryContext<'_>,
+fn serialize_field_value(
+    query_context: &QueryContext<'_>,
     collection_name: &str,
     field_definition: &ndc::Field,
     field_name: &str,
     input: &mut bson::Document,
-) -> Result<(Bson, Type)> {
-    match field_definition {
+) -> Result<serde_json::Value> {
+    let (bson, field_type) = match field_definition {
         ndc::Field::Column { column, fields } => {
+            // TODO: if `field_type` is an object type, build a new object type by filtering down to
+            // the filds listed in `fields`
             let field_type = find_field_type(query_context, collection_name, column)?;
             let value = value_from_option(
                 collection_name,
@@ -194,21 +202,23 @@ fn value_and_type_from_field(
                 &field_type,
                 input.remove(field_name),
             )?;
-            Ok((value, field_type))
+            (value, field_type)
         }
         ndc::Field::Relationship {
             query,
             relationship,
             arguments,
         } => todo!(),
-    }
+    };
+    let json = bson_to_json(field_type, &query_context.object_types, bson)?;
+    Ok(json)
 }
 
-fn find_field_type(
-    query_context: QueryContext<'_>,
+fn find_field_type<'a>(
+    query_context: &'a QueryContext<'a>,
     collection_name: &str,
     column: &str,
-) -> Result<Type> {
+) -> Result<&'a Type> {
     let object_type = query_context.find_collection_object_type(collection_name)?;
     let field_type = object_type.value.fields.get(column).ok_or_else(|| {
         ConversionError::UnknownObjectTypeField {
@@ -216,7 +226,7 @@ fn find_field_type(
             field_name: column.to_string(),
         }
     })?;
-    Ok(field_type.r#type)
+    Ok(&field_type.r#type)
 }
 
 fn parse_single_document<T>(documents: Vec<bson::Document>) -> Result<T>
@@ -242,7 +252,7 @@ fn value_from_option(
     match (expected_type, value_option) {
         (_, Some(value)) => Ok(value),
         (Type::Nullable(_), None) => Ok(Bson::Null),
-        _ => Err(QueryResponseError::MissingValue {
+        _ => Err(QueryResponseError::MissingColumnValue {
             collection_name: collection_name.to_string(),
             column: column.to_string(),
             expected_type: expected_type.clone(),
