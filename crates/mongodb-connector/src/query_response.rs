@@ -193,7 +193,7 @@ fn serialize_single_row(
         .map(|(field_name, field_definition)| {
             let value = serialize_field_value(
                 query_context,
-                path,
+                &append_to_path(path, [field_name.as_ref()]),
                 collection_name,
                 field_definition,
                 field_name,
@@ -212,7 +212,7 @@ fn serialize_field_value(
     field_name: &str,
     input: &mut bson::Document,
 ) -> Result<serde_json::Value> {
-    let (bson, field_type, object_types) = match field_definition {
+    let (bson, requested_type, object_types) = match field_definition {
         ndc::Field::Column { column, fields } => {
             let field_type = find_field_type(query_context, path, collection_name, column)?;
 
@@ -227,13 +227,15 @@ fn serialize_field_value(
                 Cow::Owned(configured_types)
             };
 
+            println!("{requested_type:?}\n\n{object_types:?}");
+
             let value = value_from_option(
                 collection_name,
                 column,
                 &requested_type,
                 input.remove(field_name),
             )?;
-            (value, field_type, object_types)
+            (value, requested_type, object_types)
         }
         ndc::Field::Relationship {
             query,
@@ -241,7 +243,7 @@ fn serialize_field_value(
             arguments,
         } => todo!(),
     };
-    let json = bson_to_json(field_type, &object_types, bson)?;
+    let json = bson_to_json(&requested_type, &object_types, bson)?;
     Ok(json)
 }
 
@@ -323,10 +325,12 @@ fn object_type_for_field_subset(
         fields,
         description: None,
     };
-    let pruned_object_type_name = path.into_iter().join("_");
-    let pruned_type = Type::Object(pruned_object_type_name);
+    let pruned_object_type_name = format!("requested_fields_{}", path.into_iter().join("_"));
+    let pruned_type = Type::Object(pruned_object_type_name.clone());
 
-    let object_types = object_type_sets.into_iter().flatten().collect();
+    let mut object_types: Vec<(String, ObjectType)> =
+        object_type_sets.into_iter().flatten().collect();
+    object_types.push((pruned_object_type_name, pruned_object_type));
 
     Ok((pruned_type, object_types))
 }
@@ -407,4 +411,59 @@ fn append_to_path<'a>(path: &[&'a str], elems: impl IntoIterator<Item = &'a str>
 
 fn path_to_owned(path: &[&str]) -> Vec<String> {
     path.into_iter().map(|x| (*x).to_owned()).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use mongodb::bson;
+    use ndc_sdk::models::{QueryResponse, RowFieldValue, RowSet};
+    use ndc_test_helpers::{field, object, query, query_request};
+    use pretty_assertions::assert_eq;
+    use serde_json::json;
+
+    use crate::test_helpers::make_nested_schema;
+
+    use super::serialize_query_response;
+
+    #[test]
+    fn serializes_response_with_nested_fields() -> anyhow::Result<()> {
+        let query_context = make_nested_schema();
+        let request = query_request()
+            .collection("authors")
+            .query(query().fields([field!("address" => "address", object!([
+                field!("street"),
+                field!("geocode" => "geocode", object!([
+                    field!("longitude"),
+                ])),
+            ]))]))
+            .into();
+
+        let response_documents = vec![bson::doc! {
+            "address": {
+                "street": "137 Maple Dr",
+                "geocode": {
+                    "longitude": 122.4194,
+                },
+            },
+        }];
+
+        let response = serialize_query_response(&query_context, &request, response_documents)?;
+        assert_eq!(
+            response,
+            QueryResponse(vec![RowSet {
+                aggregates: Default::default(),
+                rows: Some(vec![[(
+                    "address".into(),
+                    RowFieldValue(json!({
+                        "street": "137 Maple Dr",
+                        "geocode": {
+                            "longitude": 122.4194,
+                        },
+                    }))
+                )]
+                .into()]),
+            }])
+        );
+        Ok(())
+    }
 }

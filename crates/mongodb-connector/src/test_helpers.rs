@@ -3,7 +3,8 @@ use std::{borrow::Cow, collections::BTreeMap};
 use configuration::schema;
 use mongodb_support::BsonScalarType;
 use ndc_sdk::models::{
-    AggregateFunctionDefinition, CollectionInfo, ComparisonOperatorDefinition, ScalarType, Type, TypeRepresentation, UniquenessConstraint
+    AggregateFunctionDefinition, CollectionInfo, ComparisonOperatorDefinition, ScalarType, Type,
+    TypeRepresentation, UniquenessConstraint,
 };
 
 use crate::api_type_conversions::QueryContext;
@@ -187,13 +188,40 @@ pub fn make_nested_schema() -> QueryContext<'static> {
                 "Address".into(),
                 schema::ObjectType {
                     description: None,
-                    fields: BTreeMap::from([(
-                        "country".into(),
-                        schema::ObjectField {
-                            description: None,
-                            r#type: schema::Type::Scalar(BsonScalarType::String),
-                        },
-                    )]),
+                    fields: BTreeMap::from([
+                        (
+                            "country".into(),
+                            schema::ObjectField {
+                                description: None,
+                                r#type: schema::Type::Scalar(BsonScalarType::String),
+                            },
+                        ),
+                        (
+                            "street".into(),
+                            schema::ObjectField {
+                                description: None,
+                                r#type: schema::Type::Scalar(BsonScalarType::String),
+                            },
+                        ),
+                        (
+                            "apartment".into(),
+                            schema::ObjectField {
+                                description: None,
+                                r#type: schema::Type::Nullable(Box::new(schema::Type::Scalar(
+                                    BsonScalarType::String,
+                                ))),
+                            },
+                        ),
+                        (
+                            "geocode".into(),
+                            schema::ObjectField {
+                                description: Some("Lat/Long".to_owned()),
+                                r#type: schema::Type::Nullable(Box::new(schema::Type::Object(
+                                    "Geocode".to_owned(),
+                                ))),
+                            },
+                        ),
+                    ]),
                 },
             ),
             (
@@ -207,6 +235,28 @@ pub fn make_nested_schema() -> QueryContext<'static> {
                             r#type: schema::Type::Scalar(BsonScalarType::String),
                         },
                     )]),
+                },
+            ),
+            (
+                "Geocode".into(),
+                schema::ObjectType {
+                    description: None,
+                    fields: BTreeMap::from([
+                        (
+                            "latitude".into(),
+                            schema::ObjectField {
+                                description: None,
+                                r#type: schema::Type::Scalar(BsonScalarType::Double),
+                            },
+                        ),
+                        (
+                            "longitude".into(),
+                            schema::ObjectField {
+                                description: None,
+                                r#type: schema::Type::Scalar(BsonScalarType::Double),
+                            },
+                        ),
+                    ]),
                 },
             ),
         ])),
