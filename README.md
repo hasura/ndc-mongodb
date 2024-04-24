@@ -3,7 +3,7 @@
 ## Requirements
 
 * Rust via Rustup
-* MongoDB `>= 4`
+* MongoDB `>= 5`
 * OpenSSL development files
 
 or get dependencies automatically with Nix
