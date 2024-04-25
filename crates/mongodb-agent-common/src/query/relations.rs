@@ -138,7 +138,7 @@ fn lookups_for_field(
             let from = collection_reference(target.name())?;
 
             // Recursively build pipeline according to relation query
-            let (lookup_pipeline, _) = pipeline_for_non_foreach(
+            let lookup_pipeline = pipeline_for_non_foreach(
                 config,
                 variables,
                 &QueryRequest {

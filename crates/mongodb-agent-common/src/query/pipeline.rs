@@ -18,18 +18,6 @@ use super::{
     relations::pipeline_for_relations,
 };
 
-/// Signals the shape of data that will be returned by MongoDB.
-#[derive(Clone, Copy, Debug)]
-pub enum ResponseShape {
-    /// Indicates that the response will be a stream of records that must be wrapped in an object
-    /// with a `rows` field to produce a valid `QueryResponse` for HGE.
-    ListOfRows,
-
-    /// Indicates that the response has already been wrapped in a single object with `rows` and/or
-    /// `aggregates` fields.
-    SingleObject,
-}
-
 /// A query that includes aggregates will be run using a $facet pipeline stage, while a query
 /// without aggregates will not. The choice affects how result rows are mapped to a QueryResponse.
 ///
@@ -50,7 +38,7 @@ pub fn is_response_faceted(query: &Query) -> bool {
 pub fn pipeline_for_query_request(
     config: &Configuration,
     query_request: &QueryRequest,
-) -> Result<(Pipeline, ResponseShape), MongoAgentError> {
+) -> Result<Pipeline, MongoAgentError> {
     let foreach = foreach_variants(query_request);
     if let Some(foreach) = foreach {
         pipeline_for_foreach(foreach, config, query_request)
@@ -68,7 +56,7 @@ pub fn pipeline_for_non_foreach(
     config: &Configuration,
     variables: Option<&VariableSet>,
     query_request: &QueryRequest,
-) -> Result<(Pipeline, ResponseShape), MongoAgentError> {
+) -> Result<Pipeline, MongoAgentError> {
     let query = &*query_request.query;
     let Query {
         offset,
@@ -100,19 +88,19 @@ pub fn pipeline_for_non_foreach(
     // `diverging_stages` includes either a $facet stage if the query includes aggregates, or the
     // sort and limit stages if we are requesting rows only. In both cases the last stage is
     // a $replaceWith.
-    let (diverging_stages, response_shape) = if is_response_faceted(query) {
+    let diverging_stages = if is_response_faceted(query) {
         let (facet_pipelines, select_facet_results) = facet_pipelines_for_query(query_request)?;
         let aggregation_stages = Stage::Facet(facet_pipelines);
         let replace_with_stage = Stage::ReplaceWith(select_facet_results);
         let stages = Pipeline::from_iter([aggregation_stages, replace_with_stage]);
-        (stages, ResponseShape::SingleObject)
+        stages
     } else {
         let stages = pipeline_for_fields_facet(query_request)?;
-        (stages, ResponseShape::ListOfRows)
+        stages
     };
 
     pipeline.append(diverging_stages);
-    Ok((pipeline, response_shape))
+    Ok(pipeline)
 }
 
 /// Generate a pipeline to select fields requested by the given query. This is intended to be used

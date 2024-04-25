@@ -8,7 +8,7 @@ use dc_api_types::{
 };
 use mongodb::bson::{doc, Bson};
 
-use super::pipeline::{pipeline_for_non_foreach, ResponseShape};
+use super::pipeline::pipeline_for_non_foreach;
 use crate::mongodb::Selection;
 use crate::{
     interface_types::MongoAgentError,
@@ -57,8 +57,8 @@ pub fn pipeline_for_foreach(
     foreach: Vec<ForeachVariant>,
     config: &Configuration,
     query_request: &QueryRequest,
-) -> Result<(Pipeline, ResponseShape), MongoAgentError> {
-    let pipelines_with_response_shapes: Vec<(String, (Pipeline, ResponseShape))> = foreach
+) -> Result<Pipeline, MongoAgentError> {
+    let pipelines_with_response_shapes: Vec<(String, Pipeline)> = foreach
         .into_iter()
         .enumerate()
         .map(|(index, foreach_variant)| {
@@ -83,22 +83,19 @@ pub fn pipeline_for_foreach(
         .collect::<Result<_, MongoAgentError>>()?;
 
     let selection = Selection(doc! {
-        "row_sets": pipelines_with_response_shapes.iter().map(|(key, (_, response_shape))|
+        "row_sets": pipelines_with_response_shapes.iter().map(|(key, _)|
             Bson::String(format!("${key}")),
         ).collect::<Vec<_>>()
     });
 
     let queries = pipelines_with_response_shapes
         .into_iter()
-        .map(|(key, (pipeline, _))| (key, pipeline))
+        .map(|(key, pipeline)| (key, pipeline))
         .collect();
 
-    Ok((
-        Pipeline {
-            stages: vec![Stage::Facet(queries), Stage::ReplaceWith(selection)],
-        },
-        ResponseShape::SingleObject,
-    ))
+    Ok(Pipeline {
+        stages: vec![Stage::Facet(queries), Stage::ReplaceWith(selection)],
+    })
 }
 
 /// Fold a 'foreach' HashMap into an Expression.

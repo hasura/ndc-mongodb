@@ -17,7 +17,7 @@ pub async fn explain_query(
 
     let db = state.database();
 
-    let (pipeline, _) = query::pipeline_for_query_request(config, &query_request)?;
+    let pipeline = query::pipeline_for_query_request(config, &query_request)?;
     let pipeline_bson = to_bson(&pipeline)?;
 
     let aggregate_target = match QueryTarget::for_request(config, &query_request).input_collection()
