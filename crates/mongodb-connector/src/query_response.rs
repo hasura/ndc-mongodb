@@ -264,7 +264,6 @@ fn find_field_type<'a>(
     Ok(&field_type.r#type)
 }
 
-// TODO: test response with nested ExtendedJSON
 fn prune_type_to_field_selection<'a>(
     query_context: &QueryContext<'_>,
     path: &[&str],
@@ -298,7 +297,6 @@ fn prune_type_to_field_selection<'a>(
     }
 }
 
-// TODO: test query with aliased name for nested field
 fn object_type_for_field_subset(
     query_context: &QueryContext<'_>,
     path: &[&str],
@@ -413,6 +411,7 @@ fn path_to_owned(path: &[&str]) -> Vec<String> {
     path.into_iter().map(|x| (*x).to_owned()).collect()
 }
 
+// TODO: test nested objects in arrays
 #[cfg(test)]
 mod tests {
     use std::{borrow::Cow, str::FromStr};
@@ -468,6 +467,61 @@ mod tests {
                         },
                     }))
                 )]
+                .into()]),
+            }])
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn serializes_response_with_aliased_fields() -> anyhow::Result<()> {
+        let query_context = make_nested_schema();
+        let request = query_request()
+            .collection("authors")
+            .query(query().fields([
+                field!("address1" => "address", object!([
+                    field!("line1" => "street"),
+                ])),
+                field!("address2" => "address", object!([
+                    field!("latlong" => "geocode", object!([
+                        field!("long" => "longitude"),
+                    ])),
+                ])),
+            ]))
+            .into();
+
+        let response_documents = vec![bson::doc! {
+            "address1": {
+                "line1": "137 Maple Dr",
+            },
+            "address2": {
+                "latlong": {
+                    "long": 122.4194,
+                },
+            },
+        }];
+
+        let response = serialize_query_response(&query_context, &request, response_documents)?;
+        assert_eq!(
+            response,
+            QueryResponse(vec![RowSet {
+                aggregates: Default::default(),
+                rows: Some(vec![[
+                    (
+                        "address1".into(),
+                        RowFieldValue(json!({
+                            "line1": "137 Maple Dr",
+                        }))
+                    ),
+                    (
+                        "address2".into(),
+                        RowFieldValue(json!({
+                            "latlong": {
+                                "long": 122.4194,
+                            },
+                        }))
+                    )
+                ]
                 .into()]),
             }])
         );
