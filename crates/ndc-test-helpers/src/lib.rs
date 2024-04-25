@@ -2,11 +2,13 @@
 #![allow(unused_imports)]
 
 mod aggregates;
+mod collection_info;
 mod comparison_target;
 mod comparison_value;
 mod exists_in_collection;
 mod expressions;
 mod field;
+mod types;
 
 use std::collections::BTreeMap;
 
@@ -16,11 +18,13 @@ use ndc_models::{
     QueryRequest, Relationship, RelationshipArgument, RelationshipType,
 };
 
+pub use collection_info::*;
 pub use comparison_target::*;
 pub use comparison_value::*;
 pub use exists_in_collection::*;
 pub use expressions::*;
 pub use field::*;
+pub use types::*;
 
 #[derive(Clone, Debug, Default)]
 pub struct QueryRequestBuilder {

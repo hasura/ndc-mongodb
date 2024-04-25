@@ -4,8 +4,9 @@ use configuration::schema;
 use mongodb_support::BsonScalarType;
 use ndc_sdk::models::{
     AggregateFunctionDefinition, CollectionInfo, ComparisonOperatorDefinition, ScalarType, Type,
-    TypeRepresentation, UniquenessConstraint,
+    TypeRepresentation,
 };
+use ndc_test_helpers::make_primary_key_uniqueness_constraint;
 
 use crate::api_type_conversions::QueryContext;
 
@@ -262,16 +263,4 @@ pub fn make_nested_schema() -> QueryContext<'static> {
         ])),
         scalar_types: Cow::Owned(make_scalar_types()),
     }
-}
-
-pub fn make_primary_key_uniqueness_constraint(
-    collection_name: &str,
-) -> BTreeMap<String, UniquenessConstraint> {
-    [(
-        format!("{collection_name}_id"),
-        UniquenessConstraint {
-            unique_columns: vec!["_id".to_owned()],
-        },
-    )]
-    .into()
 }
