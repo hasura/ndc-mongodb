@@ -130,10 +130,8 @@ fn facet_name(index: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use dc_api_types::{
-        BinaryComparisonOperator, ComparisonColumn, Field, Query, QueryRequest, QueryResponse,
-    };
-    use mongodb::bson::{bson, Bson};
+    use dc_api_types::{BinaryComparisonOperator, ComparisonColumn, Field, Query, QueryRequest};
+    use mongodb::bson::{bson, doc, Bson};
     use pretty_assertions::assert_eq;
     use serde_json::{from_value, json};
 
@@ -188,56 +186,40 @@ mod tests {
             },
             {
                 "$replaceWith": {
-                    "rows": [
-                        { "query": { "rows": "$__FACET___0" } },
-                        { "query": { "rows": "$__FACET___1" } },
+                    "row_sets": [
+                        "$__FACET___0",
+                        "$__FACET___1",
                     ]
                 },
             }
         ]);
 
-        let expected_response: QueryResponse = from_value(json! ({
-            "rows": [
-                {
-                    "query": {
-                        "rows": [
-                            { "albumId": 1, "title": "For Those About To Rock We Salute You" },
-                            { "albumId": 4, "title": "Let There Be Rock" }
-                        ]
-                    }
-                },
-                {
-                    "query": {
-                        "rows": [
-                            { "albumId": 2, "title": "Balls to the Wall" },
-                            { "albumId": 3, "title": "Restless and Wild" }
-                        ]
-                    }
-                }
+        let expected_response = vec![doc! {
+            "row_sets": [
+                [
+                    { "albumId": 1, "title": "For Those About To Rock We Salute You" },
+                    { "albumId": 4, "title": "Let There Be Rock" },
+                ],
+                [
+                    { "albumId": 2, "title": "Balls to the Wall" },
+                    { "albumId": 3, "title": "Restless and Wild" },
+                ],
             ]
-        }))?;
+        }];
 
         let db = mock_collection_aggregate_response_for_pipeline(
             "tracks",
             expected_pipeline,
             bson!([{
-                "rows": [
-                    {
-                        "query": {
-                            "rows": [
-                                { "albumId": 1, "title": "For Those About To Rock We Salute You" },
-                                { "albumId": 4, "title": "Let There Be Rock" }
-                            ]
-                        }
-                    },
-                    {
-                        "query": {
-                            "rows": [
-                                { "albumId": 2, "title": "Balls to the Wall" },
-                                { "albumId": 3, "title": "Restless and Wild" }
-                            ]
-                        }
-                    }
+                "row_sets": [
+                    [
+                        { "albumId": 1, "title": "For Those About To Rock We Salute You" },
+                        { "albumId": 4, "title": "Let There Be Rock" }
+                    ],
+                    [
+                        { "albumId": 2, "title": "Balls to the Wall" },
+                        { "albumId": 3, "title": "Restless and Wild" }
+                    ],
                 ],
             }]),
         );
@@ -321,68 +303,60 @@ mod tests {
             },
             {
                 "$replaceWith": {
-                    "rows": [
-                        { "query": "$__FACET___0" },
-                        { "query": "$__FACET___1" },
+                    "row_sets": [
+                        "$__FACET___0",
+                        "$__FACET___1",
                     ]
                 },
             }
         ]);
 
-        let expected_response: QueryResponse = from_value(json! ({
-            "rows": [
+        let expected_response = vec![doc! {
+            "row_sets": [
                 {
-                    "query": {
-                        "aggregates": {
-                            "count": 2,
-                        },
-                        "rows": [
-                            { "albumId": 1, "title": "For Those About To Rock We Salute You" },
-                            { "albumId": 4, "title": "Let There Be Rock" }
-                        ]
-                    }
+                    "aggregates": {
+                        "count": 2,
+                    },
+                    "rows": [
+                        { "albumId": 1, "title": "For Those About To Rock We Salute You" },
+                        { "albumId": 4, "title": "Let There Be Rock" },
+                    ]
                 },
                 {
-                    "query": {
-                        "aggregates": {
-                            "count": 2,
-                        },
-                        "rows": [
-                            { "albumId": 2, "title": "Balls to the Wall" },
-                            { "albumId": 3, "title": "Restless and Wild" }
-                        ]
-                    }
-                }
+                    "aggregates": {
+                        "count": 2,
+                    },
+                    "rows": [
+                        { "albumId": 2, "title": "Balls to the Wall" },
+                        { "albumId": 3, "title": "Restless and Wild" },
+                    ]
+                },
             ]
-        }))?;
+        }];
 
         let db = mock_collection_aggregate_response_for_pipeline(
             "tracks",
             expected_pipeline,
             bson!([{
-                "rows": [
+                "row_sets": [
                     {
-                        "query": {
-                            "aggregates": {
-                                "count": 2,
-                            },
-                            "rows": [
-                                { "albumId": 1, "title": "For Those About To Rock We Salute You" },
-                                { "albumId": 4, "title": "Let There Be Rock" }
-                            ]
-                        }
+                        "aggregates": {
+                            "count": 2,
+                        },
+                        "rows": [
+                            { "albumId": 1, "title": "For Those About To Rock We Salute You" },
+                            { "albumId": 4, "title": "Let There Be Rock" },
+                        ]
                     },
                     {
-                        "query": {
-                            "aggregates": {
-                                "count": 2,
-                            },
-                            "rows": [
-                                { "albumId": 2, "title": "Balls to the Wall" },
-                                { "albumId": 3, "title": "Restless and Wild" }
-                            ]
-                        }
-                    }
+                        "aggregates": {
+                            "count": 2,
+                        },
+                        "rows": [
+                            { "albumId": 2, "title": "Balls to the Wall" },
+                            { "albumId": 3, "title": "Restless and Wild" },
+                        ]
+                    },
                 ]
             }]),
         );
@@ -418,7 +392,7 @@ mod tests {
                         name: "artistId".to_owned(),
                     },
                 }),
-                fields: Some(Some(
+                fields: Some(
                     [
                         (
                             "albumId".to_owned(),
@@ -436,7 +410,7 @@ mod tests {
                         ),
                     ]
                     .into(),
-                )),
+                ),
                 aggregates: None,
                 aggregates_limit: None,
                 limit: None,
@@ -474,88 +448,68 @@ mod tests {
             },
             {
                 "$replaceWith": {
-                    "rows": [
-                        { "query": { "rows": "$__FACET___0" } },
-                        { "query": { "rows": "$__FACET___1" } },
-                        { "query": { "rows": "$__FACET___2" } },
-                        { "query": { "rows": "$__FACET___3" } },
-                        { "query": { "rows": "$__FACET___4" } },
-                        { "query": { "rows": "$__FACET___5" } },
-                        { "query": { "rows": "$__FACET___6" } },
-                        { "query": { "rows": "$__FACET___7" } },
-                        { "query": { "rows": "$__FACET___8" } },
-                        { "query": { "rows": "$__FACET___9" } },
-                        { "query": { "rows": "$__FACET___10" } },
-                        { "query": { "rows": "$__FACET___11" } },
+                    "row_sets": [
+                        "$__FACET___0",
+                        "$__FACET___1",
+                        "$__FACET___2",
+                        "$__FACET___3",
+                        "$__FACET___4",
+                        "$__FACET___5",
+                        "$__FACET___6",
+                        "$__FACET___7",
+                        "$__FACET___8",
+                        "$__FACET___9",
+                        "$__FACET___10",
+                        "$__FACET___11",
                     ]
                 },
             }
         ]);
 
-        let expected_response: QueryResponse = from_value(json! ({
-            "rows": [
-                {
-                    "query": {
-                        "rows": [
-                            { "albumId": 1, "title": "For Those About To Rock We Salute You" },
-                            { "albumId": 4, "title": "Let There Be Rock" }
-                        ]
-                    }
-                },
-                { "query": { "rows": [] } },
-                {
-                    "query": {
-                        "rows": [
-                            { "albumId": 2, "title": "Balls to the Wall" },
-                            { "albumId": 3, "title": "Restless and Wild" }
-                        ]
-                    }
-                },
-                { "query": { "rows": [] } },
-                { "query": { "rows": [] } },
-                { "query": { "rows": [] } },
-                { "query": { "rows": [] } },
-                { "query": { "rows": [] } },
-                { "query": { "rows": [] } },
-                { "query": { "rows": [] } },
-                { "query": { "rows": [] } },
+        let expected_response = vec![doc! {
+            "row_sets": [
+                [
+                    { "albumId": 1, "title": "For Those About To Rock We Salute You" },
+                    { "albumId": 4, "title": "Let There Be Rock" }
+                ],
+                [],
+                [
+                    { "albumId": 2, "title": "Balls to the Wall" },
+                    { "albumId": 3, "title": "Restless and Wild" }
+                ],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
             ]
-        }))?;
+        }];
 
         let db = mock_collection_aggregate_response_for_pipeline(
             "tracks",
             expected_pipeline,
             bson!([{
-                "rows": [
-                    {
-                        "query": {
-                            "rows": [
-                                { "albumId": 1, "title": "For Those About To Rock We Salute You" },
-                                { "albumId": 4, "title": "Let There Be Rock" }
-                            ]
-                        }
-                    },
-                    {
-                        "query": {
-                            "rows": []
-                        }
-                    },
-                    {
-                        "query": {
-                            "rows": [
-                                { "albumId": 2, "title": "Balls to the Wall" },
-                                { "albumId": 3, "title": "Restless and Wild" }
-                            ]
-                        }
-                    },
-                    { "query": { "rows": [] } },
-                    { "query": { "rows": [] } },
-                    { "query": { "rows": [] } },
-                    { "query": { "rows": [] } },
-                    { "query": { "rows": [] } },
-                    { "query": { "rows": [] } },
-                    { "query": { "rows": [] } },
-                    { "query": { "rows": [] } },
+                "row_sets": [
+                    [
+                        { "albumId": 1, "title": "For Those About To Rock We Salute You" },
+                        { "albumId": 4, "title": "Let There Be Rock" }
+                    ],
+                    [],
+                    [
+                        { "albumId": 2, "title": "Balls to the Wall" },
+                        { "albumId": 3, "title": "Restless and Wild" }
+                    ],
+                    [],
+                    [],
+                    [],
+                    [],
+                    [],
+                    [],
+                    [],
+                    [],
                 ],
             }]),
         );

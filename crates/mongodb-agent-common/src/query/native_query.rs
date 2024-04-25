@@ -87,11 +87,11 @@ mod tests {
         Configuration,
     };
     use dc_api_test_helpers::{column, query, query_request};
-    use dc_api_types::{Argument, QueryResponse};
+    use dc_api_types::Argument;
     use mongodb::bson::{bson, doc};
     use mongodb_support::BsonScalarType as S;
     use pretty_assertions::assert_eq;
-    use serde_json::{from_value, json};
+    use serde_json::json;
 
     use crate::{
         mongodb::test_helpers::mock_aggregate_response_for_pipeline, query::execute_query_request,
@@ -272,12 +272,10 @@ mod tests {
             },
         ]);
 
-        let expected_response: QueryResponse = from_value(json!({
-            "rows": [
-                { "title": "Beau Geste", "year": 1926, "genres": ["Action", "Adventure", "Drama"] },
-                { "title": "For Heaven's Sake", "year": 1926, "genres": ["Action", "Comedy", "Romance"] },
-            ],
-        }))?;
+        let expected_response = vec![
+            doc! { "title": "Beau Geste", "year": 1926, "genres": ["Action", "Adventure", "Drama"] },
+            doc! { "title": "For Heaven's Sake", "year": 1926, "genres": ["Action", "Comedy", "Romance"] },
+        ];
 
         let db = mock_aggregate_response_for_pipeline(
             expected_pipeline,

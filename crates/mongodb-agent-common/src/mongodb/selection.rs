@@ -249,7 +249,7 @@ mod tests {
 
         let query_request = QueryRequest {
             query: Box::new(Query {
-                fields: Some(Some(fields)),
+                fields: Some(fields),
                 ..Default::default()
             }),
             foreach: None,

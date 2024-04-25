@@ -37,7 +37,7 @@ pub async fn handle_query_request(
 
 #[cfg(test)]
 mod tests {
-    use dc_api_types::{QueryRequest, QueryResponse, RowSet};
+    use dc_api_types::QueryRequest;
     use mongodb::bson::{self, bson, doc};
     use pretty_assertions::assert_eq;
     use serde_json::{from_value, json};
@@ -65,12 +65,7 @@ mod tests {
             "relationships": [],
         }))?;
 
-        let expected_response = doc! {
-            "rows": [
-                { "student_gpa": 3.1 },
-                { "student_gpa": 3.6 },
-            ],
-        };
+        let expected_response = vec![doc! { "student_gpa": 3.1 }, doc! { "student_gpa": 3.6 }];
 
         let expected_pipeline = bson!([
             { "$match": { "gpa": { "$lt": 4.0 } } },
@@ -113,12 +108,12 @@ mod tests {
             "relationships": [],
         }))?;
 
-        let expected_response: QueryResponse = from_value(json!({
+        let expected_response = vec![doc! {
             "aggregates": {
                 "count": 11,
                 "avg": 3,
             }
-        }))?;
+        }];
 
         let expected_pipeline = bson!([
             {
@@ -192,14 +187,14 @@ mod tests {
             "relationships": [],
         }))?;
 
-        let expected_response: QueryResponse = from_value(json!({
+        let expected_response = vec![doc! {
             "aggregates": {
                 "avg": 3.1,
             },
             "rows": [{
                 "gpa": 3.1,
             }],
-        }))?;
+        }];
 
         let expected_pipeline = bson!([
             { "$match": { "gpa": { "$lt": 4.0 } } },
@@ -269,11 +264,7 @@ mod tests {
           "relationships": []
         }))?;
 
-        let expected_response: QueryResponse = from_value(json!({
-            "rows": [{
-                "date": "2018-08-14T15:05:03.142Z",
-            }]
-        }))?;
+        let expected_response = vec![doc! { "date": "2018-08-14T15:05:03.142Z" }];
 
         let expected_pipeline = bson!([
             {
@@ -317,7 +308,7 @@ mod tests {
           "relationships": [],
         }))?;
 
-        let expected_response = QueryResponse::Single(RowSet::Rows { rows: vec![] });
+        let expected_response: Vec<bson::Document> = vec![];
 
         let db = mock_collection_aggregate_response("comments", bson!([]));
 

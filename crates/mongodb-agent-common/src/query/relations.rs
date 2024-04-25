@@ -243,8 +243,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use dc_api_types::{QueryRequest, QueryResponse};
-    use mongodb::bson::{bson, Bson};
+    use dc_api_types::QueryRequest;
+    use mongodb::bson::{bson, doc, Bson};
     use pretty_assertions::assert_eq;
     use serde_json::{from_value, json};
 
@@ -281,17 +281,13 @@ mod tests {
             }],
         }))?;
 
-        let expected_response: QueryResponse = from_value(json!({
-            "rows": [
-                {
-                    "class_title": "MongoDB 101",
-                    "students": [
-                        { "student_name": "Alice" },
-                        { "student_name": "Bob" },
-                    ],
-                },
-            ],
-        }))?;
+        let expected_response = vec![doc! {
+            "class_title": "MongoDB 101",
+            "students": { "rows": [
+                { "student_name": "Alice" },
+                { "student_name": "Bob" },
+            ] },
+        }];
 
         let expected_pipeline = bson!([
             {
@@ -332,10 +328,10 @@ mod tests {
             expected_pipeline,
             bson!([{
                 "class_title": "MongoDB 101",
-                "students": [
+                "students": { "rows": [
                     { "student_name": "Alice" },
                     { "student_name": "Bob" },
-                ],
+                ] },
             }]),
         );
 
@@ -375,18 +371,16 @@ mod tests {
             }],
         }))?;
 
-        let expected_response: QueryResponse = from_value(json!({
-            "rows": [
-                {
-                    "student_name": "Alice",
-                    "class": { "class_title": "MongoDB 101" },
-                },
-                {
-                    "student_name": "Bob",
-                    "class": { "class_title": "MongoDB 101" },
-                },
-            ],
-        }))?;
+        let expected_response = vec![
+            doc! {
+                "student_name": "Alice",
+                "class": { "rows": [{ "class_title": "MongoDB 101" }] },
+            },
+            doc! {
+                "student_name": "Bob",
+                "class": { "rows": [{ "class_title": "MongoDB 101" }] },
+            },
+        ];
 
         let expected_pipeline = bson!([
             {
@@ -426,11 +420,11 @@ mod tests {
             bson!([
                 {
                     "student_name": "Alice",
-                    "class": { "class_title": "MongoDB 101" },
+                    "class": { "rows": [{ "class_title": "MongoDB 101" }] },
                 },
                 {
                     "student_name": "Bob",
-                    "class": { "class_title": "MongoDB 101" },
+                    "class": { "rows": [{ "class_title": "MongoDB 101" }] },
                 },
             ]),
         );
@@ -471,17 +465,13 @@ mod tests {
             }],
         }))?;
 
-        let expected_response: QueryResponse = from_value(json!({
-            "rows": [
-                {
-                    "class_title": "MongoDB 101",
-                    "students": [
-                        { "student_name": "Alice" },
-                        { "student_name": "Bob" },
-                    ],
-                },
-            ],
-        }))?;
+        let expected_response = vec![doc! {
+            "class_title": "MongoDB 101",
+            "students": { "rows": [
+                { "student_name": "Alice" },
+                { "student_name": "Bob" },
+            ] },
+        }];
 
         let expected_pipeline = bson!([
             {
@@ -524,10 +514,10 @@ mod tests {
             expected_pipeline,
             bson!([{
                 "class_title": "MongoDB 101",
-                "students": [
-                { "student_name": "Alice" },
-                { "student_name": "Bob" },
-            ],
+                "students": { "rows": [
+                    { "student_name": "Alice" },
+                    { "student_name": "Bob" },
+                ] },
             }]),
         );
 
@@ -589,28 +579,24 @@ mod tests {
             ],
         }))?;
 
-        let expected_response: QueryResponse = from_value(json!({
-            "rows": [
+        let expected_response = vec![doc! {
+            "class_title": "MongoDB 101",
+            "students": { "rows": [
                 {
-                    "class_title": "MongoDB 101",
-                    "students": { "rows": [
-                        {
-                            "student_name": "Alice",
-                            "assignments": { "rows": [
-                                { "assignment_title": "read chapter 2" },
-                            ]}
-                        },
-                        {
-                            "student_name": "Bob",
-                            "assignments": { "rows": [
-                                { "assignment_title": "JSON Basics" },
-                                { "assignment_title": "read chapter 2" },
-                            ]}
-                        },
-                     ]},
+                    "student_name": "Alice",
+                    "assignments": { "rows": [
+                        { "assignment_title": "read chapter 2" },
+                    ]}
                 },
-            ],
-        }))?;
+                {
+                    "student_name": "Bob",
+                    "assignments": { "rows": [
+                        { "assignment_title": "JSON Basics" },
+                        { "assignment_title": "read chapter 2" },
+                    ]}
+                },
+             ]},
+        }];
 
         let expected_pipeline = bson!([
             {
@@ -736,17 +722,13 @@ mod tests {
             }],
         }))?;
 
-        let expected_response: QueryResponse = from_value(json!({
-            "rows": [
-                {
-                    "students_aggregate": {
-                        "aggregates": {
-                            "aggregate_count": 2,
-                        },
-                     },
+        let expected_response = vec![doc! {
+            "students_aggregate": {
+                "aggregates": {
+                    "aggregate_count": 2,
                 },
-            ],
-        }))?;
+             },
+        }];
 
         let expected_pipeline = bson!([
             {
@@ -868,15 +850,13 @@ mod tests {
           ]
         }))?;
 
-        let expected_response: QueryResponse = from_value(json!({
-          "rows": [{
+        let expected_response = vec![doc! {
             "name": "Mercedes Tyler",
             "movie": { "rows": [{
-              "title": "The Land Beyond the Sunset",
-              "year": 1912
+                "title": "The Land Beyond the Sunset",
+                "year": 1912
             }] },
-          }]
-        }))?;
+        }];
 
         let expected_pipeline = bson!([
           {
@@ -1004,16 +984,14 @@ mod tests {
           ]
         }))?;
 
-        let expected_response: QueryResponse = from_value(json!({
-            "rows": [{
-                "name": "Beric Dondarrion",
-                "movie": { "rows": [{
-                    "credits": {
-                        "director": "Martin Scorsese",
-                    }
-                }] },
-            }]
-        }))?;
+        let expected_response = vec![doc! {
+            "name": "Beric Dondarrion",
+            "movie": { "rows": [{
+                "credits": {
+                    "director": "Martin Scorsese",
+                }
+            }] },
+        }];
 
         let expected_pipeline = bson!([
             {
