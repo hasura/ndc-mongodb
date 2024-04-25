@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use mongodb::bson;
 use serde::Serialize;
 
-use super::{accumulator::Accumulator, pipeline::Pipeline, projection::Projection, Selection};
+use super::{accumulator::Accumulator, pipeline::Pipeline, Selection};
 
 /// Aggergation Pipeline Stage. This is a work-in-progress - we are adding enum variants to match
 /// MongoDB pipeline stage types as we need them in this app. For documentation on all stage types
@@ -132,15 +132,6 @@ pub enum Stage {
     /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/count/#mongodb-pipeline-pipe.-count
     #[serde(rename = "$count")]
     Count(String),
-
-    /// Reshapes each document in the stream, such as by adding new fields or removing existing fields. For each input document, outputs one document.
-    ///
-    /// See also [`$unset`] for removing existing fields.
-    ///
-    /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/project/#mongodb-pipeline-pipe.-project
-    #[allow(dead_code)]
-    #[serde(rename = "$project")]
-    Project(Projection),
 
     /// Replaces a document with the specified embedded document. The operation replaces all
     /// existing fields in the input document, including the _id field. Specify a document embedded
