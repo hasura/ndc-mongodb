@@ -147,14 +147,12 @@ impl Connector for MongoConnector {
         let response_documents = handle_query_request(configuration, state, v2_request)
             .await
             .map_err(mongo_agent_error_to_query_error)?;
-        Ok(
-            serialize_query_response(&query_context, &request, response_documents)
-                .map_err(|err| {
-                    QueryError::UnprocessableContent(format!(
-                        "error converting MongoDB response to JSON: {err}"
-                    ))
-                })?
-                .into(),
-        )
+        let response = serialize_query_response(&query_context, &request, response_documents)
+            .map_err(|err| {
+                QueryError::UnprocessableContent(format!(
+                    "error converting MongoDB response to JSON: {err}"
+                ))
+            })?;
+        Ok(response.into())
     }
 }

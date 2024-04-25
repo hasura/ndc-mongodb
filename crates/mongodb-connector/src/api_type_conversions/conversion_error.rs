@@ -23,7 +23,7 @@ pub enum ConversionError {
 
     #[error(
         "Unknown field \"{field_name}\" in object type \"{object_type}\"{}",
-        if path.is_empty() { "".to_owned() } else { format!(" at path {}", path.join(".")) }
+        at_path(path)
     )]
     UnknownObjectTypeField {
         object_type: String,
@@ -34,8 +34,11 @@ pub enum ConversionError {
     #[error("Unknown collection, \"{0}\"")]
     UnknownCollection(String),
 
-    #[error("Unknown relationship, \"{0}\"")]
-    UnknownRelationship(String),
+    #[error("Unknown relationship, \"{relationship_name}\"{}", at_path(path))]
+    UnknownRelationship {
+        relationship_name: String,
+        path: Vec<String>,
+    },
 
     #[error(
         "Unknown aggregate function, \"{aggregate_function}\" in scalar type \"{scalar_type}\""
@@ -67,5 +70,13 @@ impl From<ConversionError> for ExplainError {
             ConversionError::NotImplemented(e) => ExplainError::UnsupportedOperation(e.to_owned()),
             e => ExplainError::InvalidRequest(e.to_string()),
         }
+    }
+}
+
+fn at_path(path: &Vec<String>) -> String {
+    if path.is_empty() {
+        "".to_owned()
+    } else {
+        format!(" at path {}", path.join("."))
     }
 }
