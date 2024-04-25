@@ -850,6 +850,10 @@ definition:
               type:
                 type: named
                 name: String
+        TitleWordFrequency:
+          fields:
+            _id: { type: { type: named, name: String } }
+            count: { type: { type: named, name: Int } }
       collections:
         - name: comments
           arguments: {}
@@ -888,6 +892,14 @@ definition:
           type: users
           uniqueness_constraints:
             users_id:
+              unique_columns:
+                - _id
+          foreign_keys: {}
+        - name: title_word_frequency
+          arguments: {}
+          type: TitleWordFrequency
+          uniqueness_constraints:
+            title_word_frequency_id:
               unique_columns:
                 - _id
           foreign_keys: {}

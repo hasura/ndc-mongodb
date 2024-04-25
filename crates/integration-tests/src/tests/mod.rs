@@ -8,6 +8,7 @@
 //
 
 mod basic;
+mod local_relationship;
 mod native_procedure;
 mod native_query;
 mod remote_relationship;
