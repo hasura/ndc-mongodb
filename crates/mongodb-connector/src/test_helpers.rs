@@ -264,7 +264,7 @@ pub fn make_nested_schema() -> QueryContext<'static> {
     }
 }
 
-fn make_primary_key_uniqueness_constraint(
+pub fn make_primary_key_uniqueness_constraint(
     collection_name: &str,
 ) -> BTreeMap<String, UniquenessConstraint> {
     [(

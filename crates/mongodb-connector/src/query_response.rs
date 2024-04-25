@@ -415,13 +415,21 @@ fn path_to_owned(path: &[&str]) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use mongodb::bson;
-    use ndc_sdk::models::{QueryResponse, RowFieldValue, RowSet};
+    use std::{borrow::Cow, str::FromStr};
+
+    use configuration::schema::{ObjectField, ObjectType, Type};
+    use mongodb::bson::{self, Bson};
+    use ndc_sdk::models::{CollectionInfo, QueryResponse, RowFieldValue, RowSet};
     use ndc_test_helpers::{field, object, query, query_request};
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
-    use crate::test_helpers::make_nested_schema;
+    use crate::{
+        api_type_conversions::QueryContext,
+        test_helpers::{
+            make_nested_schema, make_primary_key_uniqueness_constraint, make_scalar_types,
+        },
+    };
 
     use super::serialize_query_response;
 
@@ -461,6 +469,83 @@ mod tests {
                         },
                     }))
                 )]
+                .into()]),
+            }])
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn serializes_response_with_decimal_128_fields() -> anyhow::Result<()> {
+        let query_context = QueryContext {
+            collections: Cow::Owned(
+                [(
+                    "business".into(),
+                    CollectionInfo {
+                        name: "business".into(),
+                        description: None,
+                        collection_type: "Business".into(),
+                        arguments: Default::default(),
+                        uniqueness_constraints: make_primary_key_uniqueness_constraint("business"),
+                        foreign_keys: Default::default(),
+                    },
+                )]
+                .into(),
+            ),
+            functions: Default::default(),
+            object_types: Cow::Owned(
+                [(
+                    "Business".to_owned(),
+                    ObjectType {
+                        description: None,
+                        fields: [
+                            (
+                                "price".to_owned(),
+                                ObjectField {
+                                    description: None,
+                                    r#type: Type::Scalar(mongodb_support::BsonScalarType::Decimal),
+                                },
+                            ),
+                            (
+                                "price_extjson".to_owned(),
+                                ObjectField {
+                                    description: None,
+                                    r#type: Type::ExtendedJSON,
+                                },
+                            ),
+                        ]
+                        .into(),
+                    },
+                )]
+                .into(),
+            ),
+            scalar_types: Cow::Owned(make_scalar_types()),
+        };
+
+        let request = query_request()
+            .collection("business")
+            .query(query().fields([field!("price"), field!("price_extjson")]))
+            .into();
+
+        let response_documents = vec![bson::doc! {
+            "price": Bson::Decimal128(bson::Decimal128::from_str("127.6486654").unwrap()),
+            "price_extjson": Bson::Decimal128(bson::Decimal128::from_str("-4.9999999999").unwrap()),
+        }];
+
+        let response = serialize_query_response(&query_context, &request, response_documents)?;
+        assert_eq!(
+            response,
+            QueryResponse(vec![RowSet {
+                aggregates: Default::default(),
+                rows: Some(vec![[
+                    ("price".into(), RowFieldValue(json!("127.6486654"))),
+                    (
+                        "price_extjson".into(),
+                        RowFieldValue(json!({
+                            "$numberDecimal": "-4.9999999999"
+                        }))
+                    ),
+                ]
                 .into()]),
             }])
         );
