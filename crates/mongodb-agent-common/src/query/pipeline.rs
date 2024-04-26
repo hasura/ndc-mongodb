@@ -92,11 +92,9 @@ pub fn pipeline_for_non_foreach(
         let (facet_pipelines, select_facet_results) = facet_pipelines_for_query(query_request)?;
         let aggregation_stages = Stage::Facet(facet_pipelines);
         let replace_with_stage = Stage::ReplaceWith(select_facet_results);
-        let stages = Pipeline::from_iter([aggregation_stages, replace_with_stage]);
-        stages
+        Pipeline::from_iter([aggregation_stages, replace_with_stage])
     } else {
-        let stages = pipeline_for_fields_facet(query_request)?;
-        stages
+        pipeline_for_fields_facet(query_request)?
     };
 
     pipeline.append(diverging_stages);
@@ -147,7 +145,7 @@ fn facet_pipelines_for_query(
         })
         .collect::<Result<BTreeMap<_, _>, MongoAgentError>>()?;
 
-    if let Some(_) = fields {
+    if fields.is_some() {
         let fields_pipeline = pipeline_for_fields_facet(query_request)?;
         facet_pipelines.insert(ROWS_FIELD.to_owned(), fields_pipeline);
     }

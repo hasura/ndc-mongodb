@@ -33,10 +33,9 @@ impl QueryTarget<'_> {
     pub fn input_collection(&self) -> Option<&str> {
         match self {
             QueryTarget::Collection(collection_name) => Some(collection_name),
-            QueryTarget::NativeQuery { native_query, .. } => native_query
-                .input_collection
-                .as_ref()
-                .map(|name| name.as_str()),
+            QueryTarget::NativeQuery { native_query, .. } => {
+                native_query.input_collection.as_deref()
+            }
         }
     }
 }

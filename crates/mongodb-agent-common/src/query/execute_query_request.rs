@@ -34,7 +34,7 @@ pub async fn execute_query_request(
     // the MongoDB API call `db.<collection>.aggregate` we instead call `db.aggregate`.
     let documents = match target.input_collection() {
         Some(collection_name) => {
-            let collection = database.collection(&collection_name);
+            let collection = database.collection(collection_name);
             collect_from_cursor(collection.aggregate(pipeline, None).await?).await
         }
         None => collect_from_cursor(database.aggregate(pipeline, None).await?).await,

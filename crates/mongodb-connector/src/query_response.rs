@@ -86,7 +86,7 @@ pub fn serialize_query_response(
                 serialize_row_set(
                     query_context,
                     query_request,
-                    &vec![],
+                    &[],
                     collection_name,
                     &query_request.query,
                     docs,
@@ -98,7 +98,7 @@ pub fn serialize_query_response(
         Ok(vec![serialize_row_set(
             query_context,
             query_request,
-            &vec![],
+            &[],
             collection_name,
             &query_request.query,
             response_documents,
@@ -254,7 +254,7 @@ fn serialize_field_value(
             let field_type = find_field_type(query_context, path, collection_name, column)?;
 
             let (requested_type, temp_object_types) =
-                prune_type_to_field_selection(query_context, query_request, path, &field_type, fields.as_ref())?;
+                prune_type_to_field_selection(query_context, query_request, path, field_type, fields.as_ref())?;
 
             let value = value_from_option(collection_name, column, &requested_type, value_option)?;
 
@@ -316,11 +316,11 @@ fn find_field_type<'a>(
 ///
 /// Returns a reference to the pruned type, and a list of newly-computed object types with
 /// generated names.
-fn prune_type_to_field_selection<'a>(
+fn prune_type_to_field_selection(
     query_context: &QueryContext<'_>,
     query_request: &QueryRequest,
     path: &[&str],
-    field_type: &'a Type,
+    field_type: &Type,
     fields: Option<&NestedField>,
 ) -> Result<(Type, Vec<(String, ObjectType)>)> {
     match (field_type, fields) {
@@ -389,7 +389,7 @@ fn object_type_for_field_subset(
         fields,
         description: None,
     };
-    let pruned_object_type_name = format!("requested_fields_{}", path.into_iter().join("_"));
+    let pruned_object_type_name = format!("requested_fields_{}", path.iter().join("_"));
     let pruned_type = Type::Object(pruned_object_type_name.clone());
 
     let mut object_types: Vec<(String, ObjectType)> =
@@ -398,6 +398,7 @@ fn object_type_for_field_subset(
 
     Ok((pruned_type, object_types))
 }
+// TODO: why are objectIds serializing as extended JSON?
 
 /// Given an object type for a value, and a requested field from that value, produce an updated
 /// object field definition to match the request. This must take into account aliasing where the
@@ -504,7 +505,7 @@ fn type_for_relation_field(
         .into(),
         description: Default::default(),
     };
-    let relation_object_type_name = format!("relation_{}", path.into_iter().join("_"));
+    let relation_object_type_name = format!("relation_{}", path.iter().join("_"));
     temp_object_types.push((relation_object_type_name.clone(), relation_object_type));
     let requested_type = Type::Object(relation_object_type_name);
 
@@ -543,11 +544,11 @@ where
 }
 
 fn append_to_path<'a>(path: &[&'a str], elems: impl IntoIterator<Item = &'a str>) -> Vec<&'a str> {
-    path.into_iter().map(|x| *x).chain(elems).collect()
+    path.iter().copied().chain(elems).collect()
 }
 
 fn path_to_owned(path: &[&str]) -> Vec<String> {
-    path.into_iter().map(|x| (*x).to_owned()).collect()
+    path.iter().map(|x| (*x).to_owned()).collect()
 }
 
 // TODO: test nested objects in arrays

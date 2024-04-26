@@ -73,7 +73,7 @@ impl From<ConversionError> for ExplainError {
     }
 }
 
-fn at_path(path: &Vec<String>) -> String {
+fn at_path(path: &[String]) -> String {
     if path.is_empty() {
         "".to_owned()
     } else {

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use configuration::Configuration;
 use dc_api_types::comparison_column::ColumnSelector;
@@ -58,7 +58,7 @@ pub fn pipeline_for_foreach(
     config: &Configuration,
     query_request: &QueryRequest,
 ) -> Result<Pipeline, MongoAgentError> {
-    let pipelines_with_response_shapes: Vec<(String, Pipeline)> = foreach
+    let pipelines: BTreeMap<String, Pipeline> = foreach
         .into_iter()
         .enumerate()
         .map(|(index, foreach_variant)| {
@@ -76,25 +76,19 @@ pub fn pipeline_for_foreach(
                 .into();
             }
 
-            let pipeline_with_response_shape =
-                pipeline_for_non_foreach(config, variables.as_ref(), &q)?;
-            Ok((facet_name(index), pipeline_with_response_shape))
+            let pipeline = pipeline_for_non_foreach(config, variables.as_ref(), &q)?;
+            Ok((facet_name(index), pipeline))
         })
         .collect::<Result<_, MongoAgentError>>()?;
 
     let selection = Selection(doc! {
-        "row_sets": pipelines_with_response_shapes.iter().map(|(key, _)|
+        "row_sets": pipelines.keys().map(|key|
             Bson::String(format!("${key}")),
         ).collect::<Vec<_>>()
     });
 
-    let queries = pipelines_with_response_shapes
-        .into_iter()
-        .map(|(key, pipeline)| (key, pipeline))
-        .collect();
-
     Ok(Pipeline {
-        stages: vec![Stage::Facet(queries), Stage::ReplaceWith(selection)],
+        stages: vec![Stage::Facet(pipelines), Stage::ReplaceWith(selection)],
     })
 }
 
