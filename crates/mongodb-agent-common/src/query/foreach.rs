@@ -58,7 +58,7 @@ pub fn pipeline_for_foreach(
     config: &Configuration,
     query_request: &QueryRequest,
 ) -> Result<Pipeline, MongoAgentError> {
-    let pipelines: BTreeMap<String, Pipeline> = foreach
+    let pipelines: Vec<(String, Pipeline)> = foreach
         .into_iter()
         .enumerate()
         .map(|(index, foreach_variant)| {
@@ -82,13 +82,15 @@ pub fn pipeline_for_foreach(
         .collect::<Result<_, MongoAgentError>>()?;
 
     let selection = Selection(doc! {
-        "row_sets": pipelines.keys().map(|key|
+        "row_sets": pipelines.iter().map(|(key, _)|
             Bson::String(format!("${key}")),
         ).collect::<Vec<_>>()
     });
 
+    let queries = pipelines.into_iter().collect();
+
     Ok(Pipeline {
-        stages: vec![Stage::Facet(pipelines), Stage::ReplaceWith(selection)],
+        stages: vec![Stage::Facet(queries), Stage::ReplaceWith(selection)],
     })
 }
 
