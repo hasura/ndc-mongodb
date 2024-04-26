@@ -24,7 +24,7 @@ pub struct QueryContext<'a> {
 }
 
 impl QueryContext<'_> {
-    fn find_collection(
+    pub fn find_collection(
         &self,
         collection_name: &str,
     ) -> Result<&v3::CollectionInfo, ConversionError> {
@@ -40,7 +40,7 @@ impl QueryContext<'_> {
         ))
     }
 
-    fn find_collection_object_type(
+    pub fn find_collection_object_type(
         &self,
         collection_name: &str,
     ) -> Result<WithNameRef<schema::ObjectType>, ConversionError> {
@@ -48,7 +48,7 @@ impl QueryContext<'_> {
         self.find_object_type(&collection.collection_type)
     }
 
-    fn find_object_type<'a>(
+    pub fn find_object_type<'a>(
         &'a self,
         object_type_name: &'a str,
     ) -> Result<WithNameRef<schema::ObjectType>, ConversionError> {
@@ -105,6 +105,7 @@ fn find_object_field<'a>(
         ConversionError::UnknownObjectTypeField {
             object_type: object_type.name.to_string(),
             field_name: field_name.to_string(),
+            path: Default::default(), // TODO: set a path for more helpful error reporting
         }
     })
 }
@@ -144,7 +145,7 @@ fn v3_to_v2_query(
     query: v3::Query,
     collection_object_type: &WithNameRef<schema::ObjectType>,
 ) -> Result<v2::Query, ConversionError> {
-    let aggregates: Option<Option<HashMap<String, v2::Aggregate>>> = query
+    let aggregates: Option<HashMap<String, v2::Aggregate>> = query
         .aggregates
         .map(|aggregates| -> Result<_, ConversionError> {
             aggregates
@@ -157,8 +158,7 @@ fn v3_to_v2_query(
                 })
                 .collect()
         })
-        .transpose()?
-        .map(Some);
+        .transpose()?;
 
     let fields = v3_to_v2_fields(
         context,
@@ -168,7 +168,7 @@ fn v3_to_v2_query(
         query.fields,
     )?;
 
-    let order_by: Option<Option<v2::OrderBy>> = query
+    let order_by: Option<v2::OrderBy> = query
         .order_by
         .map(|order_by| -> Result<_, ConversionError> {
             let (elements, relations) = order_by
@@ -201,8 +201,7 @@ fn v3_to_v2_query(
                 relations,
             })
         })
-        .transpose()?
-        .map(Some);
+        .transpose()?;
 
     let limit = optional_32bit_number_to_64bit(query.limit);
     let offset = optional_32bit_number_to_64bit(query.offset);
@@ -293,8 +292,8 @@ fn v3_to_v2_fields(
     root_collection_object_type: &WithNameRef<schema::ObjectType>,
     object_type: &WithNameRef<schema::ObjectType>,
     v3_fields: Option<IndexMap<String, v3::Field>>,
-) -> Result<Option<Option<HashMap<String, v2::Field>>>, ConversionError> {
-    let v2_fields: Option<Option<HashMap<String, v2::Field>>> = v3_fields
+) -> Result<Option<HashMap<String, v2::Field>>, ConversionError> {
+    let v2_fields: Option<HashMap<String, v2::Field>> = v3_fields
         .map(|fields| {
             fields
                 .into_iter()
@@ -312,8 +311,7 @@ fn v3_to_v2_fields(
                 })
                 .collect::<Result<_, ConversionError>>()
         })
-        .transpose()?
-        .map(Some);
+        .transpose()?;
     Ok(v2_fields)
 }
 
@@ -871,11 +869,11 @@ fn v3_to_v2_comparison_value(
 }
 
 #[inline]
-fn optional_32bit_number_to_64bit<A, B>(n: Option<A>) -> Option<Option<B>>
+fn optional_32bit_number_to_64bit<A, B>(n: Option<A>) -> Option<B>
 where
     B: From<A>,
 {
-    n.map(|input| Some(input.into()))
+    n.map(|input| input.into())
 }
 
 fn v3_to_v2_arguments(arguments: BTreeMap<String, v3::Argument>) -> HashMap<String, v2::Argument> {
@@ -909,23 +907,17 @@ fn v3_to_v2_relationship_arguments(
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        borrow::Cow,
-        collections::{BTreeMap, HashMap},
-    };
+    use std::collections::HashMap;
 
-    use configuration::schema;
     use dc_api_test_helpers::{self as v2, source, table_relationships, target};
-    use mongodb_support::BsonScalarType;
-    use ndc_sdk::models::{
-        self as v3, AggregateFunctionDefinition, ComparisonOperatorDefinition, OrderByElement,
-        OrderByTarget, OrderDirection, ScalarType, Type, TypeRepresentation,
-    };
+    use ndc_sdk::models::{OrderByElement, OrderByTarget, OrderDirection};
     use ndc_test_helpers::*;
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
-    use super::{v3_to_v2_query_request, v3_to_v2_relationships, QueryContext};
+    use crate::test_helpers::{make_flat_schema, make_nested_schema};
+
+    use super::{v3_to_v2_query_request, v3_to_v2_relationships};
 
     #[test]
     fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
@@ -1268,223 +1260,5 @@ mod tests {
 
         assert_eq!(v2_request, expected);
         Ok(())
-    }
-
-    fn make_scalar_types() -> BTreeMap<String, ScalarType> {
-        BTreeMap::from([
-            (
-                "String".to_owned(),
-                ScalarType {
-                    representation: Some(TypeRepresentation::String),
-                    aggregate_functions: Default::default(),
-                    comparison_operators: BTreeMap::from([
-                        ("_eq".to_owned(), ComparisonOperatorDefinition::Equal),
-                        (
-                            "_regex".to_owned(),
-                            ComparisonOperatorDefinition::Custom {
-                                argument_type: Type::Named {
-                                    name: "String".to_owned(),
-                                },
-                            },
-                        ),
-                    ]),
-                },
-            ),
-            (
-                "Int".to_owned(),
-                ScalarType {
-                    representation: Some(TypeRepresentation::Int32),
-                    aggregate_functions: BTreeMap::from([(
-                        "avg".into(),
-                        AggregateFunctionDefinition {
-                            result_type: Type::Named {
-                                name: "Float".into(), // Different result type to the input scalar type
-                            },
-                        },
-                    )]),
-                    comparison_operators: BTreeMap::from([(
-                        "_eq".to_owned(),
-                        ComparisonOperatorDefinition::Equal,
-                    )]),
-                },
-            ),
-        ])
-    }
-
-    fn make_flat_schema() -> QueryContext<'static> {
-        QueryContext {
-            collections: Cow::Owned(BTreeMap::from([
-                (
-                    "authors".into(),
-                    v3::CollectionInfo {
-                        name: "authors".to_owned(),
-                        description: None,
-                        collection_type: "Author".into(),
-                        arguments: Default::default(),
-                        uniqueness_constraints: make_primary_key_uniqueness_constraint("authors"),
-                        foreign_keys: Default::default(),
-                    },
-                ),
-                (
-                    "articles".into(),
-                    v3::CollectionInfo {
-                        name: "articles".to_owned(),
-                        description: None,
-                        collection_type: "Article".into(),
-                        arguments: Default::default(),
-                        uniqueness_constraints: make_primary_key_uniqueness_constraint("articles"),
-                        foreign_keys: Default::default(),
-                    },
-                ),
-            ])),
-            functions: Default::default(),
-            object_types: Cow::Owned(BTreeMap::from([
-                (
-                    "Author".into(),
-                    schema::ObjectType {
-                        description: None,
-                        fields: BTreeMap::from([
-                            (
-                                "id".into(),
-                                schema::ObjectField {
-                                    description: None,
-                                    r#type: schema::Type::Scalar(BsonScalarType::Int),
-                                },
-                            ),
-                            (
-                                "last_name".into(),
-                                schema::ObjectField {
-                                    description: None,
-                                    r#type: schema::Type::Scalar(BsonScalarType::String),
-                                },
-                            ),
-                        ]),
-                    },
-                ),
-                (
-                    "Article".into(),
-                    schema::ObjectType {
-                        description: None,
-                        fields: BTreeMap::from([
-                            (
-                                "author_id".into(),
-                                schema::ObjectField {
-                                    description: None,
-                                    r#type: schema::Type::Scalar(BsonScalarType::Int),
-                                },
-                            ),
-                            (
-                                "title".into(),
-                                schema::ObjectField {
-                                    description: None,
-                                    r#type: schema::Type::Scalar(BsonScalarType::String),
-                                },
-                            ),
-                            (
-                                "year".into(),
-                                schema::ObjectField {
-                                    description: None,
-                                    r#type: schema::Type::Nullable(Box::new(schema::Type::Scalar(
-                                        BsonScalarType::Int,
-                                    ))),
-                                },
-                            ),
-                        ]),
-                    },
-                ),
-            ])),
-            scalar_types: Cow::Owned(make_scalar_types()),
-        }
-    }
-
-    fn make_nested_schema() -> QueryContext<'static> {
-        QueryContext {
-            collections: Cow::Owned(BTreeMap::from([(
-                "authors".into(),
-                v3::CollectionInfo {
-                    name: "authors".into(),
-                    description: None,
-                    collection_type: "Author".into(),
-                    arguments: Default::default(),
-                    uniqueness_constraints: make_primary_key_uniqueness_constraint("authors"),
-                    foreign_keys: Default::default(),
-                },
-            )])),
-            functions: Default::default(),
-            object_types: Cow::Owned(BTreeMap::from([
-                (
-                    "Author".into(),
-                    schema::ObjectType {
-                        description: None,
-                        fields: BTreeMap::from([
-                            (
-                                "address".into(),
-                                schema::ObjectField {
-                                    description: None,
-                                    r#type: schema::Type::Object("Address".into()),
-                                },
-                            ),
-                            (
-                                "articles".into(),
-                                schema::ObjectField {
-                                    description: None,
-                                    r#type: schema::Type::ArrayOf(Box::new(schema::Type::Object(
-                                        "Article".into(),
-                                    ))),
-                                },
-                            ),
-                            (
-                                "array_of_arrays".into(),
-                                schema::ObjectField {
-                                    description: None,
-                                    r#type: schema::Type::ArrayOf(Box::new(schema::Type::ArrayOf(
-                                        Box::new(schema::Type::Object("Article".into())),
-                                    ))),
-                                },
-                            ),
-                        ]),
-                    },
-                ),
-                (
-                    "Address".into(),
-                    schema::ObjectType {
-                        description: None,
-                        fields: BTreeMap::from([(
-                            "country".into(),
-                            schema::ObjectField {
-                                description: None,
-                                r#type: schema::Type::Scalar(BsonScalarType::String),
-                            },
-                        )]),
-                    },
-                ),
-                (
-                    "Article".into(),
-                    schema::ObjectType {
-                        description: None,
-                        fields: BTreeMap::from([(
-                            "title".into(),
-                            schema::ObjectField {
-                                description: None,
-                                r#type: schema::Type::Scalar(BsonScalarType::String),
-                            },
-                        )]),
-                    },
-                ),
-            ])),
-            scalar_types: Cow::Owned(make_scalar_types()),
-        }
-    }
-
-    fn make_primary_key_uniqueness_constraint(
-        collection_name: &str,
-    ) -> BTreeMap<String, v3::UniquenessConstraint> {
-        [(
-            format!("{collection_name}_id"),
-            v3::UniquenessConstraint {
-                unique_columns: vec!["_id".to_owned()],
-            },
-        )]
-        .into()
     }
 }

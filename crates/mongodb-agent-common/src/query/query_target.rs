@@ -29,6 +29,15 @@ impl QueryTarget<'_> {
             None => QueryTarget::Collection(target_name),
         }
     }
+
+    pub fn input_collection(&self) -> Option<&str> {
+        match self {
+            QueryTarget::Collection(collection_name) => Some(collection_name),
+            QueryTarget::NativeQuery { native_query, .. } => {
+                native_query.input_collection.as_deref()
+            }
+        }
+    }
 }
 
 impl Display for QueryTarget<'_> {

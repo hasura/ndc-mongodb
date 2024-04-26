@@ -4,12 +4,12 @@ use dc_api_types::{Aggregate, Expression, Field, OrderBy, Query};
 
 #[derive(Clone, Debug, Default)]
 pub struct QueryBuilder {
-    aggregates: Option<Option<HashMap<String, Aggregate>>>,
-    aggregates_limit: Option<Option<i64>>,
-    fields: Option<Option<HashMap<String, Field>>>,
-    limit: Option<Option<i64>>,
-    offset: Option<Option<u64>>,
-    order_by: Option<Option<OrderBy>>,
+    aggregates: Option<HashMap<String, Aggregate>>,
+    aggregates_limit: Option<i64>,
+    fields: Option<HashMap<String, Field>>,
+    limit: Option<i64>,
+    offset: Option<u64>,
+    order_by: Option<OrderBy>,
     predicate: Option<Expression>,
 }
 
@@ -22,7 +22,7 @@ impl QueryBuilder {
     where
         I: IntoIterator<Item = (String, Field)>,
     {
-        self.fields = Some(Some(fields.into_iter().collect()));
+        self.fields = Some(fields.into_iter().collect());
         self
     }
 
@@ -30,7 +30,7 @@ impl QueryBuilder {
     where
         I: IntoIterator<Item = (String, Aggregate)>,
     {
-        self.aggregates = Some(Some(aggregates.into_iter().collect()));
+        self.aggregates = Some(aggregates.into_iter().collect());
         self
     }
 
@@ -40,7 +40,7 @@ impl QueryBuilder {
     }
 
     pub fn order_by(mut self, order_by: OrderBy) -> Self {
-        self.order_by = Some(Some(order_by));
+        self.order_by = Some(order_by);
         self
     }
 }

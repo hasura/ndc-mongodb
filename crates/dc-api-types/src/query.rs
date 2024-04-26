@@ -16,49 +16,27 @@ pub struct Query {
     #[serde(
         rename = "aggregates",
         default,
-        with = "::serde_with::rust::double_option",
         skip_serializing_if = "Option::is_none"
     )]
-    pub aggregates: Option<Option<::std::collections::HashMap<String, crate::Aggregate>>>,
+    pub aggregates: Option<::std::collections::HashMap<String, crate::Aggregate>>,
     /// Optionally limit the maximum number of rows considered while applying aggregations. This limit does not apply to returned rows.
     #[serde(
         rename = "aggregates_limit",
         default,
-        with = "::serde_with::rust::double_option",
         skip_serializing_if = "Option::is_none"
     )]
-    pub aggregates_limit: Option<Option<i64>>,
+    pub aggregates_limit: Option<i64>,
     /// Fields of the query
-    #[serde(
-        rename = "fields",
-        default,
-        with = "::serde_with::rust::double_option",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub fields: Option<Option<::std::collections::HashMap<String, crate::Field>>>,
+    #[serde(rename = "fields", default, skip_serializing_if = "Option::is_none")]
+    pub fields: Option<::std::collections::HashMap<String, crate::Field>>,
     /// Optionally limit the maximum number of returned rows. This limit does not apply to records considered while apply aggregations.
-    #[serde(
-        rename = "limit",
-        default,
-        with = "::serde_with::rust::double_option",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub limit: Option<Option<i64>>,
+    #[serde(rename = "limit", default, skip_serializing_if = "Option::is_none")]
+    pub limit: Option<i64>,
     /// Optionally offset from the Nth result. This applies to both row and aggregation results.
-    #[serde(
-        rename = "offset",
-        default,
-        with = "::serde_with::rust::double_option",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub offset: Option<Option<u64>>,
-    #[serde(
-        rename = "order_by",
-        default,
-        with = "::serde_with::rust::double_option",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub order_by: Option<Option<crate::OrderBy>>,
+    #[serde(rename = "offset", default, skip_serializing_if = "Option::is_none")]
+    pub offset: Option<u64>,
+    #[serde(rename = "order_by", default, skip_serializing_if = "Option::is_none")]
+    pub order_by: Option<crate::OrderBy>,
     #[serde(rename = "where", skip_serializing_if = "Option::is_none")]
     pub r#where: Option<crate::Expression>,
 }

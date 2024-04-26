@@ -13,7 +13,7 @@ enum-iterator = "^2.0.0"
 futures = "^0.3"
 http = "^0.2"
 indexmap = { version = "2.1.0", features = ["serde"] }
-itertools = "^0.10"
+itertools = { workspace = true }
 lazy_static = "^1.4.0"
 mongodb = "2.8"
 mongodb-agent-common = { path = "../mongodb-agent-common" }

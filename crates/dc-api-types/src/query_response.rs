@@ -42,29 +42,13 @@ pub struct ForEachRow {
     pub query: RowSet,
 }
 
-/// A row set must contain either rows, or aggregates, or possibly both
 #[skip_serializing_none]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum RowSet {
-    Aggregate {
-        /// The results of the aggregates returned by the query
-        aggregates: HashMap<String, serde_json::Value>,
-        /// The rows returned by the query, corresponding to the query's fields
-        rows: Option<Vec<HashMap<String, ResponseFieldValue>>>,
-    },
-    Rows {
-        /// Rows returned by a query that did not request aggregates.
-        rows: Vec<HashMap<String, ResponseFieldValue>>,
-    },
-}
-
-impl Default for RowSet {
-    fn default() -> Self {
-        RowSet::Rows {
-            rows: Default::default(),
-        }
-    }
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct RowSet {
+    /// The results of the aggregates returned by the query
+    pub aggregates: Option<HashMap<String, serde_json::Value>>,
+    /// The rows returned by the query, corresponding to the query's fields
+    pub rows: Option<Vec<HashMap<String, ResponseFieldValue>>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

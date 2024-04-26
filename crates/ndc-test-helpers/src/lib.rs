@@ -2,6 +2,7 @@
 #![allow(unused_imports)]
 
 mod aggregates;
+mod collection_info;
 mod comparison_target;
 mod comparison_value;
 mod exists_in_collection;
@@ -16,6 +17,7 @@ use ndc_models::{
     QueryRequest, Relationship, RelationshipArgument, RelationshipType,
 };
 
+pub use collection_info::*;
 pub use comparison_target::*;
 pub use comparison_value::*;
 pub use exists_in_collection::*;

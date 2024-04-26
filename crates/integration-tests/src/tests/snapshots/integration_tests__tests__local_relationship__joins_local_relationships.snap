@@ -1,14 +1,13 @@
 ---
 source: crates/integration-tests/src/tests/local_relationship.rs
-expression: "query(r#\"\n                query {\n                  movies(limit: 2, order_by: {title: Asc}, where: {title: {_iregex: \"Rear\"}}) {\n                    id\n                    title\n                    comments(limit: 2, order_by: {id: Asc}) {\n                      email\n                      text\n                      movie {\n                        id\n                        title\n                      }\n                      user {\n                        email\n                        comments(limit: 2, order_by: {id: Asc}) {\n                          email\n                          text\n                          user {\n                            email\n                            comments(limit: 2, order_by: {id: Asc}) {\n                              email\n                            }\n                          }\n                        }\n                      }\n                    }\n                  }\n                }\n            \"#).variables(json!({\n                        \"limit\": 11, \"movies_limit\": 2\n                    })).run().await?"
+expression: "query(r#\"\n                query {\n                  movies(limit: 2, order_by: {title: Asc}, where: {title: {_iregex: \"Rear\"}}) {\n                    id\n                    title\n                    comments(limit: 2, order_by: {id: Asc}) {\n                      email\n                      text\n                      movie {\n                        id\n                        title\n                      }\n                      user {\n                        email\n                        comments(limit: 2, order_by: {id: Asc}) {\n                          email\n                          text\n                          user {\n                            email\n                            comments(limit: 2, order_by: {id: Asc}) {\n                              id\n                              email\n                            }\n                          }\n                        }\n                      }\n                    }\n                  }\n                }\n            \"#).variables(json!({\n                        \"limit\": 11, \"movies_limit\": 2\n                    })).run().await?"
 ---
 data:
   movies:
     - comments:
         - email: iain_glen@gameofthron.es
           movie:
-            id:
-              $oid: 573a1398f29313caabceb0b1
+            id: 573a1398f29313caabceb0b1
             title: A Night in the Life of Jimmy Reardon
           text: Debitis tempore cum natus quaerat dolores quibusdam perferendis. Pariatur aspernatur officia libero quod pariatur nobis neque. Maiores non ipsam iste repellendus distinctio praesentium iure.
           user:
@@ -18,24 +17,26 @@ data:
                 user:
                   comments:
                     - email: iain_glen@gameofthron.es
+                      id: 5a9427648b0beebeb69579f3
                     - email: iain_glen@gameofthron.es
+                      id: 5a9427648b0beebeb6957b0f
                   email: iain_glen@gameofthron.es
               - email: iain_glen@gameofthron.es
                 text: Impedit consectetur ex cupiditate enim. Placeat assumenda reiciendis iste neque similique nesciunt aperiam.
                 user:
                   comments:
                     - email: iain_glen@gameofthron.es
+                      id: 5a9427648b0beebeb69579f3
                     - email: iain_glen@gameofthron.es
+                      id: 5a9427648b0beebeb6957b0f
                   email: iain_glen@gameofthron.es
             email: iain_glen@gameofthron.es
-      id:
-        $oid: 573a1398f29313caabceb0b1
+      id: 573a1398f29313caabceb0b1
       title: A Night in the Life of Jimmy Reardon
     - comments:
         - email: owen_teale@gameofthron.es
           movie:
-            id:
-              $oid: 573a1394f29313caabcdfa00
+            id: 573a1394f29313caabcdfa00
             title: Rear Window
           text: Nobis corporis rem hic ipsa cum impedit. Esse nihil cum est minima ducimus temporibus minima. Sed reprehenderit tempore similique nam. Ipsam nesciunt veniam aut amet ut.
           user:
@@ -45,17 +46,20 @@ data:
                 user:
                   comments:
                     - email: owen_teale@gameofthron.es
+                      id: 5a9427648b0beebeb6957b44
                     - email: owen_teale@gameofthron.es
+                      id: 5a9427648b0beebeb6957cf6
                   email: owen_teale@gameofthron.es
               - email: owen_teale@gameofthron.es
                 text: Repudiandae repellat quia officiis. Quidem voluptatum vel id itaque et. Corrupti corporis magni voluptas quae itaque fugiat quae.
                 user:
                   comments:
                     - email: owen_teale@gameofthron.es
+                      id: 5a9427648b0beebeb6957b44
                     - email: owen_teale@gameofthron.es
+                      id: 5a9427648b0beebeb6957cf6
                   email: owen_teale@gameofthron.es
             email: owen_teale@gameofthron.es
-      id:
-        $oid: 573a1394f29313caabcdfa00
+      id: 573a1394f29313caabcdfa00
       title: Rear Window
 errors: ~

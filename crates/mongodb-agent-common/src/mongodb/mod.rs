@@ -2,7 +2,6 @@ mod accumulator;
 mod collection;
 mod database;
 mod pipeline;
-mod projection;
 pub mod sanitize;
 mod selection;
 mod stage;
@@ -15,7 +14,6 @@ pub use self::{
     collection::CollectionTrait,
     database::DatabaseTrait,
     pipeline::Pipeline,
-    projection::{ProjectAs, Projection},
     selection::Selection,
     stage::Stage,
 };
