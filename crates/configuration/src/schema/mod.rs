@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use mongodb_support::{BsonScalarType, EXTENDED_JSON_TYPE_NAME};
+use mongodb_support::BsonScalarType;
 
 use crate::{WithName, WithNameRef};
 
@@ -95,30 +95,6 @@ impl From<Type> for ndc_models::Type {
     }
 }
 
-// Should only be used for testing
-impl From<ndc_models::Type> for Type {
-    fn from(value: ndc_models::Type) -> Self {
-        match value {
-            ndc_models::Type::Named { name } => {
-                if name == EXTENDED_JSON_TYPE_NAME {
-                    Type::ExtendedJSON
-                } else if let Ok(scalar_type) = BsonScalarType::from_bson_name(&name) {
-                    Type::Scalar(scalar_type)
-                } else {
-                    Type::Object(name.clone())
-                }
-            }
-            ndc_models::Type::Nullable { underlying_type } => {
-                Type::Nullable(Box::new((*underlying_type).into()))
-            }
-            ndc_models::Type::Array { element_type } => {
-                Type::ArrayOf(Box::new((*element_type).into()))
-            }
-            ndc_models::Type::Predicate { .. } => panic!("not implemented"),
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ObjectType {
@@ -154,20 +130,6 @@ impl From<ObjectType> for ndc_models::ObjectType {
     }
 }
 
-// Should only be used for testing
-impl From<ndc_models::ObjectType> for ObjectType {
-    fn from(value: ndc_models::ObjectType) -> Self {
-        ObjectType {
-            fields: value
-                .fields
-                .into_iter()
-                .map(|(name, field)| (name, field.into()))
-                .collect(),
-            description: value.description,
-        }
-    }
-}
-
 /// Information about an object type field.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -194,16 +156,6 @@ impl From<ObjectField> for ndc_models::ObjectField {
         ndc_models::ObjectField {
             description: field.description,
             r#type: field.r#type.into(),
-        }
-    }
-}
-
-// Should only be used for testing
-impl From<ndc_models::ObjectField> for ObjectField {
-    fn from(value: ndc_models::ObjectField) -> Self {
-        ObjectField {
-            r#type: value.r#type.into(),
-            description: value.description,
         }
     }
 }

@@ -14,6 +14,8 @@ use thiserror::Error;
 
 use crate::api_type_conversions::{ConversionError, QueryContext};
 
+const GEN_OBJECT_TYPE_PREFIX: &str = "__query__";
+
 #[derive(Debug, Error)]
 pub enum QueryResponseError {
     #[error("expected aggregates to be an object at path {}", path.join("."))]
@@ -446,8 +448,7 @@ fn object_type_for_field_subset(
         fields,
         description: None,
     };
-    let pruned_object_type_name = format!("requested_fields_{}", path.iter().join("_"));
-    let pruned_type = Type::Object(pruned_object_type_name.clone());
+    let (pruned_object_type_name, pruned_type) = named_type(path, "fields");
 
     let mut object_types: Vec<(String, ObjectType)> =
         object_type_sets.into_iter().flatten().collect();
@@ -572,29 +573,34 @@ fn path_to_owned(path: &[&str]) -> Vec<String> {
 }
 
 fn named_type(path: &[&str], name_suffix: &str) -> (String, Type) {
-    let name = format!("{}_{name_suffix}", path.iter().join("_"));
+    let name = format!(
+        "{GEN_OBJECT_TYPE_PREFIX}{}_{name_suffix}",
+        path.iter().join("_")
+    );
     let t = Type::Object(name.clone());
     (name, t)
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{borrow::Cow, str::FromStr};
+    use std::{borrow::Cow, collections::BTreeMap, str::FromStr};
 
-    use configuration::schema::Type;
+    use configuration::schema::{ObjectType, Type};
     use mongodb::bson::{self, Bson};
     use mongodb_support::BsonScalarType;
     use ndc_sdk::models::{QueryResponse, RowFieldValue, RowSet};
-    use ndc_test_helpers::{array, collection, field, object, object_type, query, query_request};
+    use ndc_test_helpers::{
+        array, collection, field, object, query, query_request, relation_field, relationship,
+    };
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
     use crate::{
         api_type_conversions::QueryContext,
-        test_helpers::{make_nested_schema, make_scalar_types},
+        test_helpers::{make_nested_schema, make_scalar_types, object_type},
     };
 
-    use super::serialize_query_response;
+    use super::{serialize_query_response, type_for_row_set};
 
     #[test]
     fn serializes_response_with_nested_fields() -> anyhow::Result<()> {
@@ -834,6 +840,116 @@ mod tests {
                 )]
                 .into()]),
             }])
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn uses_field_path_to_guarantee_distinct_type_names() -> anyhow::Result<()> {
+        let query_context = make_nested_schema();
+        let collection_name = "appearances";
+        let request = query_request()
+            .collection(collection_name)
+            .relationships([("author", relationship("authors", [("authorId", "id")]))])
+            .query(
+                query().fields([relation_field!("author" => "presenter", query().fields([
+                    field!("addr" => "address", object!([
+                        field!("street"),
+                        field!("geocode" => "geocode", object!([
+                            field!("latitude"),
+                            field!("long" => "longitude"),
+                        ]))
+                    ])),
+                    field!("articles" => "articles", array!(object!([
+                        field!("article_title" => "title")
+                    ]))),
+                ]))]),
+            )
+            .into();
+        let path = [collection_name];
+
+        let (row_set_type, object_types) = type_for_row_set(
+            &query_context,
+            &request,
+            &path,
+            collection_name,
+            &request.query,
+        )?;
+
+        // Convert object types into a map so we can compare without worrying about order
+        let object_types: BTreeMap<String, ObjectType> = object_types.into_iter().collect();
+
+        assert_eq!(
+            (row_set_type, object_types),
+            (
+                Type::Object("__query__appearances_row_set".to_owned()),
+                [
+                    (
+                        "__query__appearances_row_set".to_owned(),
+                        object_type([(
+                            "rows".to_owned(),
+                            Type::ArrayOf(Box::new(Type::Object(
+                                "__query__appearances_row".to_owned()
+                            )))
+                        )]),
+                    ),
+                    (
+                        "__query__appearances_row".to_owned(),
+                        object_type([(
+                            "presenter".to_owned(),
+                            Type::Object("__query__appearances_presenter_row_set".to_owned())
+                        )]),
+                    ),
+                    (
+                        "__query__appearances_presenter_row_set".to_owned(),
+                        object_type([(
+                            "rows",
+                            Type::ArrayOf(Box::new(Type::Object(
+                                "__query__appearances_presenter_row".to_owned()
+                            )))
+                        )]),
+                    ),
+                    (
+                        "__query__appearances_presenter_row".to_owned(),
+                        object_type([
+                            (
+                                "addr",
+                                Type::Object("__query__appearances_presenter_addr_fields".to_owned())
+                            ),
+                            (
+                                "articles",
+                                Type::ArrayOf(Box::new(Type::Object(
+                                    "__query__appearances_presenter_articles_fields".to_owned()
+                                )))
+                            ),
+                        ]),
+                    ),
+                    (
+                        "__query__appearances_presenter_addr_fields".to_owned(),
+                        object_type([
+                            (
+                                "geocode",
+                                Type::Nullable(Box::new(Type::Object(
+                                    "__query__appearances_presenter_addr_geocode_fields".to_owned()
+                                )))
+                            ),
+                            ("street", Type::Scalar(BsonScalarType::String)),
+                        ]),
+                    ),
+                    (
+                        "__query__appearances_presenter_addr_geocode_fields".to_owned(),
+                        object_type([
+                            ("latitude", Type::Scalar(BsonScalarType::Double)),
+                            ("long", Type::Scalar(BsonScalarType::Double)),
+                        ]),
+                    ),
+                    (
+                        "__query__appearances_presenter_articles_fields".to_owned(),
+                        object_type([("article_title", Type::Scalar(BsonScalarType::String))]),
+                    ),
+                ]
+                .into()
+            )
         );
         Ok(())
     }

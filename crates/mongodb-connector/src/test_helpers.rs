@@ -6,9 +6,29 @@ use ndc_sdk::models::{
     AggregateFunctionDefinition, CollectionInfo, ComparisonOperatorDefinition, ScalarType, Type,
     TypeRepresentation,
 };
-use ndc_test_helpers::make_primary_key_uniqueness_constraint;
+use ndc_test_helpers::{collection, make_primary_key_uniqueness_constraint};
 
 use crate::api_type_conversions::QueryContext;
+
+pub fn object_type(
+    fields: impl IntoIterator<Item = (impl ToString, impl Into<schema::Type>)>,
+) -> schema::ObjectType {
+    schema::ObjectType {
+        description: Default::default(),
+        fields: fields
+            .into_iter()
+            .map(|(name, field_type)| {
+                (
+                    name.to_string(),
+                    schema::ObjectField {
+                        description: Default::default(),
+                        r#type: field_type.into(),
+                    },
+                )
+            })
+            .collect(),
+    }
+}
 
 pub fn make_scalar_types() -> BTreeMap<String, ScalarType> {
     BTreeMap::from([
@@ -139,17 +159,20 @@ pub fn make_flat_schema() -> QueryContext<'static> {
 
 pub fn make_nested_schema() -> QueryContext<'static> {
     QueryContext {
-        collections: Cow::Owned(BTreeMap::from([(
-            "authors".into(),
-            CollectionInfo {
-                name: "authors".into(),
-                description: None,
-                collection_type: "Author".into(),
-                arguments: Default::default(),
-                uniqueness_constraints: make_primary_key_uniqueness_constraint("authors"),
-                foreign_keys: Default::default(),
-            },
-        )])),
+        collections: Cow::Owned(BTreeMap::from([
+            (
+                "authors".into(),
+                CollectionInfo {
+                    name: "authors".into(),
+                    description: None,
+                    collection_type: "Author".into(),
+                    arguments: Default::default(),
+                    uniqueness_constraints: make_primary_key_uniqueness_constraint("authors"),
+                    foreign_keys: Default::default(),
+                },
+            ),
+            collection("appearances"), // new helper gives more concise syntax
+        ])),
         functions: Default::default(),
         object_types: Cow::Owned(BTreeMap::from([
             (
@@ -259,6 +282,10 @@ pub fn make_nested_schema() -> QueryContext<'static> {
                         ),
                     ]),
                 },
+            ),
+            (
+                "appearances".to_owned(),
+                object_type([("authorId", schema::Type::Scalar(BsonScalarType::ObjectId))]).into(),
             ),
         ])),
         scalar_types: Cow::Owned(make_scalar_types()),

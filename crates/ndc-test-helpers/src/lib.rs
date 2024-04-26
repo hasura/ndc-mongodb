@@ -8,7 +8,6 @@ mod comparison_value;
 mod exists_in_collection;
 mod expressions;
 mod field;
-mod types;
 
 use std::collections::BTreeMap;
 
@@ -24,7 +23,6 @@ pub use comparison_value::*;
 pub use exists_in_collection::*;
 pub use expressions::*;
 pub use field::*;
-pub use types::*;
 
 #[derive(Clone, Debug, Default)]
 pub struct QueryRequestBuilder {
