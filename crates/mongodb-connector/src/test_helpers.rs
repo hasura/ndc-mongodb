@@ -285,7 +285,7 @@ pub fn make_nested_schema() -> QueryContext<'static> {
             ),
             (
                 "appearances".to_owned(),
-                object_type([("authorId", schema::Type::Scalar(BsonScalarType::ObjectId))]).into(),
+                object_type([("authorId", schema::Type::Scalar(BsonScalarType::ObjectId))]),
             ),
         ])),
         scalar_types: Cow::Owned(make_scalar_types()),

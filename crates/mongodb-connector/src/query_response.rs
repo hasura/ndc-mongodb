@@ -747,8 +747,7 @@ mod tests {
                     object_type([
                         ("price", Type::Scalar(BsonScalarType::Decimal)),
                         ("price_extjson", Type::ExtendedJSON),
-                    ])
-                    .into(),
+                    ]),
                 )]
                 .into(),
             ),
@@ -793,7 +792,7 @@ mod tests {
             object_types: Cow::Owned(
                 [(
                     "data".to_owned(),
-                    object_type([("value", Type::ExtendedJSON)]).into(),
+                    object_type([("value", Type::ExtendedJSON)]),
                 )]
                 .into(),
             ),
@@ -914,7 +913,9 @@ mod tests {
                         object_type([
                             (
                                 "addr",
-                                Type::Object("__query__appearances_presenter_addr_fields".to_owned())
+                                Type::Object(
+                                    "__query__appearances_presenter_addr_fields".to_owned()
+                                )
                             ),
                             (
                                 "articles",
