@@ -26,6 +26,7 @@ async fn joins_local_relationships() -> anyhow::Result<()> {
                           user {
                             email
                             comments(limit: 2, order_by: {id: Asc}) {
+                              id
                               email
                             }
                           }

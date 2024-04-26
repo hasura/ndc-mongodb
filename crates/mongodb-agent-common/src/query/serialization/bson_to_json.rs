@@ -92,7 +92,7 @@ fn bson_scalar_to_json(expected_type: BsonScalarType, value: Bson) -> Result<Val
         (BsonScalarType::BinData, Bson::Binary(b)) => {
             Ok(to_value::<json_formats::BinData>(b.into())?)
         }
-        (BsonScalarType::ObjectId, Bson::ObjectId(oid)) => Ok(to_value(oid)?),
+        (BsonScalarType::ObjectId, Bson::ObjectId(oid)) => Ok(Value::String(oid.to_hex())),
         (BsonScalarType::DbPointer, v) => Ok(v.into_canonical_extjson()),
         (_, v) => Err(BsonToJsonError::TypeMismatch(
             Type::Scalar(expected_type),
@@ -226,10 +226,24 @@ fn convert_small_number(expected_type: BsonScalarType, value: Bson) -> Result<Va
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
     use super::*;
+
+    #[test]
+    fn serializes_object_id_to_string() -> anyhow::Result<()> {
+        let expected_string = "573a1390f29313caabcd446f";
+        let json = bson_to_json(
+            &Type::Scalar(BsonScalarType::ObjectId),
+            &Default::default(),
+            Bson::ObjectId(FromStr::from_str(expected_string)?),
+        )?;
+        assert_eq!(json, Value::String(expected_string.to_owned()));
+        Ok(())
+    }
 
     #[test]
     fn serializes_document_with_missing_nullable_field() -> anyhow::Result<()> {

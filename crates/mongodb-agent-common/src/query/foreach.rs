@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 use configuration::Configuration;
 use dc_api_types::comparison_column::ColumnSelector;
