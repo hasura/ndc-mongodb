@@ -17,6 +17,9 @@ use crate::api_type_conversions::{ConversionError, QueryContext};
 #[derive(Debug, Error)]
 pub enum QueryResponseError {
     #[error("{0}")]
+    BsonDeserialization(#[from] bson::de::Error),
+
+    #[error("{0}")]
     BsonToJson(#[from] BsonToJsonError),
 
     #[error("{0}")]
@@ -43,9 +46,6 @@ pub enum QueryResponseError {
 
     #[error("results from relation are missing at path {}", path.join("."))]
     MissingRelationData { path: Vec<String> },
-
-    #[error("placeholder")]
-    TODORemoveMe,
 }
 
 type Result<T> = std::result::Result<T, QueryResponseError>;
@@ -94,7 +94,6 @@ pub fn serialize_query_response(
             })
             .try_collect()
     } else {
-        // TODO: in an aggregation response we expect one document instead of a list of documents
         Ok(vec![serialize_row_set(
             query_context,
             query_request,
@@ -179,11 +178,11 @@ fn serialize_aggregates(
     query_aggregates
         .iter()
         .map(
-            |(key, aggregate_definition)| match aggregate_values.remove_entry(key) {
+            |(key, _aggregate_definition)| match aggregate_values.remove_entry(key) {
                 Some((owned_key, value)) => Ok((
                     owned_key,
                     // TODO: bson_to_json
-                    from_bson(value).map_err(|_| QueryResponseError::TODORemoveMe)?,
+                    from_bson(value)?,
                 )),
                 None => Err(QueryResponseError::MissingAggregateValue(key.clone())),
             },
@@ -253,8 +252,13 @@ fn serialize_field_value(
         ndc::Field::Column { column, fields } => {
             let field_type = find_field_type(query_context, path, collection_name, column)?;
 
-            let (requested_type, temp_object_types) =
-                prune_type_to_field_selection(query_context, query_request, path, field_type, fields.as_ref())?;
+            let (requested_type, temp_object_types) = prune_type_to_field_selection(
+                query_context,
+                query_request,
+                path,
+                field_type,
+                fields.as_ref(),
+            )?;
 
             let value = value_from_option(collection_name, column, &requested_type, value_option)?;
 
@@ -288,8 +292,6 @@ fn serialize_field_value(
     let json = bson_to_json(&requested_type, &object_types, value)?;
     Ok(json)
 }
-// TODO: test object relationship type
-// TODO: test array relationship type
 
 fn find_field_type<'a>(
     query_context: &'a QueryContext<'a>,
@@ -398,7 +400,6 @@ fn object_type_for_field_subset(
 
     Ok((pruned_type, object_types))
 }
-// TODO: why are objectIds serializing as extended JSON?
 
 /// Given an object type for a value, and a requested field from that value, produce an updated
 /// object field definition to match the request. This must take into account aliasing where the
@@ -539,7 +540,7 @@ where
         .into_iter()
         .next()
         .ok_or(QueryResponseError::ExpectedSingleDocument)?;
-    let value = bson::from_document(document).map_err(|_| QueryResponseError::TODORemoveMe)?;
+    let value = bson::from_document(document)?;
     Ok(value)
 }
 
@@ -551,7 +552,6 @@ fn path_to_owned(path: &[&str]) -> Vec<String> {
     path.iter().map(|x| (*x).to_owned()).collect()
 }
 
-// TODO: test nested objects in arrays
 #[cfg(test)]
 mod tests {
     use std::{borrow::Cow, str::FromStr};
@@ -560,7 +560,7 @@ mod tests {
     use mongodb::bson::{self, Bson};
     use mongodb_support::BsonScalarType;
     use ndc_sdk::models::{QueryResponse, RowFieldValue, RowSet};
-    use ndc_test_helpers::{collection, field, object, object_type, query, query_request};
+    use ndc_test_helpers::{array, collection, field, object, object_type, query, query_request};
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
@@ -606,6 +606,43 @@ mod tests {
                             "longitude": 122.4194,
                         },
                     }))
+                )]
+                .into()]),
+            }])
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn serializes_response_with_nested_object_inside_array() -> anyhow::Result<()> {
+        let query_context = make_nested_schema();
+        let request = query_request()
+            .collection("authors")
+            .query(query().fields([field!("articles" => "articles", array!(
+                object!([
+                    field!("title"),
+                ])
+            ))]))
+            .into();
+
+        let response_documents = vec![bson::doc! {
+            "articles": [
+                { "title": "Modeling MongoDB with relational model" },
+                { "title": "NoSQL databases: MongoDB vs cassandra" },
+            ],
+        }];
+
+        let response = serialize_query_response(&query_context, &request, response_documents)?;
+        assert_eq!(
+            response,
+            QueryResponse(vec![RowSet {
+                aggregates: Default::default(),
+                rows: Some(vec![[(
+                    "articles".into(),
+                    RowFieldValue(json!([
+                        { "title": "Modeling MongoDB with relational model" },
+                        { "title": "NoSQL databases: MongoDB vs cassandra" },
+                    ]))
                 )]
                 .into()]),
             }])
