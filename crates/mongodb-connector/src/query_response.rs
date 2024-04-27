@@ -7,7 +7,7 @@ use mongodb::bson::{self, Bson};
 use mongodb_agent_common::query::serialization::{bson_to_json, BsonToJsonError};
 use ndc_sdk::models::{
     self as ndc, Aggregate, Field, NestedField, NestedObject, Query, QueryRequest, QueryResponse,
-    RowFieldValue, RowSet,
+    Relationship, RowFieldValue, RowSet,
 };
 use serde::Deserialize;
 use thiserror::Error;
@@ -78,7 +78,7 @@ pub fn serialize_query_response(
             .map(|docs| {
                 serialize_row_set(
                     query_context,
-                    query_request,
+                    &query_request.collection_relationships,
                     &[collection_name],
                     collection_name,
                     &query_request.query,
@@ -89,7 +89,7 @@ pub fn serialize_query_response(
     } else {
         Ok(vec![serialize_row_set(
             query_context,
-            query_request,
+            &query_request.collection_relationships,
             &[],
             collection_name,
             &query_request.query,
@@ -103,7 +103,7 @@ pub fn serialize_query_response(
 
 fn serialize_row_set(
     query_context: &QueryContext<'_>,
-    query_request: &QueryRequest,
+    relationships: &BTreeMap<String, Relationship>,
     path: &[&str],
     collection_name: &str,
     query: &Query,
@@ -117,7 +117,7 @@ fn serialize_row_set(
             .map(|fields| {
                 serialize_rows(
                     query_context,
-                    query_request,
+                    relationships,
                     path,
                     collection_name,
                     fields,
@@ -149,7 +149,7 @@ fn serialize_row_set(
             .map(|fields| {
                 serialize_rows(
                     query_context,
-                    query_request,
+                    relationships,
                     path,
                     collection_name,
                     fields,
@@ -187,7 +187,7 @@ fn serialize_aggregates(
 
 fn serialize_rows(
     query_context: &QueryContext<'_>,
-    query_request: &QueryRequest,
+    relationships: &BTreeMap<String, Relationship>,
     path: &[&str],
     collection_name: &str,
     query_fields: &IndexMap<String, Field>,
@@ -195,7 +195,7 @@ fn serialize_rows(
 ) -> Result<Vec<IndexMap<String, RowFieldValue>>> {
     let (row_type, temp_object_types) = type_for_row(
         query_context,
-        query_request,
+        relationships,
         path,
         collection_name,
         query_fields,
@@ -222,7 +222,7 @@ fn serialize_rows(
 
 fn type_for_row_set(
     query_context: &QueryContext<'_>,
-    query_request: &QueryRequest,
+    relationships: &BTreeMap<String, Relationship>,
     path: &[&str],
     collection_name: &str,
     query: &Query,
@@ -245,7 +245,7 @@ fn type_for_row_set(
     if let Some(query_fields) = &query.fields {
         let (row_type, nested_object_types) = type_for_row(
             query_context,
-            query_request,
+            relationships,
             path,
             collection_name,
             query_fields,
@@ -277,7 +277,7 @@ fn type_for_aggregates() -> Result<(Type, ObjectTypes)> {
 
 fn type_for_row(
     query_context: &QueryContext<'_>,
-    query_request: &QueryRequest,
+    relationships: &BTreeMap<String, Relationship>,
     path: &[&str],
     collection_name: &str,
     query_fields: &IndexMap<String, Field>,
@@ -289,7 +289,7 @@ fn type_for_row(
         .map(|(field_name, field_definition)| {
             let (field_type, nested_object_types) = type_for_field(
                 query_context,
-                query_request,
+                relationships,
                 &append_to_path(path, [field_name.as_ref()]),
                 collection_name,
                 field_definition,
@@ -317,7 +317,7 @@ fn type_for_row(
 
 fn type_for_field(
     query_context: &QueryContext<'_>,
-    query_request: &QueryRequest,
+    relationships: &BTreeMap<String, Relationship>,
     path: &[&str],
     collection_name: &str,
     field_definition: &ndc::Field,
@@ -328,7 +328,7 @@ fn type_for_field(
 
             let (requested_type, temp_object_types) = prune_type_to_field_selection(
                 query_context,
-                query_request,
+                relationships,
                 path,
                 field_type,
                 fields.as_ref(),
@@ -343,7 +343,7 @@ fn type_for_field(
             ..
         } => {
             let (requested_type, temp_object_types) =
-                type_for_relation_field(query_context, query_request, path, query, relationship)?;
+                type_for_relation_field(query_context, relationships, path, query, relationship)?;
 
             Ok((requested_type, temp_object_types))
         }
@@ -375,26 +375,26 @@ fn find_field_type<'a>(
 ///
 /// Returns a reference to the pruned type, and a list of newly-computed object types with
 /// generated names.
-fn prune_type_to_field_selection(
+pub fn prune_type_to_field_selection(
     query_context: &QueryContext<'_>,
-    query_request: &QueryRequest,
+    relationships: &BTreeMap<String, Relationship>,
     path: &[&str],
-    field_type: &Type,
+    input_type: &Type,
     fields: Option<&NestedField>,
 ) -> Result<(Type, Vec<(String, ObjectType)>)> {
-    match (field_type, fields) {
+    match (input_type, fields) {
         (t, None) => Ok((t.clone(), Default::default())),
         (t @ Type::Scalar(_) | t @ Type::ExtendedJSON, _) => Ok((t.clone(), Default::default())),
 
         (Type::Nullable(t), _) => {
             let (underlying_type, object_types) =
-                prune_type_to_field_selection(query_context, query_request, path, t, fields)?;
+                prune_type_to_field_selection(query_context, relationships, path, t, fields)?;
             Ok((Type::Nullable(Box::new(underlying_type)), object_types))
         }
         (Type::ArrayOf(t), Some(NestedField::Array(nested))) => {
             let (element_type, object_types) = prune_type_to_field_selection(
                 query_context,
-                query_request,
+                relationships,
                 path,
                 t,
                 Some(&nested.fields),
@@ -402,7 +402,7 @@ fn prune_type_to_field_selection(
             Ok((Type::ArrayOf(Box::new(element_type)), object_types))
         }
         (Type::Object(t), Some(NestedField::Object(nested))) => {
-            object_type_for_field_subset(query_context, query_request, path, t, nested)
+            object_type_for_field_subset(query_context, relationships, path, t, nested)
         }
 
         (_, Some(NestedField::Array(_))) => Err(QueryResponseError::ExpectedArray {
@@ -422,7 +422,7 @@ fn prune_type_to_field_selection(
 /// generated names including the newly-generated object type, and types for any nested objects.
 fn object_type_for_field_subset(
     query_context: &QueryContext<'_>,
-    query_request: &QueryRequest,
+    relationships: &BTreeMap<String, Relationship>,
     path: &[&str],
     object_type_name: &str,
     requested_fields: &NestedObject,
@@ -434,7 +434,7 @@ fn object_type_for_field_subset(
         .map(|(name, requested_field)| {
             let (object_field, object_types) = requested_field_definition(
                 query_context,
-                query_request,
+                relationships,
                 &append_to_path(path, [name.as_ref()]),
                 object_type_name,
                 object_type,
@@ -462,7 +462,7 @@ fn object_type_for_field_subset(
 /// name of the requested field maps to a different name on the underlying type.
 fn requested_field_definition(
     query_context: &QueryContext<'_>,
-    query_request: &QueryRequest,
+    relationships: &BTreeMap<String, Relationship>,
     path: &[&str],
     object_type_name: &str,
     object_type: &ObjectType,
@@ -479,7 +479,7 @@ fn requested_field_definition(
             })?;
             let (field_type, object_types) = prune_type_to_field_selection(
                 query_context,
-                query_request,
+                relationships,
                 path,
                 &field_def.r#type,
                 fields.as_ref(),
@@ -496,7 +496,7 @@ fn requested_field_definition(
             ..
         } => {
             let (relation_type, temp_object_types) =
-                type_for_relation_field(query_context, query_request, path, query, relationship)?;
+                type_for_relation_field(query_context, relationships, path, query, relationship)?;
             let relation_field = ObjectField {
                 r#type: relation_type,
                 description: None,
@@ -508,28 +508,28 @@ fn requested_field_definition(
 
 fn type_for_relation_field(
     query_context: &QueryContext<'_>,
-    query_request: &QueryRequest,
+    relationships: &BTreeMap<String, Relationship>,
     path: &[&str],
     query: &Query,
     relationship: &str,
 ) -> Result<(Type, Vec<(String, ObjectType)>)> {
-    let relationship_def = query_request
-        .collection_relationships
-        .get(relationship)
-        .ok_or_else(|| ConversionError::UnknownRelationship {
-            relationship_name: relationship.to_owned(),
-            path: path_to_owned(path),
-        })?;
+    let relationship_def =
+        relationships
+            .get(relationship)
+            .ok_or_else(|| ConversionError::UnknownRelationship {
+                relationship_name: relationship.to_owned(),
+                path: path_to_owned(path),
+            })?;
     type_for_row_set(
         query_context,
-        query_request,
+        relationships,
         path,
         &relationship_def.target_collection,
         query,
     )
 }
 
-fn extend_configured_object_types<'a>(
+pub fn extend_configured_object_types<'a>(
     query_context: &QueryContext<'a>,
     object_types: ObjectTypes,
 ) -> Cow<'a, BTreeMap<String, ObjectType>> {
@@ -588,7 +588,7 @@ mod tests {
     use configuration::schema::{ObjectType, Type};
     use mongodb::bson::{self, Bson};
     use mongodb_support::BsonScalarType;
-    use ndc_sdk::models::{QueryResponse, RowFieldValue, RowSet};
+    use ndc_sdk::models::{QueryRequest, QueryResponse, RowFieldValue, RowSet};
     use ndc_test_helpers::{
         array, collection, field, object, query, query_request, relation_field, relationship,
     };
@@ -847,7 +847,7 @@ mod tests {
     fn uses_field_path_to_guarantee_distinct_type_names() -> anyhow::Result<()> {
         let query_context = make_nested_schema();
         let collection_name = "appearances";
-        let request = query_request()
+        let request: QueryRequest = query_request()
             .collection(collection_name)
             .relationships([("author", relationship("authors", [("authorId", "id")]))])
             .query(
@@ -869,7 +869,7 @@ mod tests {
 
         let (row_set_type, object_types) = type_for_row_set(
             &query_context,
-            &request,
+            &request.collection_relationships,
             &path,
             collection_name,
             &request.query,
