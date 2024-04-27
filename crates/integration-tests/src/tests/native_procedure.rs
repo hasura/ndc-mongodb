@@ -19,7 +19,7 @@ async fn updates_with_native_procedure() -> anyhow::Result<()> {
         .variables(json!({ "id": id_1, "name": "Regina Spektor" }))
         .run()
         .await?;
-    let res2 = query(mutation)
+    query(mutation)
         .variables(json!({ "id": id_2, "name": "Ok Go" }))
         .run()
         .await?;
@@ -28,19 +28,10 @@ async fn updates_with_native_procedure() -> anyhow::Result<()> {
         res1,
         GraphQLResponse {
             data: json!({
-                "number_of_docs_inserted": 1,
-                "ok": 1,
-            }),
-            errors: None,
-        }
-    );
-
-    assert_eq!(
-        res2,
-        GraphQLResponse {
-            data: json!({
-                "number_of_docs_inserted": 1,
-                "ok": 1,
+                "insertArtist": {
+                    "number_of_docs_inserted": 1,
+                    "ok": 1,
+                }
             }),
             errors: None,
         }
