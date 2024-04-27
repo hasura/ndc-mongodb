@@ -7,6 +7,7 @@ This changelog documents the changes between release versions.
 - In the CLI update command, if the database URI is not provided the error message now mentions the correct environment variable to use (`MONGODB_DATABASE_URI`) ([#50](https://github.com/hasura/ndc-mongodb/pull/50))
 - Update to latest NDC SDK ([#51](https://github.com/hasura/ndc-mongodb/pull/51))
 - Update `rustls` dependency to fix https://github.com/hasura/ndc-mongodb/security/dependabot/1 ([#51](https://github.com/hasura/ndc-mongodb/pull/51))
+- Serialize query and mutation response fields with known types using simple JSON instead of Extended JSON (#53) (#59)
 
 ## [0.0.4] - 2024-04-12
 - Queries that attempt to compare a column to a column in the query root table, or a related table, will now fail instead of giving the incorrect result ([#22](https://github.com/hasura/ndc-mongodb/pull/22))

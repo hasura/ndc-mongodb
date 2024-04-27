@@ -827,7 +827,7 @@ definition:
         InsertArtist:
           fields:
             ok:
-              type: { type: named, name: Int }
+              type: { type: named, name: Double }
             n:
               type: { type: named, name: Int }
       collections:

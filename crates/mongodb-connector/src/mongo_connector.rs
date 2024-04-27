@@ -18,7 +18,7 @@ use ndc_sdk::{
         QueryResponse, SchemaResponse,
     },
 };
-use tracing::instrument;
+use tracing::{instrument, Instrument};
 
 use crate::{
     api_type_conversions::{v2_to_v3_explain_response, v3_to_v2_query_request},
@@ -122,7 +122,7 @@ impl Connector for MongoConnector {
         _request: MutationRequest,
     ) -> Result<JsonResponse<ExplainResponse>, ExplainError> {
         Err(ExplainError::UnsupportedOperation(
-            "The MongoDB agent does not yet support mutations".to_owned(),
+            "Explain for mutations is not implemented yet".to_owned(),
         ))
     }
 
@@ -132,7 +132,8 @@ impl Connector for MongoConnector {
         state: &Self::State,
         request: MutationRequest,
     ) -> Result<JsonResponse<MutationResponse>, MutationError> {
-        handle_mutation_request(configuration, state, request).await
+        let query_context = get_query_context(configuration);
+        handle_mutation_request(configuration, query_context, state, request).await
     }
 
     #[instrument(err, skip_all)]
@@ -141,18 +142,27 @@ impl Connector for MongoConnector {
         state: &Self::State,
         request: QueryRequest,
     ) -> Result<JsonResponse<QueryResponse>, QueryError> {
-        tracing::debug!(query_request = %serde_json::to_string(&request).unwrap(), "received query request");
-        let query_context = get_query_context(configuration);
-        let v2_request = v3_to_v2_query_request(&query_context, request.clone())?;
-        let response_documents = handle_query_request(configuration, state, v2_request)
-            .await
-            .map_err(mongo_agent_error_to_query_error)?;
-        let response = serialize_query_response(&query_context, &request, response_documents)
-            .map_err(|err| {
-                QueryError::UnprocessableContent(format!(
-                    "error converting MongoDB response to JSON: {err}"
-                ))
+        let response = async move {
+            tracing::debug!(query_request = %serde_json::to_string(&request).unwrap(), "received query request");
+            let query_context = get_query_context(configuration);
+            let v2_request = tracing::info_span!("Prepare Query Request").in_scope(|| {
+                v3_to_v2_query_request(&query_context, request.clone())
             })?;
+            let response_documents = handle_query_request(configuration, state, v2_request)
+                .instrument(tracing::info_span!("Process Query Request", internal.visibility = "user"))
+                .await
+                .map_err(mongo_agent_error_to_query_error)?;
+            tracing::info_span!("Serialize Query Response", internal.visibility = "user").in_scope(|| {
+                serialize_query_response(&query_context, &request, response_documents)
+                .map_err(|err| {
+                    QueryError::UnprocessableContent(format!(
+                        "error converting MongoDB response to JSON: {err}"
+                    ))
+                })
+            })
+        }
+        .instrument(tracing::info_span!("/query", internal.visibility = "user"))
+        .await?;
         Ok(response.into())
     }
 }

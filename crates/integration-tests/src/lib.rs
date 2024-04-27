@@ -70,7 +70,7 @@ impl From<&str> for GraphQLRequest {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct GraphQLResponse {
     data: Value,
     errors: Option<Vec<Value>>,
