@@ -30,7 +30,7 @@ async fn updates_with_native_procedure() -> anyhow::Result<()> {
             data: json!({
                 "insertArtist": {
                     "number_of_docs_inserted": 1,
-                    "ok": 1,
+                    "ok": 1.0,
                 }
             }),
             errors: None,
