@@ -14,6 +14,7 @@ let
     environment = {
       ENGINE_GRAPHQL_URL = engine-graphql-url;
       INSTA_WORKSPACE_ROOT = repo-source-mount-point;
+      MONGODB_IMAGE = builtins.getEnv "MONGODB_IMAGE";
     };
     volumes = [
       "${builtins.getEnv "PWD"}:${repo-source-mount-point}:rw"
