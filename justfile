@@ -17,7 +17,7 @@ test-e2e: (_arion "arion-compose/e2e-testing.nix" "test")
 
 # Run `just test-integration` on several MongoDB versions
 test-mongodb-versions:
-  # MONGODB_IMAGE=mongo:5 just test-integration # there's a problem with the native query example in v5
+  MONGODB_IMAGE=mongo:5 just test-integration
   MONGODB_IMAGE=mongo:6 just test-integration
   MONGODB_IMAGE=mongo:7 just test-integration
 
