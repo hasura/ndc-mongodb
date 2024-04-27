@@ -87,7 +87,7 @@ async fn execute_procedure(
     let (result, result_type) = procedure
         .execute(&query_context.object_types, database.clone())
         .await
-        .map_err(|err| MutationError::InvalidRequest(err.to_string()))?;
+        .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?;
 
     let (requested_result_type, temp_object_types) = prune_type_to_field_selection(
         query_context,
@@ -100,7 +100,7 @@ async fn execute_procedure(
     let object_types = extend_configured_object_types(query_context, temp_object_types);
 
     let json_result = bson_to_json(&requested_result_type, &object_types, result.into())
-        .map_err(|err| MutationError::Other(Box::new(err)))?;
+        .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?;
 
     Ok(MutationOperationResults::Procedure {
         result: json_result,
