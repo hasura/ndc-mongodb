@@ -21,7 +21,7 @@
       "fields": {
         "ok": {
           "type": {
-            "scalar": "int"
+            "scalar": "double"
           }
         },
         "n": {

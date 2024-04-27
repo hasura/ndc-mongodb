@@ -1,4 +1,4 @@
-use crate::query;
+use crate::{query, GraphQLResponse};
 use insta::assert_yaml_snapshot;
 use serde_json::json;
 
@@ -9,13 +9,13 @@ async fn updates_with_native_procedure() -> anyhow::Result<()> {
     let mutation = r#"
         mutation InsertArtist($id: Int!, $name: String!) {
           insertArtist(id: $id, name: $name) {
-            n
+            number_of_docs_inserted: n
             ok
           }
         }
     "#;
 
-    query(mutation)
+    let res1 = query(mutation)
         .variables(json!({ "id": id_1, "name": "Regina Spektor" }))
         .run()
         .await?;
@@ -23,6 +23,19 @@ async fn updates_with_native_procedure() -> anyhow::Result<()> {
         .variables(json!({ "id": id_2, "name": "Ok Go" }))
         .run()
         .await?;
+
+    assert_eq!(
+        res1,
+        GraphQLResponse {
+            data: json!({
+                "insertArtist": {
+                    "number_of_docs_inserted": 1,
+                    "ok": 1.0,
+                }
+            }),
+            errors: None,
+        }
+    );
 
     assert_yaml_snapshot!(
         query(

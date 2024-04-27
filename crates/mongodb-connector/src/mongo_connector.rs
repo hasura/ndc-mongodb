@@ -122,7 +122,7 @@ impl Connector for MongoConnector {
         _request: MutationRequest,
     ) -> Result<JsonResponse<ExplainResponse>, ExplainError> {
         Err(ExplainError::UnsupportedOperation(
-            "The MongoDB agent does not yet support mutations".to_owned(),
+            "Explain for mutations is not implemented yet".to_owned(),
         ))
     }
 
@@ -132,7 +132,8 @@ impl Connector for MongoConnector {
         state: &Self::State,
         request: MutationRequest,
     ) -> Result<JsonResponse<MutationResponse>, MutationError> {
-        handle_mutation_request(configuration, state, request).await
+        let query_context = get_query_context(configuration);
+        handle_mutation_request(configuration, query_context, state, request).await
     }
 
     #[instrument(err, skip_all)]
