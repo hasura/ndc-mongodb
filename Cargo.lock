@@ -319,14 +319,15 @@ dependencies = [
 
 [[package]]
 name = "bson"
-version = "2.8.0"
-source = "git+https://github.com/mongodb/bson-rust?branch=main#4af5805248a063285e9add84adc7ff11934b04e5"
+version = "2.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d43b38e074cc0de2957f10947e376a1d88b9c4dbab340b590800cc1b2e066b2"
 dependencies = [
  "ahash",
  "base64 0.13.1",
  "bitvec",
  "hex",
- "indexmap 1.9.3",
+ "indexmap 2.2.5",
  "js-sys",
  "once_cell",
  "rand",
@@ -1592,8 +1593,8 @@ dependencies = [
 
 [[package]]
 name = "mongodb"
-version = "2.8.0"
-source = "git+https://github.com/hasura/mongo-rust-driver.git?branch=time-series-fix#e83610aff2f68f8f7ac3886f06bf3d4930adec41"
+version = "2.8.2"
+source = "git+https://github.com/hasura/mongo-rust-driver.git?branch=upstream-time-series-fix#5df5e10153b043c3bf93748d53969fa4345b6250"
 dependencies = [
  "async-trait",
  "base64 0.13.1",
