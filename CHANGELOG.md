@@ -2,6 +2,8 @@
 This changelog documents the changes between release versions.
 
 ## [Unreleased]
+- Enables logging events from the MongoDB driver by setting the `RUST_LOG` variable ([#67](https://github.com/hasura/ndc-mongodb/pull/67))
+  - To log all events set `RUST_LOG=mongodb::command=debug,mongodb::connection=debug,mongodb::server_selection=debug,mongodb::topology=debug`
 - Relations with a single column mapping now use concise correlated subquery syntax in `$lookup` stage ([#65](https://github.com/hasura/ndc-mongodb/pull/65))
 
 ## [0.0.5] - 2024-04-26

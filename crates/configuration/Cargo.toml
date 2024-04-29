@@ -7,7 +7,7 @@ edition = "2021"
 anyhow = "1"
 futures = "^0.3"
 itertools = { workspace = true }
-mongodb = "2.8"
+mongodb = { workspace = true }
 mongodb-support = { path = "../mongodb-support" }
 ndc-models = { workspace = true }
 schemars = "^0.8.12"
