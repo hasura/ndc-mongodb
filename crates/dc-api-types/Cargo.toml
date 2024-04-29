@@ -16,5 +16,5 @@ serde_with = "3"
 
 [dev-dependencies]
 anyhow = "1"
-mongodb = "2"
+mongodb = { workspace = true }
 pretty_assertions = "1"
