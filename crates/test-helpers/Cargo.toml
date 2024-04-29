@@ -8,6 +8,6 @@ configuration = { path = "../configuration" }
 mongodb-support = { path = "../mongodb-support" }
 
 enum-iterator = "^2.0.0"
-mongodb = "2.8"
+mongodb = { workspace = true }
 proptest = "1"
 

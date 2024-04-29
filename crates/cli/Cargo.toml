@@ -6,7 +6,7 @@ version.workspace = true
 [dependencies]
 configuration = { path = "../configuration" }
 mongodb-agent-common = { path = "../mongodb-agent-common" }
-mongodb = "2.8"
+mongodb = { workspace = true }
 mongodb-support = { path = "../mongodb-support" }
 
 anyhow = "1.0.80"

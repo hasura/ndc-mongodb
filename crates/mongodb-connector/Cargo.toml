@@ -15,7 +15,7 @@ http = "^0.2"
 indexmap = { version = "2.1.0", features = ["serde"] }
 itertools = { workspace = true }
 lazy_static = "^1.4.0"
-mongodb = "2.8"
+mongodb = { workspace = true }
 mongodb-agent-common = { path = "../mongodb-agent-common" }
 mongodb-support = { path = "../mongodb-support" }
 ndc-sdk = { workspace = true }
