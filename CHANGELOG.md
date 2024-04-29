@@ -2,6 +2,7 @@
 This changelog documents the changes between release versions.
 
 ## [Unreleased]
+- Relations with a single column mapping now use concise correlated subquery syntax in `$lookup` stage ([#65](https://github.com/hasura/ndc-mongodb/pull/65))
 
 ## [0.0.5] - 2024-04-26
 - Fix incorrect order of results for query requests with more than 10 variable sets (#37)
