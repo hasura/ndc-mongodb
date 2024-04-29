@@ -161,6 +161,50 @@ fn make_lookup_stage(
     r#as: String,
     lookup_pipeline: Pipeline,
 ) -> Result<Stage, MongoAgentError> {
+    // If we are mapping a single field in the source collection to a single field in the target
+    // collection then we can use the correlated subquery syntax.
+    if column_mapping.0.len() == 1 {
+        // Safe to unwrap because we just checked the hashmap size
+        let (source_selector, target_selector) = column_mapping.0.iter().next().unwrap();
+        single_column_mapping_lookup(
+            from,
+            source_selector,
+            target_selector,
+            r#as,
+            lookup_pipeline,
+        )
+    } else {
+        multiple_column_mapping_lookup(from, column_mapping, r#as, lookup_pipeline)
+    }
+}
+
+fn single_column_mapping_lookup(
+    from: String,
+    source_selector: &ColumnSelector,
+    target_selector: &ColumnSelector,
+    r#as: String,
+    lookup_pipeline: Pipeline,
+) -> Result<Stage, MongoAgentError> {
+    Ok(Stage::Lookup {
+        from: Some(from),
+        local_field: Some(safe_column_selector(source_selector)?.to_string()),
+        foreign_field: Some(safe_column_selector(target_selector)?.to_string()),
+        r#let: None,
+        pipeline: if lookup_pipeline.is_empty() {
+            None
+        } else {
+            Some(lookup_pipeline)
+        },
+        r#as,
+    })
+}
+
+fn multiple_column_mapping_lookup(
+    from: String,
+    column_mapping: &ColumnMapping,
+    r#as: String,
+    lookup_pipeline: Pipeline,
+) -> Result<Stage, MongoAgentError> {
     let let_bindings: Document = column_mapping
         .0
         .keys()
@@ -293,15 +337,9 @@ mod tests {
             {
                 "$lookup": {
                     "from": "students",
-                    "let": {
-                        "v__id": "$_id"
-                    },
+                    "localField": "_id",
+                    "foreignField": "classId",
                     "pipeline": [
-                        {
-                            "$match": { "$expr": {
-                                "$eq": ["$$v__id", "$classId"]
-                            } }
-                        },
                         {
                             "$replaceWith": {
                                 "student_name": { "$ifNull": ["$name", null] },
@@ -386,15 +424,9 @@ mod tests {
             {
                 "$lookup": {
                     "from": "classes",
-                    "let": {
-                        "v_classId": "$classId"
-                    },
+                    "localField": "classId",
+                    "foreignField": "_id",
                     "pipeline": [
-                        {
-                            "$match": { "$expr": {
-                                "$eq": ["$$v_classId", "$_id"]
-                            } }
-                        },
                         {
                             "$replaceWith": {
                                 "class_title": { "$ifNull": ["$title", null] },
@@ -602,31 +634,15 @@ mod tests {
             {
                 "$lookup": {
                     "from": "students",
-                    "let": {
-                        "v__id": "$_id"
-                    },
+                    "localField": "_id",
+                    "foreignField": "class_id",
                     "pipeline": [
-                        {
-                            "$match": {
-                                "$expr": {
-                                    "$eq": ["$$v__id", "$class_id"]
-                                }
-                            }
-                        },
                         {
                             "$lookup": {
                                 "from": "assignments",
-                                "let": {
-                                    "v__id": "$_id"
-                                },
+                                "localField": "_id",
+                                "foreignField": "student_id",
                                 "pipeline": [
-                                    {
-                                        "$match": {
-                                            "$expr": {
-                                                "$eq": ["$$v__id", "$student_id"]
-                                            }
-                                        }
-                                    },
                                     {
                                         "$replaceWith": {
                                             "assignment_title": { "$ifNull": ["$title", null] },
@@ -734,15 +750,9 @@ mod tests {
             {
                 "$lookup": {
                     "from": "students",
-                    "let": {
-                        "v__id": "$_id"
-                    },
+                    "localField": "_id",
+                    "foreignField": "classId",
                     "pipeline": [
-                        {
-                            "$match": { "$expr": {
-                                "$eq": ["$$v__id", "$classId"]
-                            } }
-                        },
                         {
                             "$facet": {
                                 "aggregate_count": [
@@ -862,15 +872,9 @@ mod tests {
           {
             "$lookup": {
               "from": "movies",
-              "let": {
-                "v_movie_id": "$movie_id"
-              },
+              "localField": "movie_id",
+              "foreignField": "_id",
               "pipeline": [
-                {
-                  "$match": { "$expr": {
-                    "$eq": ["$$v_movie_id", "$_id"]
-                  } }
-                },
                 {
                   "$replaceWith": {
                     "year": { "$ifNull": ["$year", null] },
@@ -997,15 +1001,9 @@ mod tests {
             {
                 "$lookup": {
                     "from": "movies",
-                    "let": {
-                        "v_movie_id": "$movie_id",
-                    },
+                    "localField": "movie_id",
+                    "foreignField": "_id",
                     "pipeline": [
-                        {
-                            "$match": { "$expr": {
-                                "$eq": ["$$v_movie_id", "$_id"]
-                            } }
-                        },
                         {
                             "$replaceWith": {
                                 "credits": {
