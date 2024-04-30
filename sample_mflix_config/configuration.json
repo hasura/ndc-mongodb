@@ -1,0 +1,7 @@
+{
+  "introspection_options": {
+    "sample_size": 250,
+    "no_validator_schema": true,
+    "all_schema_nullable": false
+  }
+}

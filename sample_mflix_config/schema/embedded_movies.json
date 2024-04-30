@@ -1,0 +1,317 @@
+{
+  "name": "embedded_movies",
+  "collections": {
+    "embedded_movies": {
+      "type": "embedded_movies"
+    }
+  },
+  "objectTypes": {
+    "embedded_movies": {
+      "fields": {
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        },
+        "awards": {
+          "type": {
+            "object": "embedded_movies_awards"
+          }
+        },
+        "cast": {
+          "type": {
+            "nullable": {
+              "arrayOf": {
+                "scalar": "string"
+              }
+            }
+          }
+        },
+        "countries": {
+          "type": {
+            "arrayOf": {
+              "scalar": "string"
+            }
+          }
+        },
+        "directors": {
+          "type": {
+            "nullable": {
+              "arrayOf": {
+                "scalar": "string"
+              }
+            }
+          }
+        },
+        "fullplot": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "genres": {
+          "type": {
+            "arrayOf": {
+              "scalar": "string"
+            }
+          }
+        },
+        "imdb": {
+          "type": {
+            "object": "embedded_movies_imdb"
+          }
+        },
+        "languages": {
+          "type": {
+            "nullable": {
+              "arrayOf": {
+                "scalar": "string"
+              }
+            }
+          }
+        },
+        "lastupdated": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "metacritic": {
+          "type": {
+            "nullable": {
+              "scalar": "int"
+            }
+          }
+        },
+        "num_mflix_comments": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "plot": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "plot_embedding": {
+          "type": {
+            "nullable": {
+              "arrayOf": {
+                "scalar": "double"
+              }
+            }
+          }
+        },
+        "poster": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "rated": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "released": {
+          "type": {
+            "nullable": {
+              "scalar": "date"
+            }
+          }
+        },
+        "runtime": {
+          "type": {
+            "nullable": {
+              "scalar": "int"
+            }
+          }
+        },
+        "title": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "tomatoes": {
+          "type": {
+            "nullable": {
+              "object": "embedded_movies_tomatoes"
+            }
+          }
+        },
+        "type": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "writers": {
+          "type": {
+            "nullable": {
+              "arrayOf": {
+                "scalar": "string"
+              }
+            }
+          }
+        },
+        "year": {
+          "type": {
+            "scalar": "int"
+          }
+        }
+      }
+    },
+    "embedded_movies_awards": {
+      "fields": {
+        "nominations": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "text": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "wins": {
+          "type": {
+            "scalar": "int"
+          }
+        }
+      }
+    },
+    "embedded_movies_imdb": {
+      "fields": {
+        "id": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "rating": {
+          "type": {
+            "scalar": "double"
+          }
+        },
+        "votes": {
+          "type": {
+            "scalar": "int"
+          }
+        }
+      }
+    },
+    "embedded_movies_tomatoes": {
+      "fields": {
+        "boxOffice": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "consensus": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "critic": {
+          "type": {
+            "nullable": {
+              "object": "embedded_movies_tomatoes_critic"
+            }
+          }
+        },
+        "dvd": {
+          "type": {
+            "nullable": {
+              "scalar": "date"
+            }
+          }
+        },
+        "fresh": {
+          "type": {
+            "nullable": {
+              "scalar": "int"
+            }
+          }
+        },
+        "lastUpdated": {
+          "type": {
+            "scalar": "date"
+          }
+        },
+        "production": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "rotten": {
+          "type": {
+            "nullable": {
+              "scalar": "int"
+            }
+          }
+        },
+        "viewer": {
+          "type": {
+            "object": "embedded_movies_tomatoes_viewer"
+          }
+        },
+        "website": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        }
+      }
+    },
+    "embedded_movies_tomatoes_critic": {
+      "fields": {
+        "meter": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "numReviews": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "rating": {
+          "type": {
+            "scalar": "double"
+          }
+        }
+      }
+    },
+    "embedded_movies_tomatoes_viewer": {
+      "fields": {
+        "meter": {
+          "type": {
+            "nullable": {
+              "scalar": "int"
+            }
+          }
+        },
+        "numReviews": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "rating": {
+          "type": {
+            "scalar": "double"
+          }
+        }
+      }
+    }
+  }
+}
