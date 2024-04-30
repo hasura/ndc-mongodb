@@ -51,14 +51,14 @@ pub async fn run_connector_query(
 #[serde(untagged)]
 pub enum ConnectorQueryResponse {
     Ok(QueryResponse),
-    Er(ErrorResponse),
+    Err(ErrorResponse),
 }
 
 impl ConnectorQueryResponse {
     pub fn into_result(self) -> Result<QueryResponse, ErrorResponse> {
         match self {
             ConnectorQueryResponse::Ok(resp) => Ok(resp),
-            ConnectorQueryResponse::Er(err) => Err(err),
+            ConnectorQueryResponse::Err(err) => Err(err),
         }
     }
 }

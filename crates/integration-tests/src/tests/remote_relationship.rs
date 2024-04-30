@@ -29,7 +29,7 @@ async fn provides_source_and_target_for_remote_relationship() -> anyhow::Result<
 
 #[tokio::test]
 async fn handles_request_with_single_variable_set() -> anyhow::Result<()> {
-    assert_yaml_snapshot!({
+    assert_yaml_snapshot!(
         run_connector_query(
             query_request()
                 .collection("movies")
@@ -41,6 +41,6 @@ async fn handles_request_with_single_variable_set() -> anyhow::Result<()> {
                 ),
         )
         .await?
-    });
+    );
     Ok(())
 }
