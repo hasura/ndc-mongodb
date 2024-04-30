@@ -4,7 +4,7 @@ use anyhow::{anyhow, ensure};
 use itertools::Itertools;
 use mongodb_support::BsonScalarType;
 use ndc_models as ndc;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     native_procedure::NativeProcedure,
@@ -12,7 +12,7 @@ use crate::{
     read_directory, schema, serialized,
 };
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ConfigurationOptions {
     // For introspection how many documents should be sampled per collection.
     pub sample_size: u32,

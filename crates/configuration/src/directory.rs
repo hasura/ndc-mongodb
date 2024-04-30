@@ -14,8 +14,7 @@ use crate::{configuration::ConfigurationOptions, serialized::Schema, with_name::
 pub const SCHEMA_DIRNAME: &str = "schema";
 pub const NATIVE_PROCEDURES_DIRNAME: &str = "native_procedures";
 pub const NATIVE_QUERIES_DIRNAME: &str = "native_queries";
-pub const CONFIURATION_OPTIONS_JSON: &str = "configuration.json";
-pub const CONFIURATION_OPTIONS_YAML: &str = "configuration.yaml";
+pub const CONFIGURATION_OPTIONS_BASENAME: &str = "configuration";
 
 pub const CONFIGURATION_EXTENSIONS: [(&str, FileFormat); 3] =
     [("json", JSON), ("yaml", YAML), ("yml", YAML)];
@@ -114,17 +113,22 @@ where
 }
 
 pub async fn parse_configuration_options_file(dir: &Path) -> ConfigurationOptions {
-    let json_config_file = parse_config_file(&dir.join(CONFIURATION_OPTIONS_JSON), JSON).await;
+    let json_filename = CONFIGURATION_OPTIONS_BASENAME.to_owned() + ".json";
+    let json_config_file = parse_config_file(&dir.join(json_filename), JSON).await;
     if let Ok(config_options) = json_config_file {
         return config_options
     }
 
-    let yaml_config_file = parse_config_file(&dir.join(CONFIURATION_OPTIONS_YAML), YAML).await;
+    let yaml_filename = CONFIGURATION_OPTIONS_BASENAME.to_owned() + ".yaml";
+    let yaml_config_file = parse_config_file(&dir.join(yaml_filename), YAML).await;
     if let Ok(config_options) = yaml_config_file {
         return config_options
     }
 
-    return Default::default()
+    // If a configuration file does not exist use defaults and write the file
+    let defaults: ConfigurationOptions = Default::default();
+    let _ = write_file(dir, CONFIGURATION_OPTIONS_BASENAME, &defaults).await;
+    return defaults
 }
 
 async fn parse_config_file<T>(path: impl AsRef<Path>, format: FileFormat) -> anyhow::Result<T>
