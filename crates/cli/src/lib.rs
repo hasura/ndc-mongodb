@@ -12,11 +12,11 @@ use mongodb_agent_common::state::ConnectorState;
 
 #[derive(Debug, Clone, Parser)]
 pub struct UpdateArgs {
-    #[arg(long = "sample-size", value_name = "N", default_value_t = 10)]
-    sample_size: u32,
+    #[arg(long = "sample-size", value_name = "N", required = false)]
+    sample_size: Option<u32>,
 
-    #[arg(long = "no-validator-schema", default_value_t = false)]
-    no_validator_schema: bool,
+    #[arg(long = "no-validator-schema", required = false)]
+    no_validator_schema: Option<bool>,
 }
 
 /// The command invoked by the user.
@@ -41,7 +41,18 @@ pub async fn run(command: Command, context: &Context) -> anyhow::Result<()> {
 
 /// Update the configuration in the current directory by introspecting the database.
 async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
-    if !args.no_validator_schema {
+    let config_file = configuration::parse_configuration_options_file(&context.path).await;
+    // Prefer arguments passed to cli, and fallback to the configuration file
+    let sample_size = match args.sample_size {
+        Some(size) => size,
+        None => config_file.sample_size
+    };
+    let no_validator_schema = match args.no_validator_schema {
+        Some(validator) => validator,
+        None => config_file.no_validator_schema
+    };
+
+    if !no_validator_schema {
         let schemas_from_json_validation =
             introspection::get_metadata_from_validation_schema(&context.connector_state).await?;
         configuration::write_schema_directory(&context.path, schemas_from_json_validation).await?;
@@ -49,7 +60,7 @@ async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
 
     let existing_schemas = configuration::list_existing_schemas(&context.path).await?;
     let schemas_from_sampling = introspection::sample_schema_from_db(
-        args.sample_size,
+        sample_size,
         &context.connector_state,
         &existing_schemas,
     )

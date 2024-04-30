@@ -4,12 +4,31 @@ use anyhow::{anyhow, ensure};
 use itertools::Itertools;
 use mongodb_support::BsonScalarType;
 use ndc_models as ndc;
+use serde::Deserialize;
 
 use crate::{
     native_procedure::NativeProcedure,
     native_query::{NativeQuery, NativeQueryRepresentation},
     read_directory, schema, serialized,
 };
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ConfigurationOptions {
+    // For introspection how many documents should be sampled per collection.
+    pub sample_size: u32,
+
+    // Whether to try validator schema first if one exists.
+    pub no_validator_schema: bool,
+}
+
+impl Default for ConfigurationOptions {
+    fn default() -> Self {
+        ConfigurationOptions {
+            sample_size: 100,
+            no_validator_schema: false
+        }
+    }
+}
 
 #[derive(Clone, Debug, Default)]
 pub struct Configuration {
@@ -45,6 +64,8 @@ pub struct Configuration {
     /// `native_queries/`, and `native_procedures/` subdirectories in the connector configuration
     /// directory.
     pub object_types: BTreeMap<String, schema::ObjectType>,
+
+    pub options: ConfigurationOptions,
 }
 
 impl Configuration {
@@ -52,6 +73,7 @@ impl Configuration {
         schema: serialized::Schema,
         native_procedures: BTreeMap<String, serialized::NativeProcedure>,
         native_queries: BTreeMap<String, serialized::NativeQuery>,
+        options: ConfigurationOptions
     ) -> anyhow::Result<Self> {
         let object_types_iter = || merge_object_types(&schema, &native_procedures, &native_queries);
         let object_type_errors = {
@@ -153,11 +175,12 @@ impl Configuration {
             native_procedures: internal_native_procedures,
             native_queries: internal_native_queries,
             object_types,
+            options
         })
     }
 
     pub fn from_schema(schema: serialized::Schema) -> anyhow::Result<Self> {
-        Self::validate(schema, Default::default(), Default::default())
+        Self::validate(schema, Default::default(), Default::default(), Default::default())
     }
 
     pub async fn parse_configuration(
@@ -350,7 +373,7 @@ mod tests {
         )]
         .into_iter()
         .collect();
-        let result = Configuration::validate(schema, native_procedures, Default::default());
+        let result = Configuration::validate(schema, native_procedures, Default::default(), Default::default());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("multiple definitions"));
         assert!(error_msg.contains("Album"));

@@ -9,11 +9,13 @@ use std::{
 use tokio::fs;
 use tokio_stream::wrappers::ReadDirStream;
 
-use crate::{serialized::Schema, with_name::WithName, Configuration};
+use crate::{configuration::ConfigurationOptions, serialized::Schema, with_name::WithName, Configuration};
 
 pub const SCHEMA_DIRNAME: &str = "schema";
 pub const NATIVE_PROCEDURES_DIRNAME: &str = "native_procedures";
 pub const NATIVE_QUERIES_DIRNAME: &str = "native_queries";
+pub const CONFIURATION_OPTIONS_JSON: &str = "configuration.json";
+pub const CONFIURATION_OPTIONS_YAML: &str = "configuration.yaml";
 
 pub const CONFIGURATION_EXTENSIONS: [(&str, FileFormat); 3] =
     [("json", JSON), ("yaml", YAML), ("yml", YAML)];
@@ -47,7 +49,10 @@ pub async fn read_directory(
         .await?
         .unwrap_or_default();
 
-    Configuration::validate(schema, native_procedures, native_queries)
+    let options = parse_configuration_options_file(&dir)
+        .await;
+
+    Configuration::validate(schema, native_procedures, native_queries, options)
 }
 
 /// Parse all files in a directory with one of the allowed configuration extensions according to
@@ -106,6 +111,20 @@ where
             duplicate_names.join(", ")
         ))
     }
+}
+
+pub async fn parse_configuration_options_file(dir: &Path) -> ConfigurationOptions {
+    let json_config_file = parse_config_file(&dir.join(CONFIURATION_OPTIONS_JSON), JSON).await;
+    if let Ok(config_options) = json_config_file {
+        return config_options
+    }
+
+    let yaml_config_file = parse_config_file(&dir.join(CONFIURATION_OPTIONS_YAML), YAML).await;
+    if let Ok(config_options) = yaml_config_file {
+        return config_options
+    }
+
+    return Default::default()
 }
 
 async fn parse_config_file<T>(path: impl AsRef<Path>, format: FileFormat) -> anyhow::Result<T>
