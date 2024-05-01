@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashSet};
 
-use super::type_unification::{unify_object_types, unify_type};
+use super::type_unification::{make_nullable_field, unify_object_types, unify_type};
 use configuration::{
     schema::{self, Type},
     Schema, WithName,
@@ -57,7 +57,7 @@ async fn sample_schema_from_collection(
         collected_object_types = if collected_object_types.is_empty() {
             object_types
         } else {
-            unify_object_types(collected_object_types, object_types, all_schema_nullalble)
+            unify_object_types(collected_object_types, object_types)
         };
     }
     let collection_info = WithName::named(
@@ -106,14 +106,18 @@ fn make_object_field(
 ) -> (Vec<ObjectType>, ObjectField) {
     let object_type_name = format!("{type_prefix}{field_name}");
     let (collected_otds, field_type) = make_field_type(&object_type_name, field_value, all_schema_nullalble);
-
-    let object_field = WithName::named(
+    let object_field_value = WithName::named(
         field_name.to_owned(),
         schema::ObjectField {
             description: None,
             r#type: field_type,
         },
     );
+    let object_field = if all_schema_nullalble {
+        make_nullable_field(object_field_value)
+    } else {
+        object_field_value
+    };
 
     (collected_otds, object_field)
 }
@@ -144,9 +148,9 @@ fn make_field_type(object_type_name: &str, field_value: &Bson, all_schema_nullal
                 collected_otds = if collected_otds.is_empty() {
                     elem_collected_otds
                 } else {
-                    unify_object_types(collected_otds, elem_collected_otds, all_schema_nullalble)
+                    unify_object_types(collected_otds, elem_collected_otds)
                 };
-                result_type = unify_type(result_type, elem_type, all_schema_nullalble);
+                result_type = unify_type(result_type, elem_type);
             }
             (collected_otds, Type::ArrayOf(Box::new(result_type)))
         }

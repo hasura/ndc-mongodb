@@ -12,28 +12,6 @@ use crate::{
     read_directory, schema, serialized,
 };
 
-#[derive(Copy, Clone, Debug, Deserialize, Serialize)]
-pub struct ConfigurationOptions {
-    // For introspection how many documents should be sampled per collection.
-    pub sample_size: u32,
-
-    // Whether to try validator schema first if one exists.
-    pub no_validator_schema: bool,
-
-    // Default to setting all schema fields as nullable.
-    pub all_schema_nullable: bool,
-}
-
-impl Default for ConfigurationOptions {
-    fn default() -> Self {
-        ConfigurationOptions {
-            sample_size: 100,
-            no_validator_schema: false,
-            all_schema_nullable: true,
-        }
-    }
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct Configuration {
     /// Tracked collections from the configured MongoDB database. This includes real collections as
@@ -191,6 +169,34 @@ impl Configuration {
         configuration_dir: impl AsRef<Path> + Send,
     ) -> anyhow::Result<Self> {
         read_directory(configuration_dir).await
+    }
+}
+
+#[derive(Copy, Clone, Debug, Default, Deserialize, Serialize)]
+pub struct ConfigurationOptions {
+    // Options for introspection
+    pub introspection_options: ConfigurationIntrospectionOptions,
+}
+
+#[derive(Copy, Clone, Debug, Deserialize, Serialize)]
+pub struct ConfigurationIntrospectionOptions {
+    // For introspection how many documents should be sampled per collection.
+    pub sample_size: u32,
+
+    // Whether to try validator schema first if one exists.
+    pub no_validator_schema: bool,
+
+    // Default to setting all schema fields as nullable.
+    pub all_schema_nullable: bool,
+}
+
+impl Default for ConfigurationIntrospectionOptions {
+    fn default() -> Self {
+        ConfigurationIntrospectionOptions {
+            sample_size: 100,
+            no_validator_schema: false,
+            all_schema_nullable: true,
+        }
     }
 }
 

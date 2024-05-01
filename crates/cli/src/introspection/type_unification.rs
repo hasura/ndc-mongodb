@@ -17,8 +17,8 @@ type ObjectType = WithName<schema::ObjectType>;
 /// Unify two types.
 /// This is computing the join (or least upper bound) of the two types in a lattice
 /// where `ExtendedJSON` is the Top element, Scalar(Undefined) is the Bottom element, and Nullable(T) >= T for all T.
-pub fn unify_type(type_a: Type, type_b: Type, all_schema_nullable: bool) -> Type {
-    let pre_result_type = match (type_a, type_b) {
+pub fn unify_type(type_a: Type, type_b: Type) -> Type {
+    let result_type = match (type_a, type_b) {
         // Union of any type with ExtendedJSON is ExtendedJSON
         (Type::ExtendedJSON, _) => Type::ExtendedJSON,
         (_, Type::ExtendedJSON) => Type::ExtendedJSON,
@@ -31,11 +31,11 @@ pub fn unify_type(type_a: Type, type_b: Type, all_schema_nullable: bool) -> Type
         // A Nullable type will unify with another type iff the underlying type is unifiable.
         // The resulting type will be Nullable.
         (Type::Nullable(nullable_type_a), type_b) => {
-            let result_type = unify_type(*nullable_type_a, type_b, all_schema_nullable);
+            let result_type = unify_type(*nullable_type_a, type_b);
             result_type.make_nullable()
         }
         (type_a, Type::Nullable(nullable_type_b)) => {
-            let result_type = unify_type(type_a, *nullable_type_b, all_schema_nullable);
+            let result_type = unify_type(type_a, *nullable_type_b);
             result_type.make_nullable()
         }
 
@@ -65,7 +65,7 @@ pub fn unify_type(type_a: Type, type_b: Type, all_schema_nullable: bool) -> Type
 
         // Array types unify iff their element types unify.
         (Type::ArrayOf(elem_type_a), Type::ArrayOf(elem_type_b)) => {
-            let elem_type = unify_type(*elem_type_a, *elem_type_b, all_schema_nullable);
+            let elem_type = unify_type(*elem_type_a, *elem_type_b);
             Type::ArrayOf(Box::new(elem_type))
         }
 
@@ -73,16 +73,10 @@ pub fn unify_type(type_a: Type, type_b: Type, all_schema_nullable: bool) -> Type
         (_, _) => Type::ExtendedJSON,
     };
 
-    let result_type = match (all_schema_nullable, &pre_result_type) {
-        (_, Type::Nullable(_)) => pre_result_type,
-        (true, _) => pre_result_type.make_nullable(),
-        _ => pre_result_type,
-    };
-
-    result_type.normalize_type()
+    result_type
 }
 
-fn make_nullable_field(field: ObjectField) -> ObjectField {
+pub fn make_nullable_field(field: ObjectField) -> ObjectField {
     WithName::named(
         field.name,
         schema::ObjectField {
@@ -94,62 +88,58 @@ fn make_nullable_field(field: ObjectField) -> ObjectField {
 
 /// Unify two `ObjectType`s.
 /// Any field that appears in only one of the `ObjectType`s will be made nullable.
-fn unify_object_type(all_schema_nullable: bool) -> impl Fn(ObjectType, ObjectType) -> ObjectType {
-    move |object_type_a, object_type_b| {
-        let field_map_a: IndexMap<String, ObjectField> = object_type_a
-            .value
-            .fields
-            .into_iter()
-            .map_into::<ObjectField>()
-            .map(|o| (o.name.to_owned(), o))
-            .collect();
-        let field_map_b: IndexMap<String, ObjectField> = object_type_b
-            .value
-            .fields
-            .into_iter()
-            .map_into::<ObjectField>()
-            .map(|o| (o.name.to_owned(), o))
-            .collect();
+fn unify_object_type(object_type_a: ObjectType, object_type_b: ObjectType) -> ObjectType {
+    let field_map_a: IndexMap<String, ObjectField> = object_type_a
+        .value
+        .fields
+        .into_iter()
+        .map_into::<ObjectField>()
+        .map(|o| (o.name.to_owned(), o))
+        .collect();
+    let field_map_b: IndexMap<String, ObjectField> = object_type_b
+        .value
+        .fields
+        .into_iter()
+        .map_into::<ObjectField>()
+        .map(|o| (o.name.to_owned(), o))
+        .collect();
 
-        let merged_field_map = align(
-            field_map_a,
-            field_map_b,
-            make_nullable_field,
-            make_nullable_field,
-            unify_object_field(all_schema_nullable),
-        );
+    let merged_field_map = align(
+        field_map_a,
+        field_map_b,
+        make_nullable_field,
+        make_nullable_field,
+        unify_object_field,
+    );
 
-        WithName::named(
-            object_type_a.name,
-            schema::ObjectType {
-                fields: merged_field_map
-                    .into_values()
-                    .map(WithName::into_name_value_pair)
-                    .collect(),
-                description: object_type_a
-                    .value
-                    .description
-                    .or(object_type_b.value.description),
-            },
-        )
-
-    }
+    WithName::named(
+        object_type_a.name,
+        schema::ObjectType {
+            fields: merged_field_map
+                .into_values()
+                .map(WithName::into_name_value_pair)
+                .collect(),
+            description: object_type_a
+                .value
+                .description
+                .or(object_type_b.value.description),
+        },
+    )
 }
 
 /// Unify the types of two `ObjectField`s.
 /// If the types are not unifiable then return an error.
-fn unify_object_field(all_schema_nullable: bool) -> impl Fn(ObjectField, ObjectField) -> ObjectField {
-    move |object_field_a, object_field_b|
-        WithName::named(
-            object_field_a.name,
-            schema::ObjectField {
-                r#type: unify_type(object_field_a.value.r#type, object_field_b.value.r#type, all_schema_nullable),
-                description: object_field_a
-                    .value
-                    .description
-                    .or(object_field_b.value.description),
-            },
-        )
+fn unify_object_field(object_field_a: ObjectField, object_field_b: ObjectField) -> ObjectField {
+    WithName::named(
+        object_field_a.name,
+        schema::ObjectField {
+            r#type: unify_type(object_field_a.value.r#type, object_field_b.value.r#type),
+            description: object_field_a
+                .value
+                .description
+                .or(object_field_b.value.description),
+        },
+    )
 }
 
 /// Unify two sets of `ObjectType`s.
@@ -158,7 +148,6 @@ fn unify_object_field(all_schema_nullable: bool) -> impl Fn(ObjectField, ObjectF
 pub fn unify_object_types(
     object_types_a: Vec<ObjectType>,
     object_types_b: Vec<ObjectType>,
-    all_schema_nullable: bool,
 ) -> Vec<ObjectType> {
     let type_map_a: IndexMap<String, ObjectType> = object_types_a
         .into_iter()
@@ -174,7 +163,7 @@ pub fn unify_object_types(
         type_map_b,
         std::convert::identity,
         std::convert::identity,
-        unify_object_type(all_schema_nullable),
+        unify_object_type,
     );
 
     merged_type_map.into_values().collect()
@@ -199,7 +188,6 @@ mod tests {
         let actual = unify_type(
             Type::Scalar(BsonScalarType::Int),
             Type::Scalar(BsonScalarType::Int),
-            false
         );
         assert_eq!(expected, actual);
         Ok(())
@@ -211,7 +199,6 @@ mod tests {
         let actual = unify_type(
             Type::Scalar(BsonScalarType::Int),
             Type::Scalar(BsonScalarType::String),
-            false
         );
         assert_eq!(expected, actual);
         Ok(())
@@ -227,7 +214,7 @@ mod tests {
     proptest! {
         #[test]
         fn test_type_unifies_with_itself_and_normalizes(t in arb_type()) {
-            let u = unify_type(t.clone(), t.clone(), false);
+            let u = unify_type(t.clone(), t.clone());
             prop_assert_eq!(t.normalize_type(), u)
         }
     }
@@ -235,8 +222,8 @@ mod tests {
     proptest! {
         #[test]
         fn test_unify_type_is_commutative(ta in arb_type(), tb in arb_type()) {
-            let result_a_b = unify_type(ta.clone(), tb.clone(), false);
-            let result_b_a = unify_type(tb, ta, false);
+            let result_a_b = unify_type(ta.clone(), tb.clone());
+            let result_b_a = unify_type(tb, ta);
             prop_assert_eq!(result_a_b, result_b_a)
         }
     }
@@ -244,8 +231,8 @@ mod tests {
     proptest! {
         #[test]
         fn test_unify_type_is_associative(ta in arb_type(), tb in arb_type(), tc in arb_type()) {
-            let result_lr = unify_type(unify_type(ta.clone(), tb.clone(), false), tc.clone(), false);
-            let result_rl = unify_type(ta, unify_type(tb, tc, false), false);
+            let result_lr = unify_type(unify_type(ta.clone(), tb.clone()), tc.clone());
+            let result_rl = unify_type(ta, unify_type(tb, tc));
             prop_assert_eq!(result_lr, result_rl)
         }
     }
@@ -253,7 +240,7 @@ mod tests {
     proptest! {
         #[test]
         fn test_undefined_is_left_identity(t in arb_type()) {
-            let u = unify_type(Type::Scalar(BsonScalarType::Undefined), t.clone(), false);
+            let u = unify_type(Type::Scalar(BsonScalarType::Undefined), t.clone());
             prop_assert_eq!(t.normalize_type(), u)
         }
     }
@@ -261,7 +248,7 @@ mod tests {
     proptest! {
         #[test]
         fn test_undefined_is_right_identity(t in arb_type()) {
-            let u = unify_type(t.clone(), Type::Scalar(BsonScalarType::Undefined), false);
+            let u = unify_type(t.clone(), Type::Scalar(BsonScalarType::Undefined));
             prop_assert_eq!(t.normalize_type(), u)
         }
     }
@@ -269,7 +256,7 @@ mod tests {
     proptest! {
         #[test]
         fn test_any_left(t in arb_type()) {
-            let u = unify_type(Type::ExtendedJSON, t, false);
+            let u = unify_type(Type::ExtendedJSON, t);
             prop_assert_eq!(Type::ExtendedJSON, u)
         }
     }
@@ -277,7 +264,7 @@ mod tests {
     proptest! {
         #[test]
         fn test_any_right(t in arb_type()) {
-            let u = unify_type(t, Type::ExtendedJSON, false);
+            let u = unify_type(t, Type::ExtendedJSON);
             prop_assert_eq!(Type::ExtendedJSON, u)
         }
     }
@@ -305,7 +292,7 @@ mod tests {
                 fields: right_fields.into_iter().map(|(k, v)| (k, schema::ObjectField{r#type: v, description: None})).collect(),
                 description: None
             });
-            let result = unify_object_type(false)(left_object, right_object);
+            let result = unify_object_type(left_object, right_object);
 
             for field in result.value.named_fields() {
                 // Any fields not shared between the two input types should be nullable.

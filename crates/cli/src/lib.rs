@@ -44,19 +44,19 @@ pub async fn run(command: Command, context: &Context) -> anyhow::Result<()> {
 
 /// Update the configuration in the current directory by introspecting the database.
 async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
-    let config_file = configuration::parse_configuration_options_file(&context.path).await;
+    let configuration_options = configuration::parse_configuration_options_file(&context.path).await;
     // Prefer arguments passed to cli, and fallback to the configuration file
     let sample_size = match args.sample_size {
         Some(size) => size,
-        None => config_file.sample_size
+        None => configuration_options.introspection_options.sample_size
     };
     let no_validator_schema = match args.no_validator_schema {
         Some(validator) => validator,
-        None => config_file.no_validator_schema
+        None => configuration_options.introspection_options.no_validator_schema
     };
     let all_schema_nullable = match args.all_schema_nullable {
         Some(validator) => validator,
-        None => config_file.all_schema_nullable
+        None => configuration_options.introspection_options.all_schema_nullable
     };
     let config_file_changed = configuration::get_config_file_changed(&context.path).await?;
 
