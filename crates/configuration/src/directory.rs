@@ -225,11 +225,9 @@ async fn write_config_metadata_file(
         .create(true)
         .open(dir.join(CONFIGURATION_OPTIONS_METADATA))
         .await;
-    match file_result {
-        Ok(mut file) => {
-            let _ = file.write_all(b"").await;
-        },
-        Err(_) => ()
+
+    if let Ok(mut file) = file_result {
+        let _ = file.write_all(b"").await;
     };
 }
 
