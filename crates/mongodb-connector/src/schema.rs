@@ -14,7 +14,7 @@ pub async fn get_schema(config: &Configuration) -> Result<ndc::SchemaResponse, S
     Ok(ndc::SchemaResponse {
         collections: config.collections.values().cloned().collect(),
         functions: config.functions.values().map(|(f, _)| f).cloned().collect(),
-        procedures: config.procedures.values().cloned().collect(),
+        procedures: config.mutations.values().cloned().collect(),
         object_types: config
             .object_types
             .iter()

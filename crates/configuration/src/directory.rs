@@ -11,10 +11,15 @@ use tokio_stream::wrappers::ReadDirStream;
 use crate::{configuration::ConfigurationOptions, serialized::Schema, with_name::WithName, Configuration};
 
 pub const SCHEMA_DIRNAME: &str = "schema";
-pub const NATIVE_PROCEDURES_DIRNAME: &str = "native_procedures";
+pub const NATIVE_MUTATIONS_DIRNAME: &str = "native_mutations";
 pub const NATIVE_QUERIES_DIRNAME: &str = "native_queries";
 pub const CONFIGURATION_OPTIONS_BASENAME: &str = "configuration";
 pub const CONFIGURATION_OPTIONS_METADATA: &str = ".configuration_metadata";
+
+// Deprecated: Discussion came out that we standardize names and the decision
+// was to use `native_mutations`. We should leave this in for a few releases
+// with some CHANGELOG/Docs messaging around deprecation
+pub const NATIVE_PROCEDURES_DIRNAME: &str = "native_procedures";
 
 pub const CONFIGURATION_EXTENSIONS: [(&str, FileFormat); 3] =
     [("json", JSON), ("yaml", YAML), ("yml", YAML)];
@@ -40,7 +45,13 @@ pub async fn read_directory(
         .unwrap_or_default();
     let schema = schemas.into_values().fold(Schema::default(), Schema::merge);
 
+    // Deprecated see message above at NATIVE_PROCEDURES_DIRNAME
     let native_procedures = read_subdir_configs(&dir.join(NATIVE_PROCEDURES_DIRNAME))
+        .await?
+        .unwrap_or_default();
+
+    // TODO: Once we fully remove `native_procedures` after a deprecation period we can remove `mut`
+    let mut native_mutations = read_subdir_configs(&dir.join(NATIVE_MUTATIONS_DIRNAME))
         .await?
         .unwrap_or_default();
 
@@ -51,12 +62,14 @@ pub async fn read_directory(
     let options = parse_configuration_options_file(dir)
         .await;
 
-    Configuration::validate(schema, native_procedures, native_queries, options)
+    native_mutations.extend(native_procedures.into_iter());
+
+    Configuration::validate(schema, native_mutations, native_queries, options)
 }
 
 /// Parse all files in a directory with one of the allowed configuration extensions according to
-/// the given type argument. For example if `T` is `NativeProcedure` this function assumes that all
-/// json and yaml files in the given directory should be parsed as native procedure configurations.
+/// the given type argument. For example if `T` is `NativeMutation` this function assumes that all
+/// json and yaml files in the given directory should be parsed as native mutation configurations.
 ///
 /// Assumes that every configuration file has a `name` field.
 async fn read_subdir_configs<T>(subdir: &Path) -> anyhow::Result<Option<BTreeMap<String, T>>>

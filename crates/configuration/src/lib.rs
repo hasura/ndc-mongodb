@@ -1,6 +1,6 @@
 mod configuration;
 mod directory;
-pub mod native_procedure;
+pub mod native_mutation;
 pub mod native_query;
 pub mod schema;
 mod serialized;

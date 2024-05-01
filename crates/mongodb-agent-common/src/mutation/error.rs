@@ -4,7 +4,7 @@ use thiserror::Error;
 use crate::query::arguments::ArgumentError;
 
 #[derive(Debug, Error)]
-pub enum ProcedureError {
+pub enum MutationError {
     #[error("error executing mongodb command: {0}")]
     ExecutionError(#[from] mongodb::error::Error),
 

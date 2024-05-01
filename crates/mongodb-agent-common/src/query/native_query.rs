@@ -7,7 +7,7 @@ use itertools::Itertools as _;
 use crate::{
     interface_types::MongoAgentError,
     mongodb::{Pipeline, Stage},
-    procedure::{interpolated_command, ProcedureError},
+    mutation::{interpolated_command, MutationError},
 };
 
 use super::{arguments::resolve_arguments, query_target::QueryTarget};
@@ -47,7 +47,7 @@ fn make_pipeline(
 
     let bson_arguments =
         resolve_arguments(&config.object_types, &native_query.arguments, expressions)
-            .map_err(ProcedureError::UnresolvableArguments)?;
+            .map_err(MutationError::UnresolvableArguments)?;
 
     // Replace argument placeholders with resolved expressions, convert document list to
     // a `Pipeline` value
@@ -191,8 +191,8 @@ mod tests {
             object_types,
             collections: Default::default(),
             functions: Default::default(),
-            procedures: Default::default(),
-            native_procedures: Default::default(),
+            mutations: Default::default(),
+            native_mutations: Default::default(),
             options: Default::default(),
         };
 

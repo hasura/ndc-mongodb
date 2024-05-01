@@ -7,14 +7,14 @@ use crate::{
     serialized::{self},
 };
 
-/// Internal representation of Native Procedures. For doc comments see
-/// [crate::serialized::NativeProcedure]
+/// Internal representation of Native Mutations. For doc comments see
+/// [crate::serialized::NativeMutation]
 ///
 /// Note: this type excludes `name` and `object_types` from the serialized type. Object types are
 /// intended to be merged into one big map so should not be accessed through values of this type.
 /// Native query values are stored in maps so names should be taken from map keys.
 #[derive(Clone, Debug)]
-pub struct NativeProcedure {
+pub struct NativeMutation {
     pub result_type: Type,
     pub arguments: BTreeMap<String, ObjectField>,
     pub command: bson::Document,
@@ -22,9 +22,9 @@ pub struct NativeProcedure {
     pub description: Option<String>,
 }
 
-impl From<serialized::NativeProcedure> for NativeProcedure {
-    fn from(value: serialized::NativeProcedure) -> Self {
-        NativeProcedure {
+impl From<serialized::NativeMutation> for NativeMutation {
+    fn from(value: serialized::NativeMutation) -> Self {
+        NativeMutation {
             result_type: value.result_type,
             arguments: value.arguments,
             command: value.command,

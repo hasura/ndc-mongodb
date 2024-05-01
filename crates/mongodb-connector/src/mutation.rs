@@ -8,7 +8,7 @@ use mongodb::{
     Database,
 };
 use mongodb_agent_common::{
-    procedure::Procedure, query::serialization::bson_to_json, state::ConnectorState,
+    mutation::Mutation, query::serialization::bson_to_json, state::ConnectorState,
 };
 use ndc_sdk::{
     connector::MutationError,
@@ -32,13 +32,13 @@ pub async fn handle_mutation_request(
 ) -> Result<JsonResponse<MutationResponse>, MutationError> {
     tracing::debug!(?config, mutation_request = %serde_json::to_string(&mutation_request).unwrap(), "executing mutation");
     let database = state.database();
-    let jobs = look_up_procedures(config, &mutation_request)?;
-    let operation_results = try_join_all(jobs.into_iter().map(|(procedure, requested_fields)| {
-        execute_procedure(
+    let jobs = look_up_mutations(config, &mutation_request)?;
+    let operation_results = try_join_all(jobs.into_iter().map(|(mutation, requested_fields)| {
+        execute_mutation(
             &query_context,
             database.clone(),
             &mutation_request.collection_relationships,
-            procedure,
+            mutation,
             requested_fields,
         )
     }))
@@ -46,13 +46,13 @@ pub async fn handle_mutation_request(
     Ok(JsonResponse::Value(MutationResponse { operation_results }))
 }
 
-/// Looks up procedures according to the names given in the mutation request, and pairs them with
-/// arguments and requested fields. Returns an error if any procedures cannot be found.
-fn look_up_procedures<'a, 'b>(
+/// Looks up mutations according to the names given in the mutation request, and pairs them with
+/// arguments and requested fields. Returns an error if any mutations cannot be found.
+fn look_up_mutations<'a, 'b>(
     config: &'a Configuration,
     mutation_request: &'b MutationRequest,
-) -> Result<Vec<(Procedure<'a>, Option<&'b NestedField>)>, MutationError> {
-    let (procedures, not_found): (Vec<_>, Vec<String>) = mutation_request
+) -> Result<Vec<(Mutation<'a>, Option<&'b NestedField>)>, MutationError> {
+    let (mutations, not_found): (Vec<_>, Vec<String>) = mutation_request
         .operations
         .iter()
         .map(|operation| match operation {
@@ -61,33 +61,33 @@ fn look_up_procedures<'a, 'b>(
                 arguments,
                 fields,
             } => {
-                let native_procedure = config.native_procedures.get(name);
-                let procedure = native_procedure.ok_or(name).map(|native_procedure| {
-                    Procedure::from_native_procedure(native_procedure, arguments.clone())
+                let native_mutation = config.native_mutations.get(name);
+                let mutation = native_mutation.ok_or(name).map(|native_mutation| {
+                    Mutation::from_native_mutation(native_mutation, arguments.clone())
                 })?;
-                Ok((procedure, fields.as_ref()))
+                Ok((mutation, fields.as_ref()))
             }
         })
         .partition_result();
 
     if !not_found.is_empty() {
         return Err(MutationError::UnprocessableContent(format!(
-            "request includes unknown procedures: {}",
+            "request includes unknown mutations: {}",
             not_found.join(", ")
         )));
     }
 
-    Ok(procedures)
+    Ok(mutations)
 }
 
-async fn execute_procedure(
+async fn execute_mutation(
     query_context: &QueryContext<'_>,
     database: Database,
     relationships: &BTreeMap<String, Relationship>,
-    procedure: Procedure<'_>,
+    mutation: Mutation<'_>,
     requested_fields: Option<&NestedField>,
 ) -> Result<MutationOperationResults, MutationError> {
-    let (result, result_type) = procedure
+    let (result, result_type) = mutation
         .execute(&query_context.object_types, database.clone())
         .await
         .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?;

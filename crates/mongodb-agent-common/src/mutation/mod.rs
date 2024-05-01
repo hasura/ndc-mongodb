@@ -4,19 +4,19 @@ mod interpolated_command;
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 
-use configuration::native_procedure::NativeProcedure;
+use configuration::native_mutation::NativeMutation;
 use configuration::schema::{ObjectField, ObjectType, Type};
 use mongodb::options::SelectionCriteria;
 use mongodb::{bson, Database};
 
 use crate::query::arguments::resolve_arguments;
 
-pub use self::error::ProcedureError;
+pub use self::error::MutationError;
 pub use self::interpolated_command::interpolated_command;
 
 /// Encapsulates running arbitrary mongodb commands with interpolated arguments
 #[derive(Clone, Debug)]
-pub struct Procedure<'a> {
+pub struct Mutation<'a> {
     arguments: BTreeMap<String, serde_json::Value>,
     command: Cow<'a, bson::Document>,
     parameters: Cow<'a, BTreeMap<String, ObjectField>>,
@@ -24,17 +24,17 @@ pub struct Procedure<'a> {
     selection_criteria: Option<Cow<'a, SelectionCriteria>>,
 }
 
-impl<'a> Procedure<'a> {
-    pub fn from_native_procedure(
-        native_procedure: &'a NativeProcedure,
+impl<'a> Mutation<'a> {
+    pub fn from_native_mutation(
+        native_mutation: &'a NativeMutation,
         arguments: BTreeMap<String, serde_json::Value>,
     ) -> Self {
-        Procedure {
+        Mutation {
             arguments,
-            command: Cow::Borrowed(&native_procedure.command),
-            parameters: Cow::Borrowed(&native_procedure.arguments),
-            result_type: native_procedure.result_type.clone(),
-            selection_criteria: native_procedure.selection_criteria.as_ref().map(Cow::Borrowed),
+            command: Cow::Borrowed(&native_mutation.command),
+            parameters: Cow::Borrowed(&native_mutation.arguments),
+            result_type: native_mutation.result_type.clone(),
+            selection_criteria: native_mutation.selection_criteria.as_ref().map(Cow::Borrowed),
         }
     }
 
@@ -42,7 +42,7 @@ impl<'a> Procedure<'a> {
         self,
         object_types: &BTreeMap<String, ObjectType>,
         database: Database,
-    ) -> Result<(bson::Document, Type), ProcedureError> {
+    ) -> Result<(bson::Document, Type), MutationError> {
         let selection_criteria = self.selection_criteria.map(Cow::into_owned);
         let command = interpolate(
             object_types,
@@ -57,7 +57,7 @@ impl<'a> Procedure<'a> {
     pub fn interpolated_command(
         self,
         object_types: &BTreeMap<String, ObjectType>,
-    ) -> Result<bson::Document, ProcedureError> {
+    ) -> Result<bson::Document, MutationError> {
         interpolate(
             object_types,
             &self.parameters,
@@ -72,7 +72,7 @@ fn interpolate(
     parameters: &BTreeMap<String, ObjectField>,
     arguments: BTreeMap<String, serde_json::Value>,
     command: &bson::Document,
-) -> Result<bson::Document, ProcedureError> {
+) -> Result<bson::Document, MutationError> {
     let bson_arguments = resolve_arguments(object_types, parameters, arguments)?;
     interpolated_command(command, &bson_arguments)
 }
