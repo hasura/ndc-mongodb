@@ -1,0 +1,6 @@
+---
+source: crates/integration-tests/src/tests/remote_relationship.rs
+expression: "{\n    run_connector_query(query_request().collection(\"movies\").variables([vec![(\"id\",\n                                    json!(\"573a1390f29313caabcd50e5\"))]]).query(query().predicate(equal(target!(\"_id\"),\n                                variable!(id))).fields([field!(\"title\")]))).await?\n}"
+---
+- rows:
+    - title: Gertie the Dinosaur

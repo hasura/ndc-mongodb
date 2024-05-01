@@ -1359,10 +1359,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "insta",
+ "ndc-models",
+ "ndc-test-helpers",
  "reqwest 0.12.4",
  "serde",
  "serde_json",
  "tokio",
+ "url",
 ]
 
 [[package]]

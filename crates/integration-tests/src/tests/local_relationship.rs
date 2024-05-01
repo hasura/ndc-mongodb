@@ -1,11 +1,11 @@
-use crate::query;
+use crate::graphql_query;
 use insta::assert_yaml_snapshot;
 use serde_json::json;
 
 #[tokio::test]
 async fn joins_local_relationships() -> anyhow::Result<()> {
     assert_yaml_snapshot!(
-        query(
+        graphql_query(
             r#"
                 query {
                   movies(limit: 2, order_by: {title: Asc}, where: {title: {_iregex: "Rear"}}) {
