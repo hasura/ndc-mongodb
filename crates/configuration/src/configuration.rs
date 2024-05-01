@@ -12,20 +12,24 @@ use crate::{
     read_directory, schema, serialized,
 };
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 pub struct ConfigurationOptions {
     // For introspection how many documents should be sampled per collection.
     pub sample_size: u32,
 
     // Whether to try validator schema first if one exists.
     pub no_validator_schema: bool,
+
+    // Default to setting all schema fields as nullable.
+    pub all_schema_nullable: bool,
 }
 
 impl Default for ConfigurationOptions {
     fn default() -> Self {
         ConfigurationOptions {
             sample_size: 100,
-            no_validator_schema: false
+            no_validator_schema: false,
+            all_schema_nullable: true,
         }
     }
 }

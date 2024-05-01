@@ -17,6 +17,9 @@ pub struct UpdateArgs {
 
     #[arg(long = "no-validator-schema", required = false)]
     no_validator_schema: Option<bool>,
+
+    #[arg(long = "all-schema-nullable", required = false)]
+    all_schema_nullable: Option<bool>,
 }
 
 /// The command invoked by the user.
@@ -51,6 +54,11 @@ async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
         Some(validator) => validator,
         None => config_file.no_validator_schema
     };
+    let all_schema_nullable = match args.all_schema_nullable {
+        Some(validator) => validator,
+        None => config_file.all_schema_nullable
+    };
+    let config_file_changed = configuration::get_config_file_changed(&context.path).await?;
 
     if !no_validator_schema {
         let schemas_from_json_validation =
@@ -61,6 +69,8 @@ async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
     let existing_schemas = configuration::list_existing_schemas(&context.path).await?;
     let schemas_from_sampling = introspection::sample_schema_from_db(
         sample_size,
+        all_schema_nullable,
+        config_file_changed,
         &context.connector_state,
         &existing_schemas,
     )

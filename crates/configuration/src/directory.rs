@@ -3,10 +3,9 @@ use futures::stream::TryStreamExt as _;
 use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, HashSet},
-    path::{Path, PathBuf},
+    collections::{BTreeMap, HashSet}, fs::Metadata, path::{Path, PathBuf}
 };
-use tokio::fs;
+use tokio::{fs, io::AsyncWriteExt};
 use tokio_stream::wrappers::ReadDirStream;
 
 use crate::{configuration::ConfigurationOptions, serialized::Schema, with_name::WithName, Configuration};
@@ -15,6 +14,7 @@ pub const SCHEMA_DIRNAME: &str = "schema";
 pub const NATIVE_PROCEDURES_DIRNAME: &str = "native_procedures";
 pub const NATIVE_QUERIES_DIRNAME: &str = "native_queries";
 pub const CONFIGURATION_OPTIONS_BASENAME: &str = "configuration";
+pub const CONFIGURATION_OPTIONS_METADATA: &str = ".configuration_metadata";
 
 pub const CONFIGURATION_EXTENSIONS: [(&str, FileFormat); 3] =
     [("json", JSON), ("yaml", YAML), ("yml", YAML)];
@@ -128,6 +128,7 @@ pub async fn parse_configuration_options_file(dir: &Path) -> ConfigurationOption
     // If a configuration file does not exist use defaults and write the file
     let defaults: ConfigurationOptions = Default::default();
     let _ = write_file(dir, CONFIGURATION_OPTIONS_BASENAME, &defaults).await;
+    let _ = write_config_metadata_file(dir).await;
     return defaults
 }
 
@@ -210,4 +211,53 @@ pub async fn list_existing_schemas(
         .unwrap_or_default();
 
     Ok(schemas.into_keys().collect())
+}
+
+async fn write_config_metadata_file(
+    configuration_dir: impl AsRef<Path>
+) -> () {
+    let dir = configuration_dir.as_ref();
+    let file_result = fs::OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(dir.join(CONFIGURATION_OPTIONS_METADATA))
+        .await;
+    match file_result {
+        Ok(mut file) => {
+            let _ = file.write_all(b"").await;
+        },
+        Err(_) => ()
+    };
+}
+
+pub async fn get_config_file_changed(
+    dir: impl AsRef<Path>
+) -> anyhow::Result<bool> {
+    let path = dir.as_ref();
+    let dot_metadata: Result<Metadata, std::io::Error> = fs::metadata(
+        &path.join(CONFIGURATION_OPTIONS_METADATA)
+    ).await;
+    let json_metadata = fs::metadata(
+        &path.join(CONFIGURATION_OPTIONS_BASENAME.to_owned() + ".json")
+    ).await;
+    let yaml_metadata = fs::metadata(
+        &path.join(CONFIGURATION_OPTIONS_BASENAME.to_owned() + ".yaml")
+    ).await;
+
+    let compare = |dot_date, config_date| async move {
+        if dot_date < config_date {
+            let _ = write_config_metadata_file(path).await;
+            Ok(true)
+        }
+        else {
+            Ok(false)
+        }
+    };
+
+    match (dot_metadata, json_metadata, yaml_metadata) {
+        (Ok(dot), Ok(json), _) => compare(dot.modified()?, json.modified()?).await,
+        (Ok(dot), _, Ok(yaml)) => compare(dot.modified()?, yaml.modified()?).await,
+        _ => Ok(true)
+    }
 }
