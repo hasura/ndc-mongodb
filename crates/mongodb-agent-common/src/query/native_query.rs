@@ -193,6 +193,7 @@ mod tests {
             functions: Default::default(),
             procedures: Default::default(),
             native_procedures: Default::default(),
+            options: Default::default(),
         };
 
         let request = query_request()

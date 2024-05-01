@@ -72,10 +72,11 @@ pub fn unify_type(type_a: Type, type_b: Type) -> Type {
         // Anything else gives ExtendedJSON
         (_, _) => Type::ExtendedJSON,
     };
+
     result_type.normalize_type()
 }
 
-fn make_nullable_field(field: ObjectField) -> ObjectField {
+pub fn make_nullable_field(field: ObjectField) -> ObjectField {
     WithName::named(
         field.name,
         schema::ObjectField {

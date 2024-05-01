@@ -4,6 +4,7 @@ use anyhow::{anyhow, ensure};
 use itertools::Itertools;
 use mongodb_support::BsonScalarType;
 use ndc_models as ndc;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     native_procedure::NativeProcedure,
@@ -45,6 +46,8 @@ pub struct Configuration {
     /// `native_queries/`, and `native_procedures/` subdirectories in the connector configuration
     /// directory.
     pub object_types: BTreeMap<String, schema::ObjectType>,
+
+    pub options: ConfigurationOptions,
 }
 
 impl Configuration {
@@ -52,6 +55,7 @@ impl Configuration {
         schema: serialized::Schema,
         native_procedures: BTreeMap<String, serialized::NativeProcedure>,
         native_queries: BTreeMap<String, serialized::NativeQuery>,
+        options: ConfigurationOptions
     ) -> anyhow::Result<Self> {
         let object_types_iter = || merge_object_types(&schema, &native_procedures, &native_queries);
         let object_type_errors = {
@@ -153,17 +157,48 @@ impl Configuration {
             native_procedures: internal_native_procedures,
             native_queries: internal_native_queries,
             object_types,
+            options
         })
     }
 
     pub fn from_schema(schema: serialized::Schema) -> anyhow::Result<Self> {
-        Self::validate(schema, Default::default(), Default::default())
+        Self::validate(schema, Default::default(), Default::default(), Default::default())
     }
 
     pub async fn parse_configuration(
         configuration_dir: impl AsRef<Path> + Send,
     ) -> anyhow::Result<Self> {
         read_directory(configuration_dir).await
+    }
+}
+
+#[derive(Copy, Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfigurationOptions {
+    // Options for introspection
+    pub introspection_options: ConfigurationIntrospectionOptions,
+}
+
+#[derive(Copy, Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfigurationIntrospectionOptions {
+    // For introspection how many documents should be sampled per collection.
+    pub sample_size: u32,
+
+    // Whether to try validator schema first if one exists.
+    pub no_validator_schema: bool,
+
+    // Default to setting all schema fields as nullable.
+    pub all_schema_nullable: bool,
+}
+
+impl Default for ConfigurationIntrospectionOptions {
+    fn default() -> Self {
+        ConfigurationIntrospectionOptions {
+            sample_size: 100,
+            no_validator_schema: false,
+            all_schema_nullable: true,
+        }
     }
 }
 
@@ -350,7 +385,7 @@ mod tests {
         )]
         .into_iter()
         .collect();
-        let result = Configuration::validate(schema, native_procedures, Default::default());
+        let result = Configuration::validate(schema, native_procedures, Default::default(), Default::default());
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("multiple definitions"));
         assert!(error_msg.contains("Album"));
