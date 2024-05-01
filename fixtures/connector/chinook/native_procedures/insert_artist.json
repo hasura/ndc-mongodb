@@ -1,6 +1,6 @@
 {
   "name": "insertArtist",
-  "description": "Example of a database update using a native procedure",
+  "description": "Example of a database update using a native mutation",
   "resultType": {
     "object": "InsertArtist"
   },

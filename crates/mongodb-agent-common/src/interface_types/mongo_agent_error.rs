@@ -6,7 +6,7 @@ use http::StatusCode;
 use mongodb::bson;
 use thiserror::Error;
 
-use crate::procedure::ProcedureError;
+use crate::mutation::MutationError;
 
 /// A superset of the DC-API `AgentError` type. This enum adds error cases specific to the MongoDB
 /// agent.
@@ -21,7 +21,7 @@ pub enum MongoAgentError {
     MongoDBSerialization(#[from] mongodb::bson::ser::Error),
     MongoDBSupport(#[from] mongodb_support::error::Error),
     NotImplemented(&'static str),
-    ProcedureError(#[from] ProcedureError),
+    MutationError(#[from] MutationError),
     Serialization(serde_json::Error),
     UnknownAggregationFunction(String),
     UnspecifiedRelation(String),
@@ -76,7 +76,7 @@ impl MongoAgentError {
             }
             MongoDBSupport(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(&err)),
             NotImplemented(missing_feature) => (StatusCode::BAD_REQUEST, ErrorResponse::new(&format!("The MongoDB agent does not yet support {missing_feature}"))),
-            ProcedureError(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(err)),
+            MutationError(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(err)),
             Serialization(err) => (StatusCode::INTERNAL_SERVER_ERROR, ErrorResponse::new(&err)),
             UnknownAggregationFunction(function) => (
                 StatusCode::BAD_REQUEST,

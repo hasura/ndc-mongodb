@@ -3,11 +3,11 @@ use std::collections::BTreeMap;
 use itertools::Itertools as _;
 use mongodb::bson::{self, Bson};
 
-use super::ProcedureError;
+use super::MutationError;
 
-type Result<T> = std::result::Result<T, ProcedureError>;
+type Result<T> = std::result::Result<T, MutationError>;
 
-/// Parse native procedure commands, and interpolate arguments.
+/// Parse native mutation commands, and interpolate arguments.
 pub fn interpolated_command(
     command: &bson::Document,
     arguments: &BTreeMap<String, Bson>,
@@ -48,7 +48,7 @@ fn interpolate_document(
             let interpolated_key = interpolate_string(&key, arguments)?;
             match interpolated_key {
                 Bson::String(string_key) => Ok((string_key, interpolated_value)),
-                _ => Err(ProcedureError::NonStringKey(interpolated_key)),
+                _ => Err(MutationError::NonStringKey(interpolated_key)),
             }
         })
         .try_collect()
@@ -69,23 +69,23 @@ fn interpolate_document(
 ///
 /// if the type of the variable `recordId` is `int`.
 fn interpolate_string(string: &str, arguments: &BTreeMap<String, Bson>) -> Result<Bson> {
-    let parts = parse_native_procedure(string);
+    let parts = parse_native_mutation(string);
     if parts.len() == 1 {
         let mut parts = parts;
         match parts.remove(0) {
-            NativeProcedurePart::Text(string) => Ok(Bson::String(string)),
-            NativeProcedurePart::Parameter(param) => resolve_argument(&param, arguments),
+            NativeMutationPart::Text(string) => Ok(Bson::String(string)),
+            NativeMutationPart::Parameter(param) => resolve_argument(&param, arguments),
         }
     } else {
         let interpolated_parts: Vec<String> = parts
             .into_iter()
             .map(|part| match part {
-                NativeProcedurePart::Text(string) => Ok(string),
-                NativeProcedurePart::Parameter(param) => {
+                NativeMutationPart::Text(string) => Ok(string),
+                NativeMutationPart::Parameter(param) => {
                     let argument_value = resolve_argument(&param, arguments)?;
                     match argument_value {
                         Bson::String(string) => Ok(string),
-                        _ => Err(ProcedureError::NonStringInStringContext(param)),
+                        _ => Err(MutationError::NonStringInStringContext(param)),
                     }
                 }
             })
@@ -97,34 +97,34 @@ fn interpolate_string(string: &str, arguments: &BTreeMap<String, Bson>) -> Resul
 fn resolve_argument(argument_name: &str, arguments: &BTreeMap<String, Bson>) -> Result<Bson> {
     let argument = arguments
         .get(argument_name)
-        .ok_or_else(|| ProcedureError::MissingArgument(argument_name.to_owned()))?;
+        .ok_or_else(|| MutationError::MissingArgument(argument_name.to_owned()))?;
     Ok(argument.clone())
 }
 
-/// A part of a Native Procedure command text, either raw text or a parameter.
+/// A part of a Native Mutation command text, either raw text or a parameter.
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum NativeProcedurePart {
+enum NativeMutationPart {
     /// A raw text part
     Text(String),
     /// A parameter
     Parameter(String),
 }
 
-/// Parse a string or key in a native procedure into parts where variables have the syntax
+/// Parse a string or key in a native mutation into parts where variables have the syntax
 /// `{{<variable>}}`.
-fn parse_native_procedure(string: &str) -> Vec<NativeProcedurePart> {
-    let vec: Vec<Vec<NativeProcedurePart>> = string
+fn parse_native_mutation(string: &str) -> Vec<NativeMutationPart> {
+    let vec: Vec<Vec<NativeMutationPart>> = string
         .split("{{")
         .filter(|part| !part.is_empty())
         .map(|part| match part.split_once("}}") {
-            None => vec![NativeProcedurePart::Text(part.to_string())],
+            None => vec![NativeMutationPart::Text(part.to_string())],
             Some((var, text)) => {
                 if text.is_empty() {
-                    vec![NativeProcedurePart::Parameter(var.trim().to_owned())]
+                    vec![NativeMutationPart::Parameter(var.trim().to_owned())]
                 } else {
                     vec![
-                        NativeProcedurePart::Parameter(var.trim().to_owned()),
-                        NativeProcedurePart::Text(text.to_string()),
+                        NativeMutationPart::Parameter(var.trim().to_owned()),
+                        NativeMutationPart::Text(text.to_string()),
                     ]
                 }
             }
@@ -136,7 +136,7 @@ fn parse_native_procedure(string: &str) -> Vec<NativeProcedurePart> {
 #[cfg(test)]
 mod tests {
     use configuration::{
-        native_procedure::NativeProcedure,
+        native_mutation::NativeMutation,
         schema::{ObjectField, ObjectType, Type},
     };
     use mongodb::bson::doc;
@@ -153,7 +153,7 @@ mod tests {
 
     #[test]
     fn interpolates_non_string_type() -> anyhow::Result<()> {
-        let native_procedure = NativeProcedure {
+        let native_mutation = NativeMutation {
             result_type: Type::Object("InsertArtist".to_owned()),
             arguments: [
                 (
@@ -192,10 +192,10 @@ mod tests {
 
         let arguments = resolve_arguments(
             &Default::default(),
-            &native_procedure.arguments,
+            &native_mutation.arguments,
             input_arguments,
         )?;
-        let command = interpolated_command(&native_procedure.command, &arguments)?;
+        let command = interpolated_command(&native_mutation.command, &arguments)?;
 
         assert_eq!(
             command,
@@ -212,7 +212,7 @@ mod tests {
 
     #[test]
     fn interpolates_array_argument() -> anyhow::Result<()> {
-        let native_procedure = NativeProcedure {
+        let native_mutation = NativeMutation {
             result_type: Type::Object("InsertArtist".to_owned()),
             arguments: [(
                 "documents".to_owned(),
@@ -266,8 +266,8 @@ mod tests {
         .collect();
 
         let arguments =
-            resolve_arguments(&object_types, &native_procedure.arguments, input_arguments)?;
-        let command = interpolated_command(&native_procedure.command, &arguments)?;
+            resolve_arguments(&object_types, &native_mutation.arguments, input_arguments)?;
+        let command = interpolated_command(&native_mutation.command, &arguments)?;
 
         assert_eq!(
             command,
@@ -290,7 +290,7 @@ mod tests {
 
     #[test]
     fn interpolates_arguments_within_string() -> anyhow::Result<()> {
-        let native_procedure = NativeProcedure {
+        let native_mutation = NativeMutation {
             result_type: Type::Object("Insert".to_owned()),
             arguments: [
                 (
@@ -326,10 +326,10 @@ mod tests {
 
         let arguments = resolve_arguments(
             &Default::default(),
-            &native_procedure.arguments,
+            &native_mutation.arguments,
             input_arguments,
         )?;
-        let command = interpolated_command(&native_procedure.command, &arguments)?;
+        let command = interpolated_command(&native_mutation.command, &arguments)?;
 
         assert_eq!(
             command,
