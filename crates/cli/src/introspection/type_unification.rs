@@ -73,7 +73,7 @@ pub fn unify_type(type_a: Type, type_b: Type) -> Type {
         (_, _) => Type::ExtendedJSON,
     };
 
-    result_type
+    result_type.normalize_type()
 }
 
 pub fn make_nullable_field(field: ObjectField) -> ObjectField {
