@@ -8,6 +8,8 @@ This changelog documents the changes between release versions.
 - Add root `configuration.json` or `configuration.yaml` file to allow editing cli options. ([#68](https://github.com/hasura/ndc-mongodb/pull/68))
 - Update default sample size to 100. ([#68](https://github.com/hasura/ndc-mongodb/pull/68))
 - Add `all_schema_nullable` option defaulted to true. ([#68](https://github.com/hasura/ndc-mongodb/pull/68))
+- Change `native_procedure` to `native_mutation` along with code renaming ([#70](https://github.com/hasura/ndc-mongodb/pull/70))
+  - Note: `native_procedures` folder in configuration is not deprecated. It will continue to work for a few releases, but renaming your folder is all that is needed.
 
 ## [0.0.5] - 2024-04-26
 - Fix incorrect order of results for query requests with more than 10 variable sets (#37)
