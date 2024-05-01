@@ -173,12 +173,14 @@ impl Configuration {
 }
 
 #[derive(Copy, Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ConfigurationOptions {
     // Options for introspection
     pub introspection_options: ConfigurationIntrospectionOptions,
 }
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ConfigurationIntrospectionOptions {
     // For introspection how many documents should be sampled per collection.
     pub sample_size: u32,

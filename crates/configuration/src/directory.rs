@@ -48,7 +48,7 @@ pub async fn read_directory(
         .await?
         .unwrap_or_default();
 
-    let options = parse_configuration_options_file(&dir)
+    let options = parse_configuration_options_file(dir)
         .await;
 
     Configuration::validate(schema, native_procedures, native_queries, options)
@@ -129,7 +129,7 @@ pub async fn parse_configuration_options_file(dir: &Path) -> ConfigurationOption
     let defaults: ConfigurationOptions = Default::default();
     let _ = write_file(dir, CONFIGURATION_OPTIONS_BASENAME, &defaults).await;
     let _ = write_config_metadata_file(dir).await;
-    return defaults
+    defaults
 }
 
 async fn parse_config_file<T>(path: impl AsRef<Path>, format: FileFormat) -> anyhow::Result<T>
@@ -217,7 +217,7 @@ pub async fn list_existing_schemas(
 // of the schema introspection.
 async fn write_config_metadata_file(
     configuration_dir: impl AsRef<Path>
-) -> () {
+) {
     let dir = configuration_dir.as_ref();
     let file_result = fs::OpenOptions::new()
         .write(true)
