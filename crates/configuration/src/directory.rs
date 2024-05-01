@@ -213,6 +213,8 @@ pub async fn list_existing_schemas(
     Ok(schemas.into_keys().collect())
 }
 
+// Metadata file is just a dot filed used for the purposes of know if the user has updated their config to force refresh
+// of the schema introspection.
 async fn write_config_metadata_file(
     configuration_dir: impl AsRef<Path>
 ) -> () {
