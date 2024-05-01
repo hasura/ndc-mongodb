@@ -44,3 +44,23 @@ async fn joins_local_relationships() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[tokio::test]
+async fn filters_by_field_of_related_collection() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+            query {
+              comments(limit: 10, where: {movie: {title: {_is_null: false}}}) {
+                movie {
+                  title
+                }
+              }
+            }
+            "#
+        )
+        .variables(json!({ "limit": 11, "movies_limit": 2 }))
+        .run()
+        .await?
+    );
+    Ok(())
+}
