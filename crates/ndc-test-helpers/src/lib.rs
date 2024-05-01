@@ -17,6 +17,9 @@ use ndc_models::{
     QueryRequest, Relationship, RelationshipArgument, RelationshipType,
 };
 
+// Export this crate's reference to ndc_models so that we can use this reference in macros.
+pub extern crate ndc_models;
+
 pub use collection_info::*;
 pub use comparison_target::*;
 pub use comparison_value::*;
@@ -159,6 +162,11 @@ impl QueryBuilder {
                 .map(|(name, aggregate)| (name.to_owned(), aggregate))
                 .collect(),
         );
+        self
+    }
+
+    pub fn limit(mut self, n: u32) -> Self {
+        self.limit = Some(n);
         self
     }
 

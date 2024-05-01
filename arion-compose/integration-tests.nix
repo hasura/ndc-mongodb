@@ -14,6 +14,7 @@ let
     map-host-ports = false;
   };
 
+  connector-port = "7130";
   engine-port = "7100";
 in
 {
@@ -22,6 +23,7 @@ in
   services = services // {
     test = import ./services/integration-tests.nix {
       inherit pkgs;
+      connector-url = "http://connector:${connector-port}/";
       engine-graphql-url = "http://engine:${engine-port}/graphql";
       service.depends_on = {
         connector.condition = "service_healthy";

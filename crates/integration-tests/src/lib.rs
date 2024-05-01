@@ -6,78 +6,24 @@
 #[cfg(all(test, feature = "integration"))]
 mod tests;
 
+mod connector;
+mod graphql;
+
 use std::env;
 
 use anyhow::anyhow;
-use reqwest::Client;
-use serde::{Deserialize, Serialize};
-use serde_json::{to_value, Value};
+use url::Url;
 
+pub use self::connector::{run_connector_query, ConnectorQueryRequest};
+pub use self::graphql::{graphql_query, GraphQLRequest, GraphQLResponse};
+
+const CONNECTOR_URL: &str = "CONNECTOR_URL";
 const ENGINE_GRAPHQL_URL: &str = "ENGINE_GRAPHQL_URL";
 
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GraphQLRequest {
-    query: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    operation_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    variables: Option<Value>,
-}
-
-impl GraphQLRequest {
-    pub fn new(query: String) -> Self {
-        GraphQLRequest {
-            query,
-            operation_name: Default::default(),
-            variables: Default::default(),
-        }
-    }
-
-    pub fn operation_name(mut self, name: String) -> Self {
-        self.operation_name = Some(name);
-        self
-    }
-
-    pub fn variables(mut self, vars: impl Serialize) -> Self {
-        self.variables = Some(to_value(&vars).unwrap());
-        self
-    }
-
-    pub async fn run(&self) -> anyhow::Result<GraphQLResponse> {
-        let graphql_url = get_graphql_url()?;
-        let client = Client::new();
-        let response = client
-            .post(graphql_url)
-            .header("x-hasura-role", "admin")
-            .json(self)
-            .send()
-            .await?;
-        let graphql_response = response.json().await?;
-        Ok(graphql_response)
-    }
-}
-
-impl From<String> for GraphQLRequest {
-    fn from(query: String) -> Self {
-        GraphQLRequest::new(query)
-    }
-}
-
-impl From<&str> for GraphQLRequest {
-    fn from(query: &str) -> Self {
-        GraphQLRequest::new(query.to_owned())
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-pub struct GraphQLResponse {
-    data: Value,
-    errors: Option<Vec<Value>>,
-}
-
-pub fn query(q: impl ToString) -> GraphQLRequest {
-    q.to_string().into()
+fn get_connector_url() -> anyhow::Result<Url> {
+    let input = env::var(CONNECTOR_URL).map_err(|_| anyhow!("please set {CONNECTOR_URL} to the the base URL of a running MongoDB connector instance"))?;
+    let url = Url::parse(&input)?;
+    Ok(url)
 }
 
 fn get_graphql_url() -> anyhow::Result<String> {

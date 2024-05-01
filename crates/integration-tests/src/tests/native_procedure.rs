@@ -1,4 +1,4 @@
-use crate::{query, GraphQLResponse};
+use crate::{graphql_query, GraphQLResponse};
 use insta::assert_yaml_snapshot;
 use serde_json::json;
 
@@ -15,11 +15,11 @@ async fn updates_with_native_procedure() -> anyhow::Result<()> {
         }
     "#;
 
-    let res1 = query(mutation)
+    let res1 = graphql_query(mutation)
         .variables(json!({ "id": id_1, "name": "Regina Spektor" }))
         .run()
         .await?;
-    query(mutation)
+    graphql_query(mutation)
         .variables(json!({ "id": id_2, "name": "Ok Go" }))
         .run()
         .await?;
@@ -38,7 +38,7 @@ async fn updates_with_native_procedure() -> anyhow::Result<()> {
     );
 
     assert_yaml_snapshot!(
-        query(
+        graphql_query(
             r#"
                 query {
                   artist1: artist(where: { artistId: { _eq: 5471 } }, limit: 1) {
