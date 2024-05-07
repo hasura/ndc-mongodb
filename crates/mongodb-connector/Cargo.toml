@@ -12,7 +12,7 @@ dc-api-types = { path = "../dc-api-types" }
 enum-iterator = "^2.0.0"
 futures = "^0.3"
 http = "^0.2"
-indexmap = { version = "2.1.0", features = ["serde"] }
+indexmap = { wokspace = true }
 itertools = { workspace = true }
 lazy_static = "^1.4.0"
 mongodb = { workspace = true }

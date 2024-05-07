@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 dc-api-types = { path = "../dc-api-types" }
 enum-iterator = "^2.0.0"
-indexmap = { version = "1", features = ["serde"] } # must match the version that ndc-client uses
+indexmap = { workspace = true }
 mongodb = { workspace = true }
 schemars = "^0.8.12"
 serde = { version = "1", features = ["derive"] }

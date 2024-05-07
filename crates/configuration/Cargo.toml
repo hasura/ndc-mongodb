@@ -4,11 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+mongodb-support = { path = "../mongodb-support" }
+
 anyhow = "1"
 futures = "^0.3"
 itertools = { workspace = true }
 mongodb = { workspace = true }
-mongodb-support = { path = "../mongodb-support" }
 ndc-models = { workspace = true }
 schemars = "^0.8.12"
 serde = { version = "1", features = ["derive"] }
