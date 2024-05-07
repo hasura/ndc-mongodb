@@ -1,6 +1,6 @@
 use dc_api_types::{
     ArrayComparisonValue, BinaryArrayComparisonOperator, BinaryComparisonOperator,
-    ComparisonColumn, ComparisonValue, ExistsInTable, Expression,
+    ComparisonColumn, ComparisonValue, ExistsInTable, Expression, UnaryComparisonOperator,
 };
 
 pub fn and<I>(operands: I) -> Expression
@@ -43,6 +43,13 @@ where
         column: op1,
         operator: BinaryComparisonOperator::CustomBinaryComparisonOperator(oper.to_string()),
         value: op2,
+    }
+}
+
+pub fn is_null(op1: ComparisonColumn) -> Expression {
+    Expression::ApplyUnaryComparison {
+        column: op1,
+        operator: UnaryComparisonOperator::IsNull,
     }
 }
 

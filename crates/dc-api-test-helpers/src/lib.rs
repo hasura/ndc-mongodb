@@ -80,7 +80,6 @@ pub fn target(name: &str) -> Target {
     }
 }
 
-#[allow(dead_code)]
 pub fn selector_path<const S: usize>(path_elements: [&str; S]) -> ColumnSelector {
     ColumnSelector::Path(
         path_elements

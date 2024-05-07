@@ -176,37 +176,21 @@ pub fn make_nested_schema() -> QueryContext<'static> {
         functions: Default::default(),
         object_types: Cow::Owned(BTreeMap::from([
             (
-                "Author".into(),
-                schema::ObjectType {
-                    description: None,
-                    fields: BTreeMap::from([
-                        (
-                            "address".into(),
-                            schema::ObjectField {
-                                description: None,
-                                r#type: schema::Type::Object("Address".into()),
-                            },
-                        ),
-                        (
-                            "articles".into(),
-                            schema::ObjectField {
-                                description: None,
-                                r#type: schema::Type::ArrayOf(Box::new(schema::Type::Object(
-                                    "Article".into(),
-                                ))),
-                            },
-                        ),
-                        (
-                            "array_of_arrays".into(),
-                            schema::ObjectField {
-                                description: None,
-                                r#type: schema::Type::ArrayOf(Box::new(schema::Type::ArrayOf(
-                                    Box::new(schema::Type::Object("Article".into())),
-                                ))),
-                            },
-                        ),
-                    ]),
-                },
+                "Author".to_owned(),
+                object_type([
+                    ("name", schema::Type::Scalar(BsonScalarType::String)),
+                    ("address", schema::Type::Object("Address".into())),
+                    (
+                        "articles",
+                        schema::Type::ArrayOf(Box::new(schema::Type::Object("Article".into()))),
+                    ),
+                    (
+                        "array_of_arrays",
+                        schema::Type::ArrayOf(Box::new(schema::Type::ArrayOf(Box::new(
+                            schema::Type::Object("Article".into()),
+                        )))),
+                    ),
+                ]),
             ),
             (
                 "Address".into(),

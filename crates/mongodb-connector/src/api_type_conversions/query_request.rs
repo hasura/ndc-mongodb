@@ -820,7 +820,7 @@ fn v3_to_v2_comparison_target(
             let scalar_type_name = get_scalar_type_name(&object_field.r#type)?;
             if !path.is_empty() {
                 // This is not supported in the v2 model. ComparisonColumn.path accepts only two values:
-                // []/None for the current table, and ["*"] for the RootCollectionColumn (handled below)
+                // []/None for the current table, and ["$"] for the RootCollectionColumn (handled below)
                 Err(ConversionError::NotImplemented(
                     "The MongoDB connector does not currently support comparisons against columns from related tables",
                 ))
@@ -1257,6 +1257,48 @@ mod tests {
                 v2::nested_array!("author_array_of_arrays", v2::nested_array_field!(v2::nested_object_field!("array_of_arrays", v2::query().fields([v2::column!("article_title" => "title": "String")]))))
             ]))
             .into();
+
+        assert_eq!(v2_request, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Result<()> {
+        let query_context = make_nested_schema();
+        let request = query_request()
+            .collection("appearances")
+            .relationships([("author", relationship("authors", [("authorId", "id")]))])
+            .query(
+                query()
+                    .fields([relation_field!("author" => "presenter", query().fields([
+                        field!("name"),
+                    ]))])
+                    .predicate(not(is_null(target!("name", [path_element("author")])))),
+            )
+            .into();
+        let v2_request = v3_to_v2_query_request(&query_context, request)?;
+
+        let expected = v2::query_request()
+            .target(["appearances"])
+            .relationships([v2::table_relationships(
+                vec!["appearances".into()],
+                [(
+                    "author",
+                    v2::relationship(
+                        v2::target("author"),
+                        [(
+                            dc_api_types::ColumnSelector::Column("authorId".into()),
+                            dc_api_types::ColumnSelector::Column("id".into()),
+                        )],
+                    ),
+                )],
+            )])
+            .query(v2::query().fields([
+                v2::relation_field!("author" => "presenter", v2::query().fields([
+                    v2::column!("name": "String")
+                ])
+                .predicate(v2::exists("author", v2::not(v2::is_null(v2::compare!("name": "String")))))),
+            ])).into();
 
         assert_eq!(v2_request, expected);
         Ok(())
