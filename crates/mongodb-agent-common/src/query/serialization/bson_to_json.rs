@@ -1,9 +1,4 @@
-use std::collections::BTreeMap;
-
-use configuration::{
-    schema::{ObjectField, ObjectType, Type},
-    WithNameRef,
-};
+use configuration::MongoScalarType;
 use itertools::Itertools as _;
 use mongodb::bson::{self, Bson};
 use mongodb_support::BsonScalarType;
@@ -11,7 +6,9 @@ use serde_json::{to_value, Number, Value};
 use thiserror::Error;
 use time::{format_description::well_known::Iso8601, OffsetDateTime};
 
-use super::json_formats;
+use crate::mongo_query_plan::{ObjectType, Type};
+
+use super::{is_nullable, json_formats};
 
 #[derive(Debug, Error)]
 pub enum BsonToJsonError {
@@ -44,22 +41,17 @@ type Result<T> = std::result::Result<T, BsonToJsonError>;
 /// disambiguate types on the BSON side. We don't want those tags because we communicate type
 /// information out of band. That is except for the `Type::ExtendedJSON` type where we do want to emit
 /// Extended JSON because we don't have out-of-band information in that case.
-pub fn bson_to_json(
-    expected_type: &Type,
-    object_types: &BTreeMap<String, ObjectType>,
-    value: Bson,
-) -> Result<Value> {
+pub fn bson_to_json(expected_type: &Type, value: Bson) -> Result<Value> {
     match expected_type {
-        Type::ExtendedJSON => Ok(value.into_canonical_extjson()),
-        Type::Scalar(scalar_type) => bson_scalar_to_json(*scalar_type, value),
-        Type::Object(object_type_name) => {
-            let object_type = object_types
-                .get(object_type_name)
-                .ok_or_else(|| BsonToJsonError::UnknownObjectType(object_type_name.to_owned()))?;
-            convert_object(object_type_name, object_type, object_types, value)
+        Type::Scalar(configuration::MongoScalarType::ExtendedJSON) => {
+            Ok(value.into_canonical_extjson())
         }
-        Type::ArrayOf(element_type) => convert_array(element_type, object_types, value),
-        Type::Nullable(t) => convert_nullable(t, object_types, value),
+        Type::Scalar(MongoScalarType::Bson(scalar_type)) => {
+            bson_scalar_to_json(*scalar_type, value)
+        }
+        Type::Object(object_type) => convert_object(object_type, value),
+        Type::ArrayOf(element_type) => convert_array(element_type, value),
+        Type::Nullable(t) => convert_nullable(t, value),
     }
 }
 
@@ -95,17 +87,13 @@ fn bson_scalar_to_json(expected_type: BsonScalarType, value: Bson) -> Result<Val
         (BsonScalarType::ObjectId, Bson::ObjectId(oid)) => Ok(Value::String(oid.to_hex())),
         (BsonScalarType::DbPointer, v) => Ok(v.into_canonical_extjson()),
         (_, v) => Err(BsonToJsonError::TypeMismatch(
-            Type::Scalar(expected_type),
+            Type::Scalar(MongoScalarType::Bson(expected_type)),
             v,
         )),
     }
 }
 
-fn convert_array(
-    element_type: &Type,
-    object_types: &BTreeMap<String, ObjectType>,
-    value: Bson,
-) -> Result<Value> {
+fn convert_array(element_type: &Type, value: Bson) -> Result<Value> {
     let values = match value {
         Bson::Array(values) => Ok(values),
         _ => Err(BsonToJsonError::TypeMismatch(
@@ -115,21 +103,16 @@ fn convert_array(
     }?;
     let json_array = values
         .into_iter()
-        .map(|value| bson_to_json(element_type, object_types, value))
+        .map(|value| bson_to_json(element_type, value))
         .try_collect()?;
     Ok(Value::Array(json_array))
 }
 
-fn convert_object(
-    object_type_name: &str,
-    object_type: &ObjectType,
-    object_types: &BTreeMap<String, ObjectType>,
-    value: Bson,
-) -> Result<Value> {
+fn convert_object(object_type: &ObjectType, value: Bson) -> Result<Value> {
     let input_doc = match value {
         Bson::Document(fields) => Ok(fields),
         _ => Err(BsonToJsonError::TypeMismatch(
-            Type::Object(object_type_name.to_owned()),
+            Type::Object(object_type.to_owned()),
             value,
         )),
     }?;
@@ -137,13 +120,13 @@ fn convert_object(
         .named_fields()
         .filter_map(|field| {
             let field_value_result =
-                get_object_field_value(object_type_name, field.clone(), &input_doc).transpose()?;
+                get_object_field_value(object_type, field, &input_doc).transpose()?;
             Some((field, field_value_result))
         })
-        .map(|(field, field_value_result)| {
+        .map(|((field_name, field_type), field_value_result)| {
             Ok((
-                field.name.to_owned(),
-                bson_to_json(&field.value.r#type, object_types, field_value_result?)?,
+                field_name.to_owned(),
+                bson_to_json(field_type, field_value_result?)?,
             ))
         })
         .try_collect::<_, _, BsonToJsonError>()?;
@@ -154,30 +137,26 @@ fn convert_object(
 // missing, and the field is nullable. Returns `Err` if the value is missing and the field is *not*
 // nullable.
 fn get_object_field_value(
-    object_type_name: &str,
-    field: WithNameRef<'_, ObjectField>,
+    object_type: &ObjectType,
+    (field_name, field_type): (&str, &Type),
     doc: &bson::Document,
 ) -> Result<Option<Bson>> {
-    let value = doc.get(field.name);
-    if value.is_none() && field.value.r#type.is_nullable() {
+    let value = doc.get(field_name);
+    if value.is_none() && is_nullable(&field_type) {
         return Ok(None);
     }
     Ok(Some(value.cloned().ok_or_else(|| {
         BsonToJsonError::MissingObjectField(
-            Type::Object(object_type_name.to_owned()),
-            field.name.to_owned(),
+            Type::Object(object_type.clone()),
+            field_name.to_owned(),
         )
     })?))
 }
 
-fn convert_nullable(
-    underlying_type: &Type,
-    object_types: &BTreeMap<String, ObjectType>,
-    value: Bson,
-) -> Result<Value> {
+fn convert_nullable(underlying_type: &Type, value: Bson) -> Result<Value> {
     match value {
         Bson::Null => Ok(Value::Null),
-        non_null_value => bson_to_json(underlying_type, object_types, non_null_value),
+        non_null_value => bson_to_json(underlying_type, non_null_value),
     }
 }
 
@@ -218,7 +197,7 @@ fn convert_small_number(expected_type: BsonScalarType, value: Bson) -> Result<Va
         )),
         Bson::Int32(n) => Ok(Value::Number(n.into())),
         _ => Err(BsonToJsonError::TypeMismatch(
-            Type::Scalar(expected_type),
+            Type::Scalar(MongoScalarType::Bson(expected_type)),
             value,
         )),
     }
@@ -238,7 +217,6 @@ mod tests {
         let expected_string = "573a1390f29313caabcd446f";
         let json = bson_to_json(
             &Type::Scalar(BsonScalarType::ObjectId),
-            &Default::default(),
             Bson::ObjectId(FromStr::from_str(expected_string)?),
         )?;
         assert_eq!(json, Value::String(expected_string.to_owned()));
@@ -247,24 +225,25 @@ mod tests {
 
     #[test]
     fn serializes_document_with_missing_nullable_field() -> anyhow::Result<()> {
-        let expected_type = Type::Object("test_object".to_owned());
-        let object_types = [(
-            "test_object".to_owned(),
-            ObjectType {
-                fields: [(
-                    "field".to_owned(),
-                    ObjectField {
-                        r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::String))),
-                        description: None,
-                    },
-                )]
-                .into(),
-                description: None,
-            },
-        )]
-        .into();
+        let expected_type = Type::Object(ObjectType {
+            name: None,
+            fields: [(
+                "test_object".to_owned(),
+                ObjectType {
+                    name: None,
+                    fields: [(
+                        "field".to_owned(),
+                        Type::Nullable(Box::new(Type::Scalar(MongoScalarType::Bson(
+                            BsonScalarType::String,
+                        )))),
+                    )]
+                    .into(),
+                },
+            )]
+            .into(),
+        });
         let value = bson::doc! {};
-        let actual = bson_to_json(&expected_type, &object_types, value.into())?;
+        let actual = bson_to_json(&expected_type, value.into())?;
         assert_eq!(actual, json!({}));
         Ok(())
     }

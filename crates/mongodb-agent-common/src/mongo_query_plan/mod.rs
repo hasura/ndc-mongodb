@@ -1,9 +1,7 @@
-use std::{borrow::Cow, collections::BTreeMap};
+use std::borrow::Cow;
 
-use configuration::Configuration;
-use mongodb_support::{BsonScalarType, EXTENDED_JSON_TYPE_NAME};
-use ndc_models as ndc;
-use ndc_query_plan::{self as plan, ConnectorTypes, QueryContext, QueryPlanError};
+use configuration::{Configuration, MongoScalarType};
+use ndc_query_plan::{ConnectorTypes, QueryContext};
 
 use crate::{comparison_function::ComparisonFunction, scalar_types_capabilities::SCALAR_TYPES};
 
@@ -27,8 +25,12 @@ pub type ExistsInCollection = ndc_query_plan::ExistsInCollection;
 pub type Expression = ndc_query_plan::Expression<MongoConnectorTypes>;
 pub type Field = ndc_query_plan::Field<MongoConnectorTypes>;
 pub type ObjectType = ndc_query_plan::ObjectType<MongoScalarType>;
+pub type OrderBy = ndc_query_plan::OrderBy;
+pub type OrderByTarget = ndc_query_plan::OrderByTarget;
 pub type QueryPlan = ndc_query_plan::QueryPlan<MongoConnectorTypes>;
 pub type Query = ndc_query_plan::Query<MongoConnectorTypes>;
+pub type Relationship = ndc_query_plan::Relationship<MongoConnectorTypes>;
+pub type Relationships = ndc_query_plan::Relationships<MongoConnectorTypes>;
 pub type Type = ndc_query_plan::Type<MongoScalarType>;
 
 /// Produce a query context from the connector configuration to direct query request processing

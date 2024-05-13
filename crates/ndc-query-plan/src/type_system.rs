@@ -18,6 +18,8 @@ pub enum Type<ScalarType> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ObjectType<ScalarType> {
+    /// A type name may be tracked for error reporting. The name does not affect how query plans
+    /// are generated.
     pub name: Option<String>,
     pub fields: BTreeMap<String, Type<ScalarType>>,
 }

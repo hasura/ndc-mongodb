@@ -1,14 +1,9 @@
-use std::collections::HashMap;
-
 use configuration::Configuration;
-use dc_api_types::comparison_column::ColumnSelector;
-use dc_api_types::{
-    BinaryComparisonOperator, ComparisonColumn, ComparisonValue, Expression, QueryRequest,
-    ScalarValue, VariableSet,
-};
 use mongodb::bson::{doc, Bson};
+use ndc_query_plan::VariableSet;
 
 use super::pipeline::pipeline_for_non_foreach;
+use crate::mongo_query_plan::QueryPlan;
 use crate::mongodb::Selection;
 use crate::{
     interface_types::MongoAgentError,
@@ -17,66 +12,21 @@ use crate::{
 
 const FACET_FIELD: &str = "__FACET__";
 
-/// If running a native v2 query we will get `Expression` values. If the query is translated from
-/// v3 we will get variable sets instead.
-#[derive(Clone, Debug)]
-pub enum ForeachVariant {
-    Predicate(Expression),
-    VariableSet(VariableSet),
-}
-
-/// If the query request represents a "foreach" query then we will need to run multiple variations
-/// of the query represented by added predicates and variable sets. This function returns a vec in
-/// that case. If the returned map is `None` then the request is not a "foreach" query.
-pub fn foreach_variants(query_request: &QueryRequest) -> Option<Vec<ForeachVariant>> {
-    if let Some(Some(foreach)) = &query_request.foreach {
-        let expressions = foreach
-            .iter()
-            .map(make_expression)
-            .map(ForeachVariant::Predicate)
-            .collect();
-        Some(expressions)
-    } else if let Some(variables) = &query_request.variables {
-        let variable_sets = variables
-            .iter()
-            .cloned()
-            .map(ForeachVariant::VariableSet)
-            .collect();
-        Some(variable_sets)
-    } else {
-        None
-    }
-}
-
 /// Produces a complete MongoDB pipeline for a foreach query.
 ///
 /// For symmetry with [`super::execute_query_request::pipeline_for_query`] and
 /// [`pipeline_for_non_foreach`] this function returns a pipeline paired with a value that
 /// indicates whether the response requires post-processing in the agent.
 pub fn pipeline_for_foreach(
-    foreach: Vec<ForeachVariant>,
+    variable_sets: &Vec<VariableSet>,
     config: &Configuration,
-    query_request: &QueryRequest,
+    query_request: &QueryPlan,
 ) -> Result<Pipeline, MongoAgentError> {
-    let pipelines: Vec<(String, Pipeline)> = foreach
+    let pipelines: Vec<(String, Pipeline)> = variable_sets
         .into_iter()
         .enumerate()
-        .map(|(index, foreach_variant)| {
-            let (predicate, variables) = match foreach_variant {
-                ForeachVariant::Predicate(expression) => (Some(expression), None),
-                ForeachVariant::VariableSet(variables) => (None, Some(variables)),
-            };
-            let mut q = query_request.clone();
-
-            if let Some(predicate) = predicate {
-                q.query.r#where = match q.query.r#where {
-                    Some(e_old) => e_old.and(predicate),
-                    None => predicate,
-                }
-                .into();
-            }
-
-            let pipeline = pipeline_for_non_foreach(config, variables.as_ref(), &q)?;
+        .map(|(index, variables)| {
+            let pipeline = pipeline_for_non_foreach(config, Some(variables), query_request)?;
             Ok((facet_name(index), pipeline))
         })
         .collect::<Result<_, MongoAgentError>>()?;
@@ -92,32 +42,6 @@ pub fn pipeline_for_foreach(
     Ok(Pipeline {
         stages: vec![Stage::Facet(queries), Stage::ReplaceWith(selection)],
     })
-}
-
-/// Fold a 'foreach' HashMap into an Expression.
-fn make_expression(column_values: &HashMap<String, ScalarValue>) -> Expression {
-    let sub_exps: Vec<Expression> = column_values
-        .clone()
-        .into_iter()
-        .map(
-            |(column_name, scalar_value)| Expression::ApplyBinaryComparison {
-                column: ComparisonColumn {
-                    column_type: scalar_value.value_type.clone(),
-                    name: ColumnSelector::new(column_name),
-                    path: None,
-                },
-                operator: BinaryComparisonOperator::Equal,
-                value: ComparisonValue::ScalarValueComparison {
-                    value: scalar_value.value,
-                    value_type: scalar_value.value_type,
-                },
-            },
-        )
-        .collect();
-
-    Expression::And {
-        expressions: sub_exps,
-    }
 }
 
 fn facet_name(index: usize) -> String {

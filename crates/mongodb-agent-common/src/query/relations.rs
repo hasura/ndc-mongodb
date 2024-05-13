@@ -1,13 +1,13 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use anyhow::anyhow;
 use configuration::Configuration;
-use dc_api_types::comparison_column::ColumnSelector;
-use dc_api_types::relationship::ColumnMapping;
-use dc_api_types::{table_relationships, Field, QueryRequest, Relationship, Target, VariableSet};
+use itertools::Itertools as _;
 use mongodb::bson::{doc, Bson, Document};
+use ndc_query_plan::VariableSet;
 
-use crate::mongodb::sanitize::safe_column_selector;
+use crate::mongo_query_plan::{Query, QueryPlan, Relationship};
+use crate::mongodb::sanitize::safe_name;
 use crate::mongodb::Pipeline;
 use crate::{
     interface_types::MongoAgentError,
@@ -16,165 +16,57 @@ use crate::{
 
 use super::pipeline::pipeline_for_non_foreach;
 
-/// Defines any necessary $lookup stages for the given section of the pipeline
+type Result<T> = std::result::Result<T, MongoAgentError>;
+
+/// Defines any necessary $lookup stages for the given section of the pipeline. This is called for
+/// each sub-query in the plan.
 pub fn pipeline_for_relations(
     config: &Configuration,
     variables: Option<&VariableSet>,
-    query_request: &QueryRequest,
-) -> Result<Pipeline, MongoAgentError> {
-    let QueryRequest {
-        target,
-        relationships,
-        query,
-        ..
-    } = query_request;
+    query_plan: &QueryPlan,
+) -> Result<Pipeline> {
+    let QueryPlan { query, .. } = query_plan;
+    let Query { relationships, .. } = query;
 
-    let relations_for_current_source = relationships.iter()
-        .filter(|table_relationships| match target {
-            Target::TTable { name, .. } => table_relationships.source_table == *name,
-        })
-        .flat_map(|table_relationships| table_relationships.relationships);
-
-
-
-    let empty_field_map = HashMap::new();
-    let fields = if let Some(fs) = &query.fields {
-        fs
-    } else {
-        &empty_field_map
-    };
-
-    let empty_relation_map = HashMap::new();
-    let relationships = &relationships
+    // Lookup stages perform the join for each relationship, and assign the list of rows or mapping
+    // of aggregate results to a field in the parent document.
+    let lookup_stages = relationships
         .iter()
-        .find_map(|rels| {
-            if &rels.source_table == target.name() {
-                Some(&rels.relationships)
-            } else {
-                None
-            }
-        })
-        .unwrap_or(&empty_relation_map);
-
-    let stages = lookups_for_fields(config, query_request, variables, relationships, &[], fields)?;
-    Ok(Pipeline::new(stages))
-}
-
-/// Produces $lookup stages for any necessary joins
-fn lookups_for_fields(
-    config: &Configuration,
-    query_request: &QueryRequest,
-    variables: Option<&VariableSet>,
-    relationships: &HashMap<String, Relationship>,
-    parent_columns: &[&str],
-    fields: &HashMap<String, Field>,
-) -> Result<Vec<Stage>, MongoAgentError> {
-    let stages = fields
-        .iter()
-        .map(|(field_name, field)| {
-            lookups_for_field(
-                config,
-                query_request,
-                variables,
-                relationships,
-                parent_columns,
-                field_name,
-                field,
-            )
-        })
-        .collect::<Result<Vec<Vec<_>>, MongoAgentError>>()?
-        .into_iter()
-        .flatten()
-        .collect();
-    Ok(stages)
-}
-
-/// Produces $lookup stages for any necessary joins
-fn lookups_for_field(
-    config: &Configuration,
-    query_request: &QueryRequest,
-    variables: Option<&VariableSet>,
-    relationships: &HashMap<String, Relationship>,
-    parent_columns: &[&str],
-    field_name: &str,
-    field: &Field,
-) -> Result<Vec<Stage>, MongoAgentError> {
-    match field {
-        Field::Column { .. } => Ok(vec![]),
-        Field::NestedObject { column, query } => {
-            let nested_parent_columns = append_to_path(parent_columns, column);
-            let fields = query.fields.clone().unwrap_or_default();
-            lookups_for_fields(
-                config,
-                query_request,
-                variables,
-                relationships,
-                &nested_parent_columns,
-                &fields,
-            )
-            .map(Into::into)
-        }
-        Field::NestedArray {
-            field,
-            // NOTE: We can use a $slice in our selection to do offsets and limits:
-            // https://www.mongodb.com/docs/manual/reference/operator/projection/slice/#mongodb-projection-proj.-slice
-            limit: _,
-            offset: _,
-            r#where: _,
-        } => lookups_for_field(
-            config,
-            query_request,
-            variables,
-            relationships,
-            parent_columns,
-            field_name,
-            field,
-        ),
-        Field::Relationship {
-            query,
-            relationship: relationship_name,
-        } => {
-            let r#as = match parent_columns {
-                [] => field_name.to_owned(),
-                _ => format!("{}.{}", parent_columns.join("."), field_name),
-            };
-
-            let Relationship {
-                column_mapping,
-                target,
-                ..
-            } = get_relationship(relationships, relationship_name)?;
-            let from = collection_reference(target.name())?;
-
+        .map(|(name, relationship)| {
             // Recursively build pipeline according to relation query
             let lookup_pipeline = pipeline_for_non_foreach(
                 config,
                 variables,
-                &QueryRequest {
+                &QueryPlan {
                     query: query.clone(),
-                    target: target.clone(),
-                    ..query_request.clone()
+                    collection: relationship.target_collection.clone(),
+                    ..query_plan.clone()
                 },
             )?;
 
-            let lookup = make_lookup_stage(from, column_mapping, r#as, lookup_pipeline)?;
+            make_lookup_stage(
+                relationship.target_collection.clone(),
+                &relationship.column_mapping,
+                name.to_owned(),
+                lookup_pipeline,
+            )
+        })
+        .try_collect()?;
 
-            Ok(vec![lookup])
-        }
-    }
+    Ok(lookup_stages)
 }
 
 fn make_lookup_stage(
     from: String,
-    column_mapping: &ColumnMapping,
+    column_mapping: &BTreeMap<String, String>,
     r#as: String,
     lookup_pipeline: Pipeline,
-) -> Result<Stage, MongoAgentError> {
+) -> Result<Stage> {
     // If we are mapping a single field in the source collection to a single field in the target
     // collection then we can use the correlated subquery syntax.
-    if column_mapping.0.len() == 1 {
+    if column_mapping.len() == 1 {
         // Safe to unwrap because we just checked the hashmap size
-        let (source_selector, target_selector) = column_mapping.0.iter().next().unwrap();
+        let (source_selector, target_selector) = column_mapping.iter().next().unwrap();
         single_column_mapping_lookup(
             from,
             source_selector,
@@ -189,15 +81,15 @@ fn make_lookup_stage(
 
 fn single_column_mapping_lookup(
     from: String,
-    source_selector: &ColumnSelector,
-    target_selector: &ColumnSelector,
+    source_selector: &str,
+    target_selector: &str,
     r#as: String,
     lookup_pipeline: Pipeline,
-) -> Result<Stage, MongoAgentError> {
+) -> Result<Stage> {
     Ok(Stage::Lookup {
         from: Some(from),
-        local_field: Some(safe_column_selector(source_selector)?.to_string()),
-        foreign_field: Some(safe_column_selector(target_selector)?.to_string()),
+        local_field: Some(safe_name(source_selector)?.into_owned()),
+        foreign_field: Some(safe_name(target_selector)?.into_owned()),
         r#let: None,
         pipeline: if lookup_pipeline.is_empty() {
             None
@@ -210,37 +102,35 @@ fn single_column_mapping_lookup(
 
 fn multiple_column_mapping_lookup(
     from: String,
-    column_mapping: &ColumnMapping,
+    column_mapping: &BTreeMap<String, String>,
     r#as: String,
     lookup_pipeline: Pipeline,
-) -> Result<Stage, MongoAgentError> {
+) -> Result<Stage> {
     let let_bindings: Document = column_mapping
-        .0
         .keys()
         .map(|local_field| {
             Ok((
-                variable(&local_field.as_var())?,
-                Bson::String(format!("${}", safe_column_selector(local_field)?)),
+                variable(local_field)?,
+                Bson::String(safe_name(local_field)?.into_owned()),
             ))
         })
-        .collect::<Result<_, MongoAgentError>>()?;
+        .collect::<Result<_>>()?;
 
     // Creating an intermediate Vec and sorting it is done just to help with testing.
     // A stable order for matchers makes it easier to assert equality between actual
     // and expected pipelines.
-    let mut column_pairs: Vec<(&ColumnSelector, &ColumnSelector)> =
-        column_mapping.0.iter().collect();
+    let mut column_pairs: Vec<(&String, &String)> = column_mapping.iter().collect();
     column_pairs.sort();
 
     let matchers: Vec<Document> = column_pairs
         .into_iter()
         .map(|(local_field, remote_field)| {
             Ok(doc! { "$eq": [
-                format!("$${}", variable(&local_field.as_var())?),
-                format!("${}", safe_column_selector(remote_field)?)
+                format!("$${}", variable(local_field)?),
+                format!("${}", safe_name(remote_field)?)
             ] })
         })
-        .collect::<Result<_, MongoAgentError>>()?;
+        .collect::<Result<_>>()?;
 
     // Match only documents on the right side of the join that match the column-mapping
     // criteria. In the case where we have only one column mapping using the $lookup stage's
@@ -264,35 +154,139 @@ fn multiple_column_mapping_lookup(
     })
 }
 
-/// Transform an Agent IR qualified table reference into a MongoDB collection reference.
-fn collection_reference(table_ref: &[String]) -> Result<String, MongoAgentError> {
-    if table_ref.len() == 1 {
-        Ok(table_ref[0].clone())
-    } else {
-        Err(MongoAgentError::BadQuery(anyhow!(
-            "expected \"from\" field of relationship to contain one element"
-        )))
-    }
-}
-
-fn get_relationship<'a>(
-    relationships: &'a HashMap<String, Relationship>,
-    relationship_name: &str,
-) -> Result<&'a Relationship, MongoAgentError> {
-    match relationships.get(relationship_name) {
-        Some(relationship) => Ok(relationship),
-        None => Err(MongoAgentError::UnspecifiedRelation(
-            relationship_name.to_owned(),
-        )),
-    }
-}
-
-fn append_to_path<'a, 'b, 'c>(parent_columns: &'a [&'b str], column: &'c str) -> Vec<&'c str>
-where
-    'b: 'c,
-{
-    parent_columns.iter().copied().chain(Some(column)).collect()
-}
+// /// Produces $lookup stages for any necessary joins
+// fn lookups_for_fields(
+//     config: &Configuration,
+//     query_request: &QueryRequest,
+//     variables: Option<&VariableSet>,
+//     relationships: &HashMap<String, Relationship>,
+//     parent_columns: &[&str],
+//     fields: &HashMap<String, Field>,
+// ) -> Result<Vec<Stage>> {
+//     let stages = fields
+//         .iter()
+//         .map(|(field_name, field)| {
+//             lookups_for_field(
+//                 config,
+//                 query_request,
+//                 variables,
+//                 relationships,
+//                 parent_columns,
+//                 field_name,
+//                 field,
+//             )
+//         })
+//         .collect::<Result<Vec<Vec<_>>>>()?
+//         .into_iter()
+//         .flatten()
+//         .collect();
+//     Ok(stages)
+// }
+//
+// /// Produces $lookup stages for any necessary joins
+// fn lookups_for_field(
+//     config: &Configuration,
+//     query_request: &QueryRequest,
+//     variables: Option<&VariableSet>,
+//     relationships: &HashMap<String, Relationship>,
+//     parent_columns: &[&str],
+//     field_name: &str,
+//     field: &Field,
+// ) -> Result<Vec<Stage>> {
+//     match field {
+//         Field::Column { .. } => Ok(vec![]),
+//         Field::NestedObject { column, query } => {
+//             let nested_parent_columns = append_to_path(parent_columns, column);
+//             let fields = query.fields.clone().unwrap_or_default();
+//             lookups_for_fields(
+//                 config,
+//                 query_request,
+//                 variables,
+//                 relationships,
+//                 &nested_parent_columns,
+//                 &fields,
+//             )
+//             .map(Into::into)
+//         }
+//         Field::NestedArray {
+//             field,
+//             // NOTE: We can use a $slice in our selection to do offsets and limits:
+//             // https://www.mongodb.com/docs/manual/reference/operator/projection/slice/#mongodb-projection-proj.-slice
+//             limit: _,
+//             offset: _,
+//             r#where: _,
+//         } => lookups_for_field(
+//             config,
+//             query_request,
+//             variables,
+//             relationships,
+//             parent_columns,
+//             field_name,
+//             field,
+//         ),
+//         Field::Relationship {
+//             query,
+//             relationship: relationship_name,
+//         } => {
+//             let r#as = match parent_columns {
+//                 [] => field_name.to_owned(),
+//                 _ => format!("{}.{}", parent_columns.join("."), field_name),
+//             };
+//
+//             let Relationship {
+//                 column_mapping,
+//                 target,
+//                 ..
+//             } = get_relationship(relationships, relationship_name)?;
+//             let from = collection_reference(target.name())?;
+//
+//             // Recursively build pipeline according to relation query
+//             let lookup_pipeline = pipeline_for_non_foreach(
+//                 config,
+//                 variables,
+//                 &QueryRequest {
+//                     query: query.clone(),
+//                     target: target.clone(),
+//                     ..query_request.clone()
+//                 },
+//             )?;
+//
+//             let lookup = make_lookup_stage(from, column_mapping, r#as, lookup_pipeline)?;
+//
+//             Ok(vec![lookup])
+//         }
+//     }
+// }
+//
+// /// Transform an Agent IR qualified table reference into a MongoDB collection reference.
+// fn collection_reference(table_ref: &[String]) -> Result<String> {
+//     if table_ref.len() == 1 {
+//         Ok(table_ref[0].clone())
+//     } else {
+//         Err(MongoAgentError::BadQuery(anyhow!(
+//             "expected \"from\" field of relationship to contain one element"
+//         )))
+//     }
+// }
+//
+// fn get_relationship<'a>(
+//     relationships: &'a HashMap<String, Relationship>,
+//     relationship_name: &str,
+// ) -> Result<&'a Relationship> {
+//     match relationships.get(relationship_name) {
+//         Some(relationship) => Ok(relationship),
+//         None => Err(MongoAgentError::UnspecifiedRelation(
+//             relationship_name.to_owned(),
+//         )),
+//     }
+// }
+//
+// fn append_to_path<'a, 'b, 'c>(parent_columns: &'a [&'b str], column: &'c str) -> Vec<&'c str>
+// where
+//     'b: 'c,
+// {
+//     parent_columns.iter().copied().chain(Some(column)).collect()
+// }
 
 #[cfg(test)]
 mod tests {

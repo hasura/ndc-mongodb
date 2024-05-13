@@ -2,7 +2,9 @@ use std::collections::BTreeMap;
 use std::fmt::Debug;
 
 use indexmap::IndexMap;
-use ndc_models::{Argument, OrderBy, Relationship, RelationshipArgument, UnaryComparisonOperator};
+use ndc_models::{
+    Argument, OrderDirection, RelationshipArgument, RelationshipType, UnaryComparisonOperator,
+};
 use nonempty::NonEmpty;
 
 use crate::Type;
@@ -15,6 +17,9 @@ pub trait ConnectorTypes: Clone {
     /// name. (This method will also be called for object type names in which case it should return
     /// `None`.)
     fn lookup_scalar_type(type_name: &str) -> Option<Self::ScalarType>;
+    // TODO: How about an `NdcContext` trait that replaces the `QueryContext` type, and that has
+    // a constraint requiring an implementation of `ConnectorTypes`? We could move
+    // `lookup_scalar_type` to that trait. We could implement `NdcContext` for `Configuration`.
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -22,13 +27,14 @@ pub struct QueryPlan<T: ConnectorTypes> {
     pub collection: String,
     pub query: Query<T>,
     pub arguments: BTreeMap<String, Argument>,
-    pub variables: Option<Vec<BTreeMap<String, serde_json::Value>>>,
+    pub variables: Option<Vec<VariableSet>>,
 
     // TODO: type for unrelated collection
     pub unrelated_collections: BTreeMap<String, ()>,
 }
 
 pub type VariableSet = BTreeMap<String, serde_json::Value>;
+pub type Relationships<T> = BTreeMap<String, Relationship<T>>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Query<T: ConnectorTypes> {
@@ -42,7 +48,7 @@ pub struct Query<T: ConnectorTypes> {
 
     /// Relationships referenced by fields and expressions in this query or sub-query. Does not
     /// include relationships in sub-queries nested under this one.
-    pub relations: BTreeMap<String, (Relationship, Query<T>)>,
+    pub relationships: Relationships<T>,
 }
 
 impl<T: ConnectorTypes> Query<T> {
@@ -61,6 +67,15 @@ impl<T: ConnectorTypes> Query<T> {
             false
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Relationship<T: ConnectorTypes> {
+    pub column_mapping: BTreeMap<String, String>,
+    pub relationship_type: RelationshipType,
+    pub target_collection: String,
+    pub arguments: BTreeMap<String, RelationshipArgument>,
+    pub query: Query<T>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -132,6 +147,48 @@ pub enum Expression<T: ConnectorTypes> {
         /// match the predicate that was given in the Exists expression of the
         /// [ndc_models::QueryRequest] that this [QueryPlan] was based on.
         in_collection: ExistsInCollection,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct OrderBy {
+    /// The elements to order by, in priority order
+    pub elements: Vec<OrderByElement>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct OrderByElement {
+    pub order_direction: OrderDirection,
+    pub target: OrderByTarget,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum OrderByTarget {
+    Column {
+        /// The name of the column
+        name: String,
+
+        /// Any relationships to traverse to reach this column. These are translated from
+        /// [ndc_models::OrderByElement] values in the [ndc_models::QueryRequest] to names of relation
+        /// fields for the [QueryPlan].
+        path: Vec<String>,
+    },
+    SingleColumnAggregate {
+        /// The column to apply the aggregation function to
+        column: String,
+        /// Single column aggregate function name.
+        function: String,
+
+        /// Any relationships to traverse to reach this aggregate. These are translated from
+        /// [ndc_models::OrderByElement] values in the [ndc_models::QueryRequest] to names of relation
+        /// fields for the [QueryPlan].
+        path: Vec<String>,
+    },
+    StarCountAggregate {
+        /// Any relationships to traverse to reach this aggregate. These are translated from
+        /// [ndc_models::OrderByElement] values in the [ndc_models::QueryRequest] to names of relation
+        /// fields for the [QueryPlan].
+        path: Vec<String>,
     },
 }
 

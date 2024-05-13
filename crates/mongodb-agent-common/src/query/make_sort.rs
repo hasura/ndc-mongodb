@@ -1,30 +1,42 @@
+use itertools::Itertools as _;
 use mongodb::bson::{bson, Document};
+use ndc_models::OrderDirection;
 
-use dc_api_types::{OrderBy, OrderByTarget, OrderDirection};
+use crate::{
+    interface_types::MongoAgentError,
+    mongo_query_plan::{OrderBy, OrderByTarget},
+};
 
-pub fn make_sort(order_by: &OrderBy) -> Document {
-    let OrderBy {
-        elements,
-        relations: _,
-    } = order_by;
+pub fn make_sort(order_by: &OrderBy) -> Result<Document, MongoAgentError> {
+    let OrderBy { elements } = order_by;
 
     elements
         .clone()
         .iter()
-        .filter_map(|obe| {
+        .map(|obe| {
             let direction = match obe.clone().order_direction {
                 OrderDirection::Asc => bson!(1),
                 OrderDirection::Desc => bson!(-1),
             };
-            match obe.target {
-                OrderByTarget::Column { ref column } => Some((column.as_path(), direction)),
+            match &obe.target {
+                OrderByTarget::Column { name, path } => {
+                    Ok((column_ref_with_path(name, path), direction))
+                }
                 OrderByTarget::SingleColumnAggregate {
                     column: _,
                     function: _,
-                    result_type: _,
-                } => None,
-                OrderByTarget::StarCountAggregate {} => None,
+                    path: _,
+                } => Err(MongoAgentError::NotImplemented(
+                    "ordering by single column aggregate",
+                )),
+                OrderByTarget::StarCountAggregate { path: _ } => Err(
+                    MongoAgentError::NotImplemented("ordering by star count aggregate"),
+                ),
             }
         })
         .collect()
+}
+
+fn column_ref_with_path(name: &String, path: &[String]) -> String {
+    std::iter::once(name).chain(path.iter()).join(".")
 }

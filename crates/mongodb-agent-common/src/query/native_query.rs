@@ -1,11 +1,13 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use configuration::{native_query::NativeQuery, Configuration};
-use dc_api_types::{Argument, QueryRequest, VariableSet};
 use itertools::Itertools as _;
+use ndc_models::Argument;
+use ndc_query_plan::VariableSet;
 
 use crate::{
     interface_types::MongoAgentError,
+    mongo_query_plan::QueryPlan,
     mongodb::{Pipeline, Stage},
     procedure::{interpolated_command, ProcedureError},
 };
@@ -17,7 +19,7 @@ use super::{arguments::resolve_arguments, query_target::QueryTarget};
 pub fn pipeline_for_native_query(
     config: &Configuration,
     variables: Option<&VariableSet>,
-    query_request: &QueryRequest,
+    query_request: &QueryPlan,
 ) -> Result<Pipeline, MongoAgentError> {
     match QueryTarget::for_request(config, query_request) {
         QueryTarget::Collection(_) => Ok(Pipeline::empty()),
@@ -33,7 +35,7 @@ fn make_pipeline(
     config: &Configuration,
     variables: Option<&VariableSet>,
     native_query: &NativeQuery,
-    arguments: &HashMap<String, Argument>,
+    arguments: &BTreeMap<String, Argument>,
 ) -> Result<Pipeline, MongoAgentError> {
     let expressions = arguments
         .iter()
@@ -45,9 +47,8 @@ fn make_pipeline(
         })
         .try_collect()?;
 
-    let bson_arguments =
-        resolve_arguments(&config.object_types, &native_query.arguments, expressions)
-            .map_err(ProcedureError::UnresolvableArguments)?;
+    let bson_arguments = resolve_arguments(&native_query.arguments, expressions)
+        .map_err(ProcedureError::UnresolvableArguments)?;
 
     // Replace argument placeholders with resolved expressions, convert document list to
     // a `Pipeline` value
@@ -71,11 +72,6 @@ fn argument_to_mongodb_expression(
             .ok_or_else(|| MongoAgentError::VariableNotDefined(name.to_owned()))
             .cloned(),
         Argument::Literal { value } => Ok(value.clone()),
-        // TODO: Column references are needed for native queries that are a target of a relation.
-        // MDB-106
-        Argument::Column { .. } => Err(MongoAgentError::NotImplemented(
-            "column references in native queries are not currently implemented",
-        )),
     }
 }
 

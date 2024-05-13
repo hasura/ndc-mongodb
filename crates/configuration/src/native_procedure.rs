@@ -6,7 +6,7 @@ use ndc_models as ndc;
 use ndc_query_plan as plan;
 use plan::{inline_object_types, QueryPlanError};
 
-use crate::{schema::Type, serialized, MongoScalarType};
+use crate::{serialized, MongoScalarType};
 
 /// Internal representation of Native Procedures. For doc comments see
 /// [crate::serialized::NativeProcedure]
@@ -16,7 +16,7 @@ use crate::{schema::Type, serialized, MongoScalarType};
 /// Native query values are stored in maps so names should be taken from map keys.
 #[derive(Clone, Debug)]
 pub struct NativeProcedure {
-    pub result_type: Type,
+    pub result_type: plan::Type<MongoScalarType>,
     pub arguments: BTreeMap<String, plan::Type<MongoScalarType>>,
     pub command: bson::Document,
     pub selection_criteria: Option<SelectionCriteria>,
@@ -42,8 +42,15 @@ impl NativeProcedure {
                 ))
             })
             .try_collect()?;
+
+        let result_type = inline_object_types(
+            object_types,
+            &input.result_type.into(),
+            MongoScalarType::lookup_scalar_type,
+        )?;
+
         Ok(NativeProcedure {
-            result_type: input.result_type,
+            result_type,
             arguments,
             command: input.command,
             selection_criteria: input.selection_criteria,

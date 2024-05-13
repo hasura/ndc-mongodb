@@ -136,8 +136,11 @@ impl Configuration {
 
         let internal_native_queries: BTreeMap<_, _> = native_queries
             .into_iter()
-            .map(|(name, nq)| (name, nq.into()))
-            .collect();
+            .map(|(name, nq)| {
+                Ok((name, NativeQuery::from_serialized(&ndc_object_types, nq)?))
+                    as Result<_, anyhow::Error>
+            })
+            .try_collect()?;
 
         let internal_native_procedures: BTreeMap<_, _> = native_procedures
             .into_iter()

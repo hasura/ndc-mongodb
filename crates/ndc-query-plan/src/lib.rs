@@ -7,6 +7,7 @@ pub use plan_for_query_request::{
 };
 pub use query_plan::{
     Aggregate, ColumnSelector, ComparisonTarget, ComparisonValue, ConnectorTypes,
-    ExistsInCollection, Expression, Field, Query, QueryPlan, VariableSet,
+    ExistsInCollection, Expression, Field, OrderBy, OrderByTarget, Query, QueryPlan, Relationship,
+    Relationships, VariableSet,
 };
 pub use type_system::{inline_object_types, ObjectType, Type};

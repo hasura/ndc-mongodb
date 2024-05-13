@@ -7,13 +7,13 @@ use ndc_query_plan::VariableSet;
 use crate::{
     aggregation_function::AggregationFunction,
     interface_types::MongoAgentError,
+    mongo_query_plan::{Aggregate, Query, QueryPlan},
     mongodb::{sanitize::get_field, Accumulator, Pipeline, Selection, Stage},
-    mongo_query_plan::QueryPlan,
 };
 
 use super::{
     constants::{RESULT_FIELD, ROWS_FIELD},
-    foreach::{foreach_variants, pipeline_for_foreach},
+    foreach::pipeline_for_foreach,
     make_selector, make_sort,
     native_query::pipeline_for_native_query,
     relations::pipeline_for_relations,
@@ -37,9 +37,8 @@ pub fn pipeline_for_query_request(
     config: &Configuration,
     query_plan: &QueryPlan,
 ) -> Result<Pipeline, MongoAgentError> {
-    let foreach = foreach_variants(query_plan);
-    if let Some(foreach) = foreach {
-        pipeline_for_foreach(foreach, config, query_plan)
+    if let Some(variable_sets) = &query_plan.variables {
+        pipeline_for_foreach(variable_sets, config, query_plan)
     } else {
         pipeline_for_non_foreach(config, None, query_plan)
     }
@@ -55,7 +54,7 @@ pub fn pipeline_for_non_foreach(
     variables: Option<&VariableSet>,
     query_plan: &QueryPlan,
 ) -> Result<Pipeline, MongoAgentError> {
-    let query = &*query_plan.query;
+    let query = &query_plan.query;
     let Query {
         offset,
         order_by,
@@ -75,7 +74,11 @@ pub fn pipeline_for_non_foreach(
         .map(|expression| make_selector(variables, expression))
         .transpose()?
         .map(Stage::Match);
-    let sort_stage: Option<Stage> = order_by.iter().map(|o| Stage::Sort(make_sort(o))).next();
+    let sort_stage: Option<Stage> = order_by
+        .iter()
+        .map(|o| Ok(Stage::Sort(make_sort(o)?)) as Result<_, MongoAgentError>)
+        .next()
+        .transpose()?;
     let skip_stage = offset.map(Stage::Skip);
 
     [match_stage, sort_stage, skip_stage]
@@ -104,7 +107,7 @@ pub fn pipeline_for_non_foreach(
 /// are shared with aggregates) have already been applied, and that we have already joined
 /// relations.
 pub fn pipeline_for_fields_facet(query_plan: &QueryPlan) -> Result<Pipeline, MongoAgentError> {
-    let Query { limit, .. } = &*query_plan.query;
+    let Query { limit, .. } = &query_plan.query;
 
     let limit_stage = limit.map(Stage::Limit);
     let replace_with_stage: Stage = Stage::ReplaceWith(Selection::from_query_request(query_plan)?);

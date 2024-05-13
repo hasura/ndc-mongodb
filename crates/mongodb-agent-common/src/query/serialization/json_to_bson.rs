@@ -1,5 +1,6 @@
 use std::{collections::BTreeMap, num::ParseIntError, str::FromStr};
 
+use configuration::MongoScalarType;
 use itertools::Itertools as _;
 use mongodb::bson::{self, Bson, Decimal128};
 use mongodb_support::BsonScalarType;
@@ -8,7 +9,7 @@ use serde_json::Value;
 use thiserror::Error;
 use time::{format_description::well_known::Iso8601, OffsetDateTime};
 
-use crate::mongo_query_plan::{MongoScalarType, ObjectType, Type};
+use crate::mongo_query_plan::{ObjectType, Type};
 
 use super::{helpers::is_nullable, json_formats};
 
@@ -130,8 +131,7 @@ fn convert_object(object_type: &ObjectType, value: Value) -> Result<Bson> {
         .named_fields()
         .filter_map(|(name, field_type)| {
             let field_value_result =
-                get_object_field_value(object_type, name, field_type, &input_fields)
-                    .transpose()?;
+                get_object_field_value(object_type, name, field_type, &input_fields).transpose()?;
             Some((name, field_type, field_value_result))
         })
         .map(|(name, field_type, field_value_result)| {
@@ -225,45 +225,46 @@ fn incompatible_scalar_type<T>(expected_type: BsonScalarType, value: Value) -> R
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::BTreeMap, str::FromStr};
+    use std::str::FromStr;
 
-    use configuration::schema::{ObjectField, ObjectType, Type};
+    use configuration::MongoScalarType;
     use mongodb::bson::{self, bson, datetime::DateTimeBuilder, Bson};
     use mongodb_support::BsonScalarType;
     use pretty_assertions::assert_eq;
     use serde_json::json;
+
+    use crate::mongo_query_plan::{ObjectType, Type};
 
     use super::json_to_bson;
 
     #[test]
     #[allow(clippy::approx_constant)]
     fn deserializes_specialized_scalar_types() -> anyhow::Result<()> {
-        let object_type_name = "scalar_test".to_owned();
         let object_type = ObjectType {
-            fields: BTreeMap::from([
-                ObjectField::new("double", Type::Scalar(BsonScalarType::Double)),
-                ObjectField::new("int", Type::Scalar(BsonScalarType::Int)),
-                ObjectField::new("long", Type::Scalar(BsonScalarType::Long)),
-                ObjectField::new("decimal", Type::Scalar(BsonScalarType::Decimal)),
-                ObjectField::new("string", Type::Scalar(BsonScalarType::String)),
-                ObjectField::new("date", Type::Scalar(BsonScalarType::Date)),
-                ObjectField::new("timestamp", Type::Scalar(BsonScalarType::Timestamp)),
-                ObjectField::new("binData", Type::Scalar(BsonScalarType::BinData)),
-                ObjectField::new("objectId", Type::Scalar(BsonScalarType::ObjectId)),
-                ObjectField::new("bool", Type::Scalar(BsonScalarType::Bool)),
-                ObjectField::new("null", Type::Scalar(BsonScalarType::Null)),
-                ObjectField::new("undefined", Type::Scalar(BsonScalarType::Undefined)),
-                ObjectField::new("regex", Type::Scalar(BsonScalarType::Regex)),
-                ObjectField::new("javascript", Type::Scalar(BsonScalarType::Javascript)),
-                ObjectField::new(
-                    "javascriptWithScope",
-                    Type::Scalar(BsonScalarType::JavascriptWithScope),
-                ),
-                ObjectField::new("minKey", Type::Scalar(BsonScalarType::MinKey)),
-                ObjectField::new("maxKey", Type::Scalar(BsonScalarType::MaxKey)),
-                ObjectField::new("symbol", Type::Scalar(BsonScalarType::Symbol)),
-            ]),
-            description: Default::default(),
+            name: Some("scalar_test".to_owned()),
+            fields: [
+                ("double", BsonScalarType::Double),
+                ("int", BsonScalarType::Int),
+                ("long", BsonScalarType::Long),
+                ("decimal", BsonScalarType::Decimal),
+                ("string", BsonScalarType::String),
+                ("date", BsonScalarType::Date),
+                ("timestamp", BsonScalarType::Timestamp),
+                ("binData", BsonScalarType::BinData),
+                ("objectId", BsonScalarType::ObjectId),
+                ("bool", BsonScalarType::Bool),
+                ("null", BsonScalarType::Null),
+                ("undefined", BsonScalarType::Undefined),
+                ("regex", BsonScalarType::Regex),
+                ("javascript", BsonScalarType::Javascript),
+                ("javascriptWithScope", BsonScalarType::JavascriptWithScope),
+                ("minKey", BsonScalarType::MinKey),
+                ("maxKey", BsonScalarType::MaxKey),
+                ("symbol", BsonScalarType::Symbol),
+            ]
+            .into_iter()
+            .map(|(name, t)| (name.to_owned(), Type::Scalar(MongoScalarType::Bson(t))))
+            .collect(),
         };
 
         let input = json!({
@@ -320,10 +321,7 @@ mod tests {
             "symbol": Bson::Symbol("a_symbol".to_owned()),
         };
 
-        let actual = json_to_bson(
-            &Type::Object(object_type_name.clone()),
-            input,
-        )?;
+        let actual = json_to_bson(&Type::Object(object_type), input)?;
         assert_eq!(actual, expected.into());
         Ok(())
     }
@@ -341,8 +339,9 @@ mod tests {
             Bson::ObjectId(FromStr::from_str("fae1840a2b85872385c67de5")?),
         ]);
         let actual = json_to_bson(
-            &Type::ArrayOf(Box::new(Type::Scalar(BsonScalarType::ObjectId))),
-            &Default::default(),
+            &Type::ArrayOf(Box::new(Type::Scalar(MongoScalarType::Bson(
+                BsonScalarType::ObjectId,
+            )))),
             input,
         )?;
         assert_eq!(actual, expected);
@@ -359,9 +358,8 @@ mod tests {
         ]);
         let actual = json_to_bson(
             &Type::ArrayOf(Box::new(Type::Nullable(Box::new(Type::Scalar(
-                BsonScalarType::ObjectId,
+                MongoScalarType::Bson(BsonScalarType::ObjectId),
             ))))),
-            &Default::default(),
             input,
         )?;
         assert_eq!(actual, expected);
@@ -370,24 +368,18 @@ mod tests {
 
     #[test]
     fn deserializes_object_with_missing_nullable_field() -> anyhow::Result<()> {
-        let expected_type = Type::Object("test_object".to_owned());
-        let object_types = [(
-            "test_object".to_owned(),
-            ObjectType {
-                fields: [(
-                    "field".to_owned(),
-                    ObjectField {
-                        r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::String))),
-                        description: None,
-                    },
-                )]
-                .into(),
-                description: None,
-            },
-        )]
-        .into();
+        let expected_type = Type::Object(ObjectType {
+            name: Some("test_object".to_owned()),
+            fields: [(
+                "field".to_owned(),
+                Type::Nullable(Box::new(Type::Scalar(MongoScalarType::Bson(
+                    BsonScalarType::String,
+                )))),
+            )]
+            .into(),
+        });
         let value = json!({});
-        let actual = json_to_bson(&expected_type, &object_types, value)?;
+        let actual = json_to_bson(&expected_type, value)?;
         assert_eq!(actual, bson!({}));
         Ok(())
     }
