@@ -1,11 +1,12 @@
-use std::collections::HashMap;
-
-use dc_api_types::{query_request::QueryRequest, Field, TableRelationships};
-use mongodb::bson::{self, bson, doc, Bson, Document};
+use indexmap::IndexMap;
+use mongodb::bson::{self, doc, Bson, Document};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    interface_types::MongoAgentError, mongodb::sanitize::get_field, query::is_response_faceted,
+    interface_types::MongoAgentError,
+    mongo_query_plan::{Field, QueryPlan, Type},
+    mongodb::sanitize::get_field,
+    query::{is_response_faceted, serialization::is_nullable},
 };
 
 /// Wraps a BSON document that represents a MongoDB "expression" that constructs a document based
@@ -15,8 +16,6 @@ use crate::{
 /// When we compose pipelines, we can pair each Pipeline with a Selection that extracts the data we
 /// want, in the format we want it to provide to HGE. We can collect Selection values and merge
 /// them to form one stage after all of the composed pipelines.
-///
-/// TODO: Do we need a deep/recursive merge for this type?
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(transparent)]
 pub struct Selection(pub bson::Document);
@@ -26,53 +25,41 @@ impl Selection {
         Selection(doc)
     }
 
-    pub fn from_query_request(query_request: &QueryRequest) -> Result<Selection, MongoAgentError> {
+    pub fn from_query_request(query_request: &QueryPlan) -> Result<Selection, MongoAgentError> {
         // let fields = (&query_request.query.fields).flatten().unwrap_or_default();
-        let empty_map = HashMap::new();
+        let empty_map = IndexMap::new();
         let fields = if let Some(fs) = &query_request.query.fields {
             fs
         } else {
             &empty_map
         };
-        let doc = from_query_request_helper(&query_request.relationships, &[], fields)?;
+        let doc = from_query_request_helper(&[], fields)?;
         Ok(Selection(doc))
     }
 }
 
 fn from_query_request_helper(
-    table_relationships: &[TableRelationships],
     parent_columns: &[&str],
-    field_selection: &HashMap<String, Field>,
+    field_selection: &IndexMap<String, Field>,
 ) -> Result<Document, MongoAgentError> {
     field_selection
         .iter()
-        .map(|(key, value)| {
-            Ok((
-                key.into(),
-                selection_for_field(table_relationships, parent_columns, key, value)?,
-            ))
-        })
+        .map(|(key, value)| Ok((key.into(), selection_for_field(parent_columns, key, value)?)))
         .collect()
 }
 
-/// If column_type is date we want to format it as a string.
-/// TODO: do we want to format any other BSON types in any particular way,
-/// e.g. formated ObjectId as string?
-///
 /// Wraps column reference with an `$isNull` check. That catches cases where a field is missing
 /// from a document, and substitutes a concrete null value. Otherwise the field would be omitted
 /// from query results which leads to an error in the engine.
-pub fn serialized_null_checked_column_reference(col_path: String, column_type: &str) -> Bson {
-    let col_path = doc! { "$ifNull": [col_path, Bson::Null] };
-    match column_type {
-        // Don't worry, $dateToString will returns `null` if `col_path` is null
-        "date" => bson!({"$dateToString": {"date": col_path}}),
-        _ => bson!(col_path),
+pub fn value_or_null(col_path: String, column_type: &Type) -> Bson {
+    if is_nullable(column_type) {
+        doc! { "$ifNull": [col_path, Bson::Null] }.into()
+    } else {
+        col_path.into()
     }
 }
 
 fn selection_for_field(
-    table_relationships: &[TableRelationships],
     parent_columns: &[&str],
     field_name: &str,
     field: &Field,
@@ -86,15 +73,14 @@ fn selection_for_field(
                 [] => format!("${column}"),
                 _ => format!("${}.{}", parent_columns.join("."), column),
             };
-            let bson_col_path = serialized_null_checked_column_reference(col_path, column_type);
+            let bson_col_path = value_or_null(col_path, column_type);
             Ok(bson_col_path)
         }
         Field::NestedObject { column, query } => {
             let nested_parent_columns = append_to_path(parent_columns, column);
             let nested_parent_col_path = format!("${}", nested_parent_columns.join("."));
             let fields = query.fields.clone().unwrap_or_default();
-            let nested_selection =
-                from_query_request_helper(table_relationships, &nested_parent_columns, &fields)?;
+            let nested_selection = from_query_request_helper(&nested_parent_columns, &fields)?;
             Ok(doc! {"$cond": {"if": nested_parent_col_path, "then": nested_selection, "else": Bson::Null}}.into())
         }
         Field::NestedArray {
@@ -103,8 +89,8 @@ fn selection_for_field(
             // https://www.mongodb.com/docs/manual/reference/operator/projection/slice/#mongodb-projection-proj.-slice
             limit: _,
             offset: _,
-            r#where: _,
-        } => selection_for_array(table_relationships, parent_columns, field_name, field, 0),
+            predicate: _,
+        } => selection_for_array(parent_columns, field_name, field, 0),
         Field::Relationship { query, .. } => {
             if is_response_faceted(query) {
                 Ok(doc! { "$first": get_field(field_name) }.into())
@@ -116,7 +102,6 @@ fn selection_for_field(
 }
 
 fn selection_for_array(
-    table_relationships: &[TableRelationships],
     parent_columns: &[&str],
     field_name: &str,
     field: &Field,
@@ -127,8 +112,7 @@ fn selection_for_array(
             let nested_parent_columns = append_to_path(parent_columns, column);
             let nested_parent_col_path = format!("${}", nested_parent_columns.join("."));
             let fields = query.fields.clone().unwrap_or_default();
-            let mut nested_selection =
-                from_query_request_helper(table_relationships, &["$this"], &fields)?;
+            let mut nested_selection = from_query_request_helper(&["$this"], &fields)?;
             for _ in 0..array_nesting_level {
                 nested_selection = doc! {"$map": {"input": "$$this", "in": nested_selection}}
             }
@@ -142,15 +126,9 @@ fn selection_for_array(
             // https://www.mongodb.com/docs/manual/reference/operator/projection/slice/#mongodb-projection-proj.-slice
             limit: _,
             offset: _,
-            r#where: _,
-        } => selection_for_array(
-            table_relationships,
-            parent_columns,
-            field_name,
-            field,
-            array_nesting_level + 1,
-        ),
-        _ => selection_for_field(table_relationships, parent_columns, field_name, field),
+            predicate: _,
+        } => selection_for_array(parent_columns, field_name, field, array_nesting_level + 1),
+        _ => selection_for_field(parent_columns, field_name, field),
     }
 }
 fn append_to_path<'a, 'b, 'c>(parent_columns: &'a [&'b str], column: &'c str) -> Vec<&'c str>

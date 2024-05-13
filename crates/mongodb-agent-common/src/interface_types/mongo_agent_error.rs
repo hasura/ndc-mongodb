@@ -1,7 +1,5 @@
 use std::fmt::{self, Display};
 
-use axum::{response::IntoResponse, Json};
-use dc_api_types::ErrorResponse;
 use http::StatusCode;
 use mongodb::bson;
 use thiserror::Error;
@@ -27,7 +25,6 @@ pub enum MongoAgentError {
     UnspecifiedRelation(String),
     VariableNotDefined(String),
     AdHoc(#[from] anyhow::Error),
-    AgentError(#[from] dc_api::AgentError),
 }
 
 use MongoAgentError::*;
@@ -91,7 +88,6 @@ impl MongoAgentError {
                 ErrorResponse::new(&format!("Query referenced a variable, \"{variable_name}\", but it is not defined by the query request"))
             ),
             AdHoc(err) => (StatusCode::INTERNAL_SERVER_ERROR, ErrorResponse::new(&err)),
-            AgentError(err) => err.status_and_error_response(),
         }
     }
 }
@@ -103,20 +99,47 @@ impl Display for MongoAgentError {
     }
 }
 
-impl IntoResponse for MongoAgentError {
-    fn into_response(self) -> axum::response::Response {
-        if cfg!(debug_assertions) {
-            // Log certain errors in development only. The `debug_assertions` feature is present in
-            // debug builds, which we use during development. It is not present in release builds.
-            #[allow(clippy::single_match)]
-            match &self {
-                BadCollectionSchema(collection_name, collection_validator, err) => {
-                    tracing::warn!(collection_name, ?collection_validator, error = %err, "error parsing collection validator")
-                }
-                _ => (),
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct ErrorResponse {
+    pub details: Option<::std::collections::HashMap<String, serde_json::Value>>,
+    pub message: String,
+    pub r#type: Option<ErrorResponseType>,
+}
+
+impl ErrorResponse {
+    pub fn new<T>(message: &T) -> ErrorResponse
+    where
+        T: Display + ?Sized,
+    {
+        ErrorResponse {
+            details: None,
+            message: format!("{message}"),
+            r#type: None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum ErrorResponseType {
+    UncaughtError,
+    MutationConstraintViolation,
+    MutationPermissionCheckFailure,
+}
+
+impl ToString for ErrorResponseType {
+    fn to_string(&self) -> String {
+        match self {
+            Self::UncaughtError => String::from("uncaught-error"),
+            Self::MutationConstraintViolation => String::from("mutation-constraint-violation"),
+            Self::MutationPermissionCheckFailure => {
+                String::from("mutation-permission-check-failure")
             }
         }
-        let (status, resp) = self.status_and_error_response();
-        (status, Json(resp)).into_response()
+    }
+}
+
+impl Default for ErrorResponseType {
+    fn default() -> ErrorResponseType {
+        Self::UncaughtError
     }
 }

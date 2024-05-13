@@ -1,9 +1,5 @@
 use std::{collections::BTreeMap, num::ParseIntError, str::FromStr};
 
-use configuration::{
-    schema::{ObjectField, ObjectType, Type},
-    WithNameRef,
-};
 use itertools::Itertools as _;
 use mongodb::bson::{self, Bson, Decimal128};
 use mongodb_support::BsonScalarType;
@@ -12,7 +8,9 @@ use serde_json::Value;
 use thiserror::Error;
 use time::{format_description::well_known::Iso8601, OffsetDateTime};
 
-use super::json_formats;
+use crate::mongo_query_plan::{MongoScalarType, ObjectType, Type};
+
+use super::{helpers::is_nullable, json_formats};
 
 #[derive(Debug, Error)]
 pub enum JsonToBsonError {
@@ -55,24 +53,15 @@ type Result<T> = std::result::Result<T, JsonToBsonError>;
 /// The BSON library already has a `Deserialize` impl that can convert from JSON. But that
 /// implementation cannot take advantage of the type information that we have available. Instead it
 /// uses Extended JSON which uses tags in JSON data to distinguish BSON types.
-pub fn json_to_bson(
-    expected_type: &Type,
-    object_types: &BTreeMap<String, ObjectType>,
-    value: Value,
-) -> Result<Bson> {
+pub fn json_to_bson(expected_type: &Type, value: Value) -> Result<Bson> {
     match expected_type {
-        Type::ExtendedJSON => {
+        Type::Scalar(MongoScalarType::ExtendedJSON) => {
             serde_json::from_value::<Bson>(value).map_err(JsonToBsonError::SerdeError)
         }
-        Type::Scalar(t) => json_to_bson_scalar(*t, value),
-        Type::Object(object_type_name) => {
-            let object_type = object_types
-                .get(object_type_name)
-                .ok_or_else(|| JsonToBsonError::UnknownObjectType(object_type_name.to_owned()))?;
-            convert_object(object_type_name, object_type, object_types, value)
-        }
-        Type::ArrayOf(element_type) => convert_array(element_type, object_types, value),
-        Type::Nullable(t) => convert_nullable(t, object_types, value),
+        Type::Scalar(MongoScalarType::Bson(t)) => json_to_bson_scalar(*t, value),
+        Type::Object(object_type) => convert_object(object_type, value),
+        Type::ArrayOf(element_type) => convert_array(element_type, value),
+        Type::Nullable(t) => convert_nullable(t, value),
     }
 }
 
@@ -85,7 +74,7 @@ pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Resul
         BsonScalarType::Decimal => Bson::Decimal128(
             Decimal128::from_str(&from_string(expected_type, value.clone())?).map_err(|err| {
                 JsonToBsonError::ConversionErrorWithContext(
-                    Type::Scalar(expected_type),
+                    Type::Scalar(MongoScalarType::Bson(expected_type)),
                     value,
                     err.into(),
                 )
@@ -126,38 +115,29 @@ pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Resul
     Ok(result)
 }
 
-fn convert_array(
-    element_type: &Type,
-    object_types: &BTreeMap<String, ObjectType>,
-    value: Value,
-) -> Result<Bson> {
+fn convert_array(element_type: &Type, value: Value) -> Result<Bson> {
     let input_elements: Vec<Value> = serde_json::from_value(value)?;
     let bson_array = input_elements
         .into_iter()
-        .map(|v| json_to_bson(element_type, object_types, v))
+        .map(|v| json_to_bson(element_type, v))
         .try_collect()?;
     Ok(Bson::Array(bson_array))
 }
 
-fn convert_object(
-    object_type_name: &str,
-    object_type: &ObjectType,
-    object_types: &BTreeMap<String, ObjectType>,
-    value: Value,
-) -> Result<Bson> {
+fn convert_object(object_type: &ObjectType, value: Value) -> Result<Bson> {
     let input_fields: BTreeMap<String, Value> = serde_json::from_value(value)?;
     let bson_doc: bson::Document = object_type
         .named_fields()
-        .filter_map(|field| {
+        .filter_map(|(name, field_type)| {
             let field_value_result =
-                get_object_field_value(object_type_name, field.clone(), &input_fields)
+                get_object_field_value(object_type, name, field_type, &input_fields)
                     .transpose()?;
-            Some((field, field_value_result))
+            Some((name, field_type, field_value_result))
         })
-        .map(|(field, field_value_result)| {
+        .map(|(name, field_type, field_value_result)| {
             Ok((
-                field.name.to_owned(),
-                json_to_bson(&field.value.r#type, object_types, field_value_result?)?,
+                name.to_owned(),
+                json_to_bson(field_type, field_value_result?)?,
             ))
         })
         .try_collect::<_, _, JsonToBsonError>()?;
@@ -168,37 +148,34 @@ fn convert_object(
 // missing, and the field is nullable. Returns `Err` if the value is missing and the field is *not*
 // nullable.
 fn get_object_field_value(
-    object_type_name: &str,
-    field: WithNameRef<'_, ObjectField>,
+    object_type: &ObjectType,
+    field_name: &str,
+    field_type: &Type,
     object: &BTreeMap<String, Value>,
 ) -> Result<Option<Value>> {
-    let value = object.get(field.name);
-    if value.is_none() && field.value.r#type.is_nullable() {
+    let value = object.get(field_name);
+    if value.is_none() && is_nullable(field_type) {
         return Ok(None);
     }
     Ok(Some(value.cloned().ok_or_else(|| {
         JsonToBsonError::MissingObjectField(
-            Type::Object(object_type_name.to_owned()),
-            field.name.to_owned(),
+            Type::Object(object_type.clone()),
+            field_name.to_owned(),
         )
     })?))
 }
 
-fn convert_nullable(
-    underlying_type: &Type,
-    object_types: &BTreeMap<String, ObjectType>,
-    value: Value,
-) -> Result<Bson> {
+fn convert_nullable(underlying_type: &Type, value: Value) -> Result<Bson> {
     match value {
         Value::Null => Ok(Bson::Null),
-        non_null_value => json_to_bson(underlying_type, object_types, non_null_value),
+        non_null_value => json_to_bson(underlying_type, non_null_value),
     }
 }
 
 fn convert_date(value: &str) -> Result<Bson> {
     let date = OffsetDateTime::parse(value, &Iso8601::DEFAULT).map_err(|err| {
         JsonToBsonError::ConversionErrorWithContext(
-            Type::Scalar(BsonScalarType::Date),
+            Type::Scalar(MongoScalarType::Bson(BsonScalarType::Date)),
             Value::String(value.to_owned()),
             err.into(),
         )
@@ -220,7 +197,11 @@ where
     T: DeserializeOwned,
 {
     serde_json::from_value::<T>(value.clone()).map_err(|err| {
-        JsonToBsonError::ConversionErrorWithContext(Type::Scalar(expected_type), value, err.into())
+        JsonToBsonError::ConversionErrorWithContext(
+            Type::Scalar(MongoScalarType::Bson(expected_type)),
+            value,
+            err.into(),
+        )
     })
 }
 
@@ -228,7 +209,7 @@ fn from_string(expected_type: BsonScalarType, value: Value) -> Result<String> {
     match value {
         Value::String(s) => Ok(s),
         _ => Err(JsonToBsonError::IncompatibleBackingType {
-            expected_type: Type::Scalar(expected_type),
+            expected_type: Type::Scalar(MongoScalarType::Bson(expected_type)),
             expected_backing_type: "String",
             value,
         }),
@@ -237,7 +218,7 @@ fn from_string(expected_type: BsonScalarType, value: Value) -> Result<String> {
 
 fn incompatible_scalar_type<T>(expected_type: BsonScalarType, value: Value) -> Result<T> {
     Err(JsonToBsonError::IncompatibleType(
-        Type::Scalar(expected_type),
+        Type::Scalar(MongoScalarType::Bson(expected_type)),
         value,
     ))
 }
@@ -341,9 +322,6 @@ mod tests {
 
         let actual = json_to_bson(
             &Type::Object(object_type_name.clone()),
-            &[(object_type_name.clone(), object_type)]
-                .into_iter()
-                .collect(),
             input,
         )?;
         assert_eq!(actual, expected.into());

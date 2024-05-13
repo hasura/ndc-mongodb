@@ -1,4 +1,3 @@
-use dc_api_types::BinaryComparisonOperator;
 use enum_iterator::{all, Sequence};
 use mongodb::bson::{doc, Bson, Document};
 
@@ -22,7 +21,7 @@ pub enum ComparisonFunction {
     IRegex,
 }
 
-use BinaryComparisonOperator as B;
+// use BinaryComparisonOperator as B;
 use ComparisonFunction as C;
 
 use crate::interface_types::MongoAgentError;
@@ -71,17 +70,17 @@ impl ComparisonFunction {
     }
 }
 
-impl TryFrom<&BinaryComparisonOperator> for ComparisonFunction {
-    type Error = MongoAgentError;
-
-    fn try_from(operator: &BinaryComparisonOperator) -> Result<Self, Self::Error> {
-        match operator {
-            B::LessThan => Ok(C::LessThan),
-            B::LessThanOrEqual => Ok(C::LessThanOrEqual),
-            B::GreaterThan => Ok(C::GreaterThan),
-            B::GreaterThanOrEqual => Ok(C::GreaterThanOrEqual),
-            B::Equal => Ok(C::Equal),
-            B::CustomBinaryComparisonOperator(op) => ComparisonFunction::from_graphql_name(op),
-        }
-    }
-}
+// impl TryFrom<&BinaryComparisonOperator> for ComparisonFunction {
+//     type Error = MongoAgentError;
+//
+//     fn try_from(operator: &BinaryComparisonOperator) -> Result<Self, Self::Error> {
+//         match operator {
+//             B::LessThan => Ok(C::LessThan),
+//             B::LessThanOrEqual => Ok(C::LessThanOrEqual),
+//             B::GreaterThan => Ok(C::GreaterThan),
+//             B::GreaterThanOrEqual => Ok(C::GreaterThanOrEqual),
+//             B::Equal => Ok(C::Equal),
+//             B::CustomBinaryComparisonOperator(op) => ComparisonFunction::from_graphql_name(op),
+//         }
+//     }
+// }

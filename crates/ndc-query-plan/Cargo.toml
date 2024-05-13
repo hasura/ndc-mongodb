@@ -7,7 +7,7 @@ edition = "2021"
 indexmap = { workspace = true }
 itertools = { workspace = true }
 ndc-models = { workspace = true }
-serde = "1"
+nonempty = "^0.10"
 serde_json = "1"
 thiserror = "1"
 vector-map = "1"

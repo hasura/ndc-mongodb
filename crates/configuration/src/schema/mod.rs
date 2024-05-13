@@ -37,13 +37,6 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn is_nullable(&self) -> bool {
-        matches!(
-            self,
-            Type::ExtendedJSON | Type::Nullable(_) | Type::Scalar(BsonScalarType::Null)
-        )
-    }
-
     pub fn normalize_type(self) -> Type {
         match self {
             Type::ExtendedJSON => Type::ExtendedJSON,

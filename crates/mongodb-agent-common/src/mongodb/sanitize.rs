@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 
 use anyhow::anyhow;
-use dc_api_types::comparison_column::ColumnSelector;
 use mongodb::bson::{doc, Document};
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -43,16 +42,5 @@ pub fn safe_name(name: &str) -> Result<Cow<str>, MongoAgentError> {
         Err(MongoAgentError::BadQuery(anyhow!("cannot execute query that includes the name, \"{name}\", because it includes characters that MongoDB interperets specially")))
     } else {
         Ok(Cow::Borrowed(name))
-    }
-}
-
-pub fn safe_column_selector(column_selector: &ColumnSelector) -> Result<Cow<str>, MongoAgentError> {
-    match column_selector {
-        ColumnSelector::Path(p) => p
-            .iter()
-            .map(|s| safe_name(s))
-            .collect::<Result<Vec<Cow<str>>, MongoAgentError>>()
-            .map(|v| Cow::Owned(v.join("."))),
-        ColumnSelector::Column(c) => safe_name(c),
     }
 }

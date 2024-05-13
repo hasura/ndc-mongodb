@@ -21,7 +21,7 @@ pub enum QueryPlanError {
     UnknownObjectType(String),
 
     #[error(
-        "Unknown field \"{field_name}\" in object type \"{object_type}\"{}",
+        "Unknown field \"{field_name}\" in object type \"{object_type:?}\"{}",
         at_path(path)
     )]
     UnknownObjectTypeField {

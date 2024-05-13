@@ -1,24 +1,122 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
-use dc_api_types::ScalarTypeCapabilities;
+// use dc_api_types::ScalarTypeCapabilities;
 use enum_iterator::all;
 use itertools::Either;
+use lazy_static::lazy_static;
 use mongodb_support::BsonScalarType;
+use ndc_models::{
+    AggregateFunctionDefinition, ComparisonOperatorDefinition, ScalarType, Type, TypeRepresentation,
+};
 
 use crate::aggregation_function::{AggregationFunction, AggregationFunction as A};
 use crate::comparison_function::{ComparisonFunction, ComparisonFunction as C};
 
 use BsonScalarType as S;
 
-pub fn scalar_types_capabilities() -> HashMap<String, ScalarTypeCapabilities> {
-    let mut map = all::<BsonScalarType>()
-        .map(|t| (t.graphql_name(), capabilities(t)))
-        .collect::<HashMap<_, _>>();
-    map.insert(
+lazy_static! {
+    pub static ref SCALAR_TYPES: BTreeMap<String, ScalarType> = scalar_types();
+}
+
+// pub fn scalar_types_capabilities() -> HashMap<String, ScalarTypeCapabilities> {
+//     let mut map = all::<BsonScalarType>()
+//         .map(|t| (t.graphql_name(), capabilities(t)))
+//         .collect::<HashMap<_, _>>();
+//     map.insert(
+//         mongodb_support::EXTENDED_JSON_TYPE_NAME.to_owned(),
+//         ScalarTypeCapabilities::new(),
+//     );
+//     map
+// }
+
+pub fn scalar_types() -> BTreeMap<String, ScalarType> {
+    enum_iterator::all::<BsonScalarType>()
+        .map(make_scalar_type)
+        .chain([extended_json_scalar_type()])
+        .collect::<BTreeMap<_, _>>()
+}
+
+fn extended_json_scalar_type() -> (String, ScalarType) {
+    (
         mongodb_support::EXTENDED_JSON_TYPE_NAME.to_owned(),
-        ScalarTypeCapabilities::new(),
-    );
-    map
+        ScalarType {
+            representation: Some(TypeRepresentation::JSON),
+            aggregate_functions: BTreeMap::new(),
+            comparison_operators: BTreeMap::new(),
+        },
+    )
+}
+
+fn make_scalar_type(bson_scalar_type: BsonScalarType) -> (String, ScalarType) {
+    let scalar_type_name = bson_scalar_type.graphql_name();
+    let scalar_type = ScalarType {
+        representation: bson_scalar_type_representation(bson_scalar_type),
+        aggregate_functions: bson_aggregation_functions(bson_scalar_type),
+        comparison_operators: bson_comparison_operators(bson_scalar_type),
+    };
+    (scalar_type_name, scalar_type)
+}
+
+fn bson_scalar_type_representation(bson_scalar_type: BsonScalarType) -> Option<TypeRepresentation> {
+    match bson_scalar_type {
+        BsonScalarType::Double => Some(TypeRepresentation::Float64),
+        BsonScalarType::Decimal => Some(TypeRepresentation::BigDecimal), // Not quite.... Mongo Decimal is 128-bit, BigDecimal is unlimited
+        BsonScalarType::Int => Some(TypeRepresentation::Int32),
+        BsonScalarType::Long => Some(TypeRepresentation::Int64),
+        BsonScalarType::String => Some(TypeRepresentation::String),
+        BsonScalarType::Date => Some(TypeRepresentation::Timestamp), // Mongo Date is milliseconds since unix epoch
+        BsonScalarType::Timestamp => None, // Internal Mongo timestamp type
+        BsonScalarType::BinData => None,
+        BsonScalarType::ObjectId => Some(TypeRepresentation::String), // Mongo ObjectId is usually expressed as a 24 char hex string (12 byte number)
+        BsonScalarType::Bool => Some(TypeRepresentation::Boolean),
+        BsonScalarType::Null => None,
+        BsonScalarType::Regex => None,
+        BsonScalarType::Javascript => None,
+        BsonScalarType::JavascriptWithScope => None,
+        BsonScalarType::MinKey => None,
+        BsonScalarType::MaxKey => None,
+        BsonScalarType::Undefined => None,
+        BsonScalarType::DbPointer => None,
+        BsonScalarType::Symbol => None,
+    }
+}
+
+fn bson_comparison_operators(
+    bson_scalar_type: BsonScalarType,
+) -> BTreeMap<String, ComparisonOperatorDefinition> {
+    comparison_operators(bson_scalar_type)
+        .map(|(comparison_fn, arg_type)| {
+            let fn_name = comparison_fn.graphql_name().to_owned();
+            match comparison_fn {
+                ComparisonFunction::Equal => (fn_name, ComparisonOperatorDefinition::Equal),
+                _ => (
+                    fn_name,
+                    ComparisonOperatorDefinition::Custom {
+                        argument_type: bson_to_named_type(arg_type),
+                    },
+                ),
+            }
+        })
+        .collect()
+}
+
+fn bson_aggregation_functions(
+    bson_scalar_type: BsonScalarType,
+) -> BTreeMap<String, AggregateFunctionDefinition> {
+    aggregate_functions(bson_scalar_type)
+        .map(|(fn_name, result_type)| {
+            let aggregation_definition = AggregateFunctionDefinition {
+                result_type: bson_to_named_type(result_type),
+            };
+            (fn_name.graphql_name().to_owned(), aggregation_definition)
+        })
+        .collect()
+}
+
+fn bson_to_named_type(bson_scalar_type: BsonScalarType) -> Type {
+    Type::Named {
+        name: bson_scalar_type.graphql_name(),
+    }
 }
 
 pub fn aggregate_functions(
@@ -64,24 +162,24 @@ pub fn comparison_operators(
     })
 }
 
-fn capabilities(scalar_type: BsonScalarType) -> ScalarTypeCapabilities {
-    let aggregations: HashMap<String, String> = aggregate_functions(scalar_type)
-        .map(|(a, t)| (a.graphql_name().to_owned(), t.graphql_name()))
-        .collect();
-    let comparisons: HashMap<String, String> = comparison_operators(scalar_type)
-        .map(|(c, t)| (c.graphql_name().to_owned(), t.graphql_name()))
-        .collect();
-    ScalarTypeCapabilities {
-        graphql_type: scalar_type.graphql_type(),
-        aggregate_functions: Some(aggregations),
-        comparison_operators: if comparisons.is_empty() {
-            None
-        } else {
-            Some(comparisons)
-        },
-        update_column_operators: None,
-    }
-}
+// fn capabilities(scalar_type: BsonScalarType) -> ScalarTypeCapabilities {
+//     let aggregations: HashMap<String, String> = aggregate_functions(scalar_type)
+//         .map(|(a, t)| (a.graphql_name().to_owned(), t.graphql_name()))
+//         .collect();
+//     let comparisons: HashMap<String, String> = comparison_operators(scalar_type)
+//         .map(|(c, t)| (c.graphql_name().to_owned(), t.graphql_name()))
+//         .collect();
+//     ScalarTypeCapabilities {
+//         graphql_type: scalar_type.graphql_type(),
+//         aggregate_functions: Some(aggregations),
+//         comparison_operators: if comparisons.is_empty() {
+//             None
+//         } else {
+//             Some(comparisons)
+//         },
+//         update_column_operators: None,
+//     }
+// }
 
 /// If `condition` is true returns an iterator with the same items as the given `iter` input.
 /// Otherwise returns an empty iterator.

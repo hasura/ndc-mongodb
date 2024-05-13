@@ -12,7 +12,6 @@ mod relations;
 pub mod serialization;
 
 use configuration::Configuration;
-use dc_api_types::QueryRequest;
 use mongodb::bson;
 
 use self::execute_query_request::execute_query_request;
@@ -22,12 +21,12 @@ pub use self::{
     pipeline::{is_response_faceted, pipeline_for_non_foreach, pipeline_for_query_request},
     query_target::QueryTarget,
 };
-use crate::{interface_types::MongoAgentError, state::ConnectorState};
+use crate::{interface_types::MongoAgentError, mongo_query_plan::QueryPlan, state::ConnectorState};
 
 pub async fn handle_query_request(
     config: &Configuration,
     state: &ConnectorState,
-    query_request: QueryRequest,
+    query_request: QueryPlan,
 ) -> Result<Vec<bson::Document>, MongoAgentError> {
     let database = state.database();
     // This function delegates to another function which gives is a point to inject a mock database

@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use configuration::Configuration;
 use dc_api_types::comparison_column::ColumnSelector;
 use dc_api_types::relationship::ColumnMapping;
-use dc_api_types::{Field, QueryRequest, Relationship, VariableSet};
+use dc_api_types::{table_relationships, Field, QueryRequest, Relationship, Target, VariableSet};
 use mongodb::bson::{doc, Bson, Document};
 
 use crate::mongodb::sanitize::safe_column_selector;
@@ -16,6 +16,7 @@ use crate::{
 
 use super::pipeline::pipeline_for_non_foreach;
 
+/// Defines any necessary $lookup stages for the given section of the pipeline
 pub fn pipeline_for_relations(
     config: &Configuration,
     variables: Option<&VariableSet>,
@@ -27,6 +28,14 @@ pub fn pipeline_for_relations(
         query,
         ..
     } = query_request;
+
+    let relations_for_current_source = relationships.iter()
+        .filter(|table_relationships| match target {
+            Target::TTable { name, .. } => table_relationships.source_table == *name,
+        })
+        .flat_map(|table_relationships| table_relationships.relationships);
+
+
 
     let empty_field_map = HashMap::new();
     let fields = if let Some(fs) = &query.fields {

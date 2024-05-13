@@ -6,10 +6,6 @@ use ndc_sdk::{connector::SchemaError, models as ndc};
 
 use crate::capabilities;
 
-lazy_static! {
-    pub static ref SCALAR_TYPES: BTreeMap<String, ndc::ScalarType> = capabilities::scalar_types();
-}
-
 pub async fn get_schema(config: &Configuration) -> Result<ndc::SchemaResponse, SchemaError> {
     Ok(ndc::SchemaResponse {
         collections: config.collections.values().cloned().collect(),

@@ -440,6 +440,7 @@ dependencies = [
  "mongodb",
  "mongodb-support",
  "ndc-models",
+ "ndc-query-plan",
  "schemars",
  "serde",
  "serde_json",
@@ -649,7 +650,7 @@ dependencies = [
  "anyhow",
  "itertools 0.12.1",
  "mongodb",
- "nonempty",
+ "nonempty 0.8.1",
  "once_cell",
  "pretty_assertions",
  "regex",
@@ -1681,10 +1682,12 @@ dependencies = [
  "indent",
  "indexmap 2.2.5",
  "itertools 0.12.1",
+ "lazy_static",
  "mockall",
  "mongodb",
  "mongodb-cli-plugin",
  "mongodb-support",
+ "ndc-models",
  "ndc-query-plan",
  "once_cell",
  "pretty_assertions",
@@ -1737,7 +1740,6 @@ dependencies = [
  "http 0.2.9",
  "indexmap 2.2.5",
  "itertools 0.12.1",
- "lazy_static",
  "mongodb",
  "mongodb-agent-common",
  "mongodb-support",
@@ -1804,7 +1806,7 @@ dependencies = [
  "indexmap 2.2.5",
  "itertools 0.12.1",
  "ndc-models",
- "serde",
+ "nonempty 0.10.0",
  "serde_json",
  "thiserror",
  "vector-map",
@@ -1881,6 +1883,12 @@ checksum = "aeaf4ad7403de93e699c191202f017118df734d3850b01e13a3a8b2e6953d3c9"
 dependencies = [
  "serde",
 ]
+
+[[package]]
+name = "nonempty"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "303e8749c804ccd6ca3b428de7fe0d86cb86bc7606bc15291f100fd487960bb8"
 
 [[package]]
 name = "nu-ansi-term"

@@ -88,7 +88,7 @@ async fn execute_procedure(
     requested_fields: Option<&NestedField>,
 ) -> Result<MutationOperationResults, MutationError> {
     let (result, result_type) = procedure
-        .execute(&query_context.object_types, database.clone())
+        .execute(database.clone())
         .await
         .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?;
 

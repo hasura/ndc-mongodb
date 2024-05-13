@@ -14,7 +14,6 @@ futures = "^0.3"
 http = "^0.2"
 indexmap = { wokspace = true }
 itertools = { workspace = true }
-lazy_static = "^1.4.0"
 mongodb = { workspace = true }
 mongodb-agent-common = { path = "../mongodb-agent-common" }
 mongodb-support = { path = "../mongodb-support" }

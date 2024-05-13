@@ -1,32 +1,53 @@
-use dc_api_types::ComparisonColumn;
+use std::borrow::Cow;
+
+use itertools::Either;
 
 use crate::{
     interface_types::MongoAgentError,
-    mongodb::sanitize::{safe_column_selector, safe_name},
+    mongo_query_plan::{ColumnSelector, ComparisonTarget},
+    mongodb::sanitize::safe_name,
 };
 
-/// Given a column, and an optional relationship name returns a MongoDB expression that
-/// resolves to the value of the corresponding field, either in the target collection of a query
-/// request, or in the related collection.
-///
-/// evaluating them as expressions.
-pub fn column_ref(
-    column: &ComparisonColumn,
-    collection_name: Option<&str>,
-) -> Result<String, MongoAgentError> {
-    if column.path.as_ref().map(|path| !path.is_empty()).unwrap_or(false) {
-        return Err(MongoAgentError::NotImplemented("comparisons against root query table columns")) 
-    }
-
-    let reference = if let Some(collection) = collection_name {
-        // This assumes that a related collection has been brought into scope by a $lookup stage.
-        format!(
-            "{}.{}",
-            safe_name(collection)?,
-            safe_column_selector(&column.name)?
-        )
-    } else {
-        format!("{}", safe_column_selector(&column.name)?)
+/// Given a column target returns a MongoDB expression that resolves to the value of the
+/// corresponding field, either in the target collection of a query request, or in the related
+/// collection.
+pub fn column_ref(column: &ComparisonTarget) -> Result<Cow<'_, str>, MongoAgentError> {
+    let path = match column {
+        ComparisonTarget::Column {
+            name,
+            column_type,
+            path,
+        } => {
+            let relations_path = path.iter().map(AsRef::as_ref);
+            let nested_object_path = column_selector_path(name);
+            Either::Left(relations_path.chain(nested_object_path))
+        }
+        ComparisonTarget::RootCollectionColumn { name, column_type } => {
+            Either::Right(std::iter::once("$$ROOT").chain(column_selector_path(name)))
+        }
     };
-    Ok(reference)
+    safe_selector(path)
+}
+
+fn column_selector_path(selector: &ColumnSelector) -> impl Iterator<Item = &str> {
+    match selector {
+        ColumnSelector::Path(fields) => Either::Left(fields.iter().map(AsRef::as_ref)),
+        ColumnSelector::Column(col_name) => Either::Right(std::iter::once(col_name.as_ref())),
+    }
+}
+
+/// Given an iterable of fields to access, ensures that each field name does not include characters
+/// that could be interpereted as a MongoDB expression.
+fn safe_selector<'a>(
+    path: impl IntoIterator<Item = &'a str>,
+) -> Result<Cow<'a, str>, MongoAgentError> {
+    let mut safe_elements = path
+        .into_iter()
+        .map(|s| safe_name(s))
+        .collect::<Result<Vec<Cow<str>>, MongoAgentError>>()?;
+    if safe_elements.len() == 1 {
+        Ok(safe_elements.pop().unwrap())
+    } else {
+        Ok(Cow::Owned(safe_elements.join("")))
+    }
 }

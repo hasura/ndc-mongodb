@@ -5,6 +5,7 @@ pub mod health;
 pub mod interface_types;
 pub mod mongodb;
 pub mod mongodb_connection;
+pub mod mongo_query_plan;
 pub mod procedure;
 pub mod query;
 pub mod scalar_types_capabilities;

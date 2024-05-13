@@ -1,5 +1,6 @@
 mod configuration;
 mod directory;
+mod mongo_scalar_type;
 pub mod native_procedure;
 pub mod native_query;
 pub mod schema;
@@ -12,5 +13,6 @@ pub use crate::directory::read_directory;
 pub use crate::directory::write_schema_directory;
 pub use crate::directory::parse_configuration_options_file;
 pub use crate::directory::get_config_file_changed;
+pub use crate::mongo_scalar_type::MongoScalarType;
 pub use crate::serialized::Schema;
 pub use crate::with_name::{WithName, WithNameRef};
