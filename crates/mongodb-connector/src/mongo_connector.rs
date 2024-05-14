@@ -18,13 +18,9 @@ use ndc_sdk::{
         QueryResponse, SchemaResponse,
     },
 };
-use tracing::{instrument, Instrument};
+use tracing::instrument;
 
-use crate::{
-    api_type_conversions::{v2_to_v3_explain_response, v3_to_v2_query_request},
-    error_mapping::{mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error},
-    query_response::serialize_query_response,
-};
+use crate::error_mapping::{mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error};
 use crate::{capabilities::mongo_capabilities_response, mutation::handle_mutation_request};
 
 #[derive(Clone, Default)]
@@ -107,11 +103,10 @@ impl Connector for MongoConnector {
         state: &Self::State,
         request: QueryRequest,
     ) -> Result<JsonResponse<ExplainResponse>, ExplainError> {
-        let v2_request = v3_to_v2_query_request(&get_query_context(configuration), request)?;
-        let response = explain_query(configuration, state, v2_request)
+        let response = explain_query(configuration, state, request)
             .await
             .map_err(mongo_agent_error_to_explain_error)?;
-        Ok(v2_to_v3_explain_response(response).into())
+        Ok(response.into())
     }
 
     #[instrument(err, skip_all)]
@@ -141,7 +136,7 @@ impl Connector for MongoConnector {
         state: &Self::State,
         request: QueryRequest,
     ) -> Result<JsonResponse<QueryResponse>, QueryError> {
-        let response = handle_query_request(configuration, state, query_request)
+        let response = handle_query_request(configuration, state, request)
             .await
             .map_err(mongo_agent_error_to_query_error)?;
         Ok(response.into())
