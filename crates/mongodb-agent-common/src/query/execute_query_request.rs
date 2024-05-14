@@ -2,15 +2,19 @@ use configuration::Configuration;
 use futures::Stream;
 use futures_util::TryStreamExt as _;
 use mongodb::bson;
-use tracing::Instrument;
+use ndc_models::{QueryRequest, QueryResponse};
+use ndc_query_plan::plan_for_query_request;
+use tracing::{instrument, Instrument};
 
-use super::pipeline::pipeline_for_query_request;
+use super::{pipeline::pipeline_for_query_request, response::serialize_query_response};
 use crate::{
     interface_types::MongoAgentError,
-    mongo_query_plan::QueryPlan,
-    mongodb::{CollectionTrait as _, DatabaseTrait},
+    mongo_query_plan::{get_query_context, QueryPlan},
+    mongodb::{CollectionTrait as _, DatabaseTrait, Pipeline},
     query::QueryTarget,
 };
+
+type Result<T> = std::result::Result<T, MongoAgentError>;
 
 /// Execute a query request against the given collection.
 ///
@@ -19,62 +23,77 @@ use crate::{
 pub async fn execute_query_request(
     database: impl DatabaseTrait,
     config: &Configuration,
-    query_request: QueryPlan,
-) -> Result<Vec<bson::Document>, MongoAgentError> {
-    let target = QueryTarget::for_request(config, &query_request);
-    let pipeline = tracing::info_span!("Build Query Pipeline")
-        .in_scope(|| pipeline_for_query_request(config, &query_request))?;
+    query_request: QueryRequest,
+) -> Result<QueryResponse> {
+    let query_plan = preprocess_query_request(config, query_request)?;
+    let pipeline = pipeline_for_query_request(config, &query_plan)?;
+    let documents = execute_query_pipeline(database, config, &query_plan, pipeline).await?;
+    let response = serialize_query_response(&query_plan, documents)?;
+    Ok(response)
+}
+
+#[instrument(name = "Pre-process Query Request", skip_all, fields(internal.visibility = "user"))]
+fn preprocess_query_request(
+    config: &Configuration,
+    query_request: QueryRequest,
+) -> Result<QueryPlan> {
+    let query_context = get_query_context(config);
+    let query_plan = plan_for_query_request(&query_context, query_request)?;
+    Ok(query_plan)
+}
+
+#[instrument(name = "Execute Query Pipeline", skip_all, fields(internal.visibility = "user"))]
+async fn execute_query_pipeline(
+    database: impl DatabaseTrait,
+    config: &Configuration,
+    query_plan: &QueryPlan,
+    pipeline: Pipeline,
+) -> Result<Vec<bson::Document>> {
+    let target = QueryTarget::for_request(config, query_plan);
     tracing::debug!(
-        ?query_request,
         ?target,
         pipeline = %serde_json::to_string(&pipeline).unwrap(),
         "executing query"
     );
+
     // The target of a query request might be a collection, or it might be a native query. In the
     // latter case there is no collection to perform the aggregation against. So instead of sending
     // the MongoDB API call `db.<collection>.aggregate` we instead call `db.aggregate`.
-    let documents = async move {
-        match target.input_collection() {
-            Some(collection_name) => {
-                let collection = database.collection(collection_name);
-                collect_from_cursor(
-                    collection
-                        .aggregate(pipeline, None)
-                        .instrument(tracing::info_span!(
-                            "Process Pipeline",
-                            internal.visibility = "user"
-                        ))
-                        .await?,
-                )
-                .await
-            }
-            None => {
-                collect_from_cursor(
-                    database
-                        .aggregate(pipeline, None)
-                        .instrument(tracing::info_span!(
-                            "Process Pipeline",
-                            internal.visibility = "user"
-                        ))
-                        .await?,
-                )
-                .await
-            }
+    let documents = match target.input_collection() {
+        Some(collection_name) => {
+            let collection = database.collection(collection_name);
+            collect_response_documents(
+                collection
+                    .aggregate(pipeline, None)
+                    .instrument(tracing::info_span!(
+                        "MongoDB Aggregate Command",
+                        internal.visibility = "user"
+                    ))
+                    .await?,
+            )
+            .await
         }
-    }
-    .instrument(tracing::info_span!(
-        "Execute Query Pipeline",
-        internal.visibility = "user"
-    ))
-    .await?;
+        None => {
+            collect_response_documents(
+                database
+                    .aggregate(pipeline, None)
+                    .instrument(tracing::info_span!(
+                        "MongoDB Aggregate Command",
+                        internal.visibility = "user"
+                    ))
+                    .await?,
+            )
+            .await
+        }
+    }?;
     tracing::debug!(response_documents = %serde_json::to_string(&documents).unwrap(), "response from MongoDB");
-
     Ok(documents)
 }
 
-async fn collect_from_cursor(
-    document_cursor: impl Stream<Item = Result<bson::Document, mongodb::error::Error>>,
-) -> Result<Vec<bson::Document>, MongoAgentError> {
+#[instrument(name = "Collect Response Documents", skip_all, fields(internal.visibility = "user"))]
+async fn collect_response_documents(
+    document_cursor: impl Stream<Item = std::result::Result<bson::Document, mongodb::error::Error>>,
+) -> Result<Vec<bson::Document>> {
     document_cursor
         .into_stream()
         .map_err(MongoAgentError::MongoDB)

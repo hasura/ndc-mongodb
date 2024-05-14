@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use configuration::Configuration;
 use mongodb::bson::{self, doc, Bson};
 use ndc_query_plan::VariableSet;
+use tracing::instrument;
 
 use crate::{
     aggregation_function::AggregationFunction,
@@ -33,6 +34,7 @@ pub fn is_response_faceted(query: &Query) -> bool {
 ///
 /// Returns a pipeline paired with a value that indicates whether the response requires
 /// post-processing in the agent.
+#[instrument(name = "Build Query Pipeline" skip_all, fields(internal.visibility = "user"))]
 pub fn pipeline_for_query_request(
     config: &Configuration,
     query_plan: &QueryPlan,

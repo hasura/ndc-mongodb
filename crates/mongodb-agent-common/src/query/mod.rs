@@ -9,10 +9,12 @@ mod native_query;
 mod pipeline;
 mod query_target;
 mod relations;
+mod response;
 pub mod serialization;
 
 use configuration::Configuration;
 use mongodb::bson;
+use ndc_models::{QueryRequest, QueryResponse};
 
 use self::execute_query_request::execute_query_request;
 pub use self::{
@@ -20,14 +22,17 @@ pub use self::{
     make_sort::make_sort,
     pipeline::{is_response_faceted, pipeline_for_non_foreach, pipeline_for_query_request},
     query_target::QueryTarget,
+    response::QueryResponseError,
 };
-use crate::{interface_types::MongoAgentError, mongo_query_plan::QueryPlan, state::ConnectorState};
+use crate::{
+    interface_types::MongoAgentError, mongo_query_plan::QueryContext, state::ConnectorState,
+};
 
 pub async fn handle_query_request(
     config: &Configuration,
     state: &ConnectorState,
-    query_request: QueryPlan,
-) -> Result<Vec<bson::Document>, MongoAgentError> {
+    query_request: QueryRequest,
+) -> Result<QueryResponse, MongoAgentError> {
     let database = state.database();
     // This function delegates to another function which gives is a point to inject a mock database
     // implementation for testing.

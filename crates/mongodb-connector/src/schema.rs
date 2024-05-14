@@ -1,10 +1,6 @@
-use lazy_static::lazy_static;
-use std::collections::BTreeMap;
-
 use configuration::Configuration;
+use mongodb_agent_common::scalar_types_capabilities::SCALAR_TYPES;
 use ndc_sdk::{connector::SchemaError, models as ndc};
-
-use crate::capabilities;
 
 pub async fn get_schema(config: &Configuration) -> Result<ndc::SchemaResponse, SchemaError> {
     Ok(ndc::SchemaResponse {
