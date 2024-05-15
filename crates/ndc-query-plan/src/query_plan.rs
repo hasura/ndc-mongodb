@@ -69,6 +69,21 @@ impl<T: ConnectorTypes> Query<T> {
     }
 }
 
+impl<T: ConnectorTypes> Default for Query<T> {
+    fn default() -> Self {
+        Self {
+            aggregates: Default::default(),
+            fields: Default::default(),
+            limit: Default::default(),
+            aggregates_limit: Default::default(),
+            offset: Default::default(),
+            order_by: Default::default(),
+            predicate: Default::default(),
+            relationships: Default::default(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Relationship<T: ConnectorTypes> {
     pub column_mapping: BTreeMap<String, String>,
@@ -105,19 +120,20 @@ pub enum Field<T: ConnectorTypes> {
     NestedObject {
         column: String,
         query: Box<Query<T>>,
+        is_nullable: Nullable,
     },
     NestedArray {
         field: Box<Field<T>>,
         limit: Option<u32>,
         offset: Option<u32>,
         predicate: Option<OrderBy>,
+        is_nullable: Nullable,
     },
     Relationship {
-        query: Box<Query<T>>,
         /// The name of the relationship to follow for the subquery
         relationship: String,
-        /// Values to be provided to any collection arguments
-        arguments: BTreeMap<String, RelationshipArgument>,
+        aggregates: Option<IndexMap<String, Aggregate<T>>>,
+        fields: Option<IndexMap<String, Field<T>>>,
     },
 }
 
@@ -247,3 +263,12 @@ pub enum ExistsInCollection {
         unrelated_collection: String,
     },
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Nullable {
+    Nullable,
+    NonNullable,
+}
+
+pub const NULLABLE: Nullable = Nullable::Nullable;
+pub const NON_NULLABLE: Nullable = Nullable::NonNullable;

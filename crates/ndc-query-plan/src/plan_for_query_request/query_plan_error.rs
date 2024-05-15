@@ -2,6 +2,12 @@ use thiserror::Error;
 
 #[derive(Clone, Debug, Error)]
 pub enum QueryPlanError {
+    #[error("expected an array at path {}", path.join("."))]
+    ExpectedArray { path: Vec<String> },
+
+    #[error("expected an object at path {}", path.join("."))]
+    ExpectedObject { path: Vec<String> },
+
     #[error("The connector does not yet support {0}")]
     NotImplemented(&'static str),
 
@@ -21,11 +27,12 @@ pub enum QueryPlanError {
     UnknownObjectType(String),
 
     #[error(
-        "Unknown field \"{field_name}\" in object type \"{object_type:?}\"{}",
+        "Unknown field \"{field_name}\"{}{}",
+        in_object_type(object_type.as_ref()),
         at_path(path)
     )]
     UnknownObjectTypeField {
-        object_type: String,
+        object_type: Option<String>,
         field_name: String,
         path: Vec<String>,
     },
@@ -59,5 +66,12 @@ fn at_path(path: &[String]) -> String {
         "".to_owned()
     } else {
         format!(" at path {}", path.join("."))
+    }
+}
+
+fn in_object_type(type_name: Option<&String>) -> String {
+    match type_name {
+        Some(name) => format!(" in object type \"{name}\""),
+        None => "".to_owned(),
     }
 }

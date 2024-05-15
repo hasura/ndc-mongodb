@@ -5,7 +5,7 @@ use indexmap::IndexMap;
 use itertools::Itertools;
 use mongodb::bson::{self, Bson};
 use ndc_models::{QueryResponse, RowFieldValue, RowSet};
-use ndc_query_plan::QueryPlanError;
+use ndc_query_plan::NULLABLE;
 use serde::Deserialize;
 use thiserror::Error;
 use tracing::instrument;
@@ -34,7 +34,6 @@ pub enum QueryResponseError {
 
     // #[error("expected an object at path {}", path.join("."))]
     // ExpectedObject { path: Vec<String> },
-
     #[error("expected a single response document from MongoDB, but did not get one")]
     ExpectedSingleDocument,
 
@@ -164,19 +163,23 @@ fn serialize_rows(
         .try_collect()
 }
 
-fn type_for_row_set(path: &[&str], query: &Query) -> Result<Type> {
-    let mut fields = BTreeMap::new();
+fn type_for_row_set(
+    path: &[&str],
+    aggregates: &Option<IndexMap<String, Aggregate>>,
+    fields: &Option<IndexMap<String, Field>>,
+) -> Result<Type> {
+    let mut type_fields = BTreeMap::new();
 
-    if query.has_aggregates() {
-        fields.insert("aggregates".to_owned(), type_for_aggregates()?);
+    if aggregates.is_some() {
+        type_fields.insert("aggregates".to_owned(), type_for_aggregates()?);
     }
 
-    if let Some(query_fields) = &query.fields {
+    if let Some(query_fields) = fields {
         let row_type = type_for_row(path, query_fields)?;
-        fields.insert("rows".to_owned(), Type::ArrayOf(Box::new(row_type)));
+        type_fields.insert("rows".to_owned(), Type::ArrayOf(Box::new(row_type)));
     }
 
-    Ok(Type::Object(ObjectType { fields, name: None }))
+    Ok(Type::Object(ObjectType { fields: type_fields, name: None }))
 }
 
 // TODO: infer response type for aggregates MDB-130
@@ -198,165 +201,44 @@ fn type_for_row(path: &[&str], query_fields: &IndexMap<String, Field>) -> Result
     Ok(Type::Object(ObjectType { fields, name: None }))
 }
 
-fn type_for_field<'a>(path: &[&str], field_definition: &'a Field) -> Result<Type> {
+pub fn type_for_field(path: &[&str], field_definition: &Field) -> Result<Type> {
     let field_type = match field_definition {
-        Field::Column {
-            column,
-            column_type,
-        } => column_type.clone(),
-        Field::NestedObject { column, query } => match &query.fields {
-            Some(query_fields) => type_for_row(path, query_fields),
-            None => Err(QueryResponseError::NoFieldsSelected {
-                path: path_to_owned(path),
-            }),
-        }?,
-        Field::NestedArray { field, .. } => {
-            let element_type = type_for_field(path, field)?;
-            Type::ArrayOf(Box::new(element_type))
+        Field::Column { column_type, .. } => column_type.clone(),
+        Field::NestedObject {
+            query, is_nullable, ..
+        } => {
+            let t = match &query.fields {
+                Some(query_fields) => type_for_row(path, query_fields),
+                None => Err(QueryResponseError::NoFieldsSelected {
+                    path: path_to_owned(path),
+                }),
+            }?;
+            if *is_nullable == NULLABLE {
+                t.into_nullable()
+            } else {
+                t
+            }
         }
-        Field::Relationship { query, .. } => type_for_row_set(path, query)?,
+        Field::NestedArray {
+            field, is_nullable, ..
+        } => {
+            let element_type = type_for_field(path, field)?;
+            let t = Type::ArrayOf(Box::new(element_type));
+            if *is_nullable == NULLABLE {
+                t.into_nullable()
+            } else {
+                t
+            }
+        }
+        Field::Relationship {
+            aggregates, fields, ..
+        } => type_for_row_set(path, aggregates, fields)?,
     };
+    // Allow null values without failing the query. If we remove this then it will be necessary to
+    // add some indication to the nested object, nested array, and relationship cases to signal
+    // whether they are allowed to be nullable.
     Ok(field_type)
 }
-
-// /// Computes a new hierarchy of object types (if necessary) that select a subset of fields from
-// /// existing object types to match the fields requested by the query. Recurses into nested objects,
-// /// arrays, and nullable type references.
-// ///
-// /// Scalar types are returned without modification.
-// ///
-// /// Returns a reference to the pruned type, and a list of newly-computed object types with
-// /// generated names.
-// pub fn prune_type_to_field_selection(
-//     query_context: &QueryContext<'_>,
-//     relationships: &BTreeMap<String, Relationship>,
-//     path: &[&str],
-//     input_type: &Type,
-//     fields: Option<&NestedField>,
-// ) -> Result<(Type, Vec<(String, ObjectType)>)> {
-//     match (input_type, fields) {
-//         (t, None) => Ok((t.clone(), Default::default())),
-//         (t @ Type::Scalar(_) | t @ Type::ExtendedJSON, _) => Ok((t.clone(), Default::default())),
-//
-//         (Type::Nullable(t), _) => {
-//             let (underlying_type, object_types) =
-//                 prune_type_to_field_selection(query_context, relationships, path, t, fields)?;
-//             Ok((Type::Nullable(Box::new(underlying_type)), object_types))
-//         }
-//         (Type::ArrayOf(t), Some(NestedField::Array(nested))) => {
-//             let (element_type, object_types) = prune_type_to_field_selection(
-//                 query_context,
-//                 relationships,
-//                 path,
-//                 t,
-//                 Some(&nested.fields),
-//             )?;
-//             Ok((Type::ArrayOf(Box::new(element_type)), object_types))
-//         }
-//         (Type::Object(t), Some(NestedField::Object(nested))) => {
-//             object_type_for_field_subset(query_context, relationships, path, t, nested)
-//         }
-//
-//         (_, Some(NestedField::Array(_))) => Err(QueryResponseError::ExpectedArray {
-//             path: path_to_owned(path),
-//         }),
-//         (_, Some(NestedField::Object(_))) => Err(QueryResponseError::ExpectedObject {
-//             path: path_to_owned(path),
-//         }),
-//     }
-// }
-
-// /// We have a configured object type for a collection, or for a nested object in a collection. But
-// /// the query may request a subset of fields from that object type. We need to compute a new object
-// /// type for that requested subset.
-// ///
-// /// Returns a reference to the newly-generated object type, and a list of all new object types with
-// /// generated names including the newly-generated object type, and types for any nested objects.
-// fn object_type_for_field_subset(
-//     query_context: &QueryContext<'_>,
-//     relationships: &BTreeMap<String, Relationship>,
-//     path: &[&str],
-//     object_type_name: &str,
-//     requested_fields: &NestedObject,
-// ) -> Result<(Type, Vec<(String, ObjectType)>)> {
-//     let object_type = query_context.find_object_type(object_type_name)?.value;
-//     let (fields, object_type_sets): (_, Vec<Vec<_>>) = requested_fields
-//         .fields
-//         .iter()
-//         .map(|(name, requested_field)| {
-//             let (object_field, object_types) = requested_field_definition(
-//                 query_context,
-//                 relationships,
-//                 &append_to_path(path, [name.as_ref()]),
-//                 object_type_name,
-//                 object_type,
-//                 requested_field,
-//             )?;
-//             Ok(((name.clone(), object_field), object_types))
-//         })
-//         .process_results::<_, _, QueryResponseError, _>(|iter| iter.unzip())?;
-//
-//     let pruned_object_type = ObjectType {
-//         fields,
-//         description: None,
-//     };
-//     let (pruned_object_type_name, pruned_type) = named_type(path, "fields");
-//
-//     let mut object_types: Vec<(String, ObjectType)> =
-//         object_type_sets.into_iter().flatten().collect();
-//     object_types.push((pruned_object_type_name, pruned_object_type));
-//
-//     Ok((pruned_type, object_types))
-// }
-
-// /// Given an object type for a value, and a requested field from that value, produce an updated
-// /// object field definition to match the request. This must take into account aliasing where the
-// /// name of the requested field maps to a different name on the underlying type.
-// fn requested_field_definition(
-//     query_context: &QueryContext<'_>,
-//     relationships: &BTreeMap<String, Relationship>,
-//     path: &[&str],
-//     object_type_name: &str,
-//     object_type: &ObjectType,
-//     requested_field: &Field,
-// ) -> Result<(ObjectField, Vec<(String, ObjectType)>)> {
-//     match requested_field {
-//         Field::Column { column, fields } => {
-//             let field_def = object_type.fields.get(column).ok_or_else(|| {
-//                 ConversionError::UnknownObjectTypeField {
-//                     object_type: object_type_name.to_owned(),
-//                     field_name: column.to_owned(),
-//                     path: path_to_owned(path),
-//                 }
-//             })?;
-//             let (field_type, object_types) = prune_type_to_field_selection(
-//                 query_context,
-//                 relationships,
-//                 path,
-//                 &field_def.r#type,
-//                 fields.as_ref(),
-//             )?;
-//             let pruned_field = ObjectField {
-//                 r#type: field_type,
-//                 description: None,
-//             };
-//             Ok((pruned_field, object_types))
-//         }
-//         Field::Relationship {
-//             query,
-//             relationship,
-//             ..
-//         } => {
-//             let (relation_type, temp_object_types) =
-//                 type_for_relation_field(query_context, relationships, path, query, relationship)?;
-//             let relation_field = ObjectField {
-//                 r#type: relation_type,
-//                 description: None,
-//             };
-//             Ok((relation_field, temp_object_types))
-//         }
-//     }
-// }
 
 fn parse_single_document<T>(documents: Vec<bson::Document>) -> Result<T>
 where

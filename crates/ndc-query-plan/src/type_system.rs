@@ -16,6 +16,15 @@ pub enum Type<ScalarType> {
     Nullable(Box<Type<ScalarType>>),
 }
 
+impl<S> Type<S> {
+    pub fn into_nullable(self) -> Self {
+        match self {
+            t @ Type::Nullable(_) => t,
+            t => Type::Nullable(Box::new(t)),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ObjectType<ScalarType> {
     /// A type name may be tracked for error reporting. The name does not affect how query plans

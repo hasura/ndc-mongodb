@@ -9,7 +9,7 @@ mod native_query;
 mod pipeline;
 mod query_target;
 mod relations;
-mod response;
+pub mod response;
 pub mod serialization;
 
 use configuration::Configuration;

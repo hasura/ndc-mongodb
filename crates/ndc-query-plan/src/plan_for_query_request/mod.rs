@@ -1,7 +1,9 @@
 mod helpers;
 pub mod query_context;
 pub mod query_plan_error;
+mod query_plan_state;
 mod query_traversal;
+pub mod type_annotated_field;
 
 use std::collections::BTreeMap;
 
@@ -25,7 +27,7 @@ fn find_object_field<'a, S>(
 ) -> Result<&'a plan::Type<S>> {
     object_type.fields.get(field_name).ok_or_else(|| {
         QueryPlanError::UnknownObjectTypeField {
-            object_type: object_type.name.clone().unwrap_or_default(),
+            object_type: object_type.name.clone(),
             field_name: field_name.to_string(),
             path: Default::default(), // TODO: set a path for more helpful error reporting
         }

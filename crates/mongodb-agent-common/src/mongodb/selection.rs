@@ -6,7 +6,7 @@ use crate::{
     interface_types::MongoAgentError,
     mongo_query_plan::{Field, QueryPlan, Type},
     mongodb::sanitize::get_field,
-    query::{is_response_faceted, serialization::is_nullable},
+    query::serialization::is_nullable,
 };
 
 /// Wraps a BSON document that represents a MongoDB "expression" that constructs a document based
@@ -76,7 +76,7 @@ fn selection_for_field(
             let bson_col_path = value_or_null(col_path, column_type);
             Ok(bson_col_path)
         }
-        Field::NestedObject { column, query } => {
+        Field::NestedObject { column, query, .. } => {
             let nested_parent_columns = append_to_path(parent_columns, column);
             let nested_parent_col_path = format!("${}", nested_parent_columns.join("."));
             let fields = query.fields.clone().unwrap_or_default();
@@ -90,9 +90,10 @@ fn selection_for_field(
             limit: _,
             offset: _,
             predicate: _,
+            ..
         } => selection_for_array(parent_columns, field_name, field, 0),
-        Field::Relationship { query, .. } => {
-            if is_response_faceted(query) {
+        Field::Relationship { aggregates, .. } => {
+            if aggregates.is_some() {
                 Ok(doc! { "$first": get_field(field_name) }.into())
             } else {
                 Ok(doc! { "rows": get_field(field_name) }.into())
@@ -108,7 +109,7 @@ fn selection_for_array(
     array_nesting_level: usize,
 ) -> Result<Bson, MongoAgentError> {
     match field {
-        Field::NestedObject { column, query } => {
+        Field::NestedObject { column, query, .. } => {
             let nested_parent_columns = append_to_path(parent_columns, column);
             let nested_parent_col_path = format!("${}", nested_parent_columns.join("."));
             let fields = query.fields.clone().unwrap_or_default();
@@ -127,6 +128,7 @@ fn selection_for_array(
             limit: _,
             offset: _,
             predicate: _,
+            ..
         } => selection_for_array(parent_columns, field_name, field, array_nesting_level + 1),
         _ => selection_for_field(parent_columns, field_name, field),
     }

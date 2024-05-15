@@ -5,6 +5,10 @@ use ndc_query_plan::ConnectorTypes;
 
 use crate::{comparison_function::ComparisonFunction, scalar_types_capabilities::SCALAR_TYPES};
 
+pub use ndc_query_plan::{
+    ColumnSelector, Nullable, OrderBy, OrderByTarget, NON_NULLABLE, NULLABLE,
+};
+
 #[derive(Clone, Debug)]
 pub struct MongoConnectorTypes {}
 
@@ -18,15 +22,12 @@ impl ConnectorTypes for MongoConnectorTypes {
 }
 
 pub type Aggregate = ndc_query_plan::Aggregate<MongoConnectorTypes>;
-pub type ColumnSelector = ndc_query_plan::ColumnSelector;
 pub type ComparisonTarget = ndc_query_plan::ComparisonTarget<MongoConnectorTypes>;
 pub type ComparisonValue = ndc_query_plan::ComparisonValue<MongoConnectorTypes>;
 pub type ExistsInCollection = ndc_query_plan::ExistsInCollection;
 pub type Expression = ndc_query_plan::Expression<MongoConnectorTypes>;
 pub type Field = ndc_query_plan::Field<MongoConnectorTypes>;
 pub type ObjectType = ndc_query_plan::ObjectType<MongoScalarType>;
-pub type OrderBy = ndc_query_plan::OrderBy;
-pub type OrderByTarget = ndc_query_plan::OrderByTarget;
 pub type Query = ndc_query_plan::Query<MongoConnectorTypes>;
 pub type QueryContext<'a> = ndc_query_plan::QueryContext<'a, MongoConnectorTypes>;
 pub type QueryPlan = ndc_query_plan::QueryPlan<MongoConnectorTypes>;
