@@ -9,30 +9,18 @@ pub use ndc_query_plan::{
     ColumnSelector, Nullable, OrderBy, OrderByTarget, NON_NULLABLE, NULLABLE,
 };
 
-#[derive(Clone, Debug)]
-pub struct MongoConnectorTypes {}
-
-impl ConnectorTypes for MongoConnectorTypes {
-    type ScalarType = MongoScalarType;
-    type BinaryOperatorType = ComparisonFunction;
-
-    fn lookup_scalar_type(type_name: &str) -> Option<Self::ScalarType> {
-        type_name.try_into().ok()
-    }
-}
-
-pub type Aggregate = ndc_query_plan::Aggregate<MongoConnectorTypes>;
-pub type ComparisonTarget = ndc_query_plan::ComparisonTarget<MongoConnectorTypes>;
-pub type ComparisonValue = ndc_query_plan::ComparisonValue<MongoConnectorTypes>;
+pub type Aggregate = ndc_query_plan::Aggregate<Configuration>;
+pub type ComparisonTarget = ndc_query_plan::ComparisonTarget<Configuration>;
+pub type ComparisonValue = ndc_query_plan::ComparisonValue<Configuration>;
 pub type ExistsInCollection = ndc_query_plan::ExistsInCollection;
-pub type Expression = ndc_query_plan::Expression<MongoConnectorTypes>;
-pub type Field = ndc_query_plan::Field<MongoConnectorTypes>;
+pub type Expression = ndc_query_plan::Expression<Configuration>;
+pub type Field = ndc_query_plan::Field<Configuration>;
 pub type ObjectType = ndc_query_plan::ObjectType<MongoScalarType>;
-pub type Query = ndc_query_plan::Query<MongoConnectorTypes>;
-pub type QueryContext<'a> = ndc_query_plan::QueryContext<'a, MongoConnectorTypes>;
-pub type QueryPlan = ndc_query_plan::QueryPlan<MongoConnectorTypes>;
-pub type Relationship = ndc_query_plan::Relationship<MongoConnectorTypes>;
-pub type Relationships = ndc_query_plan::Relationships<MongoConnectorTypes>;
+pub type Query = ndc_query_plan::Query<Configuration>;
+pub type QueryContext<'a> = ndc_query_plan::QueryContext<'a, Configuration>;
+pub type QueryPlan = ndc_query_plan::QueryPlan<Configuration>;
+pub type Relationship = ndc_query_plan::Relationship<Configuration>;
+pub type Relationships = ndc_query_plan::Relationships<Configuration>;
 pub type Type = ndc_query_plan::Type<MongoScalarType>;
 
 /// Produce a query context from the connector configuration to direct query request processing

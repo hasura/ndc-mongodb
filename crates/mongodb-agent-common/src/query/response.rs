@@ -179,7 +179,10 @@ fn type_for_row_set(
         type_fields.insert("rows".to_owned(), Type::ArrayOf(Box::new(row_type)));
     }
 
-    Ok(Type::Object(ObjectType { fields: type_fields, name: None }))
+    Ok(Type::Object(ObjectType {
+        fields: type_fields,
+        name: None,
+    }))
 }
 
 // TODO: infer response type for aggregates MDB-130
@@ -202,7 +205,7 @@ fn type_for_row(path: &[&str], query_fields: &IndexMap<String, Field>) -> Result
 }
 
 pub fn type_for_field(path: &[&str], field_definition: &Field) -> Result<Type> {
-    let field_type = match field_definition {
+    let field_type: Type = match field_definition {
         Field::Column { column_type, .. } => column_type.clone(),
         Field::NestedObject {
             query, is_nullable, ..
@@ -303,7 +306,7 @@ mod tests {
             },
         }];
 
-        let response = serialize_query_response(&query_context, &request, response_documents)?;
+        let response = serialize_query_response(&request, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -342,7 +345,7 @@ mod tests {
             ],
         }];
 
-        let response = serialize_query_response(&query_context, &request, response_documents)?;
+        let response = serialize_query_response(&request, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -388,7 +391,7 @@ mod tests {
             },
         }];
 
-        let response = serialize_query_response(&query_context, &request, response_documents)?;
+        let response = serialize_query_response(&request, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -443,7 +446,7 @@ mod tests {
             "price_extjson": Bson::Decimal128(bson::Decimal128::from_str("-4.9999999999").unwrap()),
         }];
 
-        let response = serialize_query_response(&query_context, &request, response_documents)?;
+        let response = serialize_query_response(&request, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -497,7 +500,7 @@ mod tests {
             },
         }];
 
-        let response = serialize_query_response(&query_context, &request, response_documents)?;
+        let response = serialize_query_response(&request, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {

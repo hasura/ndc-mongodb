@@ -97,19 +97,6 @@ impl QueryContext<'_> {
     }
 }
 
-fn find_object_field<'a>(
-    object_type: &'a WithNameRef<schema::ObjectType>,
-    field_name: &str,
-) -> Result<&'a schema::ObjectField, ConversionError> {
-    object_type.value.fields.get(field_name).ok_or_else(|| {
-        ConversionError::UnknownObjectTypeField {
-            object_type: object_type.name.to_string(),
-            field_name: field_name.to_string(),
-            path: Default::default(), // TODO: set a path for more helpful error reporting
-        }
-    })
-}
-
 pub fn v3_to_v2_query_request(
     context: &QueryContext,
     request: v3::QueryRequest,

@@ -9,17 +9,9 @@ use nonempty::NonEmpty;
 
 use crate::Type;
 
-pub trait ConnectorTypes: Clone {
+pub trait ConnectorTypes {
     type ScalarType: Clone + Debug + PartialEq;
-    type BinaryOperatorType: Clone + Debug + PartialEq;
-
-    /// Get the specific scalar type for this connector by name if the given name is a scalar type
-    /// name. (This method will also be called for object type names in which case it should return
-    /// `None`.)
-    fn lookup_scalar_type(type_name: &str) -> Option<Self::ScalarType>;
-    // TODO: How about an `NdcContext` trait that replaces the `QueryContext` type, and that has
-    // a constraint requiring an implementation of `ConnectorTypes`? We could move
-    // `lookup_scalar_type` to that trait. We could implement `NdcContext` for `Configuration`.
+    type BinaryOperator: Clone + Debug + PartialEq;
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -30,7 +22,7 @@ pub struct QueryPlan<T: ConnectorTypes> {
     pub variables: Option<Vec<VariableSet>>,
 
     // TODO: type for unrelated collection
-    pub unrelated_collections: BTreeMap<String, ()>,
+    pub unrelated_collections: BTreeMap<String, UnrelatedJoin<T>>,
 }
 
 pub type VariableSet = BTreeMap<String, serde_json::Value>;
@@ -43,7 +35,7 @@ pub struct Query<T: ConnectorTypes> {
     pub limit: Option<u32>,
     pub aggregates_limit: Option<u32>,
     pub offset: Option<u32>,
-    pub order_by: Option<OrderBy>,
+    pub order_by: Option<OrderBy<T>>,
     pub predicate: Option<Expression<T>>,
 
     /// Relationships referenced by fields and expressions in this query or sub-query. Does not
@@ -94,7 +86,14 @@ pub struct Relationship<T: ConnectorTypes> {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Aggregate<CollTypes> {
+pub struct UnrelatedJoin<T: ConnectorTypes> {
+    pub target_collection: String,
+    pub arguments: BTreeMap<String, RelationshipArgument>,
+    pub query: Query<T>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Aggregate<T: ConnectorTypes> {
     ColumnCount {
         /// The column to apply the count aggregate function to
         column: String,
@@ -106,9 +105,9 @@ pub enum Aggregate<CollTypes> {
         column: String,
         /// Single column aggregate function name.
         function: String,
-        result_type: Type<CollTypes>,
+        result_type: Type<T::ScalarType>,
     },
-    StarCount {},
+    StarCount,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -126,7 +125,7 @@ pub enum Field<T: ConnectorTypes> {
         field: Box<Field<T>>,
         limit: Option<u32>,
         offset: Option<u32>,
-        predicate: Option<OrderBy>,
+        predicate: Option<OrderBy<T>>,
         is_nullable: Nullable,
     },
     Relationship {
@@ -154,7 +153,7 @@ pub enum Expression<T: ConnectorTypes> {
     },
     BinaryComparisonOperator {
         column: ComparisonTarget<T>,
-        operator: T::BinaryOperatorType,
+        operator: T::BinaryOperator,
         value: ComparisonValue<T>,
     },
     Exists {
@@ -167,19 +166,19 @@ pub enum Expression<T: ConnectorTypes> {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct OrderBy {
+pub struct OrderBy<T: ConnectorTypes> {
     /// The elements to order by, in priority order
-    pub elements: Vec<OrderByElement>,
+    pub elements: Vec<OrderByElement<T>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct OrderByElement {
+pub struct OrderByElement<T: ConnectorTypes> {
     pub order_direction: OrderDirection,
-    pub target: OrderByTarget,
+    pub target: OrderByTarget<T>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum OrderByTarget {
+pub enum OrderByTarget<T: ConnectorTypes> {
     Column {
         /// The name of the column
         name: String,
@@ -194,6 +193,8 @@ pub enum OrderByTarget {
         column: String,
         /// Single column aggregate function name.
         function: String,
+
+        result_type: Type<T::ScalarType>,
 
         /// Any relationships to traverse to reach this aggregate. These are translated from
         /// [ndc_models::OrderByElement] values in the [ndc_models::QueryRequest] to names of relation
@@ -226,6 +227,15 @@ pub enum ComparisonTarget<T: ConnectorTypes> {
     },
 }
 
+impl<T: ConnectorTypes> ComparisonTarget<T> {
+    pub fn get_column_type(&self) -> &Type<T::ScalarType> {
+        match self {
+            ComparisonTarget::Column { column_type, .. } => column_type,
+            ComparisonTarget::RootCollectionColumn { column_type, .. } => column_type,
+        }
+    }
+}
+
 /// When referencing a column value we may want to reference a field inside a nested object. In
 /// that case the [ColumnSelector::Path] variant is used. If the entire column value is referenced
 /// then [ColumnSelector::Column] is used.
@@ -247,6 +257,16 @@ pub enum ComparisonValue<T: ConnectorTypes> {
     Variable {
         name: String,
         variable_type: Type<T::ScalarType>,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ComparisonOperatorDefinition<T: ConnectorTypes> {
+    Equal,
+    In,
+    Custom {
+        /// The type of the argument to this operator
+        argument_type: Type<T::ScalarType>,
     },
 }
 

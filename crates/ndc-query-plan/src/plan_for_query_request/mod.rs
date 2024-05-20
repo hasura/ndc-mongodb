@@ -5,157 +5,98 @@ mod query_plan_state;
 mod query_traversal;
 pub mod type_annotated_field;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 
-use crate::{self as plan, ConnectorTypes, QueryPlan};
+use crate::{self as plan, inline_object_types, type_annotated_field, ConnectorTypes, QueryPlan};
+use indexmap::IndexMap;
 use itertools::Itertools as _;
 use ndc::QueryRequest;
 use ndc_models as ndc;
 
 use self::{
-    helpers::lookup_relationship,
+    helpers::{find_object_field, lookup_relationship},
     query_context::QueryContext,
     query_plan_error::QueryPlanError,
+    query_plan_state::QueryPlanState,
     query_traversal::{query_traversal, Node, TraversalStep},
 };
 
 type Result<T> = std::result::Result<T, QueryPlanError>;
 
-fn find_object_field<'a, S>(
-    object_type: &'a plan::ObjectType<S>,
-    field_name: &str,
-) -> Result<&'a plan::Type<S>> {
-    object_type.fields.get(field_name).ok_or_else(|| {
-        QueryPlanError::UnknownObjectTypeField {
-            object_type: object_type.name.clone(),
-            field_name: field_name.to_string(),
-            path: Default::default(), // TODO: set a path for more helpful error reporting
-        }
+pub fn plan_for_query_request<T: QueryContext>(
+    context: &T,
+    request: QueryRequest,
+) -> Result<QueryPlan<T>> {
+    let collection_object_type = context.find_collection_object_type(&request.collection)?;
+
+    Ok(QueryPlan {
+        collection: request.collection,
+        arguments: request.arguments,
+        query: plan_for_query(
+            context,
+            &request.collection_relationships,
+            &collection_object_type,
+            request.query,
+            &collection_object_type,
+        )?,
+        variables: request.variables,
+        unrelated_collections: todo!(),
     })
 }
 
-pub fn plan_for_query_request<S: ConnectorTypes>(
-    context: &QueryContext<S>,
-    request: QueryRequest,
-) -> Result<QueryPlan<S>> {
-    todo!()
-}
+fn plan_for_query<T: QueryContext>(
+    context: &T,
+    collection_relationships: &BTreeMap<String, ndc::Relationship>,
+    root_collection_object_type: &plan::ObjectType<T::ScalarType>,
+    query: ndc::Query,
+    collection_object_type: &plan::ObjectType<T::ScalarType>,
+) -> Result<plan::Query<T>> {
+    let plan_state = QueryPlanState::new(context);
 
-// pub fn plan_for_query_request<S: Clone>(
-//     context: &QueryContext<S>,
-//     request: QueryRequest,
-// ) -> Result<QueryPlan<S>> {
-//     let collection_object_type = context.find_collection_object_type(&request.collection)?;
-//
-//     Ok(QueryPlan {
-//         // relationships: ndc_to_v2_relationships(&request)?,
-//         collection: request.collection,
-//         arguments: request.arguments,
-//         query: Box::new(plan_for_query(
-//             context,
-//             &request.collection_relationships,
-//             &collection_object_type,
-//             request.query,
-//             &collection_object_type,
-//         )?),
-//
-//         // We are using v2 types that have been augmented with a `variables` field (even though
-//         // that is not part of the v2 API). For queries translated from ndc we use `variables`
-//         // instead of `foreach`.
-//         foreach: None,
-//         variables: request.variables,
-//     })
-// }
-//
-// fn plan_for_query<S: Clone>(
-//     context: &QueryContext<S>,
-//     collection_relationships: &BTreeMap<String, ndc::Relationship>,
-//     root_collection_object_type: &WithNameRef<plan::ObjectType<S>>,
-//     query: ndc::Query,
-//     collection_object_type: &WithNameRef<plan::ObjectType<S>>,
-// ) -> Result<plan::Query<S>> {
-//     let aggregates: Option<HashMap<String, plan::Aggregate>> = query
-//         .aggregates
-//         .map(|aggregates| -> Result<_> {
-//             aggregates
-//                 .into_iter()
-//                 .map(|(name, aggregate)| {
-//                     Ok((
-//                         name,
-//                         plan_for_aggregate(context, collection_object_type, aggregate)?,
-//                     ))
-//                 })
-//                 .collect()
-//         })
-//         .transpose()?;
-//
-//     let fields = ndc_to_v2_fields(
-//         context,
-//         collection_relationships,
-//         root_collection_object_type,
-//         collection_object_type,
-//         query.fields,
-//     )?;
-//
-//     let order_by: Option<v2::OrderBy> = query
-//         .order_by
-//         .map(|order_by| -> Result<_> {
-//             let (elements, relations) = order_by
-//                 .elements
-//                 .into_iter()
-//                 .map(|order_by_element| {
-//                     ndc_to_v2_order_by_element(
-//                         context,
-//                         collection_relationships,
-//                         root_collection_object_type,
-//                         collection_object_type,
-//                         order_by_element,
-//                     )
-//                 })
-//                 .collect::<Result<Vec<(_, _)>>>()?
-//                 .into_iter()
-//                 .try_fold(
-//                     (
-//                         Vec::<v2::OrderByElement>::new(),
-//                         HashMap::<String, v2::OrderByRelation>::new(),
-//                     ),
-//                     |(mut acc_elems, mut acc_rels), (elem, rels)| {
-//                         acc_elems.push(elem);
-//                         merge_order_by_relations(&mut acc_rels, rels)?;
-//                         Ok((acc_elems, acc_rels))
-//                     },
-//                 )?;
-//             Ok(v2::OrderBy {
-//                 elements,
-//                 relations,
-//             })
-//         })
-//         .transpose()?;
-//
-//     let limit = optional_32bit_number_to_64bit(query.limit);
-//     let offset = optional_32bit_number_to_64bit(query.offset);
-//
-//     Ok(v2::Query {
-//         aggregates,
-//         aggregates_limit: limit,
-//         fields,
-//         order_by,
-//         limit,
-//         offset,
-//         r#where: query
-//             .predicate
-//             .map(|expr| {
-//                 ndc_to_v2_expression(
-//                     context,
-//                     collection_relationships,
-//                     root_collection_object_type,
-//                     collection_object_type,
-//                     expr,
-//                 )
-//             })
-//             .transpose()?,
-//     })
-// }
+    let aggregates = plan_for_aggregates(context, collection_object_type, query.aggregates)?;
+    let fields = plan_for_fields(&mut plan_state, collection_object_type, query.fields)?;
+
+    let order_by = query
+        .order_by
+        .map(|order_by| {
+            plan_for_order_by(
+                context,
+                &mut plan_state,
+                collection_relationships,
+                root_collection_object_type,
+                collection_object_type,
+                order_by,
+            )
+        })
+        .transpose()?;
+
+    let limit = query.limit;
+    let offset = query.offset;
+
+    let predicate = query
+        .predicate
+        .map(|expr| {
+            plan_for_expression(
+                context,
+                collection_relationships,
+                root_collection_object_type,
+                collection_object_type,
+                expr,
+            )
+        })
+        .transpose()?;
+
+    Ok(plan::Query {
+        aggregates,
+        aggregates_limit: limit,
+        fields,
+        order_by,
+        limit,
+        offset,
+        predicate,
+        relationships: plan_state.into_relationships(),
+    })
+}
 //
 // fn merge_order_by_relations(
 //     rels1: &mut HashMap<String, v2::OrderByRelation>,
@@ -176,175 +117,195 @@ pub fn plan_for_query_request<S: ConnectorTypes>(
 //     }
 //     Ok(())
 // }
-//
-// fn plan_for_aggregate(
-//     context: &QueryContext,
-//     collection_object_type: &WithNameRef<plan::ObjectType>,
-//     aggregate: ndc::Aggregate,
-// ) -> Result<v2::Aggregate> {
-//     match aggregate {
-//         ndc::Aggregate::ColumnCount { column, distinct } => {
-//             Ok(v2::Aggregate::ColumnCount { column, distinct })
-//         }
-//         ndc::Aggregate::SingleColumn { column, function } => {
-//             let object_type_field = find_object_field(collection_object_type, column.as_ref())?;
-//             let column_scalar_type_name = get_scalar_type_name(&object_type_field.r#type)?;
-//             let aggregate_function = context
-//                 .find_aggregation_function_definition(&column_scalar_type_name, &function)?;
-//             let result_type = type_to_type_name(&aggregate_function.result_type)?;
-//             Ok(v2::Aggregate::SingleColumn {
-//                 column,
-//                 function,
-//                 result_type,
-//             })
-//         }
-//         ndc::Aggregate::StarCount {} => Ok(v2::Aggregate::StarCount {}),
-//     }
-// }
-//
-// fn type_to_type_name(t: &ndc::Type) -> Result<String> {
-//     match t {
-//         ndc::Type::Named { name } => Ok(name.clone()),
-//         ndc::Type::Nullable { underlying_type } => type_to_type_name(underlying_type),
-//         ndc::Type::Array { .. } => Err(QueryPlanError::TypeMismatch(format!(
-//             "Expected a named type, but got an array type: {t:?}"
-//         ))),
-//         ndc::Type::Predicate { .. } => Err(QueryPlanError::TypeMismatch(format!(
-//             "Expected a named type, but got a predicate type: {t:?}"
-//         ))),
-//     }
-// }
-//
-// fn ndc_to_v2_fields(
-//     context: &QueryContext,
-//     collection_relationships: &BTreeMap<String, ndc::Relationship>,
-//     root_collection_object_type: &WithNameRef<plan::ObjectType>,
-//     object_type: &WithNameRef<plan::ObjectType>,
-//     ndc_fields: Option<IndexMap<String, ndc::Field>>,
-// ) -> Result<Option<HashMap<String, v2::Field>>> {
-//     let v2_fields: Option<HashMap<String, v2::Field>> = ndc_fields
-//         .map(|fields| {
-//             fields
-//                 .into_iter()
-//                 .map(|(name, field)| {
-//                     Ok((
-//                         name,
-//                         ndc_to_v2_field(
-//                             context,
-//                             collection_relationships,
-//                             root_collection_object_type,
-//                             object_type,
-//                             field,
-//                         )?,
-//                     ))
-//                 })
-//                 .collect::<Result<_>>()
-//         })
-//         .transpose()?;
-//     Ok(v2_fields)
-// }
-//
-// fn ndc_to_v2_field(
-//     context: &QueryContext,
-//     collection_relationships: &BTreeMap<String, ndc::Relationship>,
-//     root_collection_object_type: &WithNameRef<plan::ObjectType>,
-//     object_type: &WithNameRef<plan::ObjectType>,
-//     field: ndc::Field,
-// ) -> Result<v2::Field> {
-//     match field {
-//         ndc::Field::Column { column, fields } => {
-//             let object_type_field = find_object_field(object_type, column.as_ref())?;
-//             ndc_to_v2_nested_field(
-//                 context,
-//                 collection_relationships,
-//                 root_collection_object_type,
-//                 column,
-//                 &object_type_field.r#type,
-//                 fields,
-//             )
-//         }
-//         ndc::Field::Relationship {
-//             query,
-//             relationship,
-//             arguments: _,
-//         } => {
-//             let ndc_relationship = lookup_relationship(collection_relationships, &relationship)?;
-//             let collection_object_type =
-//                 context.find_collection_object_type(&ndc_relationship.target_collection)?;
-//             Ok(v2::Field::Relationship {
-//                 query: Box::new(plan_for_query(
-//                     context,
-//                     collection_relationships,
-//                     root_collection_object_type,
-//                     *query,
-//                     &collection_object_type,
-//                 )?),
-//                 relationship,
-//             })
-//         }
-//     }
-// }
-//
-// fn ndc_to_v2_nested_field(
-//     context: &QueryContext,
-//     collection_relationships: &BTreeMap<String, ndc::Relationship>,
-//     root_collection_object_type: &WithNameRef<plan::ObjectType>,
-//     column: String,
-//     schema_type: &schema::Type,
-//     nested_field: Option<ndc::NestedField>,
-// ) -> Result<v2::Field> {
-//     match schema_type {
-//         schema::Type::ExtendedJSON => {
-//             Ok(v2::Field::Column {
-//                 column,
-//                 column_type: mongodb_support::EXTENDED_JSON_TYPE_NAME.to_string(),
-//             })
-//         }
-//         schema::Type::Scalar(bson_scalar_type) => {
-//             Ok(v2::Field::Column {
-//                 column,
-//                 column_type: bson_scalar_type.graphql_name(),
-//             })
-//         },
-//         schema::Type::Nullable(underlying_type) => ndc_to_v2_nested_field(context, collection_relationships, root_collection_object_type, column, underlying_type, nested_field),
-//         schema::Type::ArrayOf(element_type) => {
-//             let inner_nested_field = match nested_field {
-//                 None => Ok(None),
-//                 Some(ndc::NestedField::Object(_nested_object)) => Err(QueryPlanError::TypeMismatch("Expected an array nested field selection, but got an object nested field selection instead".into())),
-//                 Some(ndc::NestedField::Array(nested_array)) => Ok(Some(*nested_array.fields)),
-//             }?;
-//             let nested_v2_field = ndc_to_v2_nested_field(context, collection_relationships, root_collection_object_type, column, element_type, inner_nested_field)?;
-//             Ok(v2::Field::NestedArray {
-//                 field: Box::new(nested_v2_field),
-//                 limit: None,
-//                 offset: None,
-//                 r#where: None,
-//             })
-//         },
-//         schema::Type::Object(object_type_name) => {
-//             match nested_field {
-//                 None => {
-//                     Ok(v2::Field::Column {
-//                         column,
-//                         column_type: object_type_name.clone(),
-//                     })
-//                 },
-//                 Some(ndc::NestedField::Object(nested_object)) => {
-//                     let object_type = context.find_object_type(object_type_name.as_ref())?;
-//                     let mut query = v2::Query::new();
-//                     query.fields = ndc_to_v2_fields(context, collection_relationships, root_collection_object_type, &object_type, Some(nested_object.fields))?;
-//                     Ok(v2::Field::NestedObject {
-//                         column,
-//                         query: Box::new(query),
-//                     })
-//                 },
-//                 Some(ndc::NestedField::Array(_nested_array)) =>
-//                     Err(QueryPlanError::TypeMismatch("Expected an array nested field selection, but got an object nested field selection instead".into())),
-//             }
-//         },
-//     }
-// }
-//
+
+fn plan_for_aggregates<T: QueryContext>(
+    context: &T,
+    collection_object_type: &plan::ObjectType<T::ScalarType>,
+    ndc_aggregates: Option<IndexMap<String, ndc::Aggregate>>,
+) -> Result<Option<IndexMap<String, plan::Aggregate<T::ScalarType>>>> {
+    ndc_aggregates
+        .map(|aggregates| -> Result<_> {
+            aggregates
+                .into_iter()
+                .map(|(name, aggregate)| {
+                    Ok((
+                        name,
+                        plan_for_aggregate(context, collection_object_type, aggregate)?,
+                    ))
+                })
+                .collect()
+        })
+        .transpose()
+}
+
+fn plan_for_aggregate<T: QueryContext>(
+    context: &T,
+    collection_object_type: &plan::ObjectType<T::ScalarType>,
+    aggregate: ndc::Aggregate,
+) -> Result<plan::Aggregate<T::ScalarType>> {
+    match aggregate {
+        ndc::Aggregate::ColumnCount { column, distinct } => {
+            Ok(plan::Aggregate::ColumnCount { column, distinct })
+        }
+        ndc::Aggregate::SingleColumn { column, function } => {
+            let object_type_field_type =
+                find_object_field(collection_object_type, column.as_ref())?;
+            // let column_scalar_type_name = get_scalar_type_name(&object_type_field.r#type)?;
+            let aggregate_function =
+                context.find_aggregation_function_definition(object_type_field_type, &function)?;
+            let result_type = context.ndc_to_plan_type(&aggregate_function.result_type)?;
+            Ok(plan::Aggregate::SingleColumn {
+                column,
+                function,
+                result_type,
+            })
+        }
+        ndc::Aggregate::StarCount {} => Ok(plan::Aggregate::StarCount {}),
+    }
+}
+
+fn plan_for_fields<T: QueryContext>(
+    plan_state: &mut QueryPlanState<'_, T>,
+    collection_object_type: &plan::ObjectType<T::ScalarType>,
+    ndc_fields: Option<IndexMap<String, ndc::Field>>,
+) -> Result<Option<IndexMap<String, plan::Field<T>>>> {
+    let plan_fields: Option<IndexMap<String, plan::Field<T>>> = ndc_fields
+        .map(|fields| {
+            fields
+                .into_iter()
+                .map(|(name, field)| {
+                    Ok((
+                        name,
+                        type_annotated_field(plan_state, collection_object_type, field)?,
+                    ))
+                })
+                .collect::<Result<_>>()
+        })
+        .transpose()?;
+    Ok(plan_fields)
+}
+
+fn plan_for_order_by<T: QueryContext>(
+    context: &T,
+    plan_state: &mut QueryPlanState<'_, T>,
+    collection_relationships: &BTreeMap<String, ndc::Relationship>,
+    root_collection_object_type: &plan::ObjectType<T::ScalarType>,
+    object_type: &plan::ObjectType<T::ScalarType>,
+    order_by: ndc::OrderBy,
+) -> Result<plan::OrderBy<T>> {
+    let elements = order_by
+        .elements
+        .into_iter()
+        .map(|element| {
+            plan_for_order_by_element(
+                context,
+                plan_state,
+                collection_relationships,
+                root_collection_object_type,
+                object_type,
+                element,
+            )
+        })
+        .try_collect()?;
+    Ok(plan::OrderBy { elements })
+}
+
+fn plan_for_order_by_element<T: QueryContext>(
+    context: &T,
+    plan_state: &mut QueryPlanState<'_, T>,
+    collection_relationships: &BTreeMap<String, ndc::Relationship>,
+    root_collection_object_type: &plan::ObjectType<T::ScalarType>,
+    object_type: &plan::ObjectType<T::ScalarType>,
+    element: ndc::OrderByElement,
+) -> Result<plan::OrderByElement<T>> {
+    let target = match element.target {
+        ndc::OrderByTarget::Column { name, path } => plan::OrderByTarget::Column {
+            name,
+            path: plan_for_relationship_path(context, plan_state, path),
+        },
+        ndc::OrderByTarget::SingleColumnAggregate {
+            column,
+            function,
+            path,
+        } => {
+            let end_of_relationship_path_object_type = path
+                .last()
+                .map(|last_path_element| {
+                    let relationship = lookup_relationship(
+                        collection_relationships,
+                        &last_path_element.relationship,
+                    )?;
+                    context.find_collection_object_type(&relationship.target_collection)
+                })
+                .transpose()?;
+            let target_object_type = end_of_relationship_path_object_type
+                .as_ref()
+                .unwrap_or(object_type);
+            let column_type = find_object_field(target_object_type, &column)?;
+            let aggregate_function =
+                context.find_aggregation_function_definition(column_type, &function)?;
+            let result_type = context.ndc_to_plan_type(&aggregate_function.result_type)?;
+
+            plan::OrderByTarget::SingleColumnAggregate {
+                column,
+                function,
+                result_type,
+                path: plan_for_relationship_path(context, plan_state, path),
+            }
+        }
+        ndc::OrderByTarget::StarCountAggregate { path } => {
+            plan::OrderByTarget::StarCountAggregate {
+                path: plan_for_relationship_path(context, plan_state, path),
+            }
+        }
+    };
+
+    Ok(plan::OrderByElement {
+        order_direction: element.order_direction,
+        target,
+    })
+}
+
+// TODO: Wow, this came out weird. I think a recursive version would make more sense. -Jesse
+fn plan_for_relationship_path<T: QueryContext>(
+    context: &T,
+    plan_state: &mut QueryPlanState<'_, T>,
+    relationship_path: Vec<ndc::PathElement>,
+) -> Result<Vec<String>> {
+    let mut nested_states = (0..(relationship_path.len() - 1))
+        .into_iter()
+        .map(|_| &mut QueryPlanState::new(context))
+        .collect::<VecDeque<_>>();
+    nested_states.push_back(plan_state);
+    let mut plan_path = vec![];
+    let _ = relationship_path.into_iter().try_rfold(
+        nested_states.pop_front().unwrap(),
+        |nested_state,
+         ndc::PathElement {
+             relationship,
+             predicate,
+             ..
+         }| {
+            let nested_relationships = nested_state.into_relationships();
+            let state = nested_states.pop_front().unwrap();
+            let query = ndc::Query {
+                predicate: predicate.map(|p| *p),
+                aggregates: None,
+                fields: None,
+                limit: None,
+                offset: None,
+                order_by: None,
+            };
+            let (relation_key, _) =
+                plan_state.register_relationship(relationship, query, nested_relationships)?;
+            plan_path.push(relation_key.to_owned());
+            Ok(state)
+        },
+    )?;
+    plan_path.reverse();
+    Ok(plan_path)
+}
+
 // fn ndc_to_v2_order_by_element(
 //     context: &QueryContext,
 //     collection_relationships: &BTreeMap<String, ndc::Relationship>,
@@ -576,235 +537,250 @@ pub fn plan_for_query_request<S: ConnectorTypes>(
 //     Ok(v2_relationships)
 // }
 //
-// fn ndc_to_v2_expression(
-//     context: &QueryContext,
-//     collection_relationships: &BTreeMap<String, ndc::Relationship>,
-//     root_collection_object_type: &WithNameRef<plan::ObjectType>,
-//     object_type: &WithNameRef<plan::ObjectType>,
-//     expression: ndc::Expression,
-// ) -> Result<v2::Expression> {
-//     match expression {
-//         ndc::Expression::And { expressions } => Ok(v2::Expression::And {
-//             expressions: expressions
-//                 .into_iter()
-//                 .map(|expr| {
-//                     ndc_to_v2_expression(
-//                         context,
-//                         collection_relationships,
-//                         root_collection_object_type,
-//                         object_type,
-//                         expr,
-//                     )
-//                 })
-//                 .collect::<Result<_, _>>()?,
-//         }),
-//         ndc::Expression::Or { expressions } => Ok(v2::Expression::Or {
-//             expressions: expressions
-//                 .into_iter()
-//                 .map(|expr| {
-//                     ndc_to_v2_expression(
-//                         context,
-//                         collection_relationships,
-//                         root_collection_object_type,
-//                         object_type,
-//                         expr,
-//                     )
-//                 })
-//                 .collect::<Result<_, _>>()?,
-//         }),
-//         ndc::Expression::Not { expression } => Ok(v2::Expression::Not {
-//             expression: Box::new(ndc_to_v2_expression(
-//                 context,
-//                 collection_relationships,
-//                 root_collection_object_type,
-//                 object_type,
-//                 *expression,
-//             )?),
-//         }),
-//         ndc::Expression::UnaryComparisonOperator { column, operator } => {
-//             Ok(v2::Expression::ApplyUnaryComparison {
-//                 column: ndc_to_v2_comparison_target(
-//                     root_collection_object_type,
-//                     object_type,
-//                     column,
-//                 )?,
-//                 operator: match operator {
-//                     ndc::UnaryComparisonOperator::IsNull => v2::UnaryComparisonOperator::IsNull,
-//                 },
-//             })
-//         }
-//         ndc::Expression::BinaryComparisonOperator {
-//             column,
-//             operator,
-//             value,
-//         } => ndc_to_v2_binary_comparison(
-//             context,
-//             root_collection_object_type,
-//             object_type,
-//             column,
-//             operator,
-//             value,
-//         ),
-//         ndc::Expression::Exists {
-//             in_collection,
-//             predicate,
-//         } => {
-//             let (in_table, collection_object_type) = match in_collection {
-//                 ndc::ExistsInCollection::Related {
-//                     relationship,
-//                     arguments: _,
-//                 } => {
-//                     let ndc_relationship =
-//                         lookup_relationship(collection_relationships, &relationship)?;
-//                     let collection_object_type =
-//                         context.find_collection_object_type(&ndc_relationship.target_collection)?;
-//                     let in_table = v2::ExistsInTable::RelatedTable { relationship };
-//                     Ok((in_table, collection_object_type))
-//                 }
-//                 ndc::ExistsInCollection::Unrelated {
-//                     collection,
-//                     arguments: _,
-//                 } => {
-//                     let collection_object_type =
-//                         context.find_collection_object_type(&collection)?;
-//                     let in_table = v2::ExistsInTable::UnrelatedTable {
-//                         table: vec![collection],
-//                     };
-//                     Ok((in_table, collection_object_type))
-//                 }
-//             }?;
-//             Ok(v2::Expression::Exists {
-//                 in_table,
-//                 r#where: Box::new(if let Some(predicate) = predicate {
-//                     ndc_to_v2_expression(
-//                         context,
-//                         collection_relationships,
-//                         root_collection_object_type,
-//                         &collection_object_type,
-//                         *predicate,
-//                     )?
-//                 } else {
-//                     // empty expression
-//                     v2::Expression::Or {
-//                         expressions: vec![],
-//                     }
-//                 }),
-//             })
-//         }
-//     }
-// }
-//
-// // TODO: NDC-393 - What do we need to do to handle array comparisons like `in`?. ndc now combines
-// // scalar and array comparisons, v2 separates them
-// fn ndc_to_v2_binary_comparison(
-//     context: &QueryContext,
-//     root_collection_object_type: &WithNameRef<plan::ObjectType>,
-//     object_type: &WithNameRef<plan::ObjectType>,
-//     column: ndc::ComparisonTarget,
-//     operator: String,
-//     value: ndc::ComparisonValue,
-// ) -> Result<v2::Expression> {
-//     let comparison_column =
-//         ndc_to_v2_comparison_target(root_collection_object_type, object_type, column)?;
-//     let operator_definition =
-//         context.find_comparison_operator_definition(&comparison_column.column_type, &operator)?;
-//     let operator = match operator_definition {
-//         ndc::ComparisonOperatorDefinition::Equal => v2::BinaryComparisonOperator::Equal,
-//         _ => v2::BinaryComparisonOperator::CustomBinaryComparisonOperator(operator),
-//     };
-//     Ok(v2::Expression::ApplyBinaryComparison {
-//         value: ndc_to_v2_comparison_value(
-//             root_collection_object_type,
-//             object_type,
-//             comparison_column.column_type.clone(),
-//             value,
-//         )?,
-//         column: comparison_column,
-//         operator,
-//     })
-// }
-//
-// fn get_scalar_type_name(schema_type: &schema::Type) -> Result<String> {
-//     match schema_type {
-//         schema::Type::ExtendedJSON => Ok(mongodb_support::EXTENDED_JSON_TYPE_NAME.to_string()),
-//         schema::Type::Scalar(scalar_type_name) => Ok(scalar_type_name.graphql_name()),
-//         schema::Type::Object(object_name_name) => Err(QueryPlanError::TypeMismatch(format!(
-//             "Expected a scalar type, got the object type {object_name_name}"
-//         ))),
-//         schema::Type::ArrayOf(element_type) => Err(QueryPlanError::TypeMismatch(format!(
-//             "Expected a scalar type, got an array of {element_type:?}"
-//         ))),
-//         schema::Type::Nullable(underlying_type) => get_scalar_type_name(underlying_type),
-//     }
-// }
-//
-// fn ndc_to_v2_comparison_target(
-//     root_collection_object_type: &WithNameRef<plan::ObjectType>,
-//     object_type: &WithNameRef<plan::ObjectType>,
-//     target: ndc::ComparisonTarget,
-// ) -> Result<v2::ComparisonColumn> {
-//     match target {
-//         ndc::ComparisonTarget::Column { name, path } => {
-//             let object_field = find_object_field(object_type, &name)?;
-//             let scalar_type_name = get_scalar_type_name(&object_field.r#type)?;
-//             if !path.is_empty() {
-//                 // This is not supported in the v2 model. ComparisonColumn.path accepts only two values:
-//                 // []/None for the current table, and ["$"] for the RootCollectionColumn (handled below)
-//                 Err(QueryPlanError::NotImplemented(
-//                     "The MongoDB connector does not currently support comparisons against columns from related tables",
-//                 ))
-//             } else {
-//                 Ok(v2::ComparisonColumn {
-//                     column_type: scalar_type_name,
-//                     name: ColumnSelector::Column(name),
-//                     path: None,
-//                 })
-//             }
-//         }
-//         ndc::ComparisonTarget::RootCollectionColumn { name } => {
-//             let object_field = find_object_field(root_collection_object_type, &name)?;
-//             let scalar_type_name = get_scalar_type_name(&object_field.r#type)?;
-//             Ok(v2::ComparisonColumn {
-//                 column_type: scalar_type_name,
-//                 name: ColumnSelector::Column(name),
-//                 path: Some(vec!["$".to_owned()]),
-//             })
-//         }
-//     }
-// }
-//
-// fn ndc_to_v2_comparison_value(
-//     root_collection_object_type: &WithNameRef<plan::ObjectType>,
-//     object_type: &WithNameRef<plan::ObjectType>,
-//     comparison_column_scalar_type: String,
-//     value: ndc::ComparisonValue,
-// ) -> Result<v2::ComparisonValue> {
-//     match value {
-//         ndc::ComparisonValue::Column { column } => {
-//             Ok(v2::ComparisonValue::AnotherColumnComparison {
-//                 column: ndc_to_v2_comparison_target(
-//                     root_collection_object_type,
-//                     object_type,
-//                     column,
-//                 )?,
-//             })
-//         }
-//         ndc::ComparisonValue::Scalar { value } => Ok(v2::ComparisonValue::ScalarValueComparison {
-//             value,
-//             value_type: comparison_column_scalar_type,
-//         }),
-//         ndc::ComparisonValue::Variable { name } => Ok(v2::ComparisonValue::Variable { name }),
-//     }
-// }
-//
-// #[inline]
-// fn optional_32bit_number_to_64bit<A, B>(n: Option<A>) -> Option<B>
-// where
-//     B: From<A>,
-// {
-//     n.map(|input| input.into())
-// }
-//
+fn plan_for_expression<T: QueryContext>(
+    context: &T,
+    plan_state: &mut QueryPlanState<T>,
+    collection_relationships: &BTreeMap<String, ndc::Relationship>,
+    root_collection_object_type: &plan::ObjectType<T::ScalarType>,
+    object_type: &plan::ObjectType<T::ScalarType>,
+    expression: ndc::Expression,
+) -> Result<plan::Expression<T>> {
+    match expression {
+        ndc::Expression::And { expressions } => Ok(plan::Expression::And {
+            expressions: expressions
+                .into_iter()
+                .map(|expr| {
+                    plan_for_expression(
+                        context,
+                        plan_state,
+                        collection_relationships,
+                        root_collection_object_type,
+                        object_type,
+                        expr,
+                    )
+                })
+                .collect::<Result<_, _>>()?,
+        }),
+        ndc::Expression::Or { expressions } => Ok(plan::Expression::Or {
+            expressions: expressions
+                .into_iter()
+                .map(|expr| {
+                    plan_for_expression(
+                        context,
+                        plan_state,
+                        collection_relationships,
+                        root_collection_object_type,
+                        object_type,
+                        expr,
+                    )
+                })
+                .collect::<Result<_, _>>()?,
+        }),
+        ndc::Expression::Not { expression } => Ok(plan::Expression::Not {
+            expression: Box::new(plan_for_expression(
+                context,
+                plan_state,
+                collection_relationships,
+                root_collection_object_type,
+                object_type,
+                *expression,
+            )?),
+        }),
+        ndc::Expression::UnaryComparisonOperator { column, operator } => {
+            Ok(plan::Expression::UnaryComparisonOperator {
+                column: plan_for_comparison_target(
+                    root_collection_object_type,
+                    object_type,
+                    column,
+                )?,
+                operator: match operator {
+                    ndc::UnaryComparisonOperator::IsNull => ndc::UnaryComparisonOperator::IsNull,
+                },
+            })
+        }
+        ndc::Expression::BinaryComparisonOperator {
+            column,
+            operator,
+            value,
+        } => plan_for_binary_comparison(
+            context,
+            root_collection_object_type,
+            object_type,
+            column,
+            operator,
+            value,
+        ),
+        ndc::Expression::Exists {
+            in_collection,
+            predicate,
+        } => {
+            let nested_state = plan_state.state_for_subquery();
+
+            let in_collection = match in_collection {
+                ndc::ExistsInCollection::Related {
+                    relationship,
+                    arguments,
+                } => {
+                    let ndc_relationship =
+                        lookup_relationship(collection_relationships, &relationship)?;
+                    let collection_object_type =
+                        context.find_collection_object_type(&ndc_relationship.target_collection)?;
+
+                    let predicate = predicate
+                        .map(|expression| {
+                            plan_for_expression(
+                                context,
+                                &mut nested_state,
+                                collection_relationships,
+                                root_collection_object_type,
+                                &collection_object_type,
+                                *expression,
+                            )
+                        })
+                        .transpose()?;
+
+                    let relationship_query = plan::Query {
+                        limit: Some(1),
+                        predicate,
+                        relationships: nested_state.into_relationships(),
+                        ..Default::default()
+                    };
+
+                    let (relationship_key, _) = plan_state.register_relationship(
+                        relationship,
+                        arguments,
+                        relationship_query,
+                    )?;
+
+                    let in_collection = plan::ExistsInCollection::Related {
+                        relationship: relationship_key.to_owned(),
+                    };
+
+                    Ok(in_collection)
+                }
+                ndc::ExistsInCollection::Unrelated {
+                    collection,
+                    arguments,
+                } => {
+                    let collection_object_type =
+                        context.find_collection_object_type(&collection)?;
+
+                    let predicate = predicate
+                        .map(|expression| {
+                            plan_for_expression(
+                                context,
+                                &mut nested_state,
+                                collection_relationships,
+                                root_collection_object_type,
+                                &collection_object_type,
+                                *expression,
+                            )
+                        })
+                        .transpose()?;
+
+                    let join_query = plan::Query {
+                        limit: Some(1),
+                        predicate,
+                        relationships: nested_state.into_relationships(),
+                        ..Default::default()
+                    };
+
+                    let (join_key, _) =
+                        plan_state.register_unrelated_join(collection, arguments, join_query);
+
+                    let in_collection = plan::ExistsInCollection::Unrelated {
+                        unrelated_collection: join_key.to_owned(),
+                    };
+                    Ok(in_collection)
+                }
+            }?;
+
+            Ok(plan::Expression::Exists { in_collection })
+        }
+    }
+}
+
+fn plan_for_binary_comparison<T: QueryContext>(
+    context: &T,
+    plan_state: &QueryPlanState<'_, T>,
+    root_collection_object_type: &plan::ObjectType<T::ScalarType>,
+    object_type: &plan::ObjectType<T::ScalarType>,
+    column: ndc::ComparisonTarget,
+    operator: String,
+    value: ndc::ComparisonValue,
+) -> Result<plan::Expression<T>> {
+    let comparison_target =
+        plan_for_comparison_target(root_collection_object_type, object_type, column)?;
+    let op = T::lookup_binary_operator(comparison_target.get_column_type(), &operator)
+        .ok_or_else(|| QueryPlanError::UnknownComparisonOperator(operator))?;
+    let operator_definition = context.comparison_operator_definition(&op);
+    let value_type = match operator_definition {
+        plan::ComparisonOperatorDefinition::Equal => comparison_target.get_column_type().clone(),
+        plan::ComparisonOperatorDefinition::In => {
+            plan::Type::ArrayOf(Box::new(comparison_target.get_column_type().clone()))
+        }
+        plan::ComparisonOperatorDefinition::Custom { argument_type } => argument_type.clone(),
+    };
+    Ok(plan::Expression::BinaryComparisonOperator {
+        operator: op,
+        value: plan_for_comparison_value(
+            root_collection_object_type,
+            object_type,
+            value_type,
+            value,
+        )?,
+        column: comparison_target,
+    })
+}
+
+fn plan_for_comparison_target<T: QueryContext>(
+    context: &T,
+    plan_state: &mut QueryPlanState<'_, T>,
+    root_collection_object_type: &plan::ObjectType<T::ScalarType>,
+    object_type: &plan::ObjectType<T::ScalarType>,
+    target: ndc::ComparisonTarget,
+) -> Result<plan::ComparisonTarget<T>> {
+    match target {
+        ndc::ComparisonTarget::Column { name, path } => {
+            let column_type = find_object_field(object_type, &name)?.clone();
+            let path = plan_for_relationship_path(context, plan_state, path)?;
+            Ok(plan::ComparisonTarget::Column {
+                column_type,
+                name: plan::ColumnSelector::Column(name),
+                path,
+            })
+        }
+        ndc::ComparisonTarget::RootCollectionColumn { name } => {
+            let column_type = find_object_field(root_collection_object_type, &name)?.clone();
+            Ok(plan::ComparisonTarget::RootCollectionColumn {
+                column_type,
+                name: plan::ColumnSelector::Column(name),
+            })
+        }
+    }
+}
+
+fn plan_for_comparison_value<T: QueryContext>(
+    root_collection_object_type: &plan::ObjectType<T::ScalarType>,
+    object_type: &plan::ObjectType<T::ScalarType>,
+    expected_type: plan::Type<T::ScalarType>,
+    value: ndc::ComparisonValue,
+) -> Result<plan::ComparisonValue<T>> {
+    match value {
+        ndc::ComparisonValue::Column { column } => Ok(plan::ComparisonValue::Column {
+            column: plan_for_comparison_target(root_collection_object_type, object_type, column)?,
+        }),
+        ndc::ComparisonValue::Scalar { value } => Ok(plan::ComparisonValue::Scalar {
+            value,
+            value_type: expected_type,
+        }),
+        ndc::ComparisonValue::Variable { name } => Ok(plan::ComparisonValue::Variable {
+            name,
+            variable_type: expected_type,
+        }),
+    }
+}
+
 // fn ndc_to_v2_arguments(
 //     arguments: BTreeMap<String, ndc::Argument>,
 // ) -> HashMap<String, v2::Argument> {

@@ -2,27 +2,26 @@ use itertools::Itertools as _;
 use ndc_models as ndc;
 
 use crate::{
-    ConnectorTypes, Field, Nullable, Query, QueryContext, QueryPlanError, Type, NON_NULLABLE,
-    NULLABLE,
+    Field, Nullable, ObjectType, Query, QueryContext, QueryPlanError, Type, NON_NULLABLE, NULLABLE,
 };
 
-use super::query_plan_state::QueryPlanState;
+use super::{helpers::find_object_field, query_plan_state::QueryPlanState};
 
 type Result<T> = std::result::Result<T, QueryPlanError>;
 
 /// Translates [ndc::Field] to [Field]. The latter includes type annotations.
-pub fn type_annotated_field<T: ConnectorTypes>(
+pub fn type_annotated_field<T: QueryContext>(
     plan_state: &mut QueryPlanState<'_, T>,
-    field_type: &Type<T::ScalarType>,
-    field: &ndc::Field,
+    collection_object_type: &ObjectType<T::ScalarType>,
+    field: ndc::Field,
 ) -> Result<Field<T>> {
-    type_annotated_field_helper(plan_state, field_type, field, &[])
+    type_annotated_field_helper(plan_state, collection_object_type, field, &[])
 }
 
-fn type_annotated_field_helper<T: ConnectorTypes>(
+fn type_annotated_field_helper<T: QueryContext>(
     plan_state: &mut QueryPlanState<'_, T>,
-    field_type: &Type<T::ScalarType>,
-    field: &ndc::Field,
+    collection_object_type: &ObjectType<T::ScalarType>,
+    field: ndc::Field,
     path: &[&str],
 ) -> Result<Field<T>> {
     let field = match field {
@@ -30,8 +29,8 @@ fn type_annotated_field_helper<T: ConnectorTypes>(
             column,
             fields: None,
         } => Field::Column {
-            column: column.clone(),
-            column_type: field_type.clone(),
+            column,
+            column_type: find_object_field(collection_object_type, &column)?.clone(),
         },
 
         ndc::Field::Column {
@@ -40,7 +39,7 @@ fn type_annotated_field_helper<T: ConnectorTypes>(
         } => type_annotated_nested_field_helper(
             plan_state,
             column,
-            field_type,
+            find_object_field(collection_object_type, &column)?.clone(),
             NON_NULLABLE,
             nested_field,
             path,
@@ -52,11 +51,11 @@ fn type_annotated_field_helper<T: ConnectorTypes>(
             ..
         } => {
             let (relationship_key, plan_relationship) =
-                plan_state.register_relationship(relationship, query)?;
+                plan_state.register_relationship(relationship, *query, [])?;
             Field::Relationship {
                 relationship: relationship_key.to_owned(),
-                aggregates: plan_relationship.query.aggregates.clone(),
-                fields: plan_relationship.query.fields.clone(),
+                aggregates: plan_relationship.query.aggregates,
+                fields: plan_relationship.query.fields,
             }
         }
     };
@@ -64,14 +63,14 @@ fn type_annotated_field_helper<T: ConnectorTypes>(
 }
 
 /// Translates [ndc::NestedField] to [Field]. The latter includes type annotations.
-pub fn type_annotated_nested_field<T: ConnectorTypes>(
-    query_context: &QueryContext<'_, T>,
-    result_type: &Type<T::ScalarType>,
-    requested_fields: &ndc::NestedField,
+pub fn type_annotated_nested_field<T: QueryContext>(
+    query_context: &T,
+    result_type: Type<T::ScalarType>,
+    requested_fields: ndc::NestedField,
 ) -> Result<Field<T>> {
     type_annotated_nested_field_helper(
         &mut QueryPlanState::new(query_context),
-        "", // TODO
+        "".to_string(), // TODO
         result_type,
         NON_NULLABLE,
         requested_fields,
@@ -79,12 +78,12 @@ pub fn type_annotated_nested_field<T: ConnectorTypes>(
     )
 }
 
-fn type_annotated_nested_field_helper<T: ConnectorTypes>(
+fn type_annotated_nested_field_helper<T: QueryContext>(
     plan_state: &mut QueryPlanState<'_, T>,
-    field_name: &str,
-    result_type: &Type<T::ScalarType>,
+    field_name: String,
+    result_type: Type<T::ScalarType>,
     is_nullable: Nullable,
-    requested_fields: &ndc::NestedField,
+    requested_fields: ndc::NestedField,
     path: &[&str],
 ) -> Result<Field<T>> {
     let field = match (requested_fields, result_type) {
@@ -96,19 +95,12 @@ fn type_annotated_nested_field_helper<T: ConnectorTypes>(
                         .fields
                         .iter()
                         .map(|(name, field)| {
-                            let field_type = object_type.fields.get(name).ok_or_else(|| {
-                                QueryPlanError::UnknownObjectTypeField {
-                                    object_type: object_type.name.clone(),
-                                    field_name: name.to_owned(),
-                                    path: path_to_owned(path),
-                                }
-                            })?;
                             Ok((
                                 name.clone(),
                                 type_annotated_field_helper(
                                     plan_state,
-                                    field_type,
-                                    field,
+                                    &object_type,
+                                    field.clone(),
                                     &append_to_path(path, [name.as_ref()]),
                                 )?,
                             ))
@@ -122,10 +114,10 @@ fn type_annotated_nested_field_helper<T: ConnectorTypes>(
         (ndc::NestedField::Array(array), Type::ArrayOf(element_type)) => Field::NestedArray {
             field: Box::new(type_annotated_nested_field_helper(
                 plan_state,
-                "", // TODO
-                element_type,
+                "".to_owned(), // TODO
+                *element_type,
                 NON_NULLABLE,
-                &array.fields,
+                *array.fields,
                 &append_to_path(path, ["[]"]),
             )?),
             limit: None,
@@ -135,7 +127,7 @@ fn type_annotated_nested_field_helper<T: ConnectorTypes>(
         },
         (nested, Type::Nullable(t)) => {
             // let path = append_to_path(path, [])
-            type_annotated_nested_field_helper(plan_state, field_name, t, NULLABLE, nested, path)?
+            type_annotated_nested_field_helper(plan_state, field_name, *t, NULLABLE, nested, path)?
         }
         (ndc::NestedField::Object(_), _) => Err(QueryPlanError::ExpectedObject {
             path: vec!["procedure".to_owned()],

@@ -9,8 +9,9 @@ pub use plan_for_query_request::{
     type_annotated_field::{type_annotated_field, type_annotated_nested_field},
 };
 pub use query_plan::{
-    Aggregate, ColumnSelector, ComparisonTarget, ComparisonValue, ConnectorTypes,
-    ExistsInCollection, Expression, Field, Nullable, OrderBy, OrderByTarget, Query, QueryPlan,
-    Relationship, Relationships, VariableSet, NON_NULLABLE, NULLABLE,
+    Aggregate, ColumnSelector, ComparisonOperatorDefinition, ComparisonTarget, ComparisonValue,
+    ConnectorTypes, ExistsInCollection, Expression, Field, Nullable, OrderBy, OrderByElement,
+    OrderByTarget, Query, QueryPlan, Relationship, Relationships, VariableSet, NON_NULLABLE,
+    NULLABLE,
 };
 pub use type_system::{inline_object_types, ObjectType, Type};
