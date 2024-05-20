@@ -4,7 +4,7 @@ pub mod query_plan_error;
 mod query_plan_state;
 pub mod type_annotated_field;
 
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::VecDeque;
 
 use crate::{self as plan, type_annotated_field, QueryPlan};
 use indexmap::IndexMap;
@@ -30,10 +30,9 @@ pub fn plan_for_query_request<T: QueryContext>(
 
     let query = plan_for_query(
         &mut plan_state,
-        &request.collection_relationships,
+        &collection_object_type,
         &collection_object_type,
         request.query,
-        &collection_object_type,
     )?;
 
     let unrelated_collections = plan_state.into_unrelated_collections();
@@ -47,12 +46,11 @@ pub fn plan_for_query_request<T: QueryContext>(
     })
 }
 
-fn plan_for_query<T: QueryContext>(
+pub fn plan_for_query<T: QueryContext>(
     plan_state: &mut QueryPlanState<'_, T>,
-    collection_relationships: &BTreeMap<String, ndc::Relationship>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
-    query: ndc::Query,
     collection_object_type: &plan::ObjectType<T::ScalarType>,
+    query: ndc::Query,
 ) -> Result<plan::Query<T>> {
     let mut plan_state = plan_state.state_for_subquery();
 
@@ -65,7 +63,6 @@ fn plan_for_query<T: QueryContext>(
         .map(|order_by| {
             plan_for_order_by(
                 &mut plan_state,
-                collection_relationships,
                 root_collection_object_type,
                 collection_object_type,
                 order_by,
@@ -153,8 +150,8 @@ fn plan_for_aggregate<T: QueryContext>(
             let object_type_field_type =
                 find_object_field(collection_object_type, column.as_ref())?;
             // let column_scalar_type_name = get_scalar_type_name(&object_type_field.r#type)?;
-            let aggregate_function =
-                context.find_aggregation_function_definition(object_type_field_type, &function)?;
+            let (aggregate_function, definition) =
+                context.find_aggregate_function(object_type_field_type, &function)?;
             let result_type = context.ndc_to_plan_type(&aggregate_function.result_type)?;
             Ok(plan::Aggregate::SingleColumn {
                 column,
@@ -189,7 +186,6 @@ fn plan_for_fields<T: QueryContext>(
 
 fn plan_for_order_by<T: QueryContext>(
     plan_state: &mut QueryPlanState<'_, T>,
-    collection_relationships: &BTreeMap<String, ndc::Relationship>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
     object_type: &plan::ObjectType<T::ScalarType>,
     order_by: ndc::OrderBy,

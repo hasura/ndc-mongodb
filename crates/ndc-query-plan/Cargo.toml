@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+derivative = "2"
 indexmap = { workspace = true }
 itertools = { workspace = true }
 ndc-models = { workspace = true }

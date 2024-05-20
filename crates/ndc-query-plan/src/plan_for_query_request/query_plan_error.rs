@@ -46,13 +46,8 @@ pub enum QueryPlanError {
         path: Vec<String>,
     },
 
-    #[error(
-        "Unknown aggregate function, \"{aggregate_function}\" in scalar type \"{scalar_type}\""
-    )]
-    UnknownAggregateFunction {
-        scalar_type: String,
-        aggregate_function: String,
-    },
+    #[error("Unknown aggregate function, \"{aggregate_function}\"")]
+    UnknownAggregateFunction { aggregate_function: String },
 
     #[error("Query referenced a function, \"{0}\", but it has not been defined")]
     UnspecifiedFunction(String),

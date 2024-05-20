@@ -103,9 +103,10 @@ fn lookup_object_type_helper<ScalarType>(
     Ok(plan_object_type)
 }
 
-pub fn lookup_object_type<T: ConnectorTypes>(
+pub fn lookup_object_type<ScalarType>(
     object_types: &BTreeMap<String, ndc::ObjectType>,
     name: &str,
-) -> Result<plan::ObjectType<T::ScalarType>, QueryPlanError> {
-    lookup_object_type_helper(object_types, name, T::lookup_scalar_type)
+    lookup_scalar_type: fn(&str) -> Option<ScalarType>,
+) -> Result<plan::ObjectType<ScalarType>, QueryPlanError> {
+    lookup_object_type_helper(object_types, name, lookup_scalar_type)
 }

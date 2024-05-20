@@ -1780,6 +1780,7 @@ dependencies = [
 name = "ndc-query-plan"
 version = "0.1.0"
 dependencies = [
+ "derivative",
  "indexmap 2.2.5",
  "itertools 0.12.1",
  "ndc-models",

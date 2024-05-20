@@ -8,9 +8,8 @@ use ndc::RelationshipArgument;
 use ndc_models as ndc;
 
 use crate::{
-    plan_for_query_request::helpers::lookup_relationship, query_plan::UnrelatedJoin,
-    ComparisonOperatorDefinition, ConnectorTypes, Query, QueryContext, QueryPlanError,
-    Relationship,
+    plan_for_query_request::helpers::lookup_relationship, query_plan::UnrelatedJoin, Query,
+    QueryContext, QueryPlanError, Relationship,
 };
 
 type Result<T> = std::result::Result<T, QueryPlanError>;
@@ -108,7 +107,7 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
         let matching_relationship = self
             .relationships
             .iter()
-            .find(|(_, rel)| *rel == &relationship);
+            .find(|(_, rel)| rel == &relationship);
         if let Some((key, rel)) = matching_relationship {
             return Ok((key, rel));
         }
@@ -135,7 +134,7 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
 
         let mut unrelated_joins = self.unrelated_joins.borrow_mut();
 
-        let matching_join = unrelated_joins.iter().find(|(_, jn)| *jn == &join);
+        let matching_join = unrelated_joins.iter().find(|(_, jn)| jn == &join);
         if let Some((key, jn)) = matching_join {
             return (key, jn);
         }

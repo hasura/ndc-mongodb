@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 
+use derivative::Derivative;
 use indexmap::IndexMap;
 use ndc_models::{
     Argument, OrderDirection, RelationshipArgument, RelationshipType, UnaryComparisonOperator,
@@ -11,10 +12,12 @@ use crate::Type;
 
 pub trait ConnectorTypes {
     type ScalarType: Clone + Debug + PartialEq;
-    type BinaryOperator: Clone + Debug + PartialEq;
+    // type AggregateFunction: Clone + Debug + PartialEq;
+    // type BinaryOperator: Clone + Debug + PartialEq;
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(PartialEq(bound = ""))]
 pub struct QueryPlan<T: ConnectorTypes> {
     pub collection: String,
     pub query: Query<T>,
@@ -28,7 +31,8 @@ pub struct QueryPlan<T: ConnectorTypes> {
 pub type VariableSet = BTreeMap<String, serde_json::Value>;
 pub type Relationships<T> = BTreeMap<String, Relationship<T>>;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(Default(bound = ""), PartialEq(bound = ""))]
 pub struct Query<T: ConnectorTypes> {
     pub aggregates: Option<IndexMap<String, Aggregate<T>>>,
     pub fields: Option<IndexMap<String, Field<T>>>,
@@ -61,22 +65,8 @@ impl<T: ConnectorTypes> Query<T> {
     }
 }
 
-impl<T: ConnectorTypes> Default for Query<T> {
-    fn default() -> Self {
-        Self {
-            aggregates: Default::default(),
-            fields: Default::default(),
-            limit: Default::default(),
-            aggregates_limit: Default::default(),
-            offset: Default::default(),
-            order_by: Default::default(),
-            predicate: Default::default(),
-            relationships: Default::default(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(PartialEq(bound = ""))]
 pub struct Relationship<T: ConnectorTypes> {
     pub column_mapping: BTreeMap<String, String>,
     pub relationship_type: RelationshipType,
@@ -85,14 +75,16 @@ pub struct Relationship<T: ConnectorTypes> {
     pub query: Query<T>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(PartialEq(bound = ""))]
 pub struct UnrelatedJoin<T: ConnectorTypes> {
     pub target_collection: String,
     pub arguments: BTreeMap<String, RelationshipArgument>,
     pub query: Query<T>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(PartialEq(bound = ""))]
 pub enum Aggregate<T: ConnectorTypes> {
     ColumnCount {
         /// The column to apply the count aggregate function to
@@ -104,13 +96,15 @@ pub enum Aggregate<T: ConnectorTypes> {
         /// The column to apply the aggregation function to
         column: String,
         /// Single column aggregate function name.
+        // function: T::AggregateFunction,
         function: String,
         result_type: Type<T::ScalarType>,
     },
     StarCount,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(PartialEq(bound = ""))]
 pub enum Field<T: ConnectorTypes> {
     Column {
         column: String,
@@ -136,7 +130,8 @@ pub enum Field<T: ConnectorTypes> {
     },
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(PartialEq(bound = ""))]
 pub enum Expression<T: ConnectorTypes> {
     And {
         expressions: Vec<Expression<T>>,
@@ -153,7 +148,8 @@ pub enum Expression<T: ConnectorTypes> {
     },
     BinaryComparisonOperator {
         column: ComparisonTarget<T>,
-        operator: T::BinaryOperator,
+        // operator: T::BinaryOperator,
+        operator: String,
         value: ComparisonValue<T>,
     },
     Exists {
@@ -165,19 +161,22 @@ pub enum Expression<T: ConnectorTypes> {
     },
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(PartialEq(bound = ""))]
 pub struct OrderBy<T: ConnectorTypes> {
     /// The elements to order by, in priority order
     pub elements: Vec<OrderByElement<T>>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(PartialEq(bound = ""))]
 pub struct OrderByElement<T: ConnectorTypes> {
     pub order_direction: OrderDirection,
     pub target: OrderByTarget<T>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(PartialEq(bound = ""))]
 pub enum OrderByTarget<T: ConnectorTypes> {
     Column {
         /// The name of the column
@@ -192,6 +191,7 @@ pub enum OrderByTarget<T: ConnectorTypes> {
         /// The column to apply the aggregation function to
         column: String,
         /// Single column aggregate function name.
+        // function: T::AggregateFunction,
         function: String,
 
         result_type: Type<T::ScalarType>,
@@ -209,7 +209,8 @@ pub enum OrderByTarget<T: ConnectorTypes> {
     },
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(PartialEq(bound = ""))]
 pub enum ComparisonTarget<T: ConnectorTypes> {
     Column {
         /// The name of the column
@@ -245,7 +246,8 @@ pub enum ColumnSelector {
     Column(String),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(PartialEq(bound = ""))]
 pub enum ComparisonValue<T: ConnectorTypes> {
     Column {
         column: ComparisonTarget<T>,
@@ -260,7 +262,15 @@ pub enum ComparisonValue<T: ConnectorTypes> {
     },
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(PartialEq(bound = ""))]
+pub struct AggregateFunctionDefinition<T: ConnectorTypes> {
+    /// The scalar or object type of the result of this function
+    pub result_type: Type<T::ScalarType>,
+}
+
+#[derive(Clone, Debug, Derivative)]
+#[derivative(PartialEq(bound = ""))]
 pub enum ComparisonOperatorDefinition<T: ConnectorTypes> {
     Equal,
     In,
@@ -270,7 +280,8 @@ pub enum ComparisonOperatorDefinition<T: ConnectorTypes> {
     },
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(PartialEq(bound = ""))]
 pub enum ExistsInCollection {
     Related {
         /// Key of the relation in the [Query] joins map. Relationships are scoped to the sub-query
