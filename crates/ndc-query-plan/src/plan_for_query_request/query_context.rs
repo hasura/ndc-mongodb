@@ -31,6 +31,23 @@ pub trait QueryContext: ConnectorTypes {
     where
         Self: Sized;
 
+    fn find_binary_operator(
+        &self,
+        left_operand_type: &Type<Self::ScalarType>,
+        op_name: &str,
+    ) -> Result<(
+        Self::BinaryOperator,
+        &plan::ComparisonOperatorDefinition<Self>,
+    )>
+    where
+        Self: Sized,
+    {
+        let op = Self::lookup_binary_operator(left_operand_type, op_name)
+            .ok_or_else(|| QueryPlanError::UnknownComparisonOperator(op_name.to_owned()))?;
+        let definition = self.comparison_operator_definition(op);
+        Ok((op, definition))
+    }
+
     // #[derive(Clone, Debug)]
     // pub struct QueryContext<'a, T: ConnectorTypes> {
     //     pub collections: Cow<'a, BTreeMap<String, ndc::CollectionInfo>>,

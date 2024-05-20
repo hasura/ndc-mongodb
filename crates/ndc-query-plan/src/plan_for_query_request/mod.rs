@@ -2,12 +2,11 @@ mod helpers;
 pub mod query_context;
 pub mod query_plan_error;
 mod query_plan_state;
-mod query_traversal;
 pub mod type_annotated_field;
 
 use std::collections::{BTreeMap, VecDeque};
 
-use crate::{self as plan, inline_object_types, type_annotated_field, ConnectorTypes, QueryPlan};
+use crate::{self as plan, type_annotated_field, QueryPlan};
 use indexmap::IndexMap;
 use itertools::Itertools as _;
 use ndc::QueryRequest;
@@ -18,7 +17,6 @@ use self::{
     query_context::QueryContext,
     query_plan_error::QueryPlanError,
     query_plan_state::QueryPlanState,
-    query_traversal::{query_traversal, Node, TraversalStep},
 };
 
 type Result<T> = std::result::Result<T, QueryPlanError>;
@@ -27,40 +25,45 @@ pub fn plan_for_query_request<T: QueryContext>(
     context: &T,
     request: QueryRequest,
 ) -> Result<QueryPlan<T>> {
+    let mut plan_state = QueryPlanState::new(context, &request.collection_relationships);
     let collection_object_type = context.find_collection_object_type(&request.collection)?;
+
+    let query = plan_for_query(
+        &mut plan_state,
+        &request.collection_relationships,
+        &collection_object_type,
+        request.query,
+        &collection_object_type,
+    )?;
+
+    let unrelated_collections = plan_state.into_unrelated_collections();
 
     Ok(QueryPlan {
         collection: request.collection,
         arguments: request.arguments,
-        query: plan_for_query(
-            context,
-            &request.collection_relationships,
-            &collection_object_type,
-            request.query,
-            &collection_object_type,
-        )?,
+        query,
         variables: request.variables,
-        unrelated_collections: todo!(),
+        unrelated_collections,
     })
 }
 
 fn plan_for_query<T: QueryContext>(
-    context: &T,
+    plan_state: &mut QueryPlanState<'_, T>,
     collection_relationships: &BTreeMap<String, ndc::Relationship>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
     query: ndc::Query,
     collection_object_type: &plan::ObjectType<T::ScalarType>,
 ) -> Result<plan::Query<T>> {
-    let plan_state = QueryPlanState::new(context);
+    let mut plan_state = plan_state.state_for_subquery();
 
-    let aggregates = plan_for_aggregates(context, collection_object_type, query.aggregates)?;
+    let aggregates =
+        plan_for_aggregates(plan_state.context, collection_object_type, query.aggregates)?;
     let fields = plan_for_fields(&mut plan_state, collection_object_type, query.fields)?;
 
     let order_by = query
         .order_by
         .map(|order_by| {
             plan_for_order_by(
-                context,
                 &mut plan_state,
                 collection_relationships,
                 root_collection_object_type,
@@ -77,8 +80,7 @@ fn plan_for_query<T: QueryContext>(
         .predicate
         .map(|expr| {
             plan_for_expression(
-                context,
-                collection_relationships,
+                &mut plan_state,
                 root_collection_object_type,
                 collection_object_type,
                 expr,
@@ -97,7 +99,7 @@ fn plan_for_query<T: QueryContext>(
         relationships: plan_state.into_relationships(),
     })
 }
-//
+
 // fn merge_order_by_relations(
 //     rels1: &mut HashMap<String, v2::OrderByRelation>,
 //     rels2: HashMap<String, v2::OrderByRelation>,
@@ -122,7 +124,7 @@ fn plan_for_aggregates<T: QueryContext>(
     context: &T,
     collection_object_type: &plan::ObjectType<T::ScalarType>,
     ndc_aggregates: Option<IndexMap<String, ndc::Aggregate>>,
-) -> Result<Option<IndexMap<String, plan::Aggregate<T::ScalarType>>>> {
+) -> Result<Option<IndexMap<String, plan::Aggregate<T>>>> {
     ndc_aggregates
         .map(|aggregates| -> Result<_> {
             aggregates
@@ -142,7 +144,7 @@ fn plan_for_aggregate<T: QueryContext>(
     context: &T,
     collection_object_type: &plan::ObjectType<T::ScalarType>,
     aggregate: ndc::Aggregate,
-) -> Result<plan::Aggregate<T::ScalarType>> {
+) -> Result<plan::Aggregate<T>> {
     match aggregate {
         ndc::Aggregate::ColumnCount { column, distinct } => {
             Ok(plan::Aggregate::ColumnCount { column, distinct })
@@ -186,7 +188,6 @@ fn plan_for_fields<T: QueryContext>(
 }
 
 fn plan_for_order_by<T: QueryContext>(
-    context: &T,
     plan_state: &mut QueryPlanState<'_, T>,
     collection_relationships: &BTreeMap<String, ndc::Relationship>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
@@ -198,9 +199,7 @@ fn plan_for_order_by<T: QueryContext>(
         .into_iter()
         .map(|element| {
             plan_for_order_by_element(
-                context,
                 plan_state,
-                collection_relationships,
                 root_collection_object_type,
                 object_type,
                 element,
@@ -211,9 +210,7 @@ fn plan_for_order_by<T: QueryContext>(
 }
 
 fn plan_for_order_by_element<T: QueryContext>(
-    context: &T,
     plan_state: &mut QueryPlanState<'_, T>,
-    collection_relationships: &BTreeMap<String, ndc::Relationship>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
     object_type: &plan::ObjectType<T::ScalarType>,
     element: ndc::OrderByElement,
@@ -221,7 +218,12 @@ fn plan_for_order_by_element<T: QueryContext>(
     let target = match element.target {
         ndc::OrderByTarget::Column { name, path } => plan::OrderByTarget::Column {
             name,
-            path: plan_for_relationship_path(context, plan_state, path),
+            path: plan_for_relationship_path(
+                plan_state,
+                root_collection_object_type,
+                object_type,
+                path,
+            )?,
         },
         ndc::OrderByTarget::SingleColumnAggregate {
             column,
@@ -232,30 +234,45 @@ fn plan_for_order_by_element<T: QueryContext>(
                 .last()
                 .map(|last_path_element| {
                     let relationship = lookup_relationship(
-                        collection_relationships,
+                        plan_state.collection_relationships,
                         &last_path_element.relationship,
                     )?;
-                    context.find_collection_object_type(&relationship.target_collection)
+                    plan_state
+                        .context
+                        .find_collection_object_type(&relationship.target_collection)
                 })
                 .transpose()?;
             let target_object_type = end_of_relationship_path_object_type
                 .as_ref()
                 .unwrap_or(object_type);
             let column_type = find_object_field(target_object_type, &column)?;
-            let aggregate_function =
-                context.find_aggregation_function_definition(column_type, &function)?;
-            let result_type = context.ndc_to_plan_type(&aggregate_function.result_type)?;
+            let aggregate_function = plan_state
+                .context
+                .find_aggregation_function_definition(column_type, &function)?;
+            let result_type = plan_state
+                .context
+                .ndc_to_plan_type(&aggregate_function.result_type)?;
 
             plan::OrderByTarget::SingleColumnAggregate {
                 column,
                 function,
                 result_type,
-                path: plan_for_relationship_path(context, plan_state, path),
+                path: plan_for_relationship_path(
+                    plan_state,
+                    root_collection_object_type,
+                    object_type,
+                    path,
+                )?,
             }
         }
         ndc::OrderByTarget::StarCountAggregate { path } => {
             plan::OrderByTarget::StarCountAggregate {
-                path: plan_for_relationship_path(context, plan_state, path),
+                path: plan_for_relationship_path(
+                    plan_state,
+                    root_collection_object_type,
+                    object_type,
+                    path,
+                )?,
             }
         }
     };
@@ -268,13 +285,14 @@ fn plan_for_order_by_element<T: QueryContext>(
 
 // TODO: Wow, this came out weird. I think a recursive version would make more sense. -Jesse
 fn plan_for_relationship_path<T: QueryContext>(
-    context: &T,
     plan_state: &mut QueryPlanState<'_, T>,
+    root_collection_object_type: &plan::ObjectType<T::ScalarType>,
+    object_type: &plan::ObjectType<T::ScalarType>,
     relationship_path: Vec<ndc::PathElement>,
 ) -> Result<Vec<String>> {
     let mut nested_states = (0..(relationship_path.len() - 1))
         .into_iter()
-        .map(|_| &mut QueryPlanState::new(context))
+        .map(|_| &mut plan_state.state_for_subquery())
         .collect::<VecDeque<_>>();
     nested_states.push_back(plan_state);
     let mut plan_path = vec![];
@@ -282,22 +300,28 @@ fn plan_for_relationship_path<T: QueryContext>(
         nested_states.pop_front().unwrap(),
         |nested_state,
          ndc::PathElement {
+             arguments,
              relationship,
              predicate,
-             ..
          }| {
             let nested_relationships = nested_state.into_relationships();
             let state = nested_states.pop_front().unwrap();
-            let query = ndc::Query {
-                predicate: predicate.map(|p| *p),
-                aggregates: None,
-                fields: None,
-                limit: None,
-                offset: None,
-                order_by: None,
+            let query = plan::Query {
+                predicate: predicate
+                    .map(|p| {
+                        plan_for_expression(
+                            plan_state,
+                            root_collection_object_type,
+                            object_type,
+                            *p,
+                        )
+                    })
+                    .transpose()?,
+                relationships: nested_relationships,
+                ..Default::default()
             };
             let (relation_key, _) =
-                plan_state.register_relationship(relationship, query, nested_relationships)?;
+                plan_state.register_relationship(relationship, arguments, query)?;
             plan_path.push(relation_key.to_owned());
             Ok(state)
         },
@@ -538,9 +562,7 @@ fn plan_for_relationship_path<T: QueryContext>(
 // }
 //
 fn plan_for_expression<T: QueryContext>(
-    context: &T,
     plan_state: &mut QueryPlanState<T>,
-    collection_relationships: &BTreeMap<String, ndc::Relationship>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
     object_type: &plan::ObjectType<T::ScalarType>,
     expression: ndc::Expression,
@@ -550,37 +572,21 @@ fn plan_for_expression<T: QueryContext>(
             expressions: expressions
                 .into_iter()
                 .map(|expr| {
-                    plan_for_expression(
-                        context,
-                        plan_state,
-                        collection_relationships,
-                        root_collection_object_type,
-                        object_type,
-                        expr,
-                    )
+                    plan_for_expression(plan_state, root_collection_object_type, object_type, expr)
                 })
-                .collect::<Result<_, _>>()?,
+                .collect::<Result<_>>()?,
         }),
         ndc::Expression::Or { expressions } => Ok(plan::Expression::Or {
             expressions: expressions
                 .into_iter()
                 .map(|expr| {
-                    plan_for_expression(
-                        context,
-                        plan_state,
-                        collection_relationships,
-                        root_collection_object_type,
-                        object_type,
-                        expr,
-                    )
+                    plan_for_expression(plan_state, root_collection_object_type, object_type, expr)
                 })
-                .collect::<Result<_, _>>()?,
+                .collect::<Result<_>>()?,
         }),
         ndc::Expression::Not { expression } => Ok(plan::Expression::Not {
             expression: Box::new(plan_for_expression(
-                context,
                 plan_state,
-                collection_relationships,
                 root_collection_object_type,
                 object_type,
                 *expression,
@@ -589,6 +595,7 @@ fn plan_for_expression<T: QueryContext>(
         ndc::Expression::UnaryComparisonOperator { column, operator } => {
             Ok(plan::Expression::UnaryComparisonOperator {
                 column: plan_for_comparison_target(
+                    plan_state,
                     root_collection_object_type,
                     object_type,
                     column,
@@ -603,7 +610,7 @@ fn plan_for_expression<T: QueryContext>(
             operator,
             value,
         } => plan_for_binary_comparison(
-            context,
+            plan_state,
             root_collection_object_type,
             object_type,
             column,
@@ -614,7 +621,7 @@ fn plan_for_expression<T: QueryContext>(
             in_collection,
             predicate,
         } => {
-            let nested_state = plan_state.state_for_subquery();
+            let mut nested_state = plan_state.state_for_subquery();
 
             let in_collection = match in_collection {
                 ndc::ExistsInCollection::Related {
@@ -622,16 +629,15 @@ fn plan_for_expression<T: QueryContext>(
                     arguments,
                 } => {
                     let ndc_relationship =
-                        lookup_relationship(collection_relationships, &relationship)?;
-                    let collection_object_type =
-                        context.find_collection_object_type(&ndc_relationship.target_collection)?;
+                        lookup_relationship(plan_state.collection_relationships, &relationship)?;
+                    let collection_object_type = plan_state
+                        .context
+                        .find_collection_object_type(&ndc_relationship.target_collection)?;
 
                     let predicate = predicate
                         .map(|expression| {
                             plan_for_expression(
-                                context,
                                 &mut nested_state,
-                                collection_relationships,
                                 root_collection_object_type,
                                 &collection_object_type,
                                 *expression,
@@ -662,15 +668,14 @@ fn plan_for_expression<T: QueryContext>(
                     collection,
                     arguments,
                 } => {
-                    let collection_object_type =
-                        context.find_collection_object_type(&collection)?;
+                    let collection_object_type = plan_state
+                        .context
+                        .find_collection_object_type(&collection)?;
 
                     let predicate = predicate
                         .map(|expression| {
                             plan_for_expression(
-                                context,
                                 &mut nested_state,
-                                collection_relationships,
                                 root_collection_object_type,
                                 &collection_object_type,
                                 *expression,
@@ -701,8 +706,7 @@ fn plan_for_expression<T: QueryContext>(
 }
 
 fn plan_for_binary_comparison<T: QueryContext>(
-    context: &T,
-    plan_state: &QueryPlanState<'_, T>,
+    plan_state: &mut QueryPlanState<'_, T>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
     object_type: &plan::ObjectType<T::ScalarType>,
     column: ndc::ComparisonTarget,
@@ -710,10 +714,10 @@ fn plan_for_binary_comparison<T: QueryContext>(
     value: ndc::ComparisonValue,
 ) -> Result<plan::Expression<T>> {
     let comparison_target =
-        plan_for_comparison_target(root_collection_object_type, object_type, column)?;
-    let op = T::lookup_binary_operator(comparison_target.get_column_type(), &operator)
-        .ok_or_else(|| QueryPlanError::UnknownComparisonOperator(operator))?;
-    let operator_definition = context.comparison_operator_definition(&op);
+        plan_for_comparison_target(plan_state, root_collection_object_type, object_type, column)?;
+    let (operator, operator_definition) = plan_state
+        .context
+        .find_binary_operator(comparison_target.get_column_type(), &operator)?;
     let value_type = match operator_definition {
         plan::ComparisonOperatorDefinition::Equal => comparison_target.get_column_type().clone(),
         plan::ComparisonOperatorDefinition::In => {
@@ -722,8 +726,9 @@ fn plan_for_binary_comparison<T: QueryContext>(
         plan::ComparisonOperatorDefinition::Custom { argument_type } => argument_type.clone(),
     };
     Ok(plan::Expression::BinaryComparisonOperator {
-        operator: op,
+        operator,
         value: plan_for_comparison_value(
+            plan_state,
             root_collection_object_type,
             object_type,
             value_type,
@@ -734,7 +739,6 @@ fn plan_for_binary_comparison<T: QueryContext>(
 }
 
 fn plan_for_comparison_target<T: QueryContext>(
-    context: &T,
     plan_state: &mut QueryPlanState<'_, T>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
     object_type: &plan::ObjectType<T::ScalarType>,
@@ -743,7 +747,12 @@ fn plan_for_comparison_target<T: QueryContext>(
     match target {
         ndc::ComparisonTarget::Column { name, path } => {
             let column_type = find_object_field(object_type, &name)?.clone();
-            let path = plan_for_relationship_path(context, plan_state, path)?;
+            let path = plan_for_relationship_path(
+                plan_state,
+                root_collection_object_type,
+                object_type,
+                path,
+            )?;
             Ok(plan::ComparisonTarget::Column {
                 column_type,
                 name: plan::ColumnSelector::Column(name),
@@ -761,6 +770,7 @@ fn plan_for_comparison_target<T: QueryContext>(
 }
 
 fn plan_for_comparison_value<T: QueryContext>(
+    plan_state: &mut QueryPlanState<'_, T>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
     object_type: &plan::ObjectType<T::ScalarType>,
     expected_type: plan::Type<T::ScalarType>,
@@ -768,7 +778,12 @@ fn plan_for_comparison_value<T: QueryContext>(
 ) -> Result<plan::ComparisonValue<T>> {
     match value {
         ndc::ComparisonValue::Column { column } => Ok(plan::ComparisonValue::Column {
-            column: plan_for_comparison_target(root_collection_object_type, object_type, column)?,
+            column: plan_for_comparison_target(
+                plan_state,
+                root_collection_object_type,
+                object_type,
+                column,
+            )?,
         }),
         ndc::ComparisonValue::Scalar { value } => Ok(plan::ComparisonValue::Scalar {
             value,
