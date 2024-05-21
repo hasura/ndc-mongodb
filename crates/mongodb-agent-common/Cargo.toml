@@ -34,7 +34,6 @@ time = { version = "0.3.29", features = ["formatting", "parsing", "serde"] }
 tracing = "0.1"
 
 [dev-dependencies]
-dc-api-test-helpers = { path = "../dc-api-test-helpers" }
 mongodb-cli-plugin = { path = "../cli" }
 test-helpers = { path = "../test-helpers" }
 

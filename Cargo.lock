@@ -219,24 +219,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "axum-test-helper"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "298f62fa902c2515c169ab0bfb56c593229f33faa01131215d58e3d4898e3aa9"
-dependencies = [
- "axum",
- "bytes",
- "http 0.2.9",
- "http-body 0.4.5",
- "hyper 0.14.27",
- "reqwest 0.11.27",
- "serde",
- "tokio",
- "tower",
- "tower-service",
-]
-
-[[package]]
 name = "backtrace"
 version = "0.3.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -605,48 +587,6 @@ name = "data-encoding"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2e66c9d817f1720209181c316d28635c050fa304f9c79e47a520882661b7308"
-
-[[package]]
-name = "dc-api"
-version = "0.1.0"
-dependencies = [
- "axum",
- "axum-test-helper",
- "bytes",
- "dc-api-types",
- "http 0.2.9",
- "jsonwebtoken",
- "mime",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "dc-api-test-helpers"
-version = "0.1.0"
-dependencies = [
- "dc-api-types",
- "itertools 0.12.1",
-]
-
-[[package]]
-name = "dc-api-types"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "itertools 0.12.1",
- "mongodb",
- "nonempty 0.8.1",
- "once_cell",
- "pretty_assertions",
- "regex",
- "serde",
- "serde_json",
- "serde_with 3.7.0",
-]
 
 [[package]]
 name = "deranged"
@@ -1421,20 +1361,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "jsonwebtoken"
-version = "8.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6971da4d9c3aa03c3d8f3ff0f4155b534aad021292003895a469716b2a230378"
-dependencies = [
- "base64 0.21.5",
- "pem",
- "ring 0.16.20",
- "serde",
- "serde_json",
- "simple_asn1",
-]
-
-[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1652,7 +1578,6 @@ dependencies = [
  "axum",
  "bytes",
  "configuration",
- "dc-api-test-helpers",
  "enum-iterator",
  "futures",
  "futures-util",
@@ -1710,7 +1635,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "configuration",
- "dc-api-test-helpers",
  "enum-iterator",
  "futures",
  "http 0.2.9",
@@ -1736,7 +1660,6 @@ name = "mongodb-support"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "dc-api-types",
  "enum-iterator",
  "indexmap 2.2.5",
  "mongodb",
@@ -1784,7 +1707,7 @@ dependencies = [
  "indexmap 2.2.5",
  "itertools 0.12.1",
  "ndc-models",
- "nonempty 0.10.0",
+ "nonempty",
  "serde_json",
  "thiserror",
 ]
@@ -1854,15 +1777,6 @@ dependencies = [
 
 [[package]]
 name = "nonempty"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aeaf4ad7403de93e699c191202f017118df734d3850b01e13a3a8b2e6953d3c9"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "nonempty"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "303e8749c804ccd6ca3b428de7fe0d86cb86bc7606bc15291f100fd487960bb8"
@@ -1875,26 +1789,6 @@ checksum = "77a8165726e8236064dbb45459242600304b42a5ea24ee2948e18e023bf7ba84"
 dependencies = [
  "overload",
  "winapi",
-]
-
-[[package]]
-name = "num-bigint"
-version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "608e7659b5c3d7cba262d894801b9ec9d00de989e8a82bd4bef91d08da45cdc0"
-dependencies = [
- "autocfg",
- "num-integer",
- "num-traits",
-]
-
-[[package]]
-name = "num-integer"
-version = "0.1.46"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7969661fd2958a5cb096e56c8e1ad0444ac2bbcd0061bd28660485a44879858f"
-dependencies = [
- "num-traits",
 ]
 
 [[package]]
@@ -2131,15 +2025,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "83a0692ec44e4cf1ef28ca317f14f8f07da2d95ec3fa01f86e4467b725e60917"
 dependencies = [
  "digest",
-]
-
-[[package]]
-name = "pem"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8835c273a76a90455d7344889b0964598e3316e2a79ede8e36f16bdcf2228b8"
-dependencies = [
- "base64 0.13.1",
 ]
 
 [[package]]
@@ -2468,12 +2353,10 @@ dependencies = [
  "system-configuration",
  "tokio",
  "tokio-native-tls",
- "tokio-util",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
- "wasm-streams",
  "web-sys",
  "winreg 0.50.0",
 ]
@@ -3035,18 +2918,6 @@ name = "similar"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fa42c91313f1d05da9b26f267f931cf178d4aba455b4c4622dd7355eb80c6640"
-
-[[package]]
-name = "simple_asn1"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adc4e5204eb1910f40f9cfa375f6f05b68c3abac4b6fd879c8ff5e7ae8a0a085"
-dependencies = [
- "num-bigint",
- "num-traits",
- "thiserror",
- "time",
-]
 
 [[package]]
 name = "slab"
@@ -3852,19 +3723,6 @@ name = "wasm-bindgen-shared"
 version = "0.2.87"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca6ad05a4870b2bf5fe995117d3728437bd27d7cd5f06f13c17443ef369775a1"
-
-[[package]]
-name = "wasm-streams"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b65dc4c90b63b118468cf747d8bf3566c1913ef60be765b5730ead9e0a3ba129"
-dependencies = [
- "futures-util",
- "js-sys",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
 
 [[package]]
 name = "web-sys"

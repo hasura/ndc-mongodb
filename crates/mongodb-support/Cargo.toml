@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-dc-api-types = { path = "../dc-api-types" }
 enum-iterator = "^2.0.0"
 indexmap = { workspace = true }
 mongodb = { workspace = true }

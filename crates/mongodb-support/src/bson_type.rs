@@ -1,4 +1,3 @@
-use dc_api_types::GraphQlType;
 use enum_iterator::{all, Sequence};
 use mongodb::bson::Bson;
 use schemars::JsonSchema;
@@ -162,16 +161,6 @@ impl BsonScalarType {
             S::Undefined => "Undefined",
             S::DbPointer => "DbPointer",
             S::Symbol => "Symbol",
-        }
-    }
-
-    pub fn graphql_type(self) -> Option<GraphQlType> {
-        match self {
-            S::Double => Some(GraphQlType::Float),
-            S::String => Some(GraphQlType::String),
-            S::Int => Some(GraphQlType::Int),
-            S::Bool => Some(GraphQlType::Boolean),
-            _ => None,
         }
     }
 
