@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 
-use configuration::Configuration;
 use mongodb::bson::{self, doc, Bson};
 use ndc_query_plan::VariableSet;
 use tracing::instrument;
@@ -8,7 +7,7 @@ use tracing::instrument;
 use crate::{
     aggregation_function::AggregationFunction,
     interface_types::MongoAgentError,
-    mongo_query_plan::{Aggregate, Query, QueryPlan},
+    mongo_query_plan::{Aggregate, MongoConfiguration, Query, QueryPlan},
     mongodb::{sanitize::get_field, Accumulator, Pipeline, Selection, Stage},
 };
 
@@ -36,7 +35,7 @@ pub fn is_response_faceted(query: &Query) -> bool {
 /// post-processing in the agent.
 #[instrument(name = "Build Query Pipeline" skip_all, fields(internal.visibility = "user"))]
 pub fn pipeline_for_query_request(
-    config: &Configuration,
+    config: &MongoConfiguration,
     query_plan: &QueryPlan,
 ) -> Result<Pipeline, MongoAgentError> {
     if let Some(variable_sets) = &query_plan.variables {
@@ -52,7 +51,7 @@ pub fn pipeline_for_query_request(
 /// Returns a pipeline paired with a value that indicates whether the response requires
 /// post-processing in the agent.
 pub fn pipeline_for_non_foreach(
-    config: &Configuration,
+    config: &MongoConfiguration,
     variables: Option<&VariableSet>,
     query_plan: &QueryPlan,
 ) -> Result<Pipeline, MongoAgentError> {
@@ -250,7 +249,7 @@ fn pipeline_for_aggregate(
         } => {
             use AggregationFunction::*;
 
-            let accumulator = match AggregationFunction::from_graphql_name(&function)? {
+            let accumulator = match function {
                 Avg => Accumulator::Avg(field_ref(&column)),
                 Count => Accumulator::Count,
                 Min => Accumulator::Min(field_ref(&column)),

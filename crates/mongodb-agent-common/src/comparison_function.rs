@@ -21,10 +21,9 @@ pub enum ComparisonFunction {
     IRegex,
 }
 
+use ndc_query_plan::QueryPlanError;
 // use BinaryComparisonOperator as B;
 use ComparisonFunction as C;
-
-use crate::interface_types::MongoAgentError;
 
 impl ComparisonFunction {
     pub fn graphql_name(self) -> &'static str {
@@ -53,10 +52,10 @@ impl ComparisonFunction {
         }
     }
 
-    pub fn from_graphql_name(s: &str) -> Result<Self, MongoAgentError> {
+    pub fn from_graphql_name(s: &str) -> Result<Self, QueryPlanError> {
         all::<ComparisonFunction>()
             .find(|variant| variant.graphql_name() == s)
-            .ok_or(MongoAgentError::UnknownAggregationFunction(s.to_owned()))
+            .ok_or(QueryPlanError::UnknownComparisonOperator(s.to_owned()))
     }
 
     /// Produce a MongoDB expression that applies this function to the given operands.
@@ -69,19 +68,3 @@ impl ComparisonFunction {
         }
     }
 }
-
-// impl TryFrom<&BinaryComparisonOperator> for ComparisonFunction {
-//     type Error = MongoAgentError;
-//
-//     fn try_from(operator: &BinaryComparisonOperator) -> Result<Self, Self::Error> {
-//         match operator {
-//             B::LessThan => Ok(C::LessThan),
-//             B::LessThanOrEqual => Ok(C::LessThanOrEqual),
-//             B::GreaterThan => Ok(C::GreaterThan),
-//             B::GreaterThanOrEqual => Ok(C::GreaterThanOrEqual),
-//             B::Equal => Ok(C::Equal),
-//             B::CustomBinaryComparisonOperator(op) => ComparisonFunction::from_graphql_name(op),
-//         }
-//     }
-// }
-

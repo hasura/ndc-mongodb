@@ -39,22 +39,26 @@ fn type_annotated_field_helper<T: QueryContext>(
             column,
             fields: None,
         } => Field::Column {
-            column,
             column_type: find_object_field(collection_object_type, &column)?.clone(),
+            column,
         },
 
         ndc::Field::Column {
             column,
             fields: Some(nested_field),
-        } => type_annotated_nested_field_helper(
-            plan_state,
-            column,
-            root_collection_object_type,
-            find_object_field(collection_object_type, &column)?.clone(),
-            NON_NULLABLE,
-            nested_field,
-            path,
-        )?,
+        } => {
+            let collection_object_type =
+                find_object_field(collection_object_type, &column)?.clone();
+            type_annotated_nested_field_helper(
+                plan_state,
+                column,
+                root_collection_object_type,
+                collection_object_type,
+                NON_NULLABLE,
+                nested_field,
+                path,
+            )?
+        }
 
         ndc::Field::Relationship {
             arguments,
@@ -72,8 +76,8 @@ fn type_annotated_field_helper<T: QueryContext>(
                 plan_state.register_relationship(relationship, arguments, query_plan)?;
             Field::Relationship {
                 relationship: relationship_key.to_owned(),
-                aggregates: plan_relationship.query.aggregates,
-                fields: plan_relationship.query.fields,
+                aggregates: plan_relationship.query.aggregates.clone(),
+                fields: plan_relationship.query.fields.clone(),
             }
         }
     };

@@ -26,10 +26,16 @@ pub fn make_sort(order_by: &OrderBy) -> Result<Document, MongoAgentError> {
                     column: _,
                     function: _,
                     path: _,
-                } => Err(MongoAgentError::NotImplemented(
-                    "ordering by single column aggregate",
-                )),
+                    result_type: _,
+                } =>
+                // TODO: MDB-150
+                {
+                    Err(MongoAgentError::NotImplemented(
+                        "ordering by single column aggregate",
+                    ))
+                }
                 OrderByTarget::StarCountAggregate { path: _ } => Err(
+                    // TODO: MDB-151
                     MongoAgentError::NotImplemented("ordering by star count aggregate"),
                 ),
             }

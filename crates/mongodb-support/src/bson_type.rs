@@ -141,8 +141,28 @@ impl BsonScalarType {
         }
     }
 
-    pub fn graphql_name(self) -> String {
-        capitalize(self.bson_name())
+    pub fn graphql_name(self) -> &'static str {
+        match self {
+            S::Double => "Double",
+            S::Decimal => "Decimal",
+            S::Int => "Int",
+            S::Long => "Long",
+            S::String => "String",
+            S::Date => "Date",
+            S::Timestamp => "Timestamp",
+            S::BinData => "BinData",
+            S::ObjectId => "ObjectId",
+            S::Bool => "Bool",
+            S::Null => "Null",
+            S::Regex => "Regex",
+            S::Javascript => "Javascript",
+            S::JavascriptWithScope => "JavascriptWithScope",
+            S::MinKey => "MinKey",
+            S::MaxKey => "MaxKey",
+            S::Undefined => "Undefined",
+            S::DbPointer => "DbPointer",
+            S::Symbol => "Symbol",
+        }
     }
 
     pub fn graphql_type(self) -> Option<GraphQlType> {

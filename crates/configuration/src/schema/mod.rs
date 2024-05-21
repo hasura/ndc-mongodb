@@ -73,7 +73,7 @@ impl From<Type> for ndc_models::Type {
                     }),
                 },
                 Type::Scalar(t) => ndc_models::Type::Named {
-                    name: t.graphql_name(),
+                    name: t.graphql_name().to_owned(),
                 },
                 Type::Object(t) => ndc_models::Type::Named { name: t.clone() },
                 Type::ArrayOf(t) => ndc_models::Type::Array {

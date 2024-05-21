@@ -9,7 +9,7 @@ use tracing::{instrument, Instrument};
 use super::{pipeline::pipeline_for_query_request, response::serialize_query_response};
 use crate::{
     interface_types::MongoAgentError,
-    mongo_query_plan::{get_query_context, QueryPlan},
+    mongo_query_plan::{MongoConfiguration, QueryPlan},
     mongodb::{CollectionTrait as _, DatabaseTrait, Pipeline},
     query::QueryTarget,
 };
@@ -22,7 +22,7 @@ type Result<T> = std::result::Result<T, MongoAgentError>;
 /// testing.
 pub async fn execute_query_request(
     database: impl DatabaseTrait,
-    config: &Configuration,
+    config: &MongoConfiguration,
     query_request: QueryRequest,
 ) -> Result<QueryResponse> {
     let query_plan = preprocess_query_request(config, query_request)?;
@@ -34,18 +34,17 @@ pub async fn execute_query_request(
 
 #[instrument(name = "Pre-process Query Request", skip_all, fields(internal.visibility = "user"))]
 fn preprocess_query_request(
-    config: &Configuration,
+    config: &MongoConfiguration,
     query_request: QueryRequest,
 ) -> Result<QueryPlan> {
-    let query_context = get_query_context(config);
-    let query_plan = plan_for_query_request(&query_context, query_request)?;
+    let query_plan = plan_for_query_request(config, query_request)?;
     Ok(query_plan)
 }
 
 #[instrument(name = "Execute Query Pipeline", skip_all, fields(internal.visibility = "user"))]
 async fn execute_query_pipeline(
     database: impl DatabaseTrait,
-    config: &Configuration,
+    config: &MongoConfiguration,
     query_plan: &QueryPlan,
     pipeline: Pipeline,
 ) -> Result<Vec<bson::Document>> {

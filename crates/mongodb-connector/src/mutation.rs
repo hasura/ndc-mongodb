@@ -1,4 +1,3 @@
-use configuration::Configuration;
 use futures::future::try_join_all;
 use itertools::Itertools;
 use mongodb::{
@@ -6,12 +5,12 @@ use mongodb::{
     Database,
 };
 use mongodb_agent_common::{
-    mongo_query_plan::QueryContext,
+    mongo_query_plan::MongoConfiguration,
     procedure::Procedure,
     query::{response::type_for_field, serialization::bson_to_json},
     state::ConnectorState,
 };
-use ndc_query_plan::type_annotated_nested_field;
+use ndc_query_plan::{type_annotated_nested_field, QueryContext as _};
 use ndc_sdk::{
     connector::MutationError,
     json_response::JsonResponse,
@@ -22,8 +21,7 @@ use ndc_sdk::{
 };
 
 pub async fn handle_mutation_request(
-    config: &Configuration,
-    query_context: QueryContext<'_>,
+    config: &MongoConfiguration,
     state: &ConnectorState,
     mutation_request: MutationRequest,
 ) -> Result<JsonResponse<MutationResponse>, MutationError> {
@@ -32,7 +30,8 @@ pub async fn handle_mutation_request(
     let jobs = look_up_procedures(config, &mutation_request)?;
     let operation_results = try_join_all(jobs.into_iter().map(|(procedure, requested_fields)| {
         execute_procedure(
-            &query_context,
+            config,
+            &mutation_request,
             database.clone(),
             procedure,
             requested_fields,
@@ -45,7 +44,7 @@ pub async fn handle_mutation_request(
 /// Looks up procedures according to the names given in the mutation request, and pairs them with
 /// arguments and requested fields. Returns an error if any procedures cannot be found.
 fn look_up_procedures<'a, 'b>(
-    config: &'a Configuration,
+    config: &'a MongoConfiguration,
     mutation_request: &'b MutationRequest,
 ) -> Result<Vec<(Procedure<'a>, Option<&'b NestedField>)>, MutationError> {
     let (procedures, not_found): (Vec<_>, Vec<String>) = mutation_request
@@ -57,7 +56,7 @@ fn look_up_procedures<'a, 'b>(
                 arguments,
                 fields,
             } => {
-                let native_procedure = config.native_procedures.get(name);
+                let native_procedure = config.native_procedures().get(name);
                 let procedure = native_procedure.ok_or(name).map(|native_procedure| {
                     Procedure::from_native_procedure(native_procedure, arguments.clone())
                 })?;
@@ -77,7 +76,8 @@ fn look_up_procedures<'a, 'b>(
 }
 
 async fn execute_procedure(
-    query_context: &QueryContext<'_>,
+    config: &MongoConfiguration,
+    mutation_request: &MutationRequest,
     database: Database,
     procedure: Procedure<'_>,
     requested_fields: Option<&NestedField>,
@@ -90,8 +90,13 @@ async fn execute_procedure(
     let rewritten_result = rewrite_response(requested_fields, result.into())?;
 
     let requested_result_type = if let Some(fields) = requested_fields {
-        let plan_field = type_annotated_nested_field(query_context, &result_type, fields)
-            .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?;
+        let plan_field = type_annotated_nested_field(
+            config,
+            &mutation_request.collection_relationships,
+            result_type,
+            fields.clone(),
+        )
+        .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?;
         type_for_field(&[], &plan_field)
             .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?
     } else {

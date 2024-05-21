@@ -1,4 +1,3 @@
-mod comparison_function;
 mod configuration;
 mod directory;
 mod mongo_scalar_type;
@@ -8,7 +7,6 @@ pub mod schema;
 mod serialized;
 mod with_name;
 
-pub use crate::comparison_function::ComparisonFunction;
 pub use crate::configuration::Configuration;
 pub use crate::directory::get_config_file_changed;
 pub use crate::directory::list_existing_schemas;

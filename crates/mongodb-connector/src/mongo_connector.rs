@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use configuration::Configuration;
 use mongodb_agent_common::{
-    explain::explain_query, health::check_health, mongo_query_plan::get_query_context,
+    explain::explain_query, health::check_health, mongo_query_plan::MongoConfiguration,
     query::handle_query_request, state::ConnectorState,
 };
 use ndc_sdk::{
@@ -35,11 +35,11 @@ impl ConnectorSetup for MongoConnector {
     async fn parse_configuration(
         &self,
         configuration_dir: impl AsRef<Path> + Send,
-    ) -> Result<Configuration, ParseError> {
+    ) -> Result<MongoConfiguration, ParseError> {
         let configuration = Configuration::parse_configuration(configuration_dir)
             .await
             .map_err(|err| ParseError::Other(err.into()))?;
-        Ok(configuration)
+        Ok(MongoConfiguration(configuration))
     }
 
     /// Reads database connection URI from environment variable
@@ -49,7 +49,7 @@ impl ConnectorSetup for MongoConnector {
     // - `skip_all` omits arguments from the trace
     async fn try_init_state(
         &self,
-        _configuration: &Configuration,
+        _configuration: &MongoConfiguration,
         _metrics: &mut prometheus::Registry,
     ) -> Result<ConnectorState, InitializationError> {
         let state = mongodb_agent_common::state::try_init_state().await?;
@@ -60,7 +60,7 @@ impl ConnectorSetup for MongoConnector {
 #[allow(clippy::blocks_in_conditions)]
 #[async_trait]
 impl Connector for MongoConnector {
-    type Configuration = Configuration;
+    type Configuration = MongoConfiguration;
     type State = ConnectorState;
 
     #[instrument(err, skip_all)]
@@ -126,8 +126,7 @@ impl Connector for MongoConnector {
         state: &Self::State,
         request: MutationRequest,
     ) -> Result<JsonResponse<MutationResponse>, MutationError> {
-        let query_context = get_query_context(configuration);
-        handle_mutation_request(configuration, query_context, state, request).await
+        handle_mutation_request(configuration, state, request).await
     }
 
     #[instrument(name = "/query", err, skip_all, fields(internal.visibility = "user"))]

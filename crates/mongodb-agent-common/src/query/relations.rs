@@ -1,12 +1,10 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
-use anyhow::anyhow;
-use configuration::Configuration;
 use itertools::Itertools as _;
 use mongodb::bson::{doc, Bson, Document};
 use ndc_query_plan::VariableSet;
 
-use crate::mongo_query_plan::{Query, QueryPlan, Relationship};
+use crate::mongo_query_plan::{MongoConfiguration, Query, QueryPlan};
 use crate::mongodb::sanitize::safe_name;
 use crate::mongodb::Pipeline;
 use crate::{
@@ -21,7 +19,7 @@ type Result<T> = std::result::Result<T, MongoAgentError>;
 /// Defines any necessary $lookup stages for the given section of the pipeline. This is called for
 /// each sub-query in the plan.
 pub fn pipeline_for_relations(
-    config: &Configuration,
+    config: &MongoConfiguration,
     variables: Option<&VariableSet>,
     query_plan: &QueryPlan,
 ) -> Result<Pipeline> {

@@ -4,13 +4,13 @@ use anyhow::{anyhow, ensure};
 use itertools::Itertools;
 use mongodb_support::BsonScalarType;
 use ndc_models as ndc;
-use ndc_query_plan::{ConnectorTypes, QueryContext};
+use ndc_query_plan::{ConnectorTypes, QueryContext, QueryPlanError};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     native_procedure::NativeProcedure,
     native_query::{NativeQuery, NativeQueryRepresentation},
-    read_directory, schema, serialized, ComparisonFunction, MongoScalarType,
+    read_directory, schema, serialized, MongoScalarType,
 };
 
 #[derive(Clone, Debug, Default)]
@@ -49,17 +49,6 @@ pub struct Configuration {
     pub object_types: BTreeMap<String, ndc::ObjectType>,
 
     pub options: ConfigurationOptions,
-}
-
-impl ConnectorTypes for Configuration {
-    type ScalarType: MongoScalarType;
-    type BinaryOperatorType: ComparisonFunction;
-}
-
-impl QueryContext for Configuration {
-    fn lookup_scalar_type(type_name: &str) -> Option<Self::ScalarType> {
-        type_name.try_into().ok()
-    }
 }
 
 impl Configuration {

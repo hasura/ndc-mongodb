@@ -1,25 +1,23 @@
 use std::collections::BTreeMap;
 
-use configuration::Configuration;
 use mongodb::bson::{doc, to_bson, Bson};
 use ndc_models::{ExplainResponse, QueryRequest};
 use ndc_query_plan::plan_for_query_request;
 
 use crate::{
     interface_types::MongoAgentError,
-    mongo_query_plan::get_query_context,
+    mongo_query_plan::MongoConfiguration,
     query::{self, QueryTarget},
     state::ConnectorState,
 };
 
 pub async fn explain_query(
-    config: &Configuration,
+    config: &MongoConfiguration,
     state: &ConnectorState,
     query_request: QueryRequest,
 ) -> Result<ExplainResponse, MongoAgentError> {
     let db = state.database();
-    let query_context = get_query_context(config);
-    let query_plan = plan_for_query_request(&query_context, query_request)?;
+    let query_plan = plan_for_query_request(config, query_request)?;
 
     let pipeline = query::pipeline_for_query_request(config, &query_plan)?;
     let pipeline_bson = to_bson(&pipeline)?;

@@ -1,9 +1,9 @@
 use std::{collections::BTreeMap, fmt::Display};
 
-use configuration::{native_query::NativeQuery, Configuration};
+use configuration::native_query::NativeQuery;
 use ndc_models::Argument;
 
-use crate::mongo_query_plan::QueryPlan;
+use crate::mongo_query_plan::{MongoConfiguration, QueryPlan};
 
 #[derive(Clone, Debug)]
 pub enum QueryTarget<'a> {
@@ -17,11 +17,11 @@ pub enum QueryTarget<'a> {
 
 impl QueryTarget<'_> {
     pub fn for_request<'a>(
-        config: &'a Configuration,
+        config: &'a MongoConfiguration,
         query_request: &'a QueryPlan,
     ) -> QueryTarget<'a> {
         let collection = &query_request.collection;
-        match config.native_queries.get(collection) {
+        match config.native_queries().get(collection) {
             Some(native_query) => QueryTarget::NativeQuery {
                 name: collection.to_owned(),
                 native_query,

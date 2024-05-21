@@ -1,13 +1,13 @@
 use std::collections::BTreeMap;
 
-use configuration::{native_query::NativeQuery, Configuration};
+use configuration::native_query::NativeQuery;
 use itertools::Itertools as _;
 use ndc_models::Argument;
 use ndc_query_plan::VariableSet;
 
 use crate::{
     interface_types::MongoAgentError,
-    mongo_query_plan::QueryPlan,
+    mongo_query_plan::{MongoConfiguration, QueryPlan},
     mongodb::{Pipeline, Stage},
     procedure::{interpolated_command, ProcedureError},
 };
@@ -17,7 +17,7 @@ use super::{arguments::resolve_arguments, query_target::QueryTarget};
 /// Returns either the pipeline defined by a native query with variable bindings for arguments, or
 /// an empty pipeline if the query request target is not a native query
 pub fn pipeline_for_native_query(
-    config: &Configuration,
+    config: &MongoConfiguration,
     variables: Option<&VariableSet>,
     query_request: &QueryPlan,
 ) -> Result<Pipeline, MongoAgentError> {
@@ -32,7 +32,7 @@ pub fn pipeline_for_native_query(
 }
 
 fn make_pipeline(
-    config: &Configuration,
+    config: &MongoConfiguration,
     variables: Option<&VariableSet>,
     native_query: &NativeQuery,
     arguments: &BTreeMap<String, Argument>,

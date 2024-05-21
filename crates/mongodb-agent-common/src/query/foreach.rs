@@ -1,9 +1,8 @@
-use configuration::Configuration;
 use mongodb::bson::{doc, Bson};
 use ndc_query_plan::VariableSet;
 
 use super::pipeline::pipeline_for_non_foreach;
-use crate::mongo_query_plan::QueryPlan;
+use crate::mongo_query_plan::{MongoConfiguration, QueryPlan};
 use crate::mongodb::Selection;
 use crate::{
     interface_types::MongoAgentError,
@@ -19,7 +18,7 @@ const FACET_FIELD: &str = "__FACET__";
 /// indicates whether the response requires post-processing in the agent.
 pub fn pipeline_for_foreach(
     variable_sets: &Vec<VariableSet>,
-    config: &Configuration,
+    config: &MongoConfiguration,
     query_request: &QueryPlan,
 ) -> Result<Pipeline, MongoAgentError> {
     let pipelines: Vec<(String, Pipeline)> = variable_sets

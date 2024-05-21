@@ -1,6 +1,5 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
-// use dc_api_types::ScalarTypeCapabilities;
 use enum_iterator::all;
 use itertools::Either;
 use lazy_static::lazy_static;
@@ -17,17 +16,6 @@ use BsonScalarType as S;
 lazy_static! {
     pub static ref SCALAR_TYPES: BTreeMap<String, ScalarType> = scalar_types();
 }
-
-// pub fn scalar_types_capabilities() -> HashMap<String, ScalarTypeCapabilities> {
-//     let mut map = all::<BsonScalarType>()
-//         .map(|t| (t.graphql_name(), capabilities(t)))
-//         .collect::<HashMap<_, _>>();
-//     map.insert(
-//         mongodb_support::EXTENDED_JSON_TYPE_NAME.to_owned(),
-//         ScalarTypeCapabilities::new(),
-//     );
-//     map
-// }
 
 pub fn scalar_types() -> BTreeMap<String, ScalarType> {
     enum_iterator::all::<BsonScalarType>()
@@ -54,7 +42,7 @@ fn make_scalar_type(bson_scalar_type: BsonScalarType) -> (String, ScalarType) {
         aggregate_functions: bson_aggregation_functions(bson_scalar_type),
         comparison_operators: bson_comparison_operators(bson_scalar_type),
     };
-    (scalar_type_name, scalar_type)
+    (scalar_type_name.to_owned(), scalar_type)
 }
 
 fn bson_scalar_type_representation(bson_scalar_type: BsonScalarType) -> Option<TypeRepresentation> {
@@ -115,7 +103,7 @@ fn bson_aggregation_functions(
 
 fn bson_to_named_type(bson_scalar_type: BsonScalarType) -> Type {
     Type::Named {
-        name: bson_scalar_type.graphql_name(),
+        name: bson_scalar_type.graphql_name().to_owned(),
     }
 }
 

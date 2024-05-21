@@ -1,6 +1,7 @@
 use std::{
     cell::{Cell, RefCell},
     collections::BTreeMap,
+    ops::Deref,
     rc::Rc,
 };
 
@@ -24,38 +25,14 @@ type Result<T> = std::result::Result<T, QueryPlanError>;
 pub struct QueryPlanState<'a, T: QueryContext> {
     pub context: &'a T,
     pub collection_relationships: &'a BTreeMap<String, ndc::Relationship>,
-    relationships: Vec<(String, Relationship<T>)>,
-    unrelated_joins: Rc<RefCell<Vec<(String, UnrelatedJoin<T>)>>>,
+    relationships: BTreeMap<String, Relationship<T>>,
+    unrelated_joins: Rc<RefCell<BTreeMap<String, UnrelatedJoin<T>>>>,
     counter: Rc<Cell<i32>>,
 }
 
-// impl<'a, T: QueryContext> ConnectorTypes for QueryPlanState<'a, T> {
-//     type ScalarType = T::ScalarType;
-//     type BinaryOperator = T::BinaryOperator;
-// }
-//
-// impl<'a, T: QueryContext> QueryContext for QueryPlanState<'a, T> {
-//     fn lookup_binary_operator(
-//         left_operand_type: &crate::Type<Self::ScalarType>,
-//         op_name: &str,
-//     ) -> Option<Self::BinaryOperator> {
-//         T::lookup_binary_operator(left_operand_type, op_name)
-//     }
-//
-//     fn lookup_scalar_type(type_name: &str) -> Option<Self::ScalarType> {
-//         T::lookup_scalar_type(type_name)
-//     }
-//
-//     fn comparison_operator_definition(
-//         &self,
-//         op: &Self::BinaryOperator,
-//     ) -> &ComparisonOperatorDefinition<Self>
-//     where
-//         Self: Sized,
-//     {
-//         self.context.comparison_operator_definition(op)
-//     }
-// }
+// TODO: We may be able to unify relationships that are not identical, but that are compatible.
+// For example two relationships that differ only in field selection could be merged into one
+// with the union of both field selections.
 
 impl<T: QueryContext> QueryPlanState<'_, T> {
     pub fn new<'a>(
@@ -84,9 +61,8 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
         }
     }
 
-    // TODO: We may be able to unify relationships that are not identical, but that are compatible.
-    // For example two relationships that differ only in field selection could be merged into one
-    // with the union of both field selections.
+    /// Record a relationship reference so that it is added to the list of joins for the query
+    /// plan, and get back an identifier than can be used to access the joined collection.
     pub fn register_relationship<'a>(
         &'a mut self,
         ndc_relationship_name: String,
@@ -104,57 +80,98 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
             query,
         };
 
-        let matching_relationship = self
-            .relationships
-            .iter()
-            .find(|(_, rel)| rel == &relationship);
-        if let Some((key, rel)) = matching_relationship {
-            return Ok((key, rel));
-        }
+        // We want to insert the relationship into the internal map if there isn't already
+        // a matching relationship in there, then return references to the key and to the
+        // relationship. Lifetime analysis makes this fiddly. We get the key (creating one if
+        // necessary), and then do the lookup.
 
-        self.relationships
-            .push((self.unique_name(ndc_relationship_name), relationship));
-        let (key, relationship) = &self.relationships[self.relationships.len() - 1];
+        let key = match self.find_matching_relationship_key(&relationship) {
+            Some(key) => key,
+            None => {
+                let key = self.unique_name(ndc_relationship_name);
+                self.relationships.insert(key.clone(), relationship);
+                key
+            }
+        };
+
+        // Safety: we just inserted this key if it wasn't already present
+        let (key, relationship) = self.relationships.get_key_value(&key).unwrap();
         Ok((key, relationship))
     }
 
+    fn find_matching_relationship_key<'a>(
+        &'a self,
+        relationship: &Relationship<T>,
+    ) -> Option<String> {
+        self.relationships.iter().find_map(|(key, rel)| {
+            if rel == relationship {
+                Some(key.clone())
+            } else {
+                None
+            }
+        })
+    }
+
+    /// Record a collection reference so that it is added to the list of joins for the query
+    /// plan, and get back an identifier than can be used to access the joined collection.
     pub fn register_unrelated_join<'a>(
         &'a mut self,
         target_collection: String,
         arguments: BTreeMap<String, RelationshipArgument>,
         query: Query<T>,
-    ) -> (&'a str, &'a UnrelatedJoin<T>) {
-        // Err(QueryPlanError::NotImplemented("unrelated joins"))
-
+    ) -> String {
         let join = UnrelatedJoin {
             target_collection,
             arguments,
             query,
         };
 
-        let mut unrelated_joins = self.unrelated_joins.borrow_mut();
+        let matching_key = {
+            let unrelated_joins = RefCell::borrow(&self.unrelated_joins);
+            Self::find_matching_join_key(unrelated_joins, &join)
+        };
 
-        let matching_join = unrelated_joins.iter().find(|(_, jn)| jn == &join);
-        if let Some((key, jn)) = matching_join {
-            return (key, jn);
-        }
+        let key = match matching_key {
+            Some(key) => key,
+            None => {
+                let key = self.unique_name(format!("__join_{}", join.target_collection));
+                self.unrelated_joins.borrow_mut().insert(key.clone(), join);
+                key
+            }
+        };
 
-        unrelated_joins.push((
-            self.unique_name(format!("__join_{}", join.target_collection)),
-            join,
-        ));
-        let (key, join) = &unrelated_joins[unrelated_joins.len() - 1];
-        (key, join)
+        // Unlike [Self::register_relationship] this method does not return a reference to the
+        // registered join. If we need that reference then we need another [RefCell::borrow] call
+        // here, and we need to return the [std::cell::Ref] value that is produced. (We can't
+        // borrow map values through a RefCell without keeping a live Ref.) But if that Ref is
+        // still alive the next time [Self::register_unrelated_join] is called then the borrow_mut
+        // call will fail.
+        key
+    }
+
+    fn find_matching_join_key<'a>(
+        registered_joins: impl Deref<Target = BTreeMap<String, UnrelatedJoin<T>>>,
+        join: &UnrelatedJoin<T>,
+    ) -> Option<String> {
+        registered_joins.iter().find_map(
+            |(key, jn)| {
+                if jn == join {
+                    Some(key.clone())
+                } else {
+                    None
+                }
+            },
+        )
     }
 
     /// Use this for subquery plans to get the relationships for each sub-query
     pub fn into_relationships(self) -> BTreeMap<String, Relationship<T>> {
-        self.relationships.into_iter().collect()
+        self.relationships
     }
 
     /// Use this with the top-level plan to get unrelated joins.
     pub fn into_unrelated_collections(self) -> BTreeMap<String, UnrelatedJoin<T>> {
-        self.unrelated_joins.take().into_iter().collect()
+        self.unrelated_joins.take()
     }
 
     // pub fn into_join_plan(self) -> JoinPlan<T> {

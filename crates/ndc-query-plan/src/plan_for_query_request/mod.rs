@@ -56,7 +56,12 @@ pub fn plan_for_query<T: QueryContext>(
 
     let aggregates =
         plan_for_aggregates(plan_state.context, collection_object_type, query.aggregates)?;
-    let fields = plan_for_fields(&mut plan_state, collection_object_type, query.fields)?;
+    let fields = plan_for_fields(
+        &mut plan_state,
+        root_collection_object_type,
+        collection_object_type,
+        query.fields,
+    )?;
 
     let order_by = query
         .order_by
@@ -150,13 +155,12 @@ fn plan_for_aggregate<T: QueryContext>(
             let object_type_field_type =
                 find_object_field(collection_object_type, column.as_ref())?;
             // let column_scalar_type_name = get_scalar_type_name(&object_type_field.r#type)?;
-            let (aggregate_function, definition) =
-                context.find_aggregate_function(object_type_field_type, &function)?;
-            let result_type = context.ndc_to_plan_type(&aggregate_function.result_type)?;
+            let (function, definition) =
+                context.find_aggregation_function_definition(object_type_field_type, &function)?;
             Ok(plan::Aggregate::SingleColumn {
                 column,
                 function,
-                result_type,
+                result_type: definition.result_type.clone(),
             })
         }
         ndc::Aggregate::StarCount {} => Ok(plan::Aggregate::StarCount {}),
@@ -165,6 +169,7 @@ fn plan_for_aggregate<T: QueryContext>(
 
 fn plan_for_fields<T: QueryContext>(
     plan_state: &mut QueryPlanState<'_, T>,
+    root_collection_object_type: &plan::ObjectType<T::ScalarType>,
     collection_object_type: &plan::ObjectType<T::ScalarType>,
     ndc_fields: Option<IndexMap<String, ndc::Field>>,
 ) -> Result<Option<IndexMap<String, plan::Field<T>>>> {
@@ -175,7 +180,12 @@ fn plan_for_fields<T: QueryContext>(
                 .map(|(name, field)| {
                     Ok((
                         name,
-                        type_annotated_field(plan_state, collection_object_type, field)?,
+                        type_annotated_field(
+                            plan_state,
+                            root_collection_object_type,
+                            collection_object_type,
+                            field,
+                        )?,
                     ))
                 })
                 .collect::<Result<_>>()
@@ -214,12 +224,7 @@ fn plan_for_order_by_element<T: QueryContext>(
     let target = match element.target {
         ndc::OrderByTarget::Column { name, path } => plan::OrderByTarget::Column {
             name,
-            path: plan_for_relationship_path(
-                plan_state,
-                root_collection_object_type,
-                object_type,
-                path,
-            )?,
+            path: plan_for_relationship_path(plan_state, root_collection_object_type, path)?,
         },
         ndc::OrderByTarget::SingleColumnAggregate {
             column,
@@ -242,33 +247,20 @@ fn plan_for_order_by_element<T: QueryContext>(
                 .as_ref()
                 .unwrap_or(object_type);
             let column_type = find_object_field(target_object_type, &column)?;
-            let aggregate_function = plan_state
+            let (function, function_definition) = plan_state
                 .context
                 .find_aggregation_function_definition(column_type, &function)?;
-            let result_type = plan_state
-                .context
-                .ndc_to_plan_type(&aggregate_function.result_type)?;
 
             plan::OrderByTarget::SingleColumnAggregate {
                 column,
                 function,
-                result_type,
-                path: plan_for_relationship_path(
-                    plan_state,
-                    root_collection_object_type,
-                    object_type,
-                    path,
-                )?,
+                result_type: function_definition.result_type.clone(),
+                path: plan_for_relationship_path(plan_state, root_collection_object_type, path)?,
             }
         }
         ndc::OrderByTarget::StarCountAggregate { path } => {
             plan::OrderByTarget::StarCountAggregate {
-                path: plan_for_relationship_path(
-                    plan_state,
-                    root_collection_object_type,
-                    object_type,
-                    path,
-                )?,
+                path: plan_for_relationship_path(plan_state, root_collection_object_type, path)?,
             }
         }
     };
@@ -279,51 +271,120 @@ fn plan_for_order_by_element<T: QueryContext>(
     })
 }
 
-// TODO: Wow, this came out weird. I think a recursive version would make more sense. -Jesse
+// // TODO: Wow, this came out weird. I think a recursive version would make more sense. -Jesse
+// fn plan_for_relationship_path<T: QueryContext>(
+//     plan_state: &mut QueryPlanState<'_, T>,
+//     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
+//     object_type: &plan::ObjectType<T::ScalarType>,
+//     relationship_path: Vec<ndc::PathElement>,
+// ) -> Result<Vec<String>> {
+//     let mut nested_states = (0..(relationship_path.len() - 1))
+//         .into_iter()
+//         .map(|_| &mut plan_state.state_for_subquery())
+//         .collect::<VecDeque<_>>();
+//     nested_states.push_back(plan_state);
+//     let mut plan_path = vec![];
+//     let _ = relationship_path.into_iter().try_rfold(
+//         nested_states.pop_front().unwrap(),
+//         |nested_state,
+//          ndc::PathElement {
+//              arguments,
+//              relationship,
+//              predicate,
+//          }| {
+//             let nested_relationships = nested_state.into_relationships();
+//             let state = nested_states.pop_front().unwrap();
+//             let query = plan::Query {
+//                 predicate: predicate
+//                     .map(|p| {
+//                         plan_for_expression(
+//                             plan_state,
+//                             root_collection_object_type,
+//                             object_type,
+//                             *p,
+//                         )
+//                     })
+//                     .transpose()?,
+//                 relationships: nested_relationships,
+//                 ..Default::default()
+//             };
+//             let (relation_key, _) =
+//                 plan_state.register_relationship(relationship, arguments, query)?;
+//             plan_path.push(relation_key.to_owned());
+//             Ok(state)
+//         },
+//     )?;
+//     plan_path.reverse();
+//     Ok(plan_path)
+// }
+
 fn plan_for_relationship_path<T: QueryContext>(
     plan_state: &mut QueryPlanState<'_, T>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
-    object_type: &plan::ObjectType<T::ScalarType>,
     relationship_path: Vec<ndc::PathElement>,
 ) -> Result<Vec<String>> {
-    let mut nested_states = (0..(relationship_path.len() - 1))
-        .into_iter()
-        .map(|_| &mut plan_state.state_for_subquery())
-        .collect::<VecDeque<_>>();
-    nested_states.push_back(plan_state);
-    let mut plan_path = vec![];
-    let _ = relationship_path.into_iter().try_rfold(
-        nested_states.pop_front().unwrap(),
-        |nested_state,
-         ndc::PathElement {
-             arguments,
-             relationship,
-             predicate,
-         }| {
-            let nested_relationships = nested_state.into_relationships();
-            let state = nested_states.pop_front().unwrap();
-            let query = plan::Query {
-                predicate: predicate
-                    .map(|p| {
-                        plan_for_expression(
-                            plan_state,
-                            root_collection_object_type,
-                            object_type,
-                            *p,
-                        )
-                    })
-                    .transpose()?,
-                relationships: nested_relationships,
-                ..Default::default()
-            };
-            let (relation_key, _) =
-                plan_state.register_relationship(relationship, arguments, query)?;
-            plan_path.push(relation_key.to_owned());
-            Ok(state)
-        },
+    let vec_deque = plan_for_relationship_path_helper(
+        plan_state,
+        root_collection_object_type,
+        relationship_path,
     )?;
-    plan_path.reverse();
-    Ok(plan_path)
+    Ok(vec_deque.into_iter().collect())
+}
+
+fn plan_for_relationship_path_helper<T: QueryContext>(
+    plan_state: &mut QueryPlanState<'_, T>,
+    root_collection_object_type: &plan::ObjectType<T::ScalarType>,
+    relationship_path: impl IntoIterator<Item = ndc::PathElement>,
+) -> Result<VecDeque<String>> {
+    let (head, tail) = {
+        let mut path_iter = relationship_path.into_iter();
+        let head = path_iter.next();
+        (head, path_iter)
+    };
+    if let Some(ndc::PathElement {
+        relationship,
+        arguments,
+        predicate,
+    }) = head
+    {
+        let relationship_def =
+            lookup_relationship(plan_state.collection_relationships, &relationship)?;
+        let related_collection_type = plan_state
+            .context
+            .find_collection_object_type(&relationship_def.target_collection)?;
+        let mut nested_state = plan_state.state_for_subquery();
+
+        let mut rest_path = plan_for_relationship_path_helper(
+            &mut nested_state,
+            root_collection_object_type,
+            tail,
+        )?;
+
+        let nested_relationships = nested_state.into_relationships();
+
+        let relationship_query = plan::Query {
+            predicate: predicate
+                .map(|p| {
+                    plan_for_expression(
+                        plan_state,
+                        root_collection_object_type,
+                        &related_collection_type,
+                        *p,
+                    )
+                })
+                .transpose()?,
+            relationships: nested_relationships,
+            ..Default::default()
+        };
+
+        let (relation_key, _) =
+            plan_state.register_relationship(relationship, arguments, relationship_query)?;
+
+        rest_path.push_front(relation_key.to_owned());
+        Ok(rest_path)
+    } else {
+        Ok(VecDeque::new())
+    }
 }
 
 // fn ndc_to_v2_order_by_element(
@@ -686,11 +747,11 @@ fn plan_for_expression<T: QueryContext>(
                         ..Default::default()
                     };
 
-                    let (join_key, _) =
+                    let join_key =
                         plan_state.register_unrelated_join(collection, arguments, join_query);
 
                     let in_collection = plan::ExistsInCollection::Unrelated {
-                        unrelated_collection: join_key.to_owned(),
+                        unrelated_collection: join_key,
                     };
                     Ok(in_collection)
                 }
@@ -713,7 +774,7 @@ fn plan_for_binary_comparison<T: QueryContext>(
         plan_for_comparison_target(plan_state, root_collection_object_type, object_type, column)?;
     let (operator, operator_definition) = plan_state
         .context
-        .find_binary_operator(comparison_target.get_column_type(), &operator)?;
+        .find_comparison_operator(comparison_target.get_column_type(), &operator)?;
     let value_type = match operator_definition {
         plan::ComparisonOperatorDefinition::Equal => comparison_target.get_column_type().clone(),
         plan::ComparisonOperatorDefinition::In => {
@@ -746,7 +807,7 @@ fn plan_for_comparison_target<T: QueryContext>(
             let path = plan_for_relationship_path(
                 plan_state,
                 root_collection_object_type,
-                object_type,
+                // object_type,
                 path,
             )?;
             Ok(plan::ComparisonTarget::Column {

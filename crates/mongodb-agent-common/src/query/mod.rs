@@ -12,8 +12,6 @@ mod relations;
 pub mod response;
 pub mod serialization;
 
-use configuration::Configuration;
-use mongodb::bson;
 use ndc_models::{QueryRequest, QueryResponse};
 
 use self::execute_query_request::execute_query_request;
@@ -25,11 +23,11 @@ pub use self::{
     response::QueryResponseError,
 };
 use crate::{
-    interface_types::MongoAgentError, mongo_query_plan::QueryContext, state::ConnectorState,
+    interface_types::MongoAgentError, mongo_query_plan::MongoConfiguration, state::ConnectorState,
 };
 
 pub async fn handle_query_request(
-    config: &Configuration,
+    config: &MongoConfiguration,
     state: &ConnectorState,
     query_request: QueryRequest,
 ) -> Result<QueryResponse, MongoAgentError> {
