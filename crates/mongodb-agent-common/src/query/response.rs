@@ -26,14 +26,6 @@ pub enum QueryResponseError {
     #[error("{0}")]
     BsonToJson(#[from] BsonToJsonError),
 
-    // #[error("{0}")]
-    // QueryPlan(#[from] QueryPlanError),
-    //
-    // #[error("expected an array at path {}", path.join("."))]
-    // ExpectedArray { path: Vec<String> },
-
-    // #[error("expected an object at path {}", path.join("."))]
-    // ExpectedObject { path: Vec<String> },
     #[error("expected a single response document from MongoDB, but did not get one")]
     ExpectedSingleDocument,
 

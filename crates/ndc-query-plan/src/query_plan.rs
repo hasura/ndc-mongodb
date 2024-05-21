@@ -8,7 +8,7 @@ use ndc_models::{
 };
 use nonempty::NonEmpty;
 
-use crate::Type;
+use crate::{ObjectType, Type};
 
 pub trait ConnectorTypes {
     type ScalarType: Clone + Debug + PartialEq;
@@ -127,7 +127,9 @@ pub enum Field<T: ConnectorTypes> {
         is_nullable: Nullable,
     },
     Relationship {
-        /// The name of the relationship to follow for the subquery
+        /// The name of the relationship to follow for the subquery - this is the key in the
+        /// [Query] relationships map in this module, it is **not** the key in the
+        /// [ndc::QueryRequest] collection_relationships map.
         relationship: String,
         aggregates: Option<IndexMap<String, Aggregate<T>>>,
         fields: Option<IndexMap<String, Field<T>>>,

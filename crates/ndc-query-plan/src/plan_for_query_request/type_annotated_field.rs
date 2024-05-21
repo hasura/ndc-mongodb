@@ -7,7 +7,11 @@ use crate::{
     Field, Nullable, ObjectType, Query, QueryContext, QueryPlanError, Type, NON_NULLABLE, NULLABLE,
 };
 
-use super::{helpers::find_object_field, plan_for_query, query_plan_state::QueryPlanState};
+use super::{
+    helpers::{find_object_field, lookup_relationship},
+    plan_for_query,
+    query_plan_state::QueryPlanState,
+};
 
 type Result<T> = std::result::Result<T, QueryPlanError>;
 
@@ -65,10 +69,16 @@ fn type_annotated_field_helper<T: QueryContext>(
             query,
             relationship,
         } => {
+            let relationship_def =
+                lookup_relationship(plan_state.collection_relationships, &relationship)?;
+            let related_collection_type = plan_state
+                .context
+                .find_collection_object_type(&relationship_def.target_collection)?;
+
             let query_plan = plan_for_query(
-                plan_state,
+                &mut plan_state.state_for_subquery(),
                 root_collection_object_type,
-                collection_object_type,
+                &related_collection_type,
                 *query,
             )?;
 
