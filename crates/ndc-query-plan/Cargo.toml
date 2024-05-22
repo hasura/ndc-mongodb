@@ -14,8 +14,8 @@ thiserror = "1"
 
 [dev-dependencies]
 ndc-test-helpers = { path = "../ndc-test-helpers" }
-test-helpers = { path = "../test-helpers" }
 
 anyhow = "1"
+enum-iterator = "2"
 lazy_static = "1"
 pretty_assertions = "1"

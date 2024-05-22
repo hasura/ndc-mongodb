@@ -1705,6 +1705,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "derivative",
+ "enum-iterator",
  "indexmap 2.2.5",
  "itertools 0.12.1",
  "lazy_static",
@@ -1713,7 +1714,6 @@ dependencies = [
  "nonempty",
  "pretty_assertions",
  "serde_json",
- "test-helpers",
  "thiserror",
 ]
 

@@ -158,10 +158,6 @@ pub enum Expression<T: ConnectorTypes> {
         value: ComparisonValue<T>,
     },
     Exists {
-        /// Specifies which collection reference to check for row count. Assumes that the given
-        /// reference is an aggregation over the collection that provides the number of rows that
-        /// match the predicate that was given in the Exists expression of the
-        /// [ndc_models::QueryRequest] that this [QueryPlan] was based on.
         in_collection: ExistsInCollection,
     },
 }

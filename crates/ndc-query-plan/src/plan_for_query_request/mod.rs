@@ -820,11 +820,12 @@ mod tests {
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
-    use test_helpers::connector_configurations::{make_flat_schema, make_nested_schema};
-
     use crate::{
         self as plan,
-        plan_for_query_request::plan_test_helpers::{self, TestContext},
+        plan_for_query_request::plan_test_helpers::{
+            self, make_flat_schema, make_nested_schema, TestContext,
+        },
+        query_plan::UnrelatedJoin,
         ColumnSelector, ComparisonTarget, ExistsInCollection, Expression, Field, OrderBy, Query,
         QueryPlan, Relationship,
     };
@@ -874,7 +875,8 @@ mod tests {
                             name: "advisor_name".to_owned(),
                             path: vec![
                                 path_element("school_classes")
-                                    .predicate(equal(
+                                    .predicate(binop(
+                                        "Equal",
                                         target!(
                                             "_id",
                                             [
@@ -957,21 +959,6 @@ mod tests {
                                         relationship_type: RelationshipType::Array,
                                         arguments: Default::default(),
                                         query: Default::default(),
-                                        // query: plan::Query {
-                                        //     fields: Some(
-                                        //         [(
-                                        //             "student_name".into(),
-                                        //             plan::Field::Column {
-                                        //                 column: "student_name".into(),
-                                        //                 column_type: plan::Type::Scalar(
-                                        //                     test_helpers::ScalarType::Int,
-                                        //                 ),
-                                        //             },
-                                        //         )]
-                                        //         .into(),
-                                        //     ),
-                                        //     ..Default::default()
-                                        // },
                                     },
                                 )]
                                 .into(),
@@ -1101,47 +1088,120 @@ mod tests {
         Ok(())
     }
 
-    // #[test]
-    // fn translates_root_column_references() -> Result<(), anyhow::Error> {
-    //     let query_context = make_flat_schema();
-    //     let query = query_request()
-    //         .collection("authors")
-    //         .query(query().fields([field!("last_name")]).predicate(exists(
-    //             unrelated!("articles"),
-    //             and([
-    //                 equal(target!("author_id"), column_value!(root("id"))),
-    //                 binop("_regex", target!("title"), value!("Functional.*")),
-    //             ]),
-    //         )))
-    //         .into();
-    //     let query_plan = plan_for_query_request(&query_context, query)?;
-    //
-    //     let expected = v2::query_request()
-    //         .target(["authors"])
-    //         .query(
-    //             v2::query()
-    //                 .fields([v2::column!("last_name": "String")])
-    //                 .predicate(v2::exists_unrelated(
-    //                     ["articles"],
-    //                     v2::and([
-    //                         v2::equal(
-    //                             v2::compare!("author_id": "Int"),
-    //                             v2::column_value!(["$"], "id": "Int"),
-    //                         ),
-    //                         v2::binop(
-    //                             "_regex",
-    //                             v2::compare!("title": "String"),
-    //                             v2::value!(json!("Functional.*"), "String"),
-    //                         ),
-    //                     ]),
-    //                 )),
-    //         )
-    //         .into();
-    //
-    //     assert_eq!(query_plan, expected);
-    //     Ok(())
-    // }
-    //
+    #[test]
+    fn translates_root_column_references() -> Result<(), anyhow::Error> {
+        let query_context = make_flat_schema();
+        let query = query_request()
+            .collection("authors")
+            .query(query().fields([field!("last_name")]).predicate(exists(
+                unrelated!("articles"),
+                and([
+                    binop("Equal", target!("author_id"), column_value!(root("id"))),
+                    binop("Regex", target!("title"), value!("Functional.*")),
+                ]),
+            )))
+            .into();
+        let query_plan = plan_for_query_request(&query_context, query)?;
+
+        let expected = QueryPlan {
+            collection: "authors".into(),
+            query: plan::Query {
+                predicate: Some(plan::Expression::Exists {
+                    in_collection: plan::ExistsInCollection::Unrelated {
+                        unrelated_collection: "__join_articles_0".into(),
+                    },
+                }),
+                fields: Some(
+                    [(
+                        "last_name".into(),
+                        plan::Field::Column {
+                            column: "last_name".into(),
+                            column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
+                        },
+                    )]
+                    .into(),
+                ),
+                ..Default::default()
+            },
+            unrelated_collections: [(
+                "__join_articles_0".into(),
+                UnrelatedJoin {
+                    target_collection: "articles".into(),
+                    arguments: Default::default(),
+                    query: plan::Query {
+                        limit: Some(1),
+                        predicate: Some(plan::Expression::And {
+                            expressions: vec![
+                                plan::Expression::BinaryComparisonOperator {
+                                    column: plan::ComparisonTarget::Column {
+                                        name: ColumnSelector::Column("author_id".into()),
+                                        column_type: plan::Type::Scalar(
+                                            plan_test_helpers::ScalarType::Int,
+                                        ),
+                                        path: vec![],
+                                    },
+                                    operator: plan_test_helpers::ComparisonOperator::Equal,
+                                    value: plan::ComparisonValue::Column {
+                                        column: plan::ComparisonTarget::RootCollectionColumn {
+                                            name: ColumnSelector::Column("id".into()),
+                                            column_type: plan::Type::Scalar(
+                                                plan_test_helpers::ScalarType::Int,
+                                            ),
+                                        },
+                                    },
+                                },
+                                plan::Expression::BinaryComparisonOperator {
+                                    column: plan::ComparisonTarget::Column {
+                                        name: ColumnSelector::Column("title".into()),
+                                        column_type: plan::Type::Scalar(
+                                            plan_test_helpers::ScalarType::String,
+                                        ),
+                                        path: vec![],
+                                    },
+                                    operator: plan_test_helpers::ComparisonOperator::Regex,
+                                    value: plan::ComparisonValue::Scalar {
+                                        value: "Functional.*".into(),
+                                        value_type: plan::Type::Scalar(
+                                            plan_test_helpers::ScalarType::String,
+                                        ),
+                                    },
+                                },
+                            ],
+                        }),
+                        ..Default::default()
+                    },
+                },
+            )]
+            .into(),
+            arguments: Default::default(),
+            variables: Default::default(),
+        };
+
+        // .target(["authors"])
+        // .query(
+        //     v2::query()
+        //         .fields([v2::column!("last_name": "String")])
+        //         .predicate(v2::exists_unrelated(
+        //             ["articles"],
+        //             v2::and([
+        //                 v2::equal(
+        //                     v2::compare!("author_id": "Int"),
+        //                     v2::column_value!(["$"], "id": "Int"),
+        //                 ),
+        //                 v2::binop(
+        //                     "_regex",
+        //                     v2::compare!("title": "String"),
+        //                     v2::value!(json!("Functional.*"), "String"),
+        //                 ),
+        //             ]),
+        //         )),
+        // )
+        // .into();
+
+        assert_eq!(query_plan, expected);
+        Ok(())
+    }
+
     // #[test]
     // fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
     //     let query_context = make_flat_schema();
