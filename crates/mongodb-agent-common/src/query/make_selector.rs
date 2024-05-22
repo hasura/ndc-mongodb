@@ -57,7 +57,7 @@ pub fn make_selector(
         } => {
             let col = column_ref(column)?;
             let comparison_value = match value {
-                // TODO: To compare to another column we need to wrap the entire expression in
+                // TODO: MDB-152 To compare to another column we need to wrap the entire expression in
                 // an `$expr` aggregation operator (assuming the expression is not already in
                 // an aggregation expression context)
                 ComparisonValue::Column { .. } => Err(MongoAgentError::NotImplemented(

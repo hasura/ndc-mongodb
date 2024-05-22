@@ -13,16 +13,12 @@ use crate::{
 /// collection.
 pub fn column_ref(column: &ComparisonTarget) -> Result<Cow<'_, str>, MongoAgentError> {
     let path = match column {
-        ComparisonTarget::Column {
-            name,
-            column_type,
-            path,
-        } => {
+        ComparisonTarget::Column { name, path, .. } => {
             let relations_path = path.iter().map(AsRef::as_ref);
             let nested_object_path = column_selector_path(name);
             Either::Left(relations_path.chain(nested_object_path))
         }
-        ComparisonTarget::RootCollectionColumn { name, column_type } => {
+        ComparisonTarget::RootCollectionColumn { name, .. } => {
             Either::Right(std::iter::once("$$ROOT").chain(column_selector_path(name)))
         }
     };
@@ -43,11 +39,11 @@ fn safe_selector<'a>(
 ) -> Result<Cow<'a, str>, MongoAgentError> {
     let mut safe_elements = path
         .into_iter()
-        .map(|s| safe_name(s))
+        .map(safe_name)
         .collect::<Result<Vec<Cow<str>>, MongoAgentError>>()?;
     if safe_elements.len() == 1 {
         Ok(safe_elements.pop().unwrap())
     } else {
-        Ok(Cow::Owned(safe_elements.join("")))
+        Ok(Cow::Owned(safe_elements.join(".")))
     }
 }

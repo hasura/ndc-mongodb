@@ -36,7 +36,7 @@ pub fn pipeline_for_relations(
                 config,
                 variables,
                 &QueryPlan {
-                    query: query.clone(),
+                    query: relationship.query.clone(),
                     collection: relationship.target_collection.clone(),
                     ..query_plan.clone()
                 },
