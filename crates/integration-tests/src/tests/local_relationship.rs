@@ -44,6 +44,8 @@ async fn joins_local_relationships() -> anyhow::Result<()> {
     Ok(())
 }
 
+// TODO: Tests an upcoming change in MBD-14
+#[ignore]
 #[tokio::test]
 async fn filters_by_field_of_related_collection() -> anyhow::Result<()> {
     assert_yaml_snapshot!(
