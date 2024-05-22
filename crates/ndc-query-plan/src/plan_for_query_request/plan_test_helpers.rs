@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use lazy_static::lazy_static;
 use ndc_models as ndc;
 
 use crate::{ConnectorTypes, QueryContext, QueryPlanError, Type};
@@ -31,7 +32,7 @@ impl QueryContext for TestContext {
 
     fn lookup_aggregation_function(
         &self,
-        input_type: &Type<Self::ScalarType>,
+        _input_type: &Type<Self::ScalarType>,
         function_name: &str,
     ) -> Result<(Self::AggregateFunction, &ndc::AggregateFunctionDefinition), QueryPlanError> {
         let function = match function_name {
@@ -40,38 +41,31 @@ impl QueryContext for TestContext {
                 aggregate_function: function_name.to_owned(),
             }),
         }?;
+
         let definition = match &function {
-            AggregateFunction::Average => ndc::AggregateFunctionDefinition {
-                result_type: ndc::Type::Named {
-                    name: "Double".to_owned(),
-                },
-            },
+            AggregateFunction::Average => &AVERAGE_DEFINITION,
         };
-        Ok((function, &definition))
+        Ok((function, definition))
     }
 
     fn lookup_comparison_operator(
         &self,
-        left_operand_type: &Type<Self::ScalarType>,
+        _left_operand_type: &Type<Self::ScalarType>,
         operator_name: &str,
     ) -> Result<(Self::ComparisonOperator, &ndc::ComparisonOperatorDefinition), QueryPlanError>
     where
         Self: Sized,
     {
         let operator = match operator_name {
-            "GreaterThan" => Ok(ComparisonOperator::GreaterThan),
+            "_eq" => Ok(ComparisonOperator::Equal),
             _ => Err(QueryPlanError::UnknownComparisonOperator(
                 operator_name.to_owned(),
             )),
         }?;
         let definition = match &operator {
-            ComparisonOperator::GreaterThan => ndc::ComparisonOperatorDefinition::Custom {
-                argument_type: ndc::Type::Named {
-                    name: "Double".to_owned(),
-                },
-            },
+            ComparisonOperator::Equal => &EQUAL_DEFINITION,
         };
-        Ok((operator, &definition))
+        Ok((operator, definition))
     }
 
     fn collections(&self) -> &BTreeMap<String, ndc::CollectionInfo> {
@@ -98,7 +92,7 @@ pub enum AggregateFunction {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ComparisonOperator {
-    GreaterThan,
+    Equal,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -107,4 +101,19 @@ pub enum ScalarType {
     Double,
     Int,
     String,
+}
+
+lazy_static! {
+    static ref AVERAGE_DEFINITION: ndc::AggregateFunctionDefinition =
+        ndc::AggregateFunctionDefinition {
+            result_type: ndc::Type::Named {
+                name: "Double".to_owned(),
+            },
+        };
+    static ref EQUAL_DEFINITION: ndc::ComparisonOperatorDefinition =
+        ndc::ComparisonOperatorDefinition::Custom {
+            argument_type: ndc::Type::Named {
+                name: "Double".to_owned(),
+            },
+        };
 }

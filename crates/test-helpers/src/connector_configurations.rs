@@ -3,28 +3,8 @@ use std::collections::BTreeMap;
 use configuration::{schema, Configuration};
 use mongodb_agent_common::mongo_query_plan::MongoConfiguration;
 use mongodb_support::BsonScalarType;
-use ndc_models::{self as ndc, CollectionInfo, ObjectField};
-use ndc_test_helpers::{collection, make_primary_key_uniqueness_constraint};
-
-pub fn object_type(
-    fields: impl IntoIterator<Item = (impl ToString, impl Into<ndc::Type>)>,
-) -> ndc::ObjectType {
-    ndc::ObjectType {
-        description: Default::default(),
-        fields: fields
-            .into_iter()
-            .map(|(name, field_type)| {
-                (
-                    name.to_string(),
-                    ObjectField {
-                        description: Default::default(),
-                        r#type: field_type.into(),
-                    },
-                )
-            })
-            .collect(),
-    }
-}
+use ndc_models::CollectionInfo;
+use ndc_test_helpers::{collection, make_primary_key_uniqueness_constraint, object_type};
 
 pub fn make_flat_schema() -> MongoConfiguration {
     MongoConfiguration(Configuration {

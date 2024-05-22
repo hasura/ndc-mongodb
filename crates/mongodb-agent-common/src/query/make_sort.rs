@@ -1,6 +1,7 @@
-use itertools::Itertools as _;
+use itertools::{Either, Itertools as _};
 use mongodb::bson::{bson, Document};
 use ndc_models::OrderDirection;
+use ndc_query_plan::ColumnSelector;
 
 use crate::{
     interface_types::MongoAgentError,
@@ -43,6 +44,10 @@ pub fn make_sort(order_by: &OrderBy) -> Result<Document, MongoAgentError> {
         .collect()
 }
 
-fn column_ref_with_path(name: &String, path: &[String]) -> String {
-    std::iter::once(name).chain(path.iter()).join(".")
+fn column_ref_with_path(name: &ColumnSelector, path: &[String]) -> String {
+    let column_iter = match name {
+        ColumnSelector::Path(column_path) => Either::Left(column_path.iter()),
+        ColumnSelector::Column(column) => Either::Right(std::iter::once(column)),
+    };
+    path.iter().chain(column_iter).join(".")
 }

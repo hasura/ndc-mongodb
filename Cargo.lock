@@ -1707,6 +1707,7 @@ dependencies = [
  "derivative",
  "indexmap 2.2.5",
  "itertools 0.12.1",
+ "lazy_static",
  "ndc-models",
  "ndc-test-helpers",
  "nonempty",

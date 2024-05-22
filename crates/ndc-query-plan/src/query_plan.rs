@@ -185,7 +185,7 @@ pub struct OrderByElement<T: ConnectorTypes> {
 pub enum OrderByTarget<T: ConnectorTypes> {
     Column {
         /// The name of the column
-        name: String,
+        name: ColumnSelector,
 
         /// Any relationships to traverse to reach this column. These are translated from
         /// [ndc_models::OrderByElement] values in the [ndc_models::QueryRequest] to names of relation
@@ -194,7 +194,7 @@ pub enum OrderByTarget<T: ConnectorTypes> {
     },
     SingleColumnAggregate {
         /// The column to apply the aggregation function to
-        column: String,
+        column: ColumnSelector,
         /// Single column aggregate function name.
         function: T::AggregateFunction,
 

@@ -17,4 +17,5 @@ ndc-test-helpers = { path = "../ndc-test-helpers" }
 test-helpers = { path = "../test-helpers" }
 
 anyhow = "1"
+lazy_static = "1"
 pretty_assertions = "1"
