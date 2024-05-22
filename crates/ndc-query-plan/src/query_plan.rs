@@ -8,7 +8,7 @@ use ndc_models::{
 };
 use nonempty::NonEmpty;
 
-use crate::{ObjectType, Type};
+use crate::Type;
 
 pub trait ConnectorTypes {
     type ScalarType: Clone + Debug + PartialEq;

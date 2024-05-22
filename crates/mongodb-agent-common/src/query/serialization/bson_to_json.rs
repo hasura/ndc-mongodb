@@ -18,7 +18,7 @@ pub enum BsonToJsonError {
     #[error("error converting 64-bit floating point number from BSON to JSON: {0}")]
     DoubleConversion(f64),
 
-    #[error("input object of type \"{0:?}\" is missing a field, \"{1}\"")]
+    #[error("input object of type {0:?} is missing a field, \"{1}\"")]
     MissingObjectField(Type, String),
 
     #[error("error converting value to JSON: {0}")]
@@ -142,7 +142,7 @@ fn get_object_field_value(
     doc: &bson::Document,
 ) -> Result<Option<Bson>> {
     let value = doc.get(field_name);
-    if value.is_none() && is_nullable(&field_type) {
+    if value.is_none() && is_nullable(field_type) {
         return Ok(None);
     }
     Ok(Some(value.cloned().ok_or_else(|| {

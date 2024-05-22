@@ -92,11 +92,11 @@ fn selection_for_field(
             predicate: _,
             ..
         } => selection_for_array(parent_columns, field_name, field, 0),
-        Field::Relationship { aggregates, .. } => {
+        Field::Relationship { relationship, aggregates, .. } => {
             if aggregates.is_some() {
-                Ok(doc! { "$first": get_field(field_name) }.into())
+                Ok(doc! { "$first": get_field(relationship) }.into())
             } else {
-                Ok(doc! { "rows": get_field(field_name) }.into())
+                Ok(doc! { "rows": get_field(relationship) }.into())
             }
         }
     }
