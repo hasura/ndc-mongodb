@@ -4,9 +4,6 @@ mod mongo_connector;
 mod mutation;
 mod schema;
 
-#[cfg(test)]
-mod test_helpers;
-
 use std::error::Error;
 
 use mongo_connector::MongoConnector;

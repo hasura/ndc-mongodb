@@ -1703,12 +1703,16 @@ dependencies = [
 name = "ndc-query-plan"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "derivative",
  "indexmap 2.2.5",
  "itertools 0.12.1",
  "ndc-models",
+ "ndc-test-helpers",
  "nonempty",
+ "pretty_assertions",
  "serde_json",
+ "test-helpers",
  "thiserror",
 ]
 
@@ -3091,7 +3095,10 @@ dependencies = [
  "configuration",
  "enum-iterator",
  "mongodb",
+ "mongodb-agent-common",
  "mongodb-support",
+ "ndc-models",
+ "ndc-test-helpers",
  "proptest",
 ]
 

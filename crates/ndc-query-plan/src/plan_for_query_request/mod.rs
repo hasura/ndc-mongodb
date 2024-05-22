@@ -4,6 +4,9 @@ pub mod query_plan_error;
 mod query_plan_state;
 pub mod type_annotated_field;
 
+#[cfg(test)]
+mod test_helpers;
+
 use std::collections::VecDeque;
 
 use crate::{self as plan, type_annotated_field, ObjectType, QueryPlan};
@@ -806,402 +809,429 @@ fn plan_for_comparison_value<T: QueryContext>(
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use std::collections::HashMap;
-//
-//     use dc_api_test_helpers::{self as v2, source, table_relationships, target};
-//     use ndc_sdk::models::{OrderByElement, OrderByTarget, OrderDirection};
-//     use ndc_test_helpers::*;
-//     use pretty_assertions::assert_eq;
-//     use serde_json::json;
-//
-//     use crate::test_helpers::{make_flat_schema, make_nested_schema};
-//
-//     use super::{ndc_to_v2_relationships, plan_for_query_request};
-//
-//     #[test]
-//     fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
-//         let ndc_query_request = query_request()
-//             .collection("schools")
-//             .relationships([
-//                 (
-//                     "school_classes",
-//                     relationship("classes", [("_id", "school_id")]),
-//                 ),
-//                 (
-//                     "class_students",
-//                     relationship("students", [("_id", "class_id")]),
-//                 ),
-//                 (
-//                     "class_department",
-//                     relationship("departments", [("department_id", "_id")]).object_type(),
-//                 ),
-//                 (
-//                     "school_directory",
-//                     relationship("directory", [("_id", "school_id")]).object_type(),
-//                 ),
-//                 (
-//                     "student_advisor",
-//                     relationship("advisors", [("advisor_id", "_id")]).object_type(),
-//                 ),
-//                 (
-//                     "existence_check",
-//                     relationship("some_collection", [("some_id", "_id")]),
-//                 ),
-//             ])
-//             .query(
-//                 query()
-//                     .fields([relation_field!("school_classes" => "class_name", query()
-//                         .fields([
-//                             relation_field!("class_students" => "student_name")
-//                         ])
-//                     )])
-//                     .order_by(vec![OrderByElement {
-//                         order_direction: OrderDirection::Asc,
-//                         target: OrderByTarget::Column {
-//                             name: "advisor_name".to_owned(),
-//                             path: vec![
-//                                 path_element("school_classes")
-//                                     .predicate(equal(
-//                                         target!(
-//                                             "department_id",
-//                                             [
-//                                                 path_element("school_classes"),
-//                                                 path_element("class_department"),
-//                                             ],
-//                                         ),
-//                                         column_value!(
-//                                             "math_department_id",
-//                                             [path_element("school_directory")],
-//                                         ),
-//                                     ))
-//                                     .into(),
-//                                 path_element("class_students").into(),
-//                                 path_element("student_advisor").into(),
-//                             ],
-//                         },
-//                     }])
-//                     // The `And` layer checks that we properly recursive into Expressions
-//                     .predicate(and([exists(
-//                         related!("existence_check"),
-//                         empty_expression(),
-//                     )])),
-//             )
-//             .into();
-//
-//         let expected_relationships = vec![
-//             table_relationships(
-//                 source("classes"),
-//                 [
-//                     (
-//                         "class_department",
-//                         v2::relationship(
-//                             target("departments"),
-//                             [(v2::select!("department_id"), v2::select!("_id"))],
-//                         )
-//                         .object_type(),
-//                     ),
-//                     (
-//                         "class_students",
-//                         v2::relationship(
-//                             target("students"),
-//                             [(v2::select!("_id"), v2::select!("class_id"))],
-//                         ),
-//                     ),
-//                 ],
-//             ),
-//             table_relationships(
-//                 source("schools"),
-//                 [
-//                     (
-//                         "school_classes",
-//                         v2::relationship(
-//                             target("classes"),
-//                             [(v2::select!("_id"), v2::select!("school_id"))],
-//                         ),
-//                     ),
-//                     (
-//                         "school_directory",
-//                         v2::relationship(
-//                             target("directory"),
-//                             [(v2::select!("_id"), v2::select!("school_id"))],
-//                         )
-//                         .object_type(),
-//                     ),
-//                     (
-//                         "existence_check",
-//                         v2::relationship(
-//                             target("some_collection"),
-//                             [(v2::select!("some_id"), v2::select!("_id"))],
-//                         ),
-//                     ),
-//                 ],
-//             ),
-//             table_relationships(
-//                 source("students"),
-//                 [(
-//                     "student_advisor",
-//                     v2::relationship(
-//                         target("advisors"),
-//                         [(v2::select!("advisor_id"), v2::select!("_id"))],
-//                     )
-//                     .object_type(),
-//                 )],
-//             ),
-//         ];
-//
-//         let mut relationships = ndc_to_v2_relationships(&ndc_query_request)?;
-//
-//         // Sort to match order of expected result
-//         relationships.sort_by_key(|rels| rels.source_table.clone());
-//
-//         assert_eq!(relationships, expected_relationships);
-//         Ok(())
-//     }
-//
-//     #[test]
-//     fn translates_root_column_references() -> Result<(), anyhow::Error> {
-//         let query_context = make_flat_schema();
-//         let query = query_request()
-//             .collection("authors")
-//             .query(query().fields([field!("last_name")]).predicate(exists(
-//                 unrelated!("articles"),
-//                 and([
-//                     equal(target!("author_id"), column_value!(root("id"))),
-//                     binop("_regex", target!("title"), value!("Functional.*")),
-//                 ]),
-//             )))
-//             .into();
-//         let v2_request = plan_for_query_request(&query_context, query)?;
-//
-//         let expected = v2::query_request()
-//             .target(["authors"])
-//             .query(
-//                 v2::query()
-//                     .fields([v2::column!("last_name": "String")])
-//                     .predicate(v2::exists_unrelated(
-//                         ["articles"],
-//                         v2::and([
-//                             v2::equal(
-//                                 v2::compare!("author_id": "Int"),
-//                                 v2::column_value!(["$"], "id": "Int"),
-//                             ),
-//                             v2::binop(
-//                                 "_regex",
-//                                 v2::compare!("title": "String"),
-//                                 v2::value!(json!("Functional.*"), "String"),
-//                             ),
-//                         ]),
-//                     )),
-//             )
-//             .into();
-//
-//         assert_eq!(v2_request, expected);
-//         Ok(())
-//     }
-//
-//     #[test]
-//     fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
-//         let query_context = make_flat_schema();
-//         let query = query_request()
-//             .collection("authors")
-//             .query(query().aggregates([
-//                 star_count_aggregate!("count_star"),
-//                 column_count_aggregate!("count_id" => "last_name", distinct: true),
-//                 column_aggregate!("avg_id" => "id", "avg"),
-//             ]))
-//             .into();
-//         let v2_request = plan_for_query_request(&query_context, query)?;
-//
-//         let expected = v2::query_request()
-//             .target(["authors"])
-//             .query(v2::query().aggregates([
-//                 v2::star_count_aggregate!("count_star"),
-//                 v2::column_count_aggregate!("count_id" => "last_name", distinct: true),
-//                 v2::column_aggregate!("avg_id" => "id", "avg": "Float"),
-//             ]))
-//             .into();
-//
-//         assert_eq!(v2_request, expected);
-//         Ok(())
-//     }
-//
-//     #[test]
-//     fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), anyhow::Error> {
-//         let query_context = make_flat_schema();
-//         let query = query_request()
-//             .collection("authors")
-//             .query(
-//                 query()
-//                     .fields([
-//                         field!("last_name"),
-//                         relation_field!(
-//                             "author_articles" => "articles",
-//                             query().fields([field!("title"), field!("year")])
-//                         ),
-//                     ])
-//                     .predicate(exists(
-//                         related!("author_articles"),
-//                         binop("_regex", target!("title"), value!("Functional.*")),
-//                     ))
-//                     .order_by(vec![
-//                         OrderByElement {
-//                             order_direction: OrderDirection::Asc,
-//                             target: OrderByTarget::SingleColumnAggregate {
-//                                 column: "year".into(),
-//                                 function: "avg".into(),
-//                                 path: vec![path_element("author_articles").into()],
-//                             },
-//                         },
-//                         OrderByElement {
-//                             order_direction: OrderDirection::Desc,
-//                             target: OrderByTarget::Column {
-//                                 name: "id".into(),
-//                                 path: vec![],
-//                             },
-//                         },
-//                     ]),
-//             )
-//             .relationships([(
-//                 "author_articles",
-//                 relationship("articles", [("id", "author_id")]),
-//             )])
-//             .into();
-//         let v2_request = plan_for_query_request(&query_context, query)?;
-//
-//         let expected = v2::query_request()
-//             .target(["authors"])
-//             .query(
-//                 v2::query()
-//                     .fields([
-//                         v2::column!("last_name": "String"),
-//                         v2::relation_field!(
-//                             "author_articles" => "articles",
-//                             v2::query()
-//                                 .fields([
-//                                     v2::column!("title": "String"),
-//                                     v2::column!("year": "Int")]
-//                                 )
-//                         ),
-//                     ])
-//                     .predicate(v2::exists(
-//                         "author_articles",
-//                         v2::binop(
-//                             "_regex",
-//                             v2::compare!("title": "String"),
-//                             v2::value!(json!("Functional.*"), "String"),
-//                         ),
-//                     ))
-//                     .order_by(dc_api_types::OrderBy {
-//                         elements: vec![
-//                             dc_api_types::OrderByElement {
-//                                 order_direction: dc_api_types::OrderDirection::Asc,
-//                                 target: dc_api_types::OrderByTarget::SingleColumnAggregate {
-//                                     column: "year".into(),
-//                                     function: "avg".into(),
-//                                     result_type: "Float".into(),
-//                                 },
-//                                 target_path: vec!["author_articles".into()],
-//                             },
-//                             dc_api_types::OrderByElement {
-//                                 order_direction: dc_api_types::OrderDirection::Desc,
-//                                 target: dc_api_types::OrderByTarget::Column {
-//                                     column: v2::select!("id"),
-//                                 },
-//                                 target_path: vec![],
-//                             },
-//                         ],
-//                         relations: HashMap::from([(
-//                             "author_articles".into(),
-//                             dc_api_types::OrderByRelation {
-//                                 r#where: None,
-//                                 subrelations: HashMap::new(),
-//                             },
-//                         )]),
-//                     }),
-//             )
-//             .relationships(vec![table_relationships(
-//                 source("authors"),
-//                 [(
-//                     "author_articles",
-//                     v2::relationship(
-//                         target("articles"),
-//                         [(v2::select!("id"), v2::select!("author_id"))],
-//                     ),
-//                 )],
-//             )])
-//             .into();
-//
-//         assert_eq!(v2_request, expected);
-//         Ok(())
-//     }
-//
-//     #[test]
-//     fn translates_nested_fields() -> Result<(), anyhow::Error> {
-//         let query_context = make_nested_schema();
-//         let query_request = query_request()
-//             .collection("authors")
-//             .query(query().fields([
-//                 field!("author_address" => "address", object!([field!("address_country" => "country")])),
-//                 field!("author_articles" => "articles", array!(object!([field!("article_title" => "title")]))),
-//                 field!("author_array_of_arrays" => "array_of_arrays", array!(array!(object!([field!("article_title" => "title")]))))
-//             ]))
-//             .into();
-//         let v2_request = plan_for_query_request(&query_context, query_request)?;
-//
-//         let expected = v2::query_request()
-//             .target(["authors"])
-//             .query(v2::query().fields([
-//                 v2::nested_object!("author_address" => "address", v2::query().fields([v2::column!("address_country" => "country": "String")])),
-//                 v2::nested_array!("author_articles", v2::nested_object_field!("articles", v2::query().fields([v2::column!("article_title" => "title": "String")]))),
-//                 v2::nested_array!("author_array_of_arrays", v2::nested_array_field!(v2::nested_object_field!("array_of_arrays", v2::query().fields([v2::column!("article_title" => "title": "String")]))))
-//             ]))
-//             .into();
-//
-//         assert_eq!(v2_request, expected);
-//         Ok(())
-//     }
-//
-//     #[test]
-//     fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Result<()> {
-//         let query_context = make_nested_schema();
-//         let request = query_request()
-//             .collection("appearances")
-//             .relationships([("author", relationship("authors", [("authorId", "id")]))])
-//             .query(
-//                 query()
-//                     .fields([relation_field!("author" => "presenter", query().fields([
-//                         field!("name"),
-//                     ]))])
-//                     .predicate(not(is_null(target!("name", [path_element("author")])))),
-//             )
-//             .into();
-//         let v2_request = plan_for_query_request(&query_context, request)?;
-//
-//         let expected = v2::query_request()
-//             .target(["appearances"])
-//             .relationships([v2::table_relationships(
-//                 vec!["appearances".into()],
-//                 [(
-//                     "author",
-//                     v2::relationship(
-//                         v2::target("author"),
-//                         [(
-//                             dc_api_types::ColumnSelector::Column("authorId".into()),
-//                             dc_api_types::ColumnSelector::Column("id".into()),
-//                         )],
-//                     ),
-//                 )],
-//             )])
-//             .query(v2::query().fields([
-//                 v2::relation_field!("author" => "presenter", v2::query().fields([
-//                     v2::column!("name": "String")
-//                 ])
-//                 .predicate(v2::exists("author", v2::not(v2::is_null(v2::compare!("name": "String")))))),
-//             ])).into();
-//
-//         assert_eq!(v2_request, expected);
-//         Ok(())
-//     }
-// }
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use ndc_models::{OrderByElement, OrderByTarget, OrderDirection, RelationshipType};
+    use ndc_test_helpers::*;
+    use pretty_assertions::assert_eq;
+    use serde_json::json;
+
+    use test_helpers::connector_configurations::{make_flat_schema, make_nested_schema};
+
+    use crate::{
+        plan_for_query_request::test_helpers::TestContext, Query, QueryPlan, Relationship,
+    };
+
+    use super::plan_for_query_request;
+
+    #[test]
+    fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
+        let context = TestContext {
+            ..Default::default()
+        };
+
+        let request = query_request()
+            .collection("schools")
+            .relationships([
+                (
+                    "school_classes",
+                    relationship("classes", [("_id", "school_id")]),
+                ),
+                (
+                    "class_students",
+                    relationship("students", [("_id", "class_id")]),
+                ),
+                (
+                    "class_department",
+                    relationship("departments", [("department_id", "_id")]).object_type(),
+                ),
+                (
+                    "school_directory",
+                    relationship("directory", [("_id", "school_id")]).object_type(),
+                ),
+                (
+                    "student_advisor",
+                    relationship("advisors", [("advisor_id", "_id")]).object_type(),
+                ),
+                (
+                    "existence_check",
+                    relationship("some_collection", [("some_id", "_id")]),
+                ),
+            ])
+            .query(
+                query()
+                    .fields([relation_field!("school_classes" => "class_name", query()
+                        .fields([
+                            relation_field!("class_students" => "student_name")
+                        ])
+                    )])
+                    .order_by(vec![OrderByElement {
+                        order_direction: OrderDirection::Asc,
+                        target: OrderByTarget::Column {
+                            name: "advisor_name".to_owned(),
+                            path: vec![
+                                path_element("school_classes")
+                                    .predicate(equal(
+                                        target!(
+                                            "department_id",
+                                            [
+                                                path_element("school_classes"),
+                                                path_element("class_department"),
+                                            ],
+                                        ),
+                                        column_value!(
+                                            "math_department_id",
+                                            [path_element("school_directory")],
+                                        ),
+                                    ))
+                                    .into(),
+                                path_element("class_students").into(),
+                                path_element("student_advisor").into(),
+                            ],
+                        },
+                    }])
+                    // The `And` layer checks that we properly recursive into Expressions
+                    .predicate(and([exists(
+                        related!("existence_check"),
+                        empty_expression(),
+                    )])),
+            )
+            .into();
+
+        let expected = QueryPlan {
+            collection: "schools".to_owned(),
+            arguments: Default::default(),
+            variables: None,
+            unrelated_collections: Default::default(),
+            query: Query {
+                relationships: [(
+                    "school_classes".to_owned(),
+                    Relationship {
+                        column_mapping: [("_id".to_owned(), "school_id".to_owned())].into(),
+                        relationship_type: RelationshipType::Array,
+                        target_collection: "classes".to_owned(),
+                        arguments: Default::default(),
+                        query: todo!(),
+                    },
+                )],
+                fields: todo!(),
+                order_by: todo!(),
+                predicate: todo!(),
+                ..Default::default()
+            },
+        };
+
+        // let expected_relationships = vec![
+        //     collection_relationships(
+        //         source("classes"),
+        //         [
+        //             (
+        //                 "class_department",
+        //                 v2::relationship(
+        //                     target("departments"),
+        //                     [(v2::select!("department_id"), v2::select!("_id"))],
+        //                 )
+        //                 .object_type(),
+        //             ),
+        //             (
+        //                 "class_students",
+        //                 v2::relationship(
+        //                     target("students"),
+        //                     [(v2::select!("_id"), v2::select!("class_id"))],
+        //                 ),
+        //             ),
+        //         ],
+        //     ),
+        //     collection_relationships(
+        //         source("schools"),
+        //         [
+        //             (
+        //                 "school_classes",
+        //                 v2::relationship(
+        //                     target("classes"),
+        //                     [(v2::select!("_id"), v2::select!("school_id"))],
+        //                 ),
+        //             ),
+        //             (
+        //                 "school_directory",
+        //                 v2::relationship(
+        //                     target("directory"),
+        //                     [(v2::select!("_id"), v2::select!("school_id"))],
+        //                 )
+        //                 .object_type(),
+        //             ),
+        //             (
+        //                 "existence_check",
+        //                 v2::relationship(
+        //                     target("some_collection"),
+        //                     [(v2::select!("some_id"), v2::select!("_id"))],
+        //                 ),
+        //             ),
+        //         ],
+        //     ),
+        //     collection_relationships(
+        //         source("students"),
+        //         [(
+        //             "student_advisor",
+        //             v2::relationship(
+        //                 target("advisors"),
+        //                 [(v2::select!("advisor_id"), v2::select!("_id"))],
+        //             )
+        //             .object_type(),
+        //         )],
+        //     ),
+        // ];
+
+        let query_plan = plan_for_query_request(&context, &request)?;
+
+        assert_eq!(query_plan, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn translates_root_column_references() -> Result<(), anyhow::Error> {
+        let query_context = make_flat_schema();
+        let query = query_request()
+            .collection("authors")
+            .query(query().fields([field!("last_name")]).predicate(exists(
+                unrelated!("articles"),
+                and([
+                    equal(target!("author_id"), column_value!(root("id"))),
+                    binop("_regex", target!("title"), value!("Functional.*")),
+                ]),
+            )))
+            .into();
+        let query_plan = plan_for_query_request(&query_context, query)?;
+
+        let expected = v2::query_request()
+            .target(["authors"])
+            .query(
+                v2::query()
+                    .fields([v2::column!("last_name": "String")])
+                    .predicate(v2::exists_unrelated(
+                        ["articles"],
+                        v2::and([
+                            v2::equal(
+                                v2::compare!("author_id": "Int"),
+                                v2::column_value!(["$"], "id": "Int"),
+                            ),
+                            v2::binop(
+                                "_regex",
+                                v2::compare!("title": "String"),
+                                v2::value!(json!("Functional.*"), "String"),
+                            ),
+                        ]),
+                    )),
+            )
+            .into();
+
+        assert_eq!(query_plan, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
+        let query_context = make_flat_schema();
+        let query = query_request()
+            .collection("authors")
+            .query(query().aggregates([
+                star_count_aggregate!("count_star"),
+                column_count_aggregate!("count_id" => "last_name", distinct: true),
+                column_aggregate!("avg_id" => "id", "avg"),
+            ]))
+            .into();
+        let v2_request = plan_for_query_request(&query_context, query)?;
+
+        let expected = v2::query_request()
+            .target(["authors"])
+            .query(v2::query().aggregates([
+                v2::star_count_aggregate!("count_star"),
+                v2::column_count_aggregate!("count_id" => "last_name", distinct: true),
+                v2::column_aggregate!("avg_id" => "id", "avg": "Float"),
+            ]))
+            .into();
+
+        assert_eq!(v2_request, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), anyhow::Error> {
+        let query_context = make_flat_schema();
+        let query = query_request()
+            .collection("authors")
+            .query(
+                query()
+                    .fields([
+                        field!("last_name"),
+                        relation_field!(
+                            "author_articles" => "articles",
+                            query().fields([field!("title"), field!("year")])
+                        ),
+                    ])
+                    .predicate(exists(
+                        related!("author_articles"),
+                        binop("_regex", target!("title"), value!("Functional.*")),
+                    ))
+                    .order_by(vec![
+                        OrderByElement {
+                            order_direction: OrderDirection::Asc,
+                            target: OrderByTarget::SingleColumnAggregate {
+                                column: "year".into(),
+                                function: "avg".into(),
+                                path: vec![path_element("author_articles").into()],
+                            },
+                        },
+                        OrderByElement {
+                            order_direction: OrderDirection::Desc,
+                            target: OrderByTarget::Column {
+                                name: "id".into(),
+                                path: vec![],
+                            },
+                        },
+                    ]),
+            )
+            .relationships([(
+                "author_articles",
+                relationship("articles", [("id", "author_id")]),
+            )])
+            .into();
+        let v2_request = plan_for_query_request(&query_context, query)?;
+
+        let expected = v2::query_request()
+            .target(["authors"])
+            .query(
+                v2::query()
+                    .fields([
+                        v2::column!("last_name": "String"),
+                        v2::relation_field!(
+                            "author_articles" => "articles",
+                            v2::query()
+                                .fields([
+                                    v2::column!("title": "String"),
+                                    v2::column!("year": "Int")]
+                                )
+                        ),
+                    ])
+                    .predicate(v2::exists(
+                        "author_articles",
+                        v2::binop(
+                            "_regex",
+                            v2::compare!("title": "String"),
+                            v2::value!(json!("Functional.*"), "String"),
+                        ),
+                    ))
+                    .order_by(dc_api_types::OrderBy {
+                        elements: vec![
+                            dc_api_types::OrderByElement {
+                                order_direction: dc_api_types::OrderDirection::Asc,
+                                target: dc_api_types::OrderByTarget::SingleColumnAggregate {
+                                    column: "year".into(),
+                                    function: "avg".into(),
+                                    result_type: "Float".into(),
+                                },
+                                target_path: vec!["author_articles".into()],
+                            },
+                            dc_api_types::OrderByElement {
+                                order_direction: dc_api_types::OrderDirection::Desc,
+                                target: dc_api_types::OrderByTarget::Column {
+                                    column: v2::select!("id"),
+                                },
+                                target_path: vec![],
+                            },
+                        ],
+                        relations: HashMap::from([(
+                            "author_articles".into(),
+                            dc_api_types::OrderByRelation {
+                                r#where: None,
+                                subrelations: HashMap::new(),
+                            },
+                        )]),
+                    }),
+            )
+            .relationships(vec![collection_relationships(
+                source("authors"),
+                [(
+                    "author_articles",
+                    v2::relationship(
+                        target("articles"),
+                        [(v2::select!("id"), v2::select!("author_id"))],
+                    ),
+                )],
+            )])
+            .into();
+
+        assert_eq!(v2_request, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn translates_nested_fields() -> Result<(), anyhow::Error> {
+        let query_context = make_nested_schema();
+        let query_request = query_request()
+            .collection("authors")
+            .query(query().fields([
+                field!("author_address" => "address", object!([field!("address_country" => "country")])),
+                field!("author_articles" => "articles", array!(object!([field!("article_title" => "title")]))),
+                field!("author_array_of_arrays" => "array_of_arrays", array!(array!(object!([field!("article_title" => "title")]))))
+            ]))
+            .into();
+        let v2_request = plan_for_query_request(&query_context, query_request)?;
+
+        let expected = v2::query_request()
+            .target(["authors"])
+            .query(v2::query().fields([
+                v2::nested_object!("author_address" => "address", v2::query().fields([v2::column!("address_country" => "country": "String")])),
+                v2::nested_array!("author_articles", v2::nested_object_field!("articles", v2::query().fields([v2::column!("article_title" => "title": "String")]))),
+                v2::nested_array!("author_array_of_arrays", v2::nested_array_field!(v2::nested_object_field!("array_of_arrays", v2::query().fields([v2::column!("article_title" => "title": "String")]))))
+            ]))
+            .into();
+
+        assert_eq!(v2_request, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Result<()> {
+        let query_context = make_nested_schema();
+        let request = query_request()
+            .collection("appearances")
+            .relationships([("author", relationship("authors", [("authorId", "id")]))])
+            .query(
+                query()
+                    .fields([relation_field!("author" => "presenter", query().fields([
+                        field!("name"),
+                    ]))])
+                    .predicate(not(is_null(target!("name", [path_element("author")])))),
+            )
+            .into();
+        let v2_request = plan_for_query_request(&query_context, request)?;
+
+        let expected = v2::query_request()
+            .target(["appearances"])
+            .relationships([collection_relationships(
+                vec!["appearances".into()],
+                [(
+                    "author",
+                    v2::relationship(
+                        v2::target("author"),
+                        [(
+                            dc_api_types::ColumnSelector::Column("authorId".into()),
+                            dc_api_types::ColumnSelector::Column("id".into()),
+                        )],
+                    ),
+                )],
+            )])
+            .query(v2::query().fields([
+                v2::relation_field!("author" => "presenter", v2::query().fields([
+                    v2::column!("name": "String")
+                ])
+                .predicate(v2::exists("author", v2::not(v2::is_null(v2::compare!("name": "String")))))),
+            ])).into();
+
+        assert_eq!(v2_request, expected);
+        Ok(())
+    }
+}

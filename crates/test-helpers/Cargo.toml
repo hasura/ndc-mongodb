@@ -5,9 +5,12 @@ version.workspace = true
 
 [dependencies]
 configuration = { path = "../configuration" }
+mongodb-agent-common = { path = "../mongodb-agent-common" }
 mongodb-support = { path = "../mongodb-support" }
+ndc-test-helpers = { path = "../ndc-test-helpers" }
 
 enum-iterator = "^2.0.0"
 mongodb = { workspace = true }
+ndc-models = { workspace = true }
 proptest = "1"
 
