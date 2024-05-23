@@ -148,6 +148,7 @@ trait NamedEnum {
 fn scalar_type_name(t: &Type<ScalarType>) -> Option<&'static str> {
     match t {
         Type::Scalar(s) => Some(s.name()),
+        Type::Nullable(t) => scalar_type_name(t),
         _ => None,
     }
 }

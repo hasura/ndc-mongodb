@@ -89,6 +89,7 @@ fn scalar_type_name(t: &Type) -> Option<&'static str> {
     match t {
         Type::Scalar(MongoScalarType::Bson(s)) => Some(s.graphql_name()),
         Type::Scalar(MongoScalarType::ExtendedJSON) => Some(EXTENDED_JSON_TYPE_NAME),
+        Type::Nullable(t) => scalar_type_name(t),
         _ => None,
     }
 }

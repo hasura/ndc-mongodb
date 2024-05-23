@@ -93,13 +93,13 @@ pub struct UnrelatedJoin<T: ConnectorTypes> {
 pub enum Aggregate<T: ConnectorTypes> {
     ColumnCount {
         /// The column to apply the count aggregate function to
-        column: String,
+        column: ColumnSelector,
         /// Whether or not only distinct items should be counted
         distinct: bool,
     },
     SingleColumn {
         /// The column to apply the aggregation function to
-        column: String,
+        column: ColumnSelector,
         /// Single column aggregate function name.
         function: T::AggregateFunction,
         result_type: Type<T::ScalarType>,

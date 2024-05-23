@@ -9,7 +9,7 @@ mod plan_test_helpers;
 
 use std::collections::VecDeque;
 
-use crate::{self as plan, type_annotated_field, ObjectType, QueryPlan};
+use crate::{self as plan, type_annotated_field, ColumnSelector, ObjectType, QueryPlan};
 use indexmap::IndexMap;
 use itertools::Itertools as _;
 use ndc::QueryRequest;
@@ -131,9 +131,10 @@ fn plan_for_aggregate<T: QueryContext>(
     aggregate: ndc::Aggregate,
 ) -> Result<plan::Aggregate<T>> {
     match aggregate {
-        ndc::Aggregate::ColumnCount { column, distinct } => {
-            Ok(plan::Aggregate::ColumnCount { column, distinct })
-        }
+        ndc::Aggregate::ColumnCount { column, distinct } => Ok(plan::Aggregate::ColumnCount {
+            column: ColumnSelector::Column(column),
+            distinct,
+        }),
         ndc::Aggregate::SingleColumn { column, function } => {
             let object_type_field_type =
                 find_object_field(collection_object_type, column.as_ref())?;
@@ -141,7 +142,7 @@ fn plan_for_aggregate<T: QueryContext>(
             let (function, definition) =
                 context.find_aggregation_function_definition(object_type_field_type, &function)?;
             Ok(plan::Aggregate::SingleColumn {
-                column,
+                column: ColumnSelector::Column(column),
                 function,
                 result_type: definition.result_type.clone(),
             })
@@ -1177,167 +1178,291 @@ mod tests {
             variables: Default::default(),
         };
 
-        // .target(["authors"])
-        // .query(
-        //     v2::query()
-        //         .fields([v2::column!("last_name": "String")])
-        //         .predicate(v2::exists_unrelated(
-        //             ["articles"],
-        //             v2::and([
-        //                 v2::equal(
-        //                     v2::compare!("author_id": "Int"),
-        //                     v2::column_value!(["$"], "id": "Int"),
-        //                 ),
-        //                 v2::binop(
-        //                     "_regex",
-        //                     v2::compare!("title": "String"),
-        //                     v2::value!(json!("Functional.*"), "String"),
-        //                 ),
-        //             ]),
-        //         )),
-        // )
-        // .into();
+        assert_eq!(query_plan, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
+        let query_context = make_flat_schema();
+        let query = query_request()
+            .collection("authors")
+            .query(query().aggregates([
+                star_count_aggregate!("count_star"),
+                column_count_aggregate!("count_id" => "last_name", distinct: true),
+                column_aggregate!("avg_id" => "id", "Average"),
+            ]))
+            .into();
+        let query_plan = plan_for_query_request(&query_context, query)?;
+
+        let expected = QueryPlan {
+            collection: "authors".into(),
+            query: plan::Query {
+                aggregates: Some(
+                    [
+                        ("count_star".into(), plan::Aggregate::StarCount),
+                        (
+                            "count_id".into(),
+                            plan::Aggregate::ColumnCount {
+                                column: ColumnSelector::Column("last_name".into()),
+                                distinct: true,
+                            },
+                        ),
+                        (
+                            "avg_id".into(),
+                            plan::Aggregate::SingleColumn {
+                                column: ColumnSelector::Column("id".into()),
+                                function: plan_test_helpers::AggregateFunction::Average,
+                                result_type: plan::Type::Scalar(
+                                    plan_test_helpers::ScalarType::Double,
+                                ),
+                            },
+                        ),
+                    ]
+                    .into(),
+                ),
+                ..Default::default()
+            },
+            arguments: Default::default(),
+            variables: Default::default(),
+            unrelated_collections: Default::default(),
+        };
 
         assert_eq!(query_plan, expected);
         Ok(())
     }
 
-    // #[test]
-    // fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
-    //     let query_context = make_flat_schema();
-    //     let query = query_request()
-    //         .collection("authors")
-    //         .query(query().aggregates([
-    //             star_count_aggregate!("count_star"),
-    //             column_count_aggregate!("count_id" => "last_name", distinct: true),
-    //             column_aggregate!("avg_id" => "id", "avg"),
-    //         ]))
-    //         .into();
-    //     let v2_request = plan_for_query_request(&query_context, query)?;
-    //
-    //     let expected = v2::query_request()
-    //         .target(["authors"])
-    //         .query(v2::query().aggregates([
-    //             v2::star_count_aggregate!("count_star"),
-    //             v2::column_count_aggregate!("count_id" => "last_name", distinct: true),
-    //             v2::column_aggregate!("avg_id" => "id", "avg": "Float"),
-    //         ]))
-    //         .into();
-    //
-    //     assert_eq!(v2_request, expected);
-    //     Ok(())
-    // }
-    //
-    // #[test]
-    // fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), anyhow::Error> {
-    //     let query_context = make_flat_schema();
-    //     let query = query_request()
-    //         .collection("authors")
-    //         .query(
-    //             query()
-    //                 .fields([
-    //                     field!("last_name"),
-    //                     relation_field!(
-    //                         "author_articles" => "articles",
-    //                         query().fields([field!("title"), field!("year")])
-    //                     ),
-    //                 ])
-    //                 .predicate(exists(
-    //                     related!("author_articles"),
-    //                     binop("_regex", target!("title"), value!("Functional.*")),
-    //                 ))
-    //                 .order_by(vec![
-    //                     OrderByElement {
-    //                         order_direction: OrderDirection::Asc,
-    //                         target: OrderByTarget::SingleColumnAggregate {
-    //                             column: "year".into(),
-    //                             function: "avg".into(),
-    //                             path: vec![path_element("author_articles").into()],
-    //                         },
-    //                     },
-    //                     OrderByElement {
-    //                         order_direction: OrderDirection::Desc,
-    //                         target: OrderByTarget::Column {
-    //                             name: "id".into(),
-    //                             path: vec![],
-    //                         },
-    //                     },
-    //                 ]),
-    //         )
-    //         .relationships([(
-    //             "author_articles",
-    //             relationship("articles", [("id", "author_id")]),
-    //         )])
-    //         .into();
-    //     let v2_request = plan_for_query_request(&query_context, query)?;
-    //
-    //     let expected = v2::query_request()
-    //         .target(["authors"])
-    //         .query(
-    //             v2::query()
-    //                 .fields([
-    //                     v2::column!("last_name": "String"),
-    //                     v2::relation_field!(
-    //                         "author_articles" => "articles",
-    //                         v2::query()
-    //                             .fields([
-    //                                 v2::column!("title": "String"),
-    //                                 v2::column!("year": "Int")]
-    //                             )
-    //                     ),
-    //                 ])
-    //                 .predicate(v2::exists(
-    //                     "author_articles",
-    //                     v2::binop(
-    //                         "_regex",
-    //                         v2::compare!("title": "String"),
-    //                         v2::value!(json!("Functional.*"), "String"),
-    //                     ),
-    //                 ))
-    //                 .order_by(dc_api_types::OrderBy {
-    //                     elements: vec![
-    //                         dc_api_types::OrderByElement {
-    //                             order_direction: dc_api_types::OrderDirection::Asc,
-    //                             target: dc_api_types::OrderByTarget::SingleColumnAggregate {
-    //                                 column: "year".into(),
-    //                                 function: "avg".into(),
-    //                                 result_type: "Float".into(),
-    //                             },
-    //                             target_path: vec!["author_articles".into()],
-    //                         },
-    //                         dc_api_types::OrderByElement {
-    //                             order_direction: dc_api_types::OrderDirection::Desc,
-    //                             target: dc_api_types::OrderByTarget::Column {
-    //                                 column: v2::select!("id"),
-    //                             },
-    //                             target_path: vec![],
-    //                         },
-    //                     ],
-    //                     relations: HashMap::from([(
-    //                         "author_articles".into(),
-    //                         dc_api_types::OrderByRelation {
-    //                             r#where: None,
-    //                             subrelations: HashMap::new(),
-    //                         },
-    //                     )]),
-    //                 }),
-    //         )
-    //         .relationships(vec![collection_relationships(
-    //             source("authors"),
-    //             [(
-    //                 "author_articles",
-    //                 v2::relationship(
-    //                     target("articles"),
-    //                     [(v2::select!("id"), v2::select!("author_id"))],
-    //                 ),
-    //             )],
-    //         )])
-    //         .into();
-    //
-    //     assert_eq!(v2_request, expected);
-    //     Ok(())
-    // }
-    //
+    #[test]
+    fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), anyhow::Error> {
+        let query_context = make_flat_schema();
+        let query = query_request()
+            .collection("authors")
+            .query(
+                query()
+                    .fields([
+                        field!("last_name"),
+                        relation_field!(
+                            "author_articles" => "articles",
+                            query().fields([field!("title"), field!("year")])
+                        ),
+                    ])
+                    .predicate(exists(
+                        related!("author_articles"),
+                        binop("Regex", target!("title"), value!("Functional.*")),
+                    ))
+                    .order_by(vec![
+                        ndc::OrderByElement {
+                            order_direction: OrderDirection::Asc,
+                            target: OrderByTarget::SingleColumnAggregate {
+                                column: "year".into(),
+                                function: "Average".into(),
+                                path: vec![path_element("author_articles").into()],
+                            },
+                        },
+                        ndc::OrderByElement {
+                            order_direction: OrderDirection::Desc,
+                            target: OrderByTarget::Column {
+                                name: "id".into(),
+                                path: vec![],
+                            },
+                        },
+                    ]),
+            )
+            .relationships([(
+                "author_articles",
+                relationship("articles", [("id", "author_id")]),
+            )])
+            .into();
+        let query_plan = plan_for_query_request(&query_context, query)?;
+
+        let expected = QueryPlan {
+            collection: "authors".into(),
+            query: plan::Query {
+                predicate: Some(plan::Expression::Exists {
+                    in_collection: plan::ExistsInCollection::Related {
+                        relationship: "author_articles".into(),
+                    },
+                }),
+                order_by: Some(plan::OrderBy {
+                    elements: vec![
+                        plan::OrderByElement {
+                            order_direction: OrderDirection::Asc,
+                            target: plan::OrderByTarget::SingleColumnAggregate {
+                                column: ColumnSelector::Column("year".into()),
+                                function: plan_test_helpers::AggregateFunction::Average,
+                                result_type: plan::Type::Scalar(
+                                    plan_test_helpers::ScalarType::Double,
+                                ),
+                                path: vec!["author_articles".into()],
+                            },
+                        },
+                        plan::OrderByElement {
+                            order_direction: OrderDirection::Desc,
+                            target: plan::OrderByTarget::Column {
+                                name: ColumnSelector::Column("id".into()),
+                                path: vec![],
+                            },
+                        },
+                    ],
+                }),
+                fields: Some(
+                    [
+                        (
+                            "last_name".into(),
+                            plan::Field::Column {
+                                column: "last_name".into(),
+                                column_type: plan::Type::Scalar(
+                                    plan_test_helpers::ScalarType::String,
+                                ),
+                            },
+                        ),
+                        (
+                            "articles".into(),
+                            plan::Field::Relationship {
+                                relationship: "author_articles".into(),
+                                aggregates: None,
+                                fields: Some(
+                                    [
+                                        (
+                                            "title".into(),
+                                            plan::Field::Column {
+                                                column: "title".into(),
+                                                column_type: plan::Type::Scalar(
+                                                    plan_test_helpers::ScalarType::String,
+                                                ),
+                                            },
+                                        ),
+                                        (
+                                            "year".into(),
+                                            plan::Field::Column {
+                                                column: "year".into(),
+                                                column_type: plan::Type::Nullable(Box::new(
+                                                    plan::Type::Scalar(
+                                                        plan_test_helpers::ScalarType::Int,
+                                                    ),
+                                                )),
+                                            },
+                                        ),
+                                    ]
+                                    .into(),
+                                ),
+                            },
+                        ),
+                    ]
+                    .into(),
+                ),
+                relationships: [(
+                    "author_articles".into(),
+                    plan::Relationship {
+                        target_collection: "articles".into(),
+                        column_mapping: [("id".into(), "author_id".into())].into(),
+                        relationship_type: RelationshipType::Array,
+                        arguments: Default::default(),
+                        query: plan::Query {
+                            fields: Some(
+                                [
+                                    (
+                                        "title".into(),
+                                        plan::Field::Column {
+                                            column: "title".into(),
+                                            column_type: plan::Type::Scalar(
+                                                plan_test_helpers::ScalarType::String,
+                                            ),
+                                        },
+                                    ),
+                                    (
+                                        "year".into(),
+                                        plan::Field::Column {
+                                            column: "year".into(),
+                                            column_type: plan::Type::Nullable(Box::new(
+                                                plan::Type::Scalar(
+                                                    plan_test_helpers::ScalarType::Int,
+                                                ),
+                                            )),
+                                        },
+                                    ),
+                                ]
+                                .into(),
+                            ),
+                            ..Default::default()
+                        },
+                    },
+                )]
+                .into(),
+                ..Default::default()
+            },
+            arguments: Default::default(),
+            variables: Default::default(),
+            unrelated_collections: Default::default(),
+        };
+
+        // let expected = v2::query_request()
+        //     .target(["authors"])
+        //     .query(
+        //         v2::query()
+        //             .fields([
+        //                 v2::column!("last_name": "String"),
+        //                 v2::relation_field!(
+        //                     "author_articles" => "articles",
+        //                     v2::query()
+        //                         .fields([
+        //                             v2::column!("title": "String"),
+        //                             v2::column!("year": "Int")]
+        //                         )
+        //                 ),
+        //             ])
+        //             .predicate(v2::exists(
+        //                 "author_articles",
+        //                 v2::binop(
+        //                     "_regex",
+        //                     v2::compare!("title": "String"),
+        //                     v2::value!(json!("Functional.*"), "String"),
+        //                 ),
+        //             ))
+        //             .order_by(dc_api_types::OrderBy {
+        //                 elements: vec![
+        //                     dc_api_types::OrderByElement {
+        //                         order_direction: dc_api_types::OrderDirection::Asc,
+        //                         target: dc_api_types::OrderByTarget::SingleColumnAggregate {
+        //                             column: "year".into(),
+        //                             function: "avg".into(),
+        //                             result_type: "Float".into(),
+        //                         },
+        //                         target_path: vec!["author_articles".into()],
+        //                     },
+        //                     dc_api_types::OrderByElement {
+        //                         order_direction: dc_api_types::OrderDirection::Desc,
+        //                         target: dc_api_types::OrderByTarget::Column {
+        //                             column: v2::select!("id"),
+        //                         },
+        //                         target_path: vec![],
+        //                     },
+        //                 ],
+        //                 relations: HashMap::from([(
+        //                     "author_articles".into(),
+        //                     dc_api_types::OrderByRelation {
+        //                         r#where: None,
+        //                         subrelations: HashMap::new(),
+        //                     },
+        //                 )]),
+        //             }),
+        //     )
+        //     .relationships(vec![collection_relationships(
+        //         source("authors"),
+        //         [(
+        //             "author_articles",
+        //             v2::relationship(
+        //                 target("articles"),
+        //                 [(v2::select!("id"), v2::select!("author_id"))],
+        //             ),
+        //         )],
+        //     )])
+        //     .into();
+
+        assert_eq!(query_plan, expected);
+        Ok(())
+    }
+
     // #[test]
     // fn translates_nested_fields() -> Result<(), anyhow::Error> {
     //     let query_context = make_nested_schema();
