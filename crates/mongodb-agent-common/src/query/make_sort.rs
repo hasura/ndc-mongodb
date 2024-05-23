@@ -1,11 +1,11 @@
-use itertools::{Either, Itertools as _};
+use itertools::Itertools;
 use mongodb::bson::{bson, Document};
 use ndc_models::OrderDirection;
-use ndc_query_plan::ColumnSelector;
 
 use crate::{
     interface_types::MongoAgentError,
     mongo_query_plan::{OrderBy, OrderByTarget},
+    mongodb::sanitize::safe_name,
 };
 
 pub fn make_sort(order_by: &OrderBy) -> Result<Document, MongoAgentError> {
@@ -20,9 +20,14 @@ pub fn make_sort(order_by: &OrderBy) -> Result<Document, MongoAgentError> {
                 OrderDirection::Desc => bson!(-1),
             };
             match &obe.target {
-                OrderByTarget::Column { name, path } => {
-                    Ok((column_ref_with_path(name, path), direction))
-                }
+                OrderByTarget::Column {
+                    name,
+                    field_path,
+                    path,
+                } => Ok((
+                    column_ref_with_path(name, field_path.as_deref(), path)?,
+                    direction,
+                )),
                 OrderByTarget::SingleColumnAggregate {
                     column: _,
                     function: _,
@@ -44,10 +49,15 @@ pub fn make_sort(order_by: &OrderBy) -> Result<Document, MongoAgentError> {
         .collect()
 }
 
-fn column_ref_with_path(name: &ColumnSelector, path: &[String]) -> String {
-    let column_iter = match name {
-        ColumnSelector::Path(column_path) => Either::Left(column_path.iter()),
-        ColumnSelector::Column(column) => Either::Right(std::iter::once(column)),
-    };
-    path.iter().chain(column_iter).join(".")
+fn column_ref_with_path(
+    name: &String,
+    field_path: Option<&[String]>,
+    relation_path: &[String],
+) -> Result<String, MongoAgentError> {
+    relation_path
+        .iter()
+        .chain(std::iter::once(name))
+        .chain(field_path.into_iter().flatten())
+        .map(|x| safe_name(x))
+        .process_results(|mut iter| iter.join("."))
 }

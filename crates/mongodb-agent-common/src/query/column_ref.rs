@@ -1,10 +1,10 @@
 use std::borrow::Cow;
+use std::iter::once;
 
 use itertools::Either;
 
 use crate::{
-    interface_types::MongoAgentError,
-    mongo_query_plan::{ColumnSelector, ComparisonTarget},
+    interface_types::MongoAgentError, mongo_query_plan::ComparisonTarget,
     mongodb::sanitize::safe_name,
 };
 
@@ -13,23 +13,26 @@ use crate::{
 /// collection.
 pub fn column_ref(column: &ComparisonTarget) -> Result<Cow<'_, str>, MongoAgentError> {
     let path = match column {
-        ComparisonTarget::Column { name, path, .. } => {
-            let relations_path = path.iter().map(AsRef::as_ref);
-            let nested_object_path = column_selector_path(name);
-            Either::Left(relations_path.chain(nested_object_path))
-        }
-        ComparisonTarget::RootCollectionColumn { name, .. } => {
-            Either::Right(std::iter::once("$$ROOT").chain(column_selector_path(name)))
-        }
+        ComparisonTarget::Column {
+            name,
+            field_path,
+            path,
+            ..
+        } => Either::Left(
+            path.into_iter()
+                .chain(once(name))
+                .chain(field_path.into_iter().flatten())
+                .map(AsRef::as_ref),
+        ),
+        ComparisonTarget::RootCollectionColumn {
+            name, field_path, ..
+        } => Either::Right(
+            once("$$ROOT")
+                .chain(once(name.as_ref()))
+                .chain(field_path.into_iter().flatten().map(AsRef::as_ref)),
+        ),
     };
     safe_selector(path)
-}
-
-fn column_selector_path(selector: &ColumnSelector) -> impl Iterator<Item = &str> {
-    match selector {
-        ColumnSelector::Path(fields) => Either::Left(fields.iter().map(AsRef::as_ref)),
-        ColumnSelector::Column(col_name) => Either::Right(std::iter::once(col_name.as_ref())),
-    }
 }
 
 /// Given an iterable of fields to access, ensures that each field name does not include characters

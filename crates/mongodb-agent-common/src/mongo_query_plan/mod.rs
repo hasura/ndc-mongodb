@@ -11,7 +11,7 @@ use crate::aggregation_function::AggregationFunction;
 use crate::comparison_function::ComparisonFunction;
 use crate::scalar_types_capabilities::SCALAR_TYPES;
 
-pub use ndc_query_plan::{ColumnSelector, Nullable, OrderByTarget, NON_NULLABLE, NULLABLE};
+pub use ndc_query_plan::OrderByTarget;
 
 #[derive(Clone, Debug)]
 pub struct MongoConfiguration(pub Configuration);
@@ -100,6 +100,9 @@ pub type ComparisonValue = ndc_query_plan::ComparisonValue<MongoConfiguration>;
 pub type ExistsInCollection = ndc_query_plan::ExistsInCollection;
 pub type Expression = ndc_query_plan::Expression<MongoConfiguration>;
 pub type Field = ndc_query_plan::Field<MongoConfiguration>;
+pub type NestedField = ndc_query_plan::NestedField<MongoConfiguration>;
+pub type NestedArray = ndc_query_plan::NestedArray<MongoConfiguration>;
+pub type NestedObject = ndc_query_plan::NestedObject<MongoConfiguration>;
 pub type ObjectType = ndc_query_plan::ObjectType<MongoScalarType>;
 pub type OrderBy = ndc_query_plan::OrderBy<MongoConfiguration>;
 pub type Query = ndc_query_plan::Query<MongoConfiguration>;

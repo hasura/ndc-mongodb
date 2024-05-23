@@ -7,10 +7,10 @@ use mongodb::{
 use mongodb_agent_common::{
     mongo_query_plan::MongoConfiguration,
     procedure::Procedure,
-    query::{response::type_for_field, serialization::bson_to_json},
+    query::{response::type_for_nested_field, serialization::bson_to_json},
     state::ConnectorState,
 };
-use ndc_query_plan::{type_annotated_nested_field, QueryContext as _};
+use ndc_query_plan::type_annotated_nested_field;
 use ndc_sdk::{
     connector::MutationError,
     json_response::JsonResponse,
@@ -93,11 +93,11 @@ async fn execute_procedure(
         let plan_field = type_annotated_nested_field(
             config,
             &mutation_request.collection_relationships,
-            result_type,
+            &result_type,
             fields.clone(),
         )
         .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?;
-        type_for_field(&[], &plan_field)
+        type_for_nested_field(&[], &result_type, &plan_field)
             .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?
     } else {
         result_type

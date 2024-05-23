@@ -6,7 +6,6 @@ use indexmap::IndexMap;
 use ndc_models::{
     Argument, OrderDirection, RelationshipArgument, RelationshipType, UnaryComparisonOperator,
 };
-use nonempty::NonEmpty;
 
 use crate::Type;
 
@@ -93,13 +92,13 @@ pub struct UnrelatedJoin<T: ConnectorTypes> {
 pub enum Aggregate<T: ConnectorTypes> {
     ColumnCount {
         /// The column to apply the count aggregate function to
-        column: ColumnSelector,
+        column: String,
         /// Whether or not only distinct items should be counted
         distinct: bool,
     },
     SingleColumn {
         /// The column to apply the aggregation function to
-        column: ColumnSelector,
+        column: String,
         /// Single column aggregate function name.
         function: T::AggregateFunction,
         result_type: Type<T::ScalarType>,
@@ -109,22 +108,36 @@ pub enum Aggregate<T: ConnectorTypes> {
 
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
+pub struct NestedObject<T: ConnectorTypes> {
+    pub fields: IndexMap<String, Field<T>>,
+}
+
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
+pub struct NestedArray<T: ConnectorTypes> {
+    pub fields: Box<NestedField<T>>,
+}
+
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
+pub enum NestedField<T: ConnectorTypes> {
+    Object(NestedObject<T>),
+    Array(NestedArray<T>),
+}
+
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub enum Field<T: ConnectorTypes> {
     Column {
         column: String,
+
+        /// When the type of the column is a (possibly-nullable) array or object,
+        /// the caller can request a subset of the complete column data,
+        /// by specifying fields to fetch here.
+        /// If omitted, the column data will be fetched in full.
+        fields: Option<NestedField<T>>,
+
         column_type: Type<T::ScalarType>,
-    },
-    NestedObject {
-        column: String,
-        query: Box<Query<T>>,
-        is_nullable: Nullable,
-    },
-    NestedArray {
-        field: Box<Field<T>>,
-        limit: Option<u32>,
-        offset: Option<u32>,
-        predicate: Option<OrderBy<T>>,
-        is_nullable: Nullable,
     },
     Relationship {
         /// The name of the relationship to follow for the subquery - this is the key in the
@@ -181,7 +194,10 @@ pub struct OrderByElement<T: ConnectorTypes> {
 pub enum OrderByTarget<T: ConnectorTypes> {
     Column {
         /// The name of the column
-        name: ColumnSelector,
+        name: String,
+
+        /// Path to a nested field within an object column
+        field_path: Option<Vec<String>>,
 
         /// Any relationships to traverse to reach this column. These are translated from
         /// [ndc_models::OrderByElement] values in the [ndc_models::QueryRequest] to names of relation
@@ -190,7 +206,7 @@ pub enum OrderByTarget<T: ConnectorTypes> {
     },
     SingleColumnAggregate {
         /// The column to apply the aggregation function to
-        column: ColumnSelector,
+        column: String,
         /// Single column aggregate function name.
         function: T::AggregateFunction,
 
@@ -214,8 +230,13 @@ pub enum OrderByTarget<T: ConnectorTypes> {
 pub enum ComparisonTarget<T: ConnectorTypes> {
     Column {
         /// The name of the column
-        name: ColumnSelector,
+        name: String,
+
+        /// Path to a nested field within an object column
+        field_path: Option<Vec<String>>,
+
         column_type: Type<T::ScalarType>,
+
         /// Any relationships to traverse to reach this column. These are translated from
         /// [ndc_models::PathElement] values in the [ndc_models::QueryRequest] to names of relation
         /// fields for the [QueryPlan].
@@ -223,7 +244,11 @@ pub enum ComparisonTarget<T: ConnectorTypes> {
     },
     RootCollectionColumn {
         /// The name of the column
-        name: ColumnSelector,
+        name: String,
+
+        /// Path to a nested field within an object column
+        field_path: Option<Vec<String>>,
+
         column_type: Type<T::ScalarType>,
     },
 }
@@ -235,15 +260,6 @@ impl<T: ConnectorTypes> ComparisonTarget<T> {
             ComparisonTarget::RootCollectionColumn { column_type, .. } => column_type,
         }
     }
-}
-
-/// When referencing a column value we may want to reference a field inside a nested object. In
-/// that case the [ColumnSelector::Path] variant is used. If the entire column value is referenced
-/// then [ColumnSelector::Column] is used.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum ColumnSelector {
-    Path(NonEmpty<String>),
-    Column(String),
 }
 
 #[derive(Derivative)]
@@ -294,12 +310,3 @@ pub enum ExistsInCollection {
         unrelated_collection: String,
     },
 }
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Nullable {
-    Nullable,
-    NonNullable,
-}
-
-pub const NULLABLE: Nullable = Nullable::Nullable;
-pub const NON_NULLABLE: Nullable = Nullable::NonNullable;

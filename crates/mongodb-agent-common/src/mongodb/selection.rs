@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     interface_types::MongoAgentError,
-    mongo_query_plan::{Field, QueryPlan, Type},
+    mongo_query_plan::{Field, NestedArray, NestedField, NestedObject, QueryPlan, Type},
     mongodb::sanitize::get_field,
     query::serialization::is_nullable,
 };
@@ -44,7 +44,7 @@ fn from_query_request_helper(
 ) -> Result<Document, MongoAgentError> {
     field_selection
         .iter()
-        .map(|(key, value)| Ok((key.into(), selection_for_field(parent_columns, key, value)?)))
+        .map(|(key, value)| Ok((key.into(), selection_for_field(parent_columns, value)?)))
         .collect()
 }
 
@@ -59,15 +59,12 @@ pub fn value_or_null(col_path: String, column_type: &Type) -> Bson {
     }
 }
 
-fn selection_for_field(
-    parent_columns: &[&str],
-    field_name: &str,
-    field: &Field,
-) -> Result<Bson, MongoAgentError> {
+fn selection_for_field(parent_columns: &[&str], field: &Field) -> Result<Bson, MongoAgentError> {
     match field {
         Field::Column {
             column,
             column_type,
+            fields: None,
         } => {
             let col_path = match parent_columns {
                 [] => format!("${column}"),
@@ -76,23 +73,29 @@ fn selection_for_field(
             let bson_col_path = value_or_null(col_path, column_type);
             Ok(bson_col_path)
         }
-        Field::NestedObject { column, query, .. } => {
+        Field::Column {
+            column,
+            fields: Some(NestedField::Object(NestedObject { fields })),
+            ..
+        } => {
             let nested_parent_columns = append_to_path(parent_columns, column);
             let nested_parent_col_path = format!("${}", nested_parent_columns.join("."));
-            let fields = query.fields.clone().unwrap_or_default();
-            let nested_selection = from_query_request_helper(&nested_parent_columns, &fields)?;
+            let nested_selection = from_query_request_helper(&nested_parent_columns, fields)?;
             Ok(doc! {"$cond": {"if": nested_parent_col_path, "then": nested_selection, "else": Bson::Null}}.into())
         }
-        Field::NestedArray {
-            field,
-            // NOTE: We can use a $slice in our selection to do offsets and limits:
-            // https://www.mongodb.com/docs/manual/reference/operator/projection/slice/#mongodb-projection-proj.-slice
-            limit: _,
-            offset: _,
-            predicate: _,
+        Field::Column {
+            column,
+            fields:
+                Some(NestedField::Array(NestedArray {
+                    fields: nested_field,
+                })),
             ..
-        } => selection_for_array(parent_columns, field_name, field, 0),
-        Field::Relationship { relationship, aggregates, .. } => {
+        } => selection_for_array(&append_to_path(parent_columns, column), nested_field, 0),
+        Field::Relationship {
+            relationship,
+            aggregates,
+            ..
+        } => {
             if aggregates.is_some() {
                 Ok(doc! { "$first": get_field(relationship) }.into())
             } else {
@@ -104,16 +107,13 @@ fn selection_for_field(
 
 fn selection_for_array(
     parent_columns: &[&str],
-    field_name: &str,
-    field: &Field,
+    field: &NestedField,
     array_nesting_level: usize,
 ) -> Result<Bson, MongoAgentError> {
     match field {
-        Field::NestedObject { column, query, .. } => {
-            let nested_parent_columns = append_to_path(parent_columns, column);
-            let nested_parent_col_path = format!("${}", nested_parent_columns.join("."));
-            let fields = query.fields.clone().unwrap_or_default();
-            let mut nested_selection = from_query_request_helper(&["$this"], &fields)?;
+        NestedField::Object(NestedObject { fields }) => {
+            let nested_parent_col_path = parent_columns.join(".");
+            let mut nested_selection = from_query_request_helper(&["$this"], fields)?;
             for _ in 0..array_nesting_level {
                 nested_selection = doc! {"$map": {"input": "$$this", "in": nested_selection}}
             }
@@ -121,16 +121,9 @@ fn selection_for_array(
                 doc! {"$map": {"input": &nested_parent_col_path, "in": nested_selection}};
             Ok(doc! {"$cond": {"if": &nested_parent_col_path, "then": map_expression, "else": Bson::Null}}.into())
         }
-        Field::NestedArray {
-            field,
-            // NOTE: We can use a $slice in our selection to do offsets and limits:
-            // https://www.mongodb.com/docs/manual/reference/operator/projection/slice/#mongodb-projection-proj.-slice
-            limit: _,
-            offset: _,
-            predicate: _,
-            ..
-        } => selection_for_array(parent_columns, field_name, field, array_nesting_level + 1),
-        _ => selection_for_field(parent_columns, field_name, field),
+        NestedField::Array(NestedArray {
+            fields: nested_field,
+        }) => selection_for_array(parent_columns, nested_field, array_nesting_level + 1),
     }
 }
 fn append_to_path<'a, 'b, 'c>(parent_columns: &'a [&'b str], column: &'c str) -> Vec<&'c str>

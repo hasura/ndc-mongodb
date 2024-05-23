@@ -9,7 +9,7 @@ mod plan_test_helpers;
 
 use std::collections::VecDeque;
 
-use crate::{self as plan, type_annotated_field, ColumnSelector, ObjectType, QueryPlan};
+use crate::{self as plan, type_annotated_field, ObjectType, QueryPlan};
 use indexmap::IndexMap;
 use itertools::Itertools as _;
 use ndc::QueryRequest;
@@ -131,10 +131,9 @@ fn plan_for_aggregate<T: QueryContext>(
     aggregate: ndc::Aggregate,
 ) -> Result<plan::Aggregate<T>> {
     match aggregate {
-        ndc::Aggregate::ColumnCount { column, distinct } => Ok(plan::Aggregate::ColumnCount {
-            column: ColumnSelector::Column(column),
-            distinct,
-        }),
+        ndc::Aggregate::ColumnCount { column, distinct } => {
+            Ok(plan::Aggregate::ColumnCount { column, distinct })
+        }
         ndc::Aggregate::SingleColumn { column, function } => {
             let object_type_field_type =
                 find_object_field(collection_object_type, column.as_ref())?;
@@ -142,7 +141,7 @@ fn plan_for_aggregate<T: QueryContext>(
             let (function, definition) =
                 context.find_aggregation_function_definition(object_type_field_type, &function)?;
             Ok(plan::Aggregate::SingleColumn {
-                column: ColumnSelector::Column(column),
+                column,
                 function,
                 result_type: definition.result_type.clone(),
             })
@@ -207,7 +206,8 @@ fn plan_for_order_by_element<T: QueryContext>(
 ) -> Result<plan::OrderByElement<T>> {
     let target = match element.target {
         ndc::OrderByTarget::Column { name, path } => plan::OrderByTarget::Column {
-            name: plan::ColumnSelector::Column(name),
+            name,
+            field_path: Default::default(), // TODO: propagate this after ndc-spec update
             path: plan_for_relationship_path(
                 plan_state,
                 root_collection_object_type,
@@ -233,7 +233,7 @@ fn plan_for_order_by_element<T: QueryContext>(
                 .find_aggregation_function_definition(column_type, &function)?;
 
             plan::OrderByTarget::SingleColumnAggregate {
-                column: plan::ColumnSelector::Column(column),
+                column,
                 function,
                 result_type: function_definition.result_type.clone(),
                 path: plan_path,
@@ -768,16 +768,18 @@ fn plan_for_comparison_target<T: QueryContext>(
             )?;
             let column_type = find_object_field(&target_object_type, &name)?.clone();
             Ok(plan::ComparisonTarget::Column {
-                column_type,
-                name: plan::ColumnSelector::Column(name),
+                name,
+                field_path: Default::default(), // TODO: propagate this after ndc-spec update
                 path,
+                column_type,
             })
         }
         ndc::ComparisonTarget::RootCollectionColumn { name } => {
             let column_type = find_object_field(root_collection_object_type, &name)?.clone();
             Ok(plan::ComparisonTarget::RootCollectionColumn {
+                name,
+                field_path: Default::default(), // TODO: propagate this after ndc-spec update
                 column_type,
-                name: plan::ColumnSelector::Column(name),
             })
         }
     }

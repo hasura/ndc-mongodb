@@ -5,15 +5,19 @@ use indexmap::IndexMap;
 use itertools::Itertools;
 use mongodb::bson::{self, Bson};
 use ndc_models::{QueryResponse, RowFieldValue, RowSet};
-use ndc_query_plan::NULLABLE;
 use serde::Deserialize;
 use thiserror::Error;
 use tracing::instrument;
 
 use crate::{
-    mongo_query_plan::{Aggregate, Field, ObjectType, Query, QueryPlan, Type},
+    mongo_query_plan::{
+        Aggregate, Field, NestedArray, NestedField, NestedObject, ObjectType, Query, QueryPlan,
+        Type,
+    },
     query::serialization::{bson_to_json, BsonToJsonError},
 };
+
+use super::serialization::is_nullable;
 
 #[derive(Debug, Error)]
 pub enum QueryResponseError {
@@ -196,43 +200,65 @@ fn type_for_row(path: &[&str], query_fields: &IndexMap<String, Field>) -> Result
     Ok(Type::Object(ObjectType { fields, name: None }))
 }
 
-pub fn type_for_field(path: &[&str], field_definition: &Field) -> Result<Type> {
+fn type_for_field(path: &[&str], field_definition: &Field) -> Result<Type> {
     let field_type: Type = match field_definition {
-        Field::Column { column_type, .. } => column_type.clone(),
-        Field::NestedObject {
-            query, is_nullable, ..
-        } => {
-            let t = match &query.fields {
-                Some(query_fields) => type_for_row(path, query_fields),
-                None => Err(QueryResponseError::NoFieldsSelected {
-                    path: path_to_owned(path),
-                }),
-            }?;
-            if *is_nullable == NULLABLE {
-                t.into_nullable()
-            } else {
-                t
-            }
-        }
-        Field::NestedArray {
-            field, is_nullable, ..
-        } => {
-            let element_type = type_for_field(path, field)?;
-            let t = Type::ArrayOf(Box::new(element_type));
-            if *is_nullable == NULLABLE {
-                t.into_nullable()
-            } else {
-                t
-            }
-        }
+        Field::Column {
+            column_type,
+            fields: None,
+            ..
+        } => column_type.clone(),
+        Field::Column {
+            column_type,
+            fields: Some(nested_field),
+            ..
+        } => type_for_nested_field(path, column_type, nested_field)?,
         Field::Relationship {
             aggregates, fields, ..
         } => type_for_row_set(path, aggregates, fields)?,
     };
-    // Allow null values without failing the query. If we remove this then it will be necessary to
-    // add some indication to the nested object, nested array, and relationship cases to signal
-    // whether they are allowed to be nullable.
     Ok(field_type)
+}
+
+pub fn type_for_nested_field(
+    path: &[&str],
+    parent_type: &Type,
+    nested_field: &NestedField,
+) -> Result<Type> {
+    let field_type = match nested_field {
+        ndc_query_plan::NestedField::Object(NestedObject { fields }) => {
+            let t = type_for_row(path, fields)?;
+            if is_nullable(parent_type) {
+                t.into_nullable()
+            } else {
+                t
+            }
+        }
+        ndc_query_plan::NestedField::Array(NestedArray {
+            fields: nested_field,
+        }) => {
+            let element_type = type_for_nested_field(
+                &append_to_path(path, ["[]"]),
+                element_type(parent_type),
+                nested_field,
+            )?;
+            let t = Type::ArrayOf(Box::new(element_type));
+            if is_nullable(parent_type) {
+                t.into_nullable()
+            } else {
+                t
+            }
+        }
+    };
+    Ok(field_type)
+}
+
+/// Get type for elements within an array type. Be permissive if the given type is not an array.
+fn element_type(probably_array_type: &Type) -> &Type {
+    match probably_array_type {
+        Type::Nullable(pt) => element_type(pt),
+        Type::ArrayOf(pt) => pt,
+        pt => pt,
+    }
 }
 
 fn parse_single_document<T>(documents: Vec<bson::Document>) -> Result<T>
