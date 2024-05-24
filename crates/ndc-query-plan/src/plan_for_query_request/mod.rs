@@ -1523,45 +1523,93 @@ mod tests {
         Ok(())
     }
 
-    // #[test]
-    // fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Result<()> {
-    //     let query_context = make_nested_schema();
-    //     let request = query_request()
-    //         .collection("appearances")
-    //         .relationships([("author", relationship("authors", [("authorId", "id")]))])
-    //         .query(
-    //             query()
-    //                 .fields([relation_field!("author" => "presenter", query().fields([
-    //                     field!("name"),
-    //                 ]))])
-    //                 .predicate(not(is_null(target!("name", [path_element("author")])))),
-    //         )
-    //         .into();
-    //     let v2_request = plan_for_query_request(&query_context, request)?;
-    //
-    //     let expected = v2::query_request()
-    //         .target(["appearances"])
-    //         .relationships([collection_relationships(
-    //             vec!["appearances".into()],
-    //             [(
-    //                 "author",
-    //                 v2::relationship(
-    //                     v2::target("author"),
-    //                     [(
-    //                         dc_api_types::ColumnSelector::Column("authorId".into()),
-    //                         dc_api_types::ColumnSelector::Column("id".into()),
-    //                     )],
-    //                 ),
-    //             )],
-    //         )])
-    //         .query(v2::query().fields([
-    //             v2::relation_field!("author" => "presenter", v2::query().fields([
-    //                 v2::column!("name": "String")
-    //             ])
-    //             .predicate(v2::exists("author", v2::not(v2::is_null(v2::compare!("name": "String")))))),
-    //         ])).into();
-    //
-    //     assert_eq!(v2_request, expected);
-    //     Ok(())
-    // }
+    #[test]
+    fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Result<()> {
+        let query_context = make_nested_schema();
+        let request = query_request()
+            .collection("appearances")
+            .relationships([("author", relationship("authors", [("authorId", "id")]))])
+            .query(
+                query()
+                    .fields([relation_field!("author" => "presenter", query().fields([
+                        field!("name"),
+                    ]))])
+                    .predicate(not(is_null(target!("name", [path_element("author")])))),
+            )
+            .into();
+        let query_plan = plan_for_query_request(&query_context, request)?;
+
+        let expected = QueryPlan {
+            collection: "appearances".into(),
+            query: plan::Query {
+                predicate: Some(plan::Expression::Not {
+                    expression: Box::new(plan::Expression::UnaryComparisonOperator {
+                        column: plan::ComparisonTarget::Column {
+                            name: "name".into(),
+                            field_path: None,
+                            column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
+                            path: vec!["author".into()],
+                        },
+                        operator: ndc_models::UnaryComparisonOperator::IsNull,
+                    }),
+                }),
+                fields: Some(
+                    [(
+                        "presenter".into(),
+                        plan::Field::Relationship {
+                            relationship: "author".into(),
+                            aggregates: None,
+                            fields: Some(
+                                [(
+                                    "name".into(),
+                                    plan::Field::Column {
+                                        column: "name".into(),
+                                        fields: None,
+                                        column_type: plan::Type::Scalar(
+                                            plan_test_helpers::ScalarType::String,
+                                        ),
+                                    },
+                                )]
+                                .into(),
+                            ),
+                        },
+                    )]
+                    .into(),
+                ),
+                relationships: [(
+                    "author".into(),
+                    plan::Relationship {
+                        column_mapping: [("authorId".into(), "id".into())].into(),
+                        relationship_type: RelationshipType::Array,
+                        target_collection: "authors".into(),
+                        arguments: Default::default(),
+                        query: plan::Query {
+                            fields: Some(
+                                [(
+                                    "name".into(),
+                                    plan::Field::Column {
+                                        column: "name".into(),
+                                        fields: None,
+                                        column_type: plan::Type::Scalar(
+                                            plan_test_helpers::ScalarType::String,
+                                        ),
+                                    },
+                                )]
+                                .into(),
+                            ),
+                            ..Default::default()
+                        },
+                    },
+                )]
+                .into(),
+                ..Default::default()
+            },
+            arguments: Default::default(),
+            variables: Default::default(),
+            unrelated_collections: Default::default(),
+        };
+
+        assert_eq!(query_plan, expected);
+        Ok(())
+    }
 }
