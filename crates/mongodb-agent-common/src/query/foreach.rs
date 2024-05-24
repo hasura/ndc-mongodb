@@ -50,13 +50,13 @@ fn facet_name(index: usize) -> String {
 #[cfg(test)]
 mod tests {
     use configuration::Configuration;
-    use mongodb::bson::{bson, doc, Bson};
+    use mongodb::bson::{bson, Bson};
     use ndc_test_helpers::{
         binop, collection, field, named_type, object_type, query, query_request, query_response,
         row_set, star_count_aggregate, target, variable,
     };
     use pretty_assertions::assert_eq;
-    use serde_json::{from_value, json};
+    use serde_json::json;
 
     use crate::{
         mongo_query_plan::MongoConfiguration,
@@ -108,16 +108,16 @@ mod tests {
         let expected_response = query_response()
             .row_set_rows([
                 [
-                    ("albumId", 1),
-                    ("title", "For Those About To Rock We Salute You"),
+                    ("albumId", json!(1)),
+                    ("title", json!("For Those About To Rock We Salute You")),
                 ],
-                [("albumId", 4), ("title", "Let There Be Rock")],
+                [("albumId", json!(4)), ("title", json!("Let There Be Rock"))],
             ])
             .row_set_rows([
-                [("albumId", 2), ("title", "Balls to the Wall")],
-                [("albumId", 3), ("title", "Restless and Wild")],
+                [("albumId", json!(2)), ("title", json!("Balls to the Wall"))],
+                [("albumId", json!(3)), ("title", json!("Restless and Wild"))],
             ])
-            .into();
+            .build();
 
         let db = mock_collection_aggregate_response_for_pipeline(
             "tracks",
@@ -210,16 +210,16 @@ mod tests {
         let expected_response = query_response()
             .row_set(row_set().aggregates([("count", 2)]).rows([
                 [
-                    ("albumId", 1),
-                    ("title", "For Those About To Rock We Salute You"),
+                    ("albumId", json!(1)),
+                    ("title", json!("For Those About To Rock We Salute You")),
                 ],
-                [("albumId", 4), ("title", "Let There Be Rock")],
+                [("albumId", json!(4)), ("title", json!("Let There Be Rock"))],
             ]))
             .row_set(row_set().aggregates([("count", 2)]).rows([
-                [("albumId", 2), ("title", "Balls to the Wall")],
-                [("albumId", 3), ("title", "Restless and Wild")],
+                [("albumId", json!(2)), ("title", json!("Balls to the Wall"))],
+                [("albumId", json!(3)), ("title", json!("Restless and Wild"))],
             ]))
-            .into();
+            .build();
 
         let db = mock_collection_aggregate_response_for_pipeline(
             "tracks",
@@ -316,25 +316,25 @@ mod tests {
         let expected_response = query_response()
             .row_set_rows([
                 [
-                    ("albumId", 1),
-                    ("title", "For Those About To Rock We Salute You"),
+                    ("albumId", json!(1)),
+                    ("title", json!("For Those About To Rock We Salute You")),
                 ],
-                [("albumId", 4), ("title", "Let There Be Rock")],
+                [("albumId", json!(4)), ("title", json!("Let There Be Rock"))],
             ])
-            .row_set_rows([])
+            .empty_row_set()
             .row_set_rows([
-                [("albumId", 2), ("title", "Balls to the Wall")],
-                [("albumId", 3), ("title", "Restless and Wild")],
+                [("albumId", json!(2)), ("title", json!("Balls to the Wall"))],
+                [("albumId", json!(3)), ("title", json!("Restless and Wild"))],
             ])
-            .row_set_rows([])
-            .row_set_rows([])
-            .row_set_rows([])
-            .row_set_rows([])
-            .row_set_rows([])
-            .row_set_rows([])
-            .row_set_rows([])
-            .row_set_rows([])
-            .into();
+            .empty_row_set()
+            .empty_row_set()
+            .empty_row_set()
+            .empty_row_set()
+            .empty_row_set()
+            .empty_row_set()
+            .empty_row_set()
+            .empty_row_set()
+            .build();
 
         let db = mock_collection_aggregate_response_for_pipeline(
             "tracks",

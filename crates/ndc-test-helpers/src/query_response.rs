@@ -25,6 +25,14 @@ impl QueryResponseBuilder {
         self.row_sets.push(row_set().rows(rows).into());
         self
     }
+
+    pub fn empty_row_set(mut self) -> Self {
+        self.row_sets.push(RowSet {
+            aggregates: None,
+            rows: Some(vec![]),
+        });
+        self
+    }
 }
 
 impl From<QueryResponseBuilder> for QueryResponse {

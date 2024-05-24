@@ -40,14 +40,13 @@ pub async fn handle_query_request(
 #[cfg(test)]
 mod tests {
     use configuration::Configuration;
-    use mongodb::bson::{self, bson, doc};
-    use ndc_models::{QueryResponse, RowFieldValue, RowSet};
+    use mongodb::bson::{self, bson};
+    use ndc_models::{QueryResponse, RowSet};
     use ndc_test_helpers::{
         binop, collection, column_aggregate, column_count_aggregate, field, named_type,
         object_type, query, query_request, row_set, target, value,
     };
     use pretty_assertions::assert_eq;
-    use serde_json::{from_value, json};
 
     use super::execute_query_request;
     use crate::{
@@ -70,7 +69,7 @@ mod tests {
 
         let expected_response = row_set()
             .row([("student_gpa", 3.1), ("student_gpa", 3.6)])
-            .into();
+            .into_response();
 
         let expected_pipeline = bson!([
             { "$match": { "gpa": { "$lt": 4.0 } } },
@@ -179,8 +178,8 @@ mod tests {
 
         let expected_response = row_set()
             .aggregates([("avg", 3.1), ("gpa", 3.1)])
-            .rows([("gpa", 3.1)])
-            .into();
+            .row([("gpa", 3.1)])
+            .into_response();
 
         let expected_pipeline = bson!([
             { "$match": { "gpa": { "$lt": 4.0 } } },
@@ -240,8 +239,8 @@ mod tests {
             .into();
 
         let expected_response = row_set()
-            .rows([("date", "2018-08-14T15:05:03.142Z")])
-            .into();
+            .row([("date", "2018-08-14T15:05:03.142Z")])
+            .into_response();
 
         let expected_pipeline = bson!([
             {

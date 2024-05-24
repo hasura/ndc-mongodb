@@ -78,16 +78,21 @@ fn argument_to_mongodb_expression(
 mod tests {
     use configuration::{
         native_query::{NativeQuery, NativeQueryRepresentation},
-        schema::{ObjectField, ObjectType, Type},
-        Configuration,
+        Configuration, MongoScalarType,
     };
     use mongodb::bson::{bson, doc};
     use mongodb_support::BsonScalarType as S;
+    use ndc_models::Argument;
+    use ndc_test_helpers::{
+        array_of, field, named_type, object_type, query, query_request, row_set,
+    };
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
     use crate::{
-        mongodb::test_helpers::mock_aggregate_response_for_pipeline, query::execute_query_request,
+        mongo_query_plan::{MongoConfiguration, Type},
+        mongodb::test_helpers::mock_aggregate_response_for_pipeline,
+        query::execute_query_request,
     };
 
     #[tokio::test]
@@ -98,31 +103,19 @@ mod tests {
             arguments: [
                 (
                     "filter".to_string(),
-                    ObjectField {
-                        r#type: Type::ExtendedJSON,
-                        description: None,
-                    },
+                    Type::Scalar(MongoScalarType::ExtendedJSON),
                 ),
                 (
                     "queryVector".to_string(),
-                    ObjectField {
-                        r#type: Type::ArrayOf(Box::new(Type::Scalar(S::Double))),
-                        description: None,
-                    },
+                    Type::ArrayOf(Box::new(Type::Scalar(MongoScalarType::Bson(S::Double)))),
                 ),
                 (
                     "numCandidates".to_string(),
-                    ObjectField {
-                        r#type: Type::Scalar(S::Int),
-                        description: None,
-                    },
+                    Type::Scalar(MongoScalarType::Bson(S::Int)),
                 ),
                 (
                     "limit".to_string(),
-                    ObjectField {
-                        r#type: Type::Scalar(S::Int),
-                        description: None,
-                    },
+                    Type::Scalar(MongoScalarType::Bson(S::Int)),
                 ),
             ]
             .into(),
@@ -142,44 +135,16 @@ mod tests {
 
         let object_types = [(
             "VectorResult".to_owned(),
-            ObjectType {
-                description: None,
-                fields: [
-                    (
-                        "_id".to_owned(),
-                        ObjectField {
-                            r#type: Type::Scalar(S::ObjectId),
-                            description: None,
-                        },
-                    ),
-                    (
-                        "title".to_owned(),
-                        ObjectField {
-                            r#type: Type::Scalar(S::ObjectId),
-                            description: None,
-                        },
-                    ),
-                    (
-                        "genres".to_owned(),
-                        ObjectField {
-                            r#type: Type::ArrayOf(Box::new(Type::Scalar(S::String))),
-                            description: None,
-                        },
-                    ),
-                    (
-                        "year".to_owned(),
-                        ObjectField {
-                            r#type: Type::Scalar(S::Int),
-                            description: None,
-                        },
-                    ),
-                ]
-                .into(),
-            },
+            object_type([
+                ("_id", named_type("ObjectId")),
+                ("title", named_type("String")),
+                ("genres", array_of(named_type("String"))),
+                ("year", array_of(named_type("Int"))),
+            ]),
         )]
         .into();
 
-        let config = Configuration {
+        let config = MongoConfiguration(Configuration {
             native_queries: [("vectorSearch".to_owned(), native_query.clone())].into(),
             object_types,
             collections: Default::default(),
@@ -187,48 +152,42 @@ mod tests {
             procedures: Default::default(),
             native_procedures: Default::default(),
             options: Default::default(),
-        };
+        });
 
         let request = query_request()
-            .target_with_arguments(
-                ["vectorSearch"],
-                [
-                    (
-                        "filter",
-                        Argument::Literal {
-                            value: json!({
-                                "$and": [
-                                    {
-                                        "genres": {
-                                            "$nin": [
-                                                "Drama", "Western", "Crime"
-                                            ],
-                                            "$in": [
-                                                "Action", "Adventure", "Family"
-                                            ]
-                                        }
-                                    }, {
-                                        "year": { "$gte": 1960, "$lte": 2000 }
+            .collection("vectorSearch")
+            .arguments([
+                (
+                    "filter",
+                    Argument::Literal {
+                        value: json!({
+                            "$and": [
+                                {
+                                    "genres": {
+                                        "$nin": [
+                                            "Drama", "Western", "Crime"
+                                        ],
+                                        "$in": [
+                                            "Action", "Adventure", "Family"
+                                        ]
                                     }
-                                ]
-                            }),
-                        },
-                    ),
-                    (
-                        "queryVector",
-                        Argument::Literal {
-                            value: json!([-0.020156775, -0.024996493, 0.010778184]),
-                        },
-                    ),
-                    ("numCandidates", Argument::Literal { value: json!(200) }),
-                    ("limit", Argument::Literal { value: json!(10) }),
-                ],
-            )
-            .query(query().fields([
-                column!("title": "String"),
-                column!("genres": "String"),
-                column!("year": "String"),
-            ]))
+                                }, {
+                                    "year": { "$gte": 1960, "$lte": 2000 }
+                                }
+                            ]
+                        }),
+                    },
+                ),
+                (
+                    "queryVector",
+                    Argument::Literal {
+                        value: json!([-0.020156775, -0.024996493, 0.010778184]),
+                    },
+                ),
+                ("numCandidates", Argument::Literal { value: json!(200) }),
+                ("limit", Argument::Literal { value: json!(10) }),
+            ])
+            .query(query().fields([field!("title"), field!("genres"), field!("year")]))
             .into();
 
         let expected_pipeline = bson!([
@@ -266,10 +225,20 @@ mod tests {
             },
         ]);
 
-        let expected_response = vec![
-            doc! { "title": "Beau Geste", "year": 1926, "genres": ["Action", "Adventure", "Drama"] },
-            doc! { "title": "For Heaven's Sake", "year": 1926, "genres": ["Action", "Comedy", "Romance"] },
-        ];
+        let expected_response = row_set()
+            .rows([
+                [
+                    ("title", json!("Beau Geste")),
+                    ("year", json!(1926)),
+                    ("genres", json!(["Action", "Adventure", "Drama"])),
+                ],
+                [
+                    ("title", json!("For Heaven's Sake")),
+                    ("year", json!(1926)),
+                    ("genres", json!(["Action", "Comedy", "Romance"])),
+                ],
+            ])
+            .into_response();
 
         let db = mock_aggregate_response_for_pipeline(
             expected_pipeline,

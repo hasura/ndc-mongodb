@@ -92,9 +92,11 @@ impl QueryRequestBuilder {
         self
     }
 
-    pub fn variables<const S: usize, const T: usize>(
+    pub fn variables(
         mut self,
-        variables: [[(&str, serde_json::Value); T]; S],
+        variables: impl IntoIterator<
+            Item = impl IntoIterator<Item = (impl ToString, impl Into<serde_json::Value>)>,
+        >,
     ) -> Self {
         self.variables = Some(
             variables
@@ -102,7 +104,7 @@ impl QueryRequestBuilder {
                 .map(|var_map| {
                     var_map
                         .into_iter()
-                        .map(|(name, value)| (name.to_owned(), value))
+                        .map(|(name, value)| (name.to_string(), value.into()))
                         .collect()
                 })
                 .collect(),
