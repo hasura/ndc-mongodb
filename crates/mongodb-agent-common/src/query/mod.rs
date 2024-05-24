@@ -44,7 +44,7 @@ mod tests {
     use ndc_models::{QueryResponse, RowFieldValue, RowSet};
     use ndc_test_helpers::{
         binop, collection, column_aggregate, column_count_aggregate, field, named_type,
-        object_type, query, query_request, target, value,
+        object_type, query, query_request, row_set, target, value,
     };
     use pretty_assertions::assert_eq;
     use serde_json::{from_value, json};
@@ -68,14 +68,9 @@ mod tests {
             )
             .into();
 
-        let expected_response = QueryResponse(vec![RowSet {
-            aggregates: None,
-            rows: Some(vec![[
-                ("student_gpa".into(), RowFieldValue(json!(3.1))),
-                ("student_gpa".into(), RowFieldValue(json!(3.6))),
-            ]
-            .into()]),
-        }]);
+        let expected_response = row_set()
+            .rows([("student_gpa", 3.1), ("student_gpa", 3.6)])
+            .into();
 
         let expected_pipeline = bson!([
             { "$match": { "gpa": { "$lt": 4.0 } } },
@@ -120,10 +115,9 @@ mod tests {
             options: Default::default(),
         });
 
-        let expected_response = QueryResponse(vec![RowSet {
-            aggregates: Some([("count".into(), json!(11)), ("avg".into(), json!(3))].into()),
-            rows: None,
-        }]);
+        let expected_response = row_set()
+            .aggregates([("count", 11), ("avg", 3)])
+            .into_response();
 
         let expected_pipeline = bson!([
             {
@@ -183,10 +177,10 @@ mod tests {
             )
             .into();
 
-        let expected_response = QueryResponse(vec![RowSet {
-            aggregates: Some([("avg".into(), json!(3.1))].into()),
-            rows: Some(vec![[("gpa".into(), RowFieldValue(json!(3.1)))].into()]),
-        }]);
+        let expected_response = row_set()
+            .aggregates([("avg", 3.1), ("gpa", 3.1)])
+            .rows([("gpa", 3.1)])
+            .into();
 
         let expected_pipeline = bson!([
             { "$match": { "gpa": { "$lt": 4.0 } } },
@@ -245,14 +239,9 @@ mod tests {
             )))
             .into();
 
-        let expected_response = QueryResponse(vec![RowSet {
-            aggregates: None,
-            rows: Some(vec![[(
-                "date".into(),
-                RowFieldValue(json!("2018-08-14T15:05:03.142Z")),
-            )]
-            .into()]),
-        }]);
+        let expected_response = row_set()
+            .rows([("date", "2018-08-14T15:05:03.142Z")])
+            .into();
 
         let expected_pipeline = bson!([
             {

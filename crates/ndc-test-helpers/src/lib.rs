@@ -9,6 +9,7 @@ mod exists_in_collection;
 mod expressions;
 mod field;
 mod object_type;
+mod query_response;
 mod relationships;
 mod type_helpers;
 
@@ -30,6 +31,7 @@ pub use exists_in_collection::*;
 pub use expressions::*;
 pub use field::*;
 pub use object_type::*;
+pub use query_response::*;
 pub use relationships::*;
 pub use type_helpers::*;
 
@@ -90,9 +92,9 @@ impl QueryRequestBuilder {
         self
     }
 
-    pub fn variables<const S: usize>(
+    pub fn variables<const S: usize, const T: usize>(
         mut self,
-        variables: [Vec<(&str, serde_json::Value)>; S],
+        variables: [[(&str, serde_json::Value); T]; S],
     ) -> Self {
         self.variables = Some(
             variables
