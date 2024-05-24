@@ -824,13 +824,13 @@ mod tests {
     use serde_json::json;
 
     use crate::{
-        self as plan,
+        self as plan, inline_object_types,
         plan_for_query_request::plan_test_helpers::{
             self, make_flat_schema, make_nested_schema, TestContext,
         },
         query_plan::UnrelatedJoin,
-        ColumnSelector, ComparisonTarget, ExistsInCollection, Expression, Field, OrderBy, Query,
-        QueryPlan, Relationship,
+        ExistsInCollection, Expression, Field, OrderBy, Query, QueryContext, QueryPlan,
+        Relationship,
     };
 
     use super::plan_for_query_request;
@@ -923,7 +923,8 @@ mod tests {
                     elements: [plan::OrderByElement {
                         order_direction: OrderDirection::Asc,
                         target: plan::OrderByTarget::Column {
-                            name: ColumnSelector::Column("advisor_name".into()),
+                            name: "advisor_name".into(),
+                            field_path: Default::default(),
                             path: [
                                 "school_classes".into(),
                                 "class_students".into(),
@@ -1119,6 +1120,7 @@ mod tests {
                         "last_name".into(),
                         plan::Field::Column {
                             column: "last_name".into(),
+                            fields: None,
                             column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
                         },
                     )]
@@ -1137,28 +1139,31 @@ mod tests {
                             expressions: vec![
                                 plan::Expression::BinaryComparisonOperator {
                                     column: plan::ComparisonTarget::Column {
-                                        name: ColumnSelector::Column("author_id".into()),
+                                        name: "author_id".into(),
                                         column_type: plan::Type::Scalar(
                                             plan_test_helpers::ScalarType::Int,
                                         ),
+                                        field_path: None,
                                         path: vec![],
                                     },
                                     operator: plan_test_helpers::ComparisonOperator::Equal,
                                     value: plan::ComparisonValue::Column {
                                         column: plan::ComparisonTarget::RootCollectionColumn {
-                                            name: ColumnSelector::Column("id".into()),
+                                            name: "id".into(),
                                             column_type: plan::Type::Scalar(
                                                 plan_test_helpers::ScalarType::Int,
                                             ),
+                                            field_path: None,
                                         },
                                     },
                                 },
                                 plan::Expression::BinaryComparisonOperator {
                                     column: plan::ComparisonTarget::Column {
-                                        name: ColumnSelector::Column("title".into()),
+                                        name: "title".into(),
                                         column_type: plan::Type::Scalar(
                                             plan_test_helpers::ScalarType::String,
                                         ),
+                                        field_path: None,
                                         path: vec![],
                                     },
                                     operator: plan_test_helpers::ComparisonOperator::Regex,
@@ -1206,14 +1211,14 @@ mod tests {
                         (
                             "count_id".into(),
                             plan::Aggregate::ColumnCount {
-                                column: ColumnSelector::Column("last_name".into()),
+                                column: "last_name".into(),
                                 distinct: true,
                             },
                         ),
                         (
                             "avg_id".into(),
                             plan::Aggregate::SingleColumn {
-                                column: ColumnSelector::Column("id".into()),
+                                column: "id".into(),
                                 function: plan_test_helpers::AggregateFunction::Average,
                                 result_type: plan::Type::Scalar(
                                     plan_test_helpers::ScalarType::Double,
@@ -1290,7 +1295,7 @@ mod tests {
                         plan::OrderByElement {
                             order_direction: OrderDirection::Asc,
                             target: plan::OrderByTarget::SingleColumnAggregate {
-                                column: ColumnSelector::Column("year".into()),
+                                column: "year".into(),
                                 function: plan_test_helpers::AggregateFunction::Average,
                                 result_type: plan::Type::Scalar(
                                     plan_test_helpers::ScalarType::Double,
@@ -1301,7 +1306,8 @@ mod tests {
                         plan::OrderByElement {
                             order_direction: OrderDirection::Desc,
                             target: plan::OrderByTarget::Column {
-                                name: ColumnSelector::Column("id".into()),
+                                name: "id".into(),
+                                field_path: None,
                                 path: vec![],
                             },
                         },
@@ -1316,6 +1322,7 @@ mod tests {
                                 column_type: plan::Type::Scalar(
                                     plan_test_helpers::ScalarType::String,
                                 ),
+                                fields: None,
                             },
                         ),
                         (
@@ -1332,6 +1339,7 @@ mod tests {
                                                 column_type: plan::Type::Scalar(
                                                     plan_test_helpers::ScalarType::String,
                                                 ),
+                                                fields: None,
                                             },
                                         ),
                                         (
@@ -1343,6 +1351,7 @@ mod tests {
                                                         plan_test_helpers::ScalarType::Int,
                                                     ),
                                                 )),
+                                                fields: None,
                                             },
                                         ),
                                     ]
@@ -1370,6 +1379,7 @@ mod tests {
                                             column_type: plan::Type::Scalar(
                                                 plan_test_helpers::ScalarType::String,
                                             ),
+                                            fields: None,
                                         },
                                     ),
                                     (
@@ -1381,6 +1391,7 @@ mod tests {
                                                     plan_test_helpers::ScalarType::Int,
                                                 ),
                                             )),
+                                            fields: None,
                                         },
                                     ),
                                 ]
@@ -1398,99 +1409,120 @@ mod tests {
             unrelated_collections: Default::default(),
         };
 
-        // let expected = v2::query_request()
-        //     .target(["authors"])
-        //     .query(
-        //         v2::query()
-        //             .fields([
-        //                 v2::column!("last_name": "String"),
-        //                 v2::relation_field!(
-        //                     "author_articles" => "articles",
-        //                     v2::query()
-        //                         .fields([
-        //                             v2::column!("title": "String"),
-        //                             v2::column!("year": "Int")]
-        //                         )
-        //                 ),
-        //             ])
-        //             .predicate(v2::exists(
-        //                 "author_articles",
-        //                 v2::binop(
-        //                     "_regex",
-        //                     v2::compare!("title": "String"),
-        //                     v2::value!(json!("Functional.*"), "String"),
-        //                 ),
-        //             ))
-        //             .order_by(dc_api_types::OrderBy {
-        //                 elements: vec![
-        //                     dc_api_types::OrderByElement {
-        //                         order_direction: dc_api_types::OrderDirection::Asc,
-        //                         target: dc_api_types::OrderByTarget::SingleColumnAggregate {
-        //                             column: "year".into(),
-        //                             function: "avg".into(),
-        //                             result_type: "Float".into(),
-        //                         },
-        //                         target_path: vec!["author_articles".into()],
-        //                     },
-        //                     dc_api_types::OrderByElement {
-        //                         order_direction: dc_api_types::OrderDirection::Desc,
-        //                         target: dc_api_types::OrderByTarget::Column {
-        //                             column: v2::select!("id"),
-        //                         },
-        //                         target_path: vec![],
-        //                     },
-        //                 ],
-        //                 relations: HashMap::from([(
-        //                     "author_articles".into(),
-        //                     dc_api_types::OrderByRelation {
-        //                         r#where: None,
-        //                         subrelations: HashMap::new(),
-        //                     },
-        //                 )]),
-        //             }),
-        //     )
-        //     .relationships(vec![collection_relationships(
-        //         source("authors"),
-        //         [(
-        //             "author_articles",
-        //             v2::relationship(
-        //                 target("articles"),
-        //                 [(v2::select!("id"), v2::select!("author_id"))],
-        //             ),
-        //         )],
-        //     )])
-        //     .into();
+        assert_eq!(query_plan, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn translates_nested_fields() -> Result<(), anyhow::Error> {
+        let query_context = make_nested_schema();
+        let query_request = query_request()
+            .collection("authors")
+            .query(query().fields([
+                field!("author_address" => "address", object!([field!("address_country" => "country")])),
+                field!("author_articles" => "articles", array!(object!([field!("article_title" => "title")]))),
+                field!("author_array_of_arrays" => "array_of_arrays", array!(array!(object!([field!("article_title" => "title")]))))
+            ]))
+            .into();
+        let query_plan = plan_for_query_request(&query_context, query_request)?;
+
+        let expected = QueryPlan {
+            collection: "authors".into(),
+            query: plan::Query {
+                fields: Some(
+                    [
+                        (
+                            "author_address".into(),
+                            plan::Field::Column {
+                                column: "address".into(),
+                                column_type: plan::Type::Object(
+                                    query_context.find_object_type("Address")?,
+                                ),
+                                fields: Some(plan::NestedField::Object(plan::NestedObject {
+                                    fields: [(
+                                        "address_country".into(),
+                                        plan::Field::Column {
+                                            column: "country".into(),
+                                            column_type: plan::Type::Scalar(
+                                                plan_test_helpers::ScalarType::String,
+                                            ),
+                                            fields: None,
+                                        },
+                                    )]
+                                    .into(),
+                                })),
+                            },
+                        ),
+                        (
+                            "author_articles".into(),
+                            plan::Field::Column {
+                                column: "articles".into(),
+                                column_type: plan::Type::ArrayOf(Box::new(plan::Type::Object(
+                                    query_context.find_object_type("Article")?,
+                                ))),
+                                fields: Some(plan::NestedField::Array(plan::NestedArray {
+                                    fields: Box::new(plan::NestedField::Object(
+                                        plan::NestedObject {
+                                            fields: [(
+                                                "article_title".into(),
+                                                plan::Field::Column {
+                                                    column: "title".into(),
+                                                    fields: None,
+                                                    column_type: plan::Type::Scalar(
+                                                        plan_test_helpers::ScalarType::String,
+                                                    ),
+                                                },
+                                            )]
+                                            .into(),
+                                        },
+                                    )),
+                                })),
+                            },
+                        ),
+                        (
+                            "author_array_of_arrays".into(),
+                            plan::Field::Column {
+                                column: "array_of_arrays".into(),
+                                fields: Some(plan::NestedField::Array(plan::NestedArray {
+                                    fields: Box::new(plan::NestedField::Array(plan::NestedArray {
+                                        fields: Box::new(plan::NestedField::Object(
+                                            plan::NestedObject {
+                                                fields: [(
+                                                    "article_title".into(),
+                                                    plan::Field::Column {
+                                                        column: "title".into(),
+                                                        fields: None,
+                                                        column_type: plan::Type::Scalar(
+                                                            plan_test_helpers::ScalarType::String,
+                                                        ),
+                                                    },
+                                                )]
+                                                .into(),
+                                            },
+                                        )),
+                                    })),
+                                })),
+                                column_type: plan::Type::ArrayOf(Box::new(plan::Type::ArrayOf(
+                                    Box::new(plan::Type::Object(
+                                        query_context.find_object_type("Article")?,
+                                    )),
+                                ))),
+                            },
+                        ),
+                    ]
+                    .into(),
+                ),
+                ..Default::default()
+            },
+            arguments: Default::default(),
+            variables: Default::default(),
+            unrelated_collections: Default::default(),
+        };
 
         assert_eq!(query_plan, expected);
         Ok(())
     }
 
-    // #[test]
-    // fn translates_nested_fields() -> Result<(), anyhow::Error> {
-    //     let query_context = make_nested_schema();
-    //     let query_request = query_request()
-    //         .collection("authors")
-    //         .query(query().fields([
-    //             field!("author_address" => "address", object!([field!("address_country" => "country")])),
-    //             field!("author_articles" => "articles", array!(object!([field!("article_title" => "title")]))),
-    //             field!("author_array_of_arrays" => "array_of_arrays", array!(array!(object!([field!("article_title" => "title")]))))
-    //         ]))
-    //         .into();
-    //     let v2_request = plan_for_query_request(&query_context, query_request)?;
-    //
-    //     let expected = v2::query_request()
-    //         .target(["authors"])
-    //         .query(v2::query().fields([
-    //             v2::nested_object!("author_address" => "address", v2::query().fields([v2::column!("address_country" => "country": "String")])),
-    //             v2::nested_array!("author_articles", v2::nested_object_field!("articles", v2::query().fields([v2::column!("article_title" => "title": "String")]))),
-    //             v2::nested_array!("author_array_of_arrays", v2::nested_array_field!(v2::nested_object_field!("array_of_arrays", v2::query().fields([v2::column!("article_title" => "title": "String")]))))
-    //         ]))
-    //         .into();
-    //
-    //     assert_eq!(v2_request, expected);
-    //     Ok(())
-    // }
-    //
     // #[test]
     // fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Result<()> {
     //     let query_context = make_nested_schema();
