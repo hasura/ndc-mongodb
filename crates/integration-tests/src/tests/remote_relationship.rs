@@ -33,7 +33,7 @@ async fn handles_request_with_single_variable_set() -> anyhow::Result<()> {
         run_connector_query(
             query_request()
                 .collection("movies")
-                .variables([vec![("id", json!("573a1390f29313caabcd50e5"))]])
+                .variables([[("id", json!("573a1390f29313caabcd50e5"))]])
                 .query(
                     query()
                         .predicate(binop("_eq", target!("_id"), variable!(id)))

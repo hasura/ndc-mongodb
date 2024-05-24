@@ -884,7 +884,7 @@ mod tests {
                                         ),
                                         column_value!(
                                             "math_department_id",
-                                            [path_element("school_directory")],
+                                            relations: [path_element("school_directory")],
                                         ),
                                     ))
                                     .into(),
@@ -1529,7 +1529,9 @@ mod tests {
                     .fields([relation_field!("presenter" => "author", query().fields([
                         field!("name"),
                     ]))])
-                    .predicate(not(is_null(target!("name", [path_element("author")])))),
+                    .predicate(not(is_null(
+                        target!("name", relations: [path_element("author")]),
+                    ))),
             )
             .into();
         let query_plan = plan_for_query_request(&query_context, request)?;

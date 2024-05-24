@@ -156,85 +156,46 @@ impl TryFrom<bson::Document> for Selection {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
+    use configuration::Configuration;
     use mongodb::bson::{doc, Document};
+    use ndc_query_plan::plan_for_query_request;
+    use ndc_test_helpers::{
+        array, array_of, collection, field, named_type, nullable, object, object_type, query,
+        query_request, relation_field, relationship,
+    };
     use pretty_assertions::assert_eq;
-    use serde_json::{from_value, json};
+
+    use crate::mongo_query_plan::MongoConfiguration;
 
     use super::Selection;
-    use dc_api_types::{Field, Query, QueryRequest, Target};
 
     #[test]
     fn calculates_selection_for_query_request() -> Result<(), anyhow::Error> {
-        let fields: HashMap<String, Field> = from_value(json!({
-            "foo": { "type": "column", "column": "foo", "column_type": "String" },
-            "foo_again": { "type": "column", "column": "foo", "column_type": "String" },
-            "bar": {
-                "type": "object",
-                "column": "bar",
-                "query": {
-                    "fields": {
-                        "baz": { "type": "column", "column": "baz", "column_type": "String" },
-                        "baz_again": { "type": "column", "column": "baz", "column_type": "String" },
-                    },
-                },
-            },
-            "bar_again": {
-                "type": "object",
-                "column": "bar",
-                "query": {
-                    "fields": {
-                        "baz": { "type": "column", "column": "baz", "column_type": "String" },
-                    },
-                },
-            },
-            "my_date": { "type": "column", "column": "my_date", "column_type": "date"},
-            "array_of_scalars": {"type": "array", "field": { "type": "column", "column": "foo", "column_type": "String"}},
-            "array_of_objects": {
-                "type": "array",
-                "field": {
-                    "type": "object",
-                     "column": "foo",
-                     "query": {
-                        "fields": {
-                            "baz": {"type": "column", "column": "baz", "column_type": "String"}
-                        }
-                     }
-                }
-            },
-            "array_of_arrays_of_objects": {
-                "type": "array",
-                "field": {
-                    "type": "array",
-                    "field": {
-                        "type": "object",
-                        "column": "foo",
-                        "query": {
-                            "fields": {
-                                "baz": {"type": "column", "column": "baz", "column_type": "String"}
-                            }
-                        }
-                    }
-                }
-            }
-        }))?;
+        let query_request = query_request()
+            .collection("test")
+            .query(query().fields([
+                field!("foo"),
+                field!("foo_again" => "foo"),
+                field!("bar" => "bar", object!([
+                    field!("baz"),
+                    field!("baz_again" => "baz"),
+                ])),
+                field!("bar_again" => "bar", object!([
+                    field!("baz"),
+                ])),
+                field!("array_of_scalars" => "xs"),
+                field!("array_of_objects" => "os", array!(object!([
+                    field!("cat")
+                ]))),
+                field!("array_of_arrays_of_objects" => "oss", array!(array!(object!([
+                    field!("cat")
+                ])))),
+            ]))
+            .into();
 
-        let query_request = QueryRequest {
-            query: Box::new(Query {
-                fields: Some(fields),
-                ..Default::default()
-            }),
-            foreach: None,
-            variables: None,
-            target: Target::TTable {
-                name: vec!["test".to_owned()],
-                arguments: Default::default(),
-            },
-            relationships: vec![],
-        };
+        let query_plan = plan_for_query_request(&foo_config(), query_request)?;
 
-        let selection = Selection::from_query_request(&query_request)?;
+        let selection = Selection::from_query_request(&query_plan)?;
         assert_eq!(
             Into::<Document>::into(selection),
             doc! {
@@ -257,11 +218,6 @@ mod tests {
                             "baz": { "$ifNull": ["$bar.baz", null] }
                         },
                         "else": null
-                    }
-               },
-               "my_date": {
-                    "$dateToString": {
-                        "date": { "$ifNull": ["$my_date", null] }
                     }
                },
                "array_of_scalars": { "$ifNull": ["$foo", null] },
@@ -301,42 +257,25 @@ mod tests {
 
     #[test]
     fn produces_selection_for_relation() -> Result<(), anyhow::Error> {
-        let query_request: QueryRequest = from_value(json!({
-            "query": {
-                "fields": {
-                    "class_students": {
-                        "type": "relationship",
-                        "query": {
-                            "fields": {
-                                "name": { "type": "column", "column": "name", "column_type": "string" },
-                            },
-                        },
-                        "relationship": "class_students",
-                    },
-                    "students": {
-                        "type": "relationship",
-                        "query": {
-                            "fields": {
-                                "student_name": { "type": "column", "column": "name", "column_type": "string" },
-                            },
-                        },
-                        "relationship": "class_students",
-                    },
-                },
-            },
-            "target": {"name": ["classes"], "type": "table"},
-            "relationships": [{
-                "source_table": ["classes"],
-                "relationships": {
-                    "class_students": {
-                        "column_mapping": { "_id": "classId" },
-                        "relationship_type": "array",
-                        "target": {"name": ["students"], "type": "table"},
-                    },
-                },
-            }],
-        }))?;
-        let selection = Selection::from_query_request(&query_request)?;
+        let query_request = query_request()
+            .collection("classes")
+            .query(query().fields([
+                relation_field!("class_students" => "class_students", query().fields([
+                    field!("name")
+                ])),
+                relation_field!("students" => "class_students", query().fields([
+                    field!("student_name" => "name")
+                ])),
+            ]))
+            .relationships([(
+                "class_students",
+                relationship("students", [("_id", "classId")]),
+            )])
+            .into();
+
+        let query_plan = plan_for_query_request(&students_config(), query_request)?;
+
+        let selection = Selection::from_query_request(&query_plan)?;
         assert_eq!(
             Into::<Document>::into(selection),
             doc! {
@@ -355,60 +294,78 @@ mod tests {
         Ok(())
     }
 
-    // Same test as above, but using the old query format to test for backwards compatibility
-    #[test]
-    fn produces_selection_for_relation_compat() -> Result<(), anyhow::Error> {
-        let query_request: QueryRequest = from_value(json!({
-            "query": {
-                "fields": {
-                    "class_students": {
-                        "type": "relationship",
-                        "query": {
-                            "fields": {
-                                "name": { "type": "column", "column": "name", "column_type": "string" },
-                            },
-                        },
-                        "relationship": "class_students",
-                    },
-                    "students": {
-                        "type": "relationship",
-                        "query": {
-                            "fields": {
-                                "student_name": { "type": "column", "column": "name", "column_type": "string" },
-                            },
-                        },
-                        "relationship": "class_students",
-                    },
-                },
-            },
-            "table": ["classes"],
-            "table_relationships": [{
-                "source_table": ["classes"],
-                "relationships": {
-                    "class_students": {
-                        "column_mapping": { "_id": "classId" },
-                        "relationship_type": "array",
-                        "target_table": ["students"],
-                    },
-                },
-            }],
-        }))?;
-        let selection = Selection::from_query_request(&query_request)?;
-        assert_eq!(
-            Into::<Document>::into(selection),
-            doc! {
-                "class_students": {
-                    "rows": {
-                        "$getField": { "$literal": "class_students" }
-                    },
-                },
-                "students": {
-                    "rows": {
-                        "$getField": { "$literal": "students" }
-                    },
-                },
-            }
-        );
-        Ok(())
+    fn students_config() -> MongoConfiguration {
+        MongoConfiguration(Configuration {
+            collections: [collection("classes"), collection("students")].into(),
+            object_types: [
+                (
+                    "assignments".into(),
+                    object_type([
+                        ("_id", named_type("ObjectId")),
+                        ("student_id", named_type("ObjectId")),
+                        ("title", named_type("String")),
+                    ]),
+                ),
+                (
+                    "classes".into(),
+                    object_type([
+                        ("_id", named_type("ObjectId")),
+                        ("title", named_type("String")),
+                        ("year", named_type("Int")),
+                    ]),
+                ),
+                (
+                    "students".into(),
+                    object_type([
+                        ("_id", named_type("ObjectId")),
+                        ("classId", named_type("ObjectId")),
+                        ("gpa", named_type("Double")),
+                        ("name", named_type("String")),
+                        ("year", named_type("Int")),
+                    ]),
+                ),
+            ]
+            .into(),
+            functions: Default::default(),
+            procedures: Default::default(),
+            native_procedures: Default::default(),
+            native_queries: Default::default(),
+            options: Default::default(),
+        })
+    }
+
+    fn foo_config() -> MongoConfiguration {
+        MongoConfiguration(Configuration {
+            collections: [collection("test")].into(),
+            object_types: [
+                (
+                    "test".into(),
+                    object_type([
+                        ("foo", nullable(named_type("String"))),
+                        ("bar", nullable(named_type("bar"))),
+                        ("xs", nullable(array_of(nullable(named_type("Int"))))),
+                        ("os", nullable(array_of(nullable(named_type("os"))))),
+                        (
+                            "oss",
+                            nullable(array_of(nullable(array_of(nullable(named_type("os")))))),
+                        ),
+                    ]),
+                ),
+                (
+                    "bar".into(),
+                    object_type([("baz", nullable(named_type("String")))]),
+                ),
+                (
+                    "os".into(),
+                    object_type([("cat", nullable(named_type("String")))]),
+                ),
+            ]
+            .into(),
+            functions: Default::default(),
+            procedures: Default::default(),
+            native_procedures: Default::default(),
+            native_queries: Default::default(),
+            options: Default::default(),
+        })
     }
 }

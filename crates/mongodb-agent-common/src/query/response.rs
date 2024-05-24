@@ -288,16 +288,15 @@ mod tests {
     use configuration::schema::{ObjectType, Type};
     use mongodb::bson::{self, Bson};
     use mongodb_support::BsonScalarType;
-    use ndc_sdk::models::{QueryRequest, QueryResponse, RowFieldValue, RowSet};
+    use ndc_models::{QueryRequest, QueryResponse, RowFieldValue, RowSet};
     use ndc_test_helpers::{
         array, collection, field, object, query, query_request, relation_field, relationship,
     };
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
-    use crate::{
-        api_type_conversions::QueryContext,
-        test_helpers::{make_nested_schema, make_scalar_types, object_type},
+    use test_helpers::connector_configurations::{
+        make_nested_schema, make_scalar_types, object_type,
     };
 
     use super::{serialize_query_response, type_for_row_set};
@@ -567,13 +566,7 @@ mod tests {
             .into();
         let path = [collection_name];
 
-        let (row_set_type, object_types) = type_for_row_set(
-            &query_context,
-            &request.collection_relationships,
-            &path,
-            collection_name,
-            &request.query,
-        )?;
+        let row_set_type = type_for_row_set(&path, collection_name, &request.query)?;
 
         // Convert object types into a map so we can compare without worrying about order
         let object_types: BTreeMap<String, ObjectType> = object_types.into_iter().collect();

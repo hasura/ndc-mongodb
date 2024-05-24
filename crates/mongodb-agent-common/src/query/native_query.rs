@@ -81,8 +81,6 @@ mod tests {
         schema::{ObjectField, ObjectType, Type},
         Configuration,
     };
-    use dc_api_test_helpers::{column, query, query_request};
-    use dc_api_types::Argument;
     use mongodb::bson::{bson, doc};
     use mongodb_support::BsonScalarType as S;
     use pretty_assertions::assert_eq;

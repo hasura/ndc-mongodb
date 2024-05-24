@@ -69,7 +69,7 @@ mod tests {
             .into();
 
         let expected_response = row_set()
-            .rows([("student_gpa", 3.1), ("student_gpa", 3.6)])
+            .row([("student_gpa", 3.1), ("student_gpa", 3.6)])
             .into();
 
         let expected_pipeline = bson!([

@@ -818,46 +818,46 @@ mod tests {
     //
     //     Ok(())
     // }
-    //
-    // fn students_config() -> MongoConfiguration {
-    //     MongoConfiguration(Configuration {
-    //         collections: [collection("classes"), collection("students")].into(),
-    //         object_types: [
-    //             (
-    //                 "assignments".into(),
-    //                 object_type([
-    //                     ("_id", named_type("ObjectId")),
-    //                     ("student_id", named_type("ObjectId")),
-    //                     ("title", named_type("String")),
-    //                 ]),
-    //             ),
-    //             (
-    //                 "classes".into(),
-    //                 object_type([
-    //                     ("_id", named_type("ObjectId")),
-    //                     ("title", named_type("String")),
-    //                     ("year", named_type("Int")),
-    //                 ]),
-    //             ),
-    //             (
-    //                 "students".into(),
-    //                 object_type([
-    //                     ("_id", named_type("ObjectId")),
-    //                     ("classId", named_type("ObjectId")),
-    //                     ("gpa", named_type("Double")),
-    //                     ("name", named_type("String")),
-    //                     ("year", named_type("Int")),
-    //                 ]),
-    //             ),
-    //         ]
-    //         .into(),
-    //         functions: Default::default(),
-    //         procedures: Default::default(),
-    //         native_procedures: Default::default(),
-    //         native_queries: Default::default(),
-    //         options: Default::default(),
-    //     })
-    // }
+
+    fn students_config() -> MongoConfiguration {
+        MongoConfiguration(Configuration {
+            collections: [collection("classes"), collection("students")].into(),
+            object_types: [
+                (
+                    "assignments".into(),
+                    object_type([
+                        ("_id", named_type("ObjectId")),
+                        ("student_id", named_type("ObjectId")),
+                        ("title", named_type("String")),
+                    ]),
+                ),
+                (
+                    "classes".into(),
+                    object_type([
+                        ("_id", named_type("ObjectId")),
+                        ("title", named_type("String")),
+                        ("year", named_type("Int")),
+                    ]),
+                ),
+                (
+                    "students".into(),
+                    object_type([
+                        ("_id", named_type("ObjectId")),
+                        ("classId", named_type("ObjectId")),
+                        ("gpa", named_type("Double")),
+                        ("name", named_type("String")),
+                        ("year", named_type("Int")),
+                    ]),
+                ),
+            ]
+            .into(),
+            functions: Default::default(),
+            procedures: Default::default(),
+            native_procedures: Default::default(),
+            native_queries: Default::default(),
+            options: Default::default(),
+        })
+    }
 
     fn mflix_config() -> MongoConfiguration {
         MongoConfiguration(Configuration {
