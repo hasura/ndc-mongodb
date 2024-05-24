@@ -27,12 +27,11 @@ pub fn pipeline_for_native_query(
             native_query,
             arguments,
             ..
-        } => make_pipeline(config, variables, native_query, arguments),
+        } => make_pipeline(variables, native_query, arguments),
     }
 }
 
 fn make_pipeline(
-    config: &MongoConfiguration,
     variables: Option<&VariableSet>,
     native_query: &NativeQuery,
     arguments: &BTreeMap<String, Argument>,

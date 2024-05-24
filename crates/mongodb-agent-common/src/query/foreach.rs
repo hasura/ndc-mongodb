@@ -17,12 +17,12 @@ const FACET_FIELD: &str = "__FACET__";
 /// [`pipeline_for_non_foreach`] this function returns a pipeline paired with a value that
 /// indicates whether the response requires post-processing in the agent.
 pub fn pipeline_for_foreach(
-    variable_sets: &Vec<VariableSet>,
+    variable_sets: &[VariableSet],
     config: &MongoConfiguration,
     query_request: &QueryPlan,
 ) -> Result<Pipeline, MongoAgentError> {
     let pipelines: Vec<(String, Pipeline)> = variable_sets
-        .into_iter()
+        .iter()
         .enumerate()
         .map(|(index, variables)| {
             let pipeline = pipeline_for_non_foreach(config, Some(variables), query_request)?;

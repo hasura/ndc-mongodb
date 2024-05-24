@@ -4,13 +4,12 @@ use anyhow::{anyhow, ensure};
 use itertools::Itertools;
 use mongodb_support::BsonScalarType;
 use ndc_models as ndc;
-use ndc_query_plan::{ConnectorTypes, QueryContext, QueryPlanError};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     native_procedure::NativeProcedure,
     native_query::{NativeQuery, NativeQueryRepresentation},
-    read_directory, schema, serialized, MongoScalarType,
+    read_directory, schema, serialized,
 };
 
 #[derive(Clone, Debug, Default)]

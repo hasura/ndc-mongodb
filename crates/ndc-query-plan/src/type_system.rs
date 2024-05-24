@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use itertools::Itertools as _;
 use ndc_models as ndc;
 
-use crate::{self as plan, ConnectorTypes, QueryPlanError};
+use crate::{self as plan, QueryPlanError};
 
 /// The type of values that a column, field, or argument may take.
 #[derive(Debug, Clone, PartialEq, Eq)]

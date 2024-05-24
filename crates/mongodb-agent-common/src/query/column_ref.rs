@@ -19,9 +19,9 @@ pub fn column_ref(column: &ComparisonTarget) -> Result<Cow<'_, str>, MongoAgentE
             path,
             ..
         } => Either::Left(
-            path.into_iter()
+            path.iter()
                 .chain(once(name))
-                .chain(field_path.into_iter().flatten())
+                .chain(field_path.iter().flatten())
                 .map(AsRef::as_ref),
         ),
         ComparisonTarget::RootCollectionColumn {
@@ -29,7 +29,7 @@ pub fn column_ref(column: &ComparisonTarget) -> Result<Cow<'_, str>, MongoAgentE
         } => Either::Right(
             once("$$ROOT")
                 .chain(once(name.as_ref()))
-                .chain(field_path.into_iter().flatten().map(AsRef::as_ref)),
+                .chain(field_path.iter().flatten().map(AsRef::as_ref)),
         ),
     };
     safe_selector(path)

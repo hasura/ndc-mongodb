@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 
-use enum_iterator::all;
 use itertools::Either;
 use lazy_static::lazy_static;
 use mongodb_support::BsonScalarType;

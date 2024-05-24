@@ -814,17 +814,12 @@ fn plan_for_comparison_value<T: QueryContext>(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use ndc_models::{
-        self as ndc, CollectionInfo, OrderByTarget, OrderDirection, RelationshipType,
-    };
+    use ndc_models::{self as ndc, OrderByTarget, OrderDirection, RelationshipType};
     use ndc_test_helpers::*;
     use pretty_assertions::assert_eq;
-    use serde_json::json;
 
     use crate::{
-        self as plan, inline_object_types,
+        self as plan,
         plan_for_query_request::plan_test_helpers::{
             self, make_flat_schema, make_nested_schema, TestContext,
         },

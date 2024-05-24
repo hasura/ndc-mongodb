@@ -1,10 +1,5 @@
-use std::collections::BTreeMap;
-
-use mongodb_support::BsonScalarType;
 use ndc_sdk::models::{
-    AggregateFunctionDefinition, Capabilities, CapabilitiesResponse, ComparisonOperatorDefinition,
-    LeafCapability, QueryCapabilities, RelationshipCapabilities, ScalarType, Type,
-    TypeRepresentation,
+    Capabilities, CapabilitiesResponse, LeafCapability, QueryCapabilities, RelationshipCapabilities,
 };
 
 pub fn mongo_capabilities_response() -> CapabilitiesResponse {

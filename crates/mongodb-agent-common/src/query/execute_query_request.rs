@@ -1,4 +1,3 @@
-use configuration::Configuration;
 use futures::Stream;
 use futures_util::TryStreamExt as _;
 use mongodb::bson;

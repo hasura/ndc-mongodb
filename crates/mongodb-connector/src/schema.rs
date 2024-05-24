@@ -17,7 +17,7 @@ pub async fn get_schema(config: &MongoConfiguration) -> Result<ndc::SchemaRespon
         object_types: config
             .object_types()
             .iter()
-            .map(|(name, object_type)| (name.clone(), object_type.clone().into()))
+            .map(|(name, object_type)| (name.clone(), object_type.clone()))
             .collect(),
         scalar_types: SCALAR_TYPES.clone(),
     })
