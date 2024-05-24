@@ -216,7 +216,7 @@ mod tests {
     fn serializes_object_id_to_string() -> anyhow::Result<()> {
         let expected_string = "573a1390f29313caabcd446f";
         let json = bson_to_json(
-            &Type::Scalar(BsonScalarType::ObjectId),
+            &Type::Scalar(MongoScalarType::Bson(BsonScalarType::ObjectId)),
             Bson::ObjectId(FromStr::from_str(expected_string)?),
         )?;
         assert_eq!(json, Value::String(expected_string.to_owned()));
@@ -229,7 +229,7 @@ mod tests {
             name: None,
             fields: [(
                 "test_object".to_owned(),
-                ObjectType {
+                Type::Object(ObjectType {
                     name: None,
                     fields: [(
                         "field".to_owned(),
@@ -238,7 +238,7 @@ mod tests {
                         )))),
                     )]
                     .into(),
-                },
+                }),
             )]
             .into(),
         });
