@@ -152,187 +152,52 @@ fn multiple_column_mapping_lookup(
     })
 }
 
-// /// Produces $lookup stages for any necessary joins
-// fn lookups_for_fields(
-//     config: &Configuration,
-//     query_request: &QueryRequest,
-//     variables: Option<&VariableSet>,
-//     relationships: &HashMap<String, Relationship>,
-//     parent_columns: &[&str],
-//     fields: &HashMap<String, Field>,
-// ) -> Result<Vec<Stage>> {
-//     let stages = fields
-//         .iter()
-//         .map(|(field_name, field)| {
-//             lookups_for_field(
-//                 config,
-//                 query_request,
-//                 variables,
-//                 relationships,
-//                 parent_columns,
-//                 field_name,
-//                 field,
-//             )
-//         })
-//         .collect::<Result<Vec<Vec<_>>>>()?
-//         .into_iter()
-//         .flatten()
-//         .collect();
-//     Ok(stages)
-// }
-//
-// /// Produces $lookup stages for any necessary joins
-// fn lookups_for_field(
-//     config: &Configuration,
-//     query_request: &QueryRequest,
-//     variables: Option<&VariableSet>,
-//     relationships: &HashMap<String, Relationship>,
-//     parent_columns: &[&str],
-//     field_name: &str,
-//     field: &Field,
-// ) -> Result<Vec<Stage>> {
-//     match field {
-//         Field::Column { .. } => Ok(vec![]),
-//         Field::NestedObject { column, query } => {
-//             let nested_parent_columns = append_to_path(parent_columns, column);
-//             let fields = query.fields.clone().unwrap_or_default();
-//             lookups_for_fields(
-//                 config,
-//                 query_request,
-//                 variables,
-//                 relationships,
-//                 &nested_parent_columns,
-//                 &fields,
-//             )
-//             .map(Into::into)
-//         }
-//         Field::NestedArray {
-//             field,
-//             // NOTE: We can use a $slice in our selection to do offsets and limits:
-//             // https://www.mongodb.com/docs/manual/reference/operator/projection/slice/#mongodb-projection-proj.-slice
-//             limit: _,
-//             offset: _,
-//             r#where: _,
-//         } => lookups_for_field(
-//             config,
-//             query_request,
-//             variables,
-//             relationships,
-//             parent_columns,
-//             field_name,
-//             field,
-//         ),
-//         Field::Relationship {
-//             query,
-//             relationship: relationship_name,
-//         } => {
-//             let r#as = match parent_columns {
-//                 [] => field_name.to_owned(),
-//                 _ => format!("{}.{}", parent_columns.join("."), field_name),
-//             };
-//
-//             let Relationship {
-//                 column_mapping,
-//                 target,
-//                 ..
-//             } = get_relationship(relationships, relationship_name)?;
-//             let from = collection_reference(target.name())?;
-//
-//             // Recursively build pipeline according to relation query
-//             let lookup_pipeline = pipeline_for_non_foreach(
-//                 config,
-//                 variables,
-//                 &QueryRequest {
-//                     query: query.clone(),
-//                     target: target.clone(),
-//                     ..query_request.clone()
-//                 },
-//             )?;
-//
-//             let lookup = make_lookup_stage(from, column_mapping, r#as, lookup_pipeline)?;
-//
-//             Ok(vec![lookup])
-//         }
-//     }
-// }
-//
-// /// Transform an Agent IR qualified table reference into a MongoDB collection reference.
-// fn collection_reference(table_ref: &[String]) -> Result<String> {
-//     if table_ref.len() == 1 {
-//         Ok(table_ref[0].clone())
-//     } else {
-//         Err(MongoAgentError::BadQuery(anyhow!(
-//             "expected \"from\" field of relationship to contain one element"
-//         )))
-//     }
-// }
-//
-// fn get_relationship<'a>(
-//     relationships: &'a HashMap<String, Relationship>,
-//     relationship_name: &str,
-// ) -> Result<&'a Relationship> {
-//     match relationships.get(relationship_name) {
-//         Some(relationship) => Ok(relationship),
-//         None => Err(MongoAgentError::UnspecifiedRelation(
-//             relationship_name.to_owned(),
-//         )),
-//     }
-// }
-//
-// fn append_to_path<'a, 'b, 'c>(parent_columns: &'a [&'b str], column: &'c str) -> Vec<&'c str>
-// where
-//     'b: 'c,
-// {
-//     parent_columns.iter().copied().chain(Some(column)).collect()
-// }
-
 #[cfg(test)]
 mod tests {
-    use dc_api_types::QueryRequest;
+    use configuration::Configuration;
     use mongodb::bson::{bson, doc, Bson};
+    use ndc_test_helpers::{
+        binop, collection, collection_relationships, exists, field, named_type, object,
+        object_type, query, query_request, query_response, relation_field, relationship, row_set,
+        star_count_aggregate, target,
+    };
     use pretty_assertions::assert_eq;
     use serde_json::{from_value, json};
 
     use super::super::execute_query_request;
-    use crate::mongodb::test_helpers::mock_collection_aggregate_response_for_pipeline;
+    use crate::{
+        mongo_query_plan::MongoConfiguration,
+        mongodb::test_helpers::mock_collection_aggregate_response_for_pipeline,
+    };
 
     #[tokio::test]
     async fn looks_up_an_array_relation() -> Result<(), anyhow::Error> {
-        let query_request: QueryRequest = from_value(json!({
-            "query": {
-                "fields": {
-                    "class_title": { "type": "column", "column": "title", "column_type": "string" },
-                    "students": {
-                        "type": "relationship",
-                        "query": {
-                            "fields": {
-                                "student_name": { "type": "column", "column": "name", "column_type": "string" },
-                            },
-                        },
-                        "relationship": "class_students",
-                    },
-                },
-            },
-            "target": {"name": ["classes"], "type": "table"},
-            "relationships": [{
-                "source_table": ["classes"],
-                "relationships": {
-                    "class_students": {
-                        "column_mapping": { "_id": "classId" },
-                        "relationship_type": "array",
-                        "target": { "name": ["students"], "type": "table"},
-                    },
-                },
-            }],
-        }))?;
+        let query_request = query_request()
+            .collection("classes")
+            .query(query().fields([
+                field!("class_title" => "title"),
+                relation_field!("students" => "class_students", query().fields([
+                    field!("student_name" => "name")
+                ])),
+            ]))
+            .relationships(collection_relationships([(
+                "class_students",
+                relationship("students", [("_id", "classId")]),
+            )]))
+            .into();
 
-        let expected_response = vec![doc! {
-            "class_title": "MongoDB 101",
-            "students": { "rows": [
-                { "student_name": "Alice" },
-                { "student_name": "Bob" },
-            ] },
-        }];
+        let expected_response = row_set()
+            .row([
+                ("class_title", "MongoDB 101"),
+                (
+                    "students",
+                    json!({ "rows": [
+                        { "student_name": "Alice" },
+                        { "student_name": "Bob" },
+                    ]}),
+                ),
+            ])
+            .into();
 
         let expected_pipeline = bson!([
             {
@@ -374,7 +239,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, &Default::default(), query_request).await?;
+        let result = execute_query_request(db, &students_config(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -382,44 +247,38 @@ mod tests {
 
     #[tokio::test]
     async fn looks_up_an_object_relation() -> Result<(), anyhow::Error> {
-        let query_request: QueryRequest = from_value(json!({
-            "query": {
-                "fields": {
-                    "student_name": { "type": "column", "column": "name", "column_type": "string" },
-                    "class": {
-                        "type": "relationship",
-                        "query": {
-                            "fields": {
-                                "class_title": { "type": "column", "column": "title", "column_type": "string" },
-                            },
-                        },
-                        "relationship": "student_class",
-                    },
-                },
-            },
-            "target": {"name": ["students"], "type": "table"},
-            "relationships": [{
-                "source_table": ["students"],
-                "relationships": {
-                    "student_class": {
-                        "column_mapping": { "classId": "_id" },
-                        "relationship_type": "object",
-                        "target": {"name": ["classes"], "type": "table"},
-                    },
-                },
-            }],
-        }))?;
+        let query_request = query_request()
+            .collection("students")
+            .query(query().fields([
+                field!("student_name" => "name"),
+                relation_field!("class" => "student_class", query().fields([
+                    field!("class_title" => "title")
+                ])),
+            ]))
+            .relationships([(
+                "student_class",
+                relationship("classes", [("classId", "_id")]),
+            )])
+            .into();
 
-        let expected_response = vec![
-            doc! {
-                "student_name": "Alice",
-                "class": { "rows": [{ "class_title": "MongoDB 101" }] },
-            },
-            doc! {
-                "student_name": "Bob",
-                "class": { "rows": [{ "class_title": "MongoDB 101" }] },
-            },
-        ];
+        let expected_response = row_set()
+            .rows([
+                [
+                    ("student_name", "Alice"),
+                    (
+                        "class",
+                        json!({ "rows": [{ "class_title": "MongoDB 101" }] }),
+                    ),
+                ],
+                [
+                    ("student_name", "Alice"),
+                    (
+                        "class",
+                        json!({ "rows": [{ "class_title": "MongoDB 101" }] }),
+                    ),
+                ],
+            ])
+            .into();
 
         let expected_pipeline = bson!([
             {
@@ -462,7 +321,7 @@ mod tests {
             ]),
         );
 
-        let result = execute_query_request(db, &Default::default(), query_request).await?;
+        let result = execute_query_request(db, &students_config(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -470,41 +329,32 @@ mod tests {
 
     #[tokio::test]
     async fn looks_up_a_relation_with_multiple_column_mappings() -> Result<(), anyhow::Error> {
-        let query_request: QueryRequest = from_value(json!({
-            "query": {
-                "fields": {
-                    "class_title": { "type": "column", "column": "title", "column_type": "string" },
-                    "students": {
-                        "type": "relationship",
-                        "query": {
-                            "fields": {
-                                "student_name": { "type": "column", "column": "name", "column_type": "string" },
-                            },
-                        },
-                        "relationship": "students",
-                    },
-                },
-            },
-            "target": {"name": ["classes"], "type": "table"},
-            "relationships": [{
-                "source_table": ["classes"],
-                "relationships": {
-                    "students": {
-                        "column_mapping": { "title": "class_title", "year": "year" },
-                        "relationship_type": "array",
-                        "target": {"name": ["students"], "type": "table"},
-                    },
-                },
-            }],
-        }))?;
+        let query_request = query_request()
+            .collection("classes")
+            .query(query().fields([
+                field!("class_title" => "title"),
+                relation_field!("students" => "students", query().fields([
+                    field!("student_name" => "name")
+                ])),
+            ]))
+            .relationships([(
+                "students",
+                relationship("students", [("title", "class_title"), ("year", "year")]),
+            )])
+            .into();
 
-        let expected_response = vec![doc! {
-            "class_title": "MongoDB 101",
-            "students": { "rows": [
-                { "student_name": "Alice" },
-                { "student_name": "Bob" },
-            ] },
-        }];
+        let expected_response = row_set()
+            .row([
+                ("class_title", "MongoDB 101"),
+                (
+                    "students",
+                    json!({ "rows": [
+                        { "student_name": "Alice" },
+                        { "student_name": "Bob" },
+                    ]}),
+                ),
+            ])
+            .into();
 
         let expected_pipeline = bson!([
             {
@@ -554,7 +404,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, &Default::default(), query_request).await?;
+        let result = execute_query_request(db, &students_config(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -562,74 +412,49 @@ mod tests {
 
     #[tokio::test]
     async fn makes_recursive_lookups_for_nested_relations() -> Result<(), anyhow::Error> {
-        let query_request: QueryRequest = from_value(json!({
-            "query": {
-                "fields": {
-                    "class_title": { "type": "column", "column": "title", "column_type": "string" },
-                    "students": {
-                        "type": "relationship",
-                        "relationship": "students",
-                        "query": {
-                            "fields": {
-                                "student_name": { "type": "column", "column": "name", "column_type": "string" },
-                                "assignments": {
-                                    "type": "relationship",
-                                    "relationship": "assignments",
-                                    "query": {
-                                        "fields": {
-                                            "assignment_title": { "type": "column", "column": "title", "column_type": "string" },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                        "relationship": "students",
-                    },
-                },
-            },
-            "target": {"name": ["classes"], "type": "table"},
-            "relationships": [
-                {
-                    "source_table": ["classes"],
-                    "relationships": {
-                        "students": {
-                            "column_mapping": { "_id": "class_id" },
-                            "relationship_type": "array",
-                            "target": {"name": ["students"], "type": "table"},
-                        },
-                    },
-                },
-                {
-                    "source_table": ["students"],
-                    "relationships": {
-                        "assignments": {
-                            "column_mapping": { "_id": "student_id" },
-                            "relationship_type": "array",
-                            "target": {"name": ["assignments"], "type": "table"},
-                        },
-                    },
-                }
-            ],
-        }))?;
+        let query_request = query_request()
+            .collection("classes")
+            .query(query().fields([
+                field!("class_title" => "title"),
+                relation_field!("students" => "students", query().fields([
+                    field!("student_name" => "name"),
+                    relation_field!("assignments" => "assignments", query().fields([
+                        field!("assignment_title" => "title")
+                    ]))
+                ])),
+            ]))
+            .relationships([
+                ("students", relationship("students", [("_id", "class_id")])),
+                (
+                    "assignments",
+                    relationship("assignments", [("_id", "student_id")]),
+                ),
+            ])
+            .into();
 
-        let expected_response = vec![doc! {
-            "class_title": "MongoDB 101",
-            "students": { "rows": [
-                {
-                    "student_name": "Alice",
-                    "assignments": { "rows": [
-                        { "assignment_title": "read chapter 2" },
-                    ]}
-                },
-                {
-                    "student_name": "Bob",
-                    "assignments": { "rows": [
-                        { "assignment_title": "JSON Basics" },
-                        { "assignment_title": "read chapter 2" },
-                    ]}
-                },
-             ]},
-        }];
+        let expected_response = row_set()
+            .row([
+                ("class_title", "MongoDB 101"),
+                (
+                    "students",
+                    json!({ "rows": [
+                        {
+                            "student_name": "Alice",
+                            "assignments": { "rows": [
+                                { "assignment_title": "read chapter 2" },
+                            ]}
+                        },
+                        {
+                            "student_name": "Bob",
+                            "assignments": { "rows": [
+                                { "assignment_title": "JSON Basics" },
+                                { "assignment_title": "read chapter 2" },
+                            ]}
+                        },
+                    ]}),
+                ),
+            ])
+            .into();
 
         let expected_pipeline = bson!([
             {
@@ -704,7 +529,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, &Default::default(), query_request).await?;
+        let result = execute_query_request(db, &students_config(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -712,40 +537,17 @@ mod tests {
 
     #[tokio::test]
     async fn executes_aggregation_in_relation() -> Result<(), anyhow::Error> {
-        let query_request: QueryRequest = from_value(json!({
-            "query": {
-                "fields": {
-                    "students_aggregate": {
-                        "type": "relationship",
-                        "query": {
-                            "aggregates": {
-                                "aggregate_count": { "type": "star_count" },
-                            },
-                        },
-                        "relationship": "students",
-                    },
-                },
-            },
-            "table": ["classes"],
-            "table_relationships": [{
-                "source_table": ["classes"],
-                "relationships": {
-                    "students": {
-                        "column_mapping": { "_id": "classId" },
-                        "relationship_type": "array",
-                        "target_table": ["students"],
-                    },
-                },
-            }],
-        }))?;
+        let query_request = query_request()
+            .collection("classes")
+            .query(query().fields([
+                relation_field!("students_aggregate" => "students", query().aggregates([
+                    star_count_aggregate!("aggregate_count")
+                ])),
+            ]))
+            .relationships([("students", relationship("students", [("_id", "classId")]))])
+            .into();
 
-        let expected_response = vec![doc! {
-            "students_aggregate": {
-                "aggregates": {
-                    "aggregate_count": 2,
-                },
-             },
-        }];
+        let expected_response = row_set().aggregates([("aggregate_count", 2)]).into();
 
         let expected_pipeline = bson!([
             {
@@ -798,7 +600,7 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, &Default::default(), query_request).await?;
+        let result = execute_query_request(db, &students_config(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
@@ -806,68 +608,48 @@ mod tests {
 
     #[tokio::test]
     async fn filters_by_field_of_related_collection() -> Result<(), anyhow::Error> {
-        let query_request: QueryRequest = from_value(json!({
-          "query": {
-            "fields": {
-              "movie": {
-                "type": "relationship",
-                "query": {
-                  "fields": {
-                    "title": { "type": "column", "column": "title", "column_type": "string" },
-                    "year": { "type": "column", "column": "year", "column_type": "int" }
-                  }
-                },
-                "relationship": "movie"
-              },
-              "name": {
-                "type": "column",
-                "column": "name",
-                "column_type": "string"
-              }
-            },
-            "limit": 50,
-            "where": {
-              "type": "exists",
-              "in_table": { "type": "related", "relationship": "movie" },
-              "where": {
-                "type": "binary_op",
-                "column": { "column_type": "string", "name": "title" },
-                "operator": "equal",
-                "value": { "type": "scalar", "value": "The Land Beyond the Sunset", "value_type": "string" }
-              }
-            }
-          },
-          "target": {
-            "type": "table",
-            "name": [
-              "comments"
-            ]
-          },
-          "relationships": [
-            {
-              "relationships": {
-                "movie": {
-                  "column_mapping": {
-                    "movie_id": "_id"
-                  },
-                  "relationship_type": "object",
-                  "target": { "type": "table", "name": [ "movies" ] }
-                }
-              },
-              "source_table": [
-                "comments"
-              ]
-            }
-          ]
-        }))?;
+        let query_request = query_request()
+            .collection("comments")
+            .query(
+                query()
+                    .fields([
+                        relation_field!("movie" => "movie", query().fields([
+                            field!("title"),
+                            field!("year"),
+                        ])),
+                        field!("name"),
+                    ])
+                    .limit(50)
+                    .predicate(exists(
+                        ndc_models::ExistsInCollection::Related {
+                            relationship: "movie".into(),
+                            arguments: Default::default(),
+                        },
+                        binop(
+                            "_eq",
+                            target!("title"),
+                            value!("The Land Beyond the Sunset"),
+                        ),
+                    )),
+            )
+            .relationships([(
+                "movie",
+                relationship("movies", [("movie_id", "_id")]).object_type(),
+            )])
+            .into();
 
-        let expected_response = vec![doc! {
-            "name": "Mercedes Tyler",
-            "movie": { "rows": [{
-                "title": "The Land Beyond the Sunset",
-                "year": 1912
-            }] },
-        }];
+        let expected_response = row_set()
+            .row([
+                ("name", "Mercedes Tyler"),
+                (
+                    "movie",
+                    json!({ "rows": [{
+                        "title": "The Land Beyond the Sunset",
+                        "year": 1912
+                    }]}),
+                ),
+            ])
+            .into();
 
         let expected_pipeline = bson!([
           {
@@ -922,144 +704,193 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, &Default::default(), query_request).await?;
+        let result = execute_query_request(db, &mflix_config(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
     }
 
-    #[tokio::test]
-    async fn filters_by_field_nested_in_object_in_related_collection() -> Result<(), anyhow::Error>
-    {
-        let query_request: QueryRequest = from_value(json!({
-          "query": {
-            "fields": {
-              "movie": {
-                "type": "relationship",
-                "query": {
-                  "fields": {
-                    "credits": { "type": "object", "column": "credits", "query": {
-                        "fields": {
-                            "director": { "type": "column", "column": "director", "column_type": "string" },
-                        }
-                    } },
-                  }
-                },
-                "relationship": "movie"
-              },
-              "name": {
-                "type": "column",
-                "column": "name",
-                "column_type": "string"
-              }
-            },
-            "limit": 50,
-            "where": {
-              "type": "exists",
-              "in_table": { "type": "related", "relationship": "movie" },
-              "where": {
-                "type": "binary_op",
-                "column": { "column_type": "string", "name": ["credits", "director"] },
-                "operator": "equal",
-                "value": { "type": "scalar", "value": "Martin Scorsese", "value_type": "string" }
-              }
-            }
-          },
-          "target": {
-            "type": "table",
-            "name": [
-              "comments"
+    // TODO: This test requires updated ndc_models that add `field_path` to
+    // [ndc::ComparisonTarget::Column]
+    // #[tokio::test]
+    // async fn filters_by_field_nested_in_object_in_related_collection() -> Result<(), anyhow::Error>
+    // {
+    //     let query_request = query_request()
+    //         .collection("comments")
+    //         .query(
+    //             query()
+    //                 .fields([relation_field!("movie" => "movie", query().fields([
+    //                     field!("credits" => "credits", object!([
+    //                         field!("director"),
+    //                     ])),
+    //                 ]))])
+    //                 .limit(50)
+    //                 .predicate(exists(
+    //                     ndc_models::ExistsInCollection::Related {
+    //                         relationship: "movie".into(),
+    //                         arguments: Default::default(),
+    //                     },
+    //                     binop(
+    //                         "_eq",
+    //                         target!("credits", field_path: ["director"]),
+    //                         value!("Martin Scorsese"),
+    //                     ),
+    //                 )),
+    //         )
+    //         .relationships([("movie", relationship("movies", [("movie_id", "_id")]))])
+    //         .into();
+    //
+    //     let expected_response = row_set()
+    //         .row([
+    //             ("name", "Beric Dondarrion"),
+    //             (
+    //                 "movie",
+    //                 json!({ "rows": [{
+    //                     "credits": {
+    //                         "director": "Martin Scorsese",
+    //                     }
+    //                 }]}),
+    //             ),
+    //         ])
+    //         .into();
+    //
+    //     let expected_pipeline = bson!([
+    //         {
+    //             "$lookup": {
+    //                 "from": "movies",
+    //                 "localField": "movie_id",
+    //                 "foreignField": "_id",
+    //                 "pipeline": [
+    //                     {
+    //                         "$replaceWith": {
+    //                             "credits": {
+    //                                 "$cond": {
+    //                                     "if": "$credits",
+    //                                     "then": { "director": { "$ifNull": ["$credits.director", null] } },
+    //                                     "else": null,
+    //                                 }
+    //                             },
+    //                         }
+    //                     }
+    //                 ],
+    //                 "as": "movie"
+    //             }
+    //         },
+    //         {
+    //             "$match": {
+    //                 "movie.credits.director": {
+    //                     "$eq": "Martin Scorsese"
+    //                 }
+    //             }
+    //         },
+    //         {
+    //             "$limit": Bson::Int64(50),
+    //         },
+    //         {
+    //             "$replaceWith": {
+    //                 "name": { "$ifNull": ["$name", null] },
+    //                 "movie": {
+    //                     "rows": {
+    //                         "$getField": {
+    //                             "$literal": "movie"
+    //                         }
+    //                     }
+    //                 },
+    //             }
+    //         },
+    //     ]);
+    //
+    //     let db = mock_collection_aggregate_response_for_pipeline(
+    //         "comments",
+    //         expected_pipeline,
+    //         bson!([{
+    //             "name": "Beric Dondarrion",
+    //             "movie": { "rows": [{
+    //                 "credits": {
+    //                     "director": "Martin Scorsese"
+    //                 }
+    //             }] },
+    //         }]),
+    //     );
+    //
+    //     let result = execute_query_request(db, &mflix_config(), query_request).await?;
+    //     assert_eq!(expected_response, result);
+    //
+    //     Ok(())
+    // }
+    //
+    // fn students_config() -> MongoConfiguration {
+    //     MongoConfiguration(Configuration {
+    //         collections: [collection("classes"), collection("students")].into(),
+    //         object_types: [
+    //             (
+    //                 "assignments".into(),
+    //                 object_type([
+    //                     ("_id", named_type("ObjectId")),
+    //                     ("student_id", named_type("ObjectId")),
+    //                     ("title", named_type("String")),
+    //                 ]),
+    //             ),
+    //             (
+    //                 "classes".into(),
+    //                 object_type([
+    //                     ("_id", named_type("ObjectId")),
+    //                     ("title", named_type("String")),
+    //                     ("year", named_type("Int")),
+    //                 ]),
+    //             ),
+    //             (
+    //                 "students".into(),
+    //                 object_type([
+    //                     ("_id", named_type("ObjectId")),
+    //                     ("classId", named_type("ObjectId")),
+    //                     ("gpa", named_type("Double")),
+    //                     ("name", named_type("String")),
+    //                     ("year", named_type("Int")),
+    //                 ]),
+    //             ),
+    //         ]
+    //         .into(),
+    //         functions: Default::default(),
+    //         procedures: Default::default(),
+    //         native_procedures: Default::default(),
+    //         native_queries: Default::default(),
+    //         options: Default::default(),
+    //     })
+    // }
+
+    fn mflix_config() -> MongoConfiguration {
+        MongoConfiguration(Configuration {
+            collections: [collection("comments"), collection("movies")].into(),
+            object_types: [
+                (
+                    "comments".into(),
+                    object_type([
+                        ("_id", named_type("ObjectId")),
+                        ("movie_id", named_type("ObjectId")),
+                        ("name", named_type("String")),
+                    ]),
+                ),
+                (
+                    "credits".into(),
+                    object_type([("director", named_type("String"))]),
+                ),
+                (
+                    "movies".into(),
+                    object_type([
+                        ("_id", named_type("ObjectId")),
+                        ("credits", named_type("credits")),
+                        ("title", named_type("String")),
+                        ("year", named_type("Int")),
+                    ]),
+                ),
             ]
-          },
-          "relationships": [
-            {
-              "relationships": {
-                "movie": {
-                  "column_mapping": {
-                    "movie_id": "_id"
-                  },
-                  "relationship_type": "object",
-                  "target": { "type": "table", "name": [ "movies" ] }
-                }
-              },
-              "source_table": [
-                "comments"
-              ]
-            }
-          ]
-        }))?;
-
-        let expected_response = vec![doc! {
-            "name": "Beric Dondarrion",
-            "movie": { "rows": [{
-                "credits": {
-                    "director": "Martin Scorsese",
-                }
-            }] },
-        }];
-
-        let expected_pipeline = bson!([
-            {
-                "$lookup": {
-                    "from": "movies",
-                    "localField": "movie_id",
-                    "foreignField": "_id",
-                    "pipeline": [
-                        {
-                            "$replaceWith": {
-                                "credits": {
-                                    "$cond": {
-                                        "if": "$credits",
-                                        "then": { "director": { "$ifNull": ["$credits.director", null] } },
-                                        "else": null,
-                                    }
-                                },
-                            }
-                        }
-                    ],
-                    "as": "movie"
-                }
-            },
-            {
-                "$match": {
-                    "movie.credits.director": {
-                        "$eq": "Martin Scorsese"
-                    }
-                }
-            },
-            {
-                "$limit": Bson::Int64(50),
-            },
-            {
-                "$replaceWith": {
-                    "name": { "$ifNull": ["$name", null] },
-                    "movie": {
-                        "rows": {
-                            "$getField": {
-                                "$literal": "movie"
-                            }
-                        }
-                    },
-                }
-            },
-        ]);
-
-        let db = mock_collection_aggregate_response_for_pipeline(
-            "comments",
-            expected_pipeline,
-            bson!([{
-                "name": "Beric Dondarrion",
-                "movie": { "rows": [{
-                    "credits": {
-                        "director": "Martin Scorsese"
-                    }
-                }] },
-            }]),
-        );
-
-        let result = execute_query_request(db, &Default::default(), query_request).await?;
-        assert_eq!(expected_response, result);
-
-        Ok(())
+            .into(),
+            functions: Default::default(),
+            procedures: Default::default(),
+            native_procedures: Default::default(),
+            native_queries: Default::default(),
+            options: Default::default(),
+        })
     }
 }

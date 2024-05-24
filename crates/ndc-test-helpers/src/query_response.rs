@@ -69,6 +69,18 @@ impl RowSetBuilder {
         }));
         self
     }
+
+    pub fn row(
+        mut self,
+        row: impl IntoIterator<Item = (impl ToString, impl Into<serde_json::Value>)>,
+    ) -> Self {
+        self.rows.push(
+            row.into_iter()
+                .map(|(k, v)| (k.to_string(), RowFieldValue(v.into())))
+                .collect(),
+        );
+        self
+    }
 }
 
 impl From<RowSetBuilder> for RowSet {

@@ -862,9 +862,9 @@ mod tests {
             ])
             .query(
                 query()
-                    .fields([relation_field!("school_classes" => "class_name", query()
+                    .fields([relation_field!("class_name" => "school_classes", query()
                         .fields([
-                            relation_field!("class_students" => "student_name")
+                            relation_field!("student_name" => "class_students")
                         ])
                     )])
                     .order_by(vec![ndc::OrderByElement {
@@ -877,7 +877,7 @@ mod tests {
                                         "Equal",
                                         target!(
                                             "_id",
-                                            [
+                                            relations: [
                                                 path_element("school_classes"),
                                                 path_element("class_department"),
                                             ],
@@ -1244,7 +1244,7 @@ mod tests {
                     .fields([
                         field!("last_name"),
                         relation_field!(
-                            "author_articles" => "articles",
+                            "articles" => "author_articles",
                             query().fields([field!("title"), field!("year")])
                         ),
                     ])
@@ -1526,7 +1526,7 @@ mod tests {
             .relationships([("author", relationship("authors", [("authorId", "id")]))])
             .query(
                 query()
-                    .fields([relation_field!("author" => "presenter", query().fields([
+                    .fields([relation_field!("presenter" => "author", query().fields([
                         field!("name"),
                     ]))])
                     .predicate(not(is_null(target!("name", [path_element("author")])))),

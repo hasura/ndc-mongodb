@@ -52,7 +52,7 @@ macro_rules! array {
 
 #[macro_export]
 macro_rules! relation_field {
-    ($relationship:literal => $name:literal) => {
+    ($name:literal => $relationship:literal) => {
         (
             $name,
             $crate::ndc_models::Field::Relationship {
@@ -62,7 +62,7 @@ macro_rules! relation_field {
             },
         )
     };
-    ($relationship:literal => $name:literal, $query:expr) => {
+    ($name:literal => $relationship:literal, $query:expr) => {
         (
             $name,
             $crate::ndc_models::Field::Relationship {

@@ -551,7 +551,7 @@ mod tests {
             .collection(collection_name)
             .relationships([("author", relationship("authors", [("authorId", "id")]))])
             .query(
-                query().fields([relation_field!("author" => "presenter", query().fields([
+                query().fields([relation_field!("presenter" => "author", query().fields([
                     field!("addr" => "address", object!([
                         field!("street"),
                         field!("geocode" => "geocode", object!([
