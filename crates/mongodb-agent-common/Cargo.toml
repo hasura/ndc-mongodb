@@ -35,6 +35,7 @@ tracing = "0.1"
 
 [dev-dependencies]
 mongodb-cli-plugin = { path = "../cli" }
+ndc-test-helpers = { path = "../ndc-test-helpers" }
 test-helpers = { path = "../test-helpers" }
 
 mockall = "^0.12.1"

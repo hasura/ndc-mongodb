@@ -1592,6 +1592,7 @@ dependencies = [
  "mongodb-support",
  "ndc-models",
  "ndc-query-plan",
+ "ndc-test-helpers",
  "once_cell",
  "pretty_assertions",
  "proptest",
