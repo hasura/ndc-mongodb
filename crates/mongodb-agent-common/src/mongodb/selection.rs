@@ -51,26 +51,22 @@ fn from_query_request_helper(
 /// Wraps column reference with an `$isNull` check. That catches cases where a field is missing
 /// from a document, and substitutes a concrete null value. Otherwise the field would be omitted
 /// from query results which leads to an error in the engine.
-pub fn value_or_null(col_path: String, column_type: &Type) -> Bson {
-    if is_nullable(column_type) {
-        doc! { "$ifNull": [col_path, Bson::Null] }.into()
-    } else {
-        col_path.into()
-    }
+fn value_or_null(col_path: String) -> Bson {
+    doc! { "$ifNull": [col_path, Bson::Null] }.into()
 }
 
 fn selection_for_field(parent_columns: &[&str], field: &Field) -> Result<Bson, MongoAgentError> {
     match field {
         Field::Column {
             column,
-            column_type,
             fields: None,
+            ..
         } => {
             let col_path = match parent_columns {
                 [] => format!("${column}"),
                 _ => format!("${}.{}", parent_columns.join("."), column),
             };
-            let bson_col_path = value_or_null(col_path, column_type);
+            let bson_col_path = value_or_null(col_path);
             Ok(bson_col_path)
         }
         Field::Column {

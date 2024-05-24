@@ -172,6 +172,7 @@ pub enum Expression<T: ConnectorTypes> {
     },
     Exists {
         in_collection: ExistsInCollection,
+        predicate: Option<Box<Expression<T>>>,
     },
 }
 

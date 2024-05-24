@@ -44,11 +44,19 @@ pub fn make_selector(
         Expression::Not { expression } => {
             Ok(doc! { "$nor": [make_selector(variables, expression)?]})
         }
-        Expression::Exists { in_collection } => Ok(match in_collection {
-            ExistsInCollection::Related { relationship } => doc! { relationship: { "$gt": 0 } },
+        Expression::Exists {
+            in_collection,
+            predicate,
+        } => Ok(match in_collection {
+            ExistsInCollection::Related { relationship } => match predicate {
+                Some(predicate) => doc! {
+                    format!("${relationship}"): { "$elemMatch": make_selector(variables, predicate)? }
+                },
+                None => doc! { format!("${relationship}.0"): { "$exists": true } },
+            },
             ExistsInCollection::Unrelated {
                 unrelated_collection,
-            } => doc! { format!("$$ROOT.${unrelated_collection}"): { "$gt": 0 } },
+            } => doc! { format!("$$ROOT.{unrelated_collection}.0"): { "$exists": true } },
         }),
         Expression::BinaryComparisonOperator {
             column,

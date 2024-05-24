@@ -109,7 +109,7 @@ fn multiple_column_mapping_lookup(
         .map(|local_field| {
             Ok((
                 variable(local_field)?,
-                Bson::String(safe_name(local_field)?.into_owned()),
+                Bson::String(format!("${}", safe_name(local_field)?.into_owned())),
             ))
         })
         .collect::<Result<_>>()?;

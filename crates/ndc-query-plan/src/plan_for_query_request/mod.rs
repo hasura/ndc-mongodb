@@ -344,237 +344,6 @@ fn plan_for_relationship_path_helper<T: QueryContext>(
     }
 }
 
-// fn ndc_to_v2_order_by_element(
-//     context: &QueryContext,
-//     collection_relationships: &BTreeMap<String, ndc::Relationship>,
-//     root_collection_object_type: &WithNameRef<plan::ObjectType>,
-//     object_type: &WithNameRef<plan::ObjectType>,
-//     elem: ndc::OrderByElement,
-// ) -> Result<(v2::OrderByElement, HashMap<String, v2::OrderByRelation>)> {
-//     let (target, target_path) = match elem.target {
-//         ndc::OrderByTarget::Column { name, path } => (
-//             v2::OrderByTarget::Column {
-//                 column: v2::ColumnSelector::Column(name),
-//             },
-//             path,
-//         ),
-//         ndc::OrderByTarget::SingleColumnAggregate {
-//             column,
-//             function,
-//             path,
-//         } => {
-//             let end_of_relationship_path_object_type = path
-//                 .last()
-//                 .map(|last_path_element| {
-//                     let relationship = lookup_relationship(
-//                         collection_relationships,
-//                         &last_path_element.relationship,
-//                     )?;
-//                     context.find_collection_object_type(&relationship.target_collection)
-//                 })
-//                 .transpose()?;
-//             let target_object_type = end_of_relationship_path_object_type
-//                 .as_ref()
-//                 .unwrap_or(object_type);
-//             let object_field = find_object_field(target_object_type, &column)?;
-//             let scalar_type_name = get_scalar_type_name(&object_field.r#type)?;
-//             let aggregate_function =
-//                 context.find_aggregation_function_definition(&scalar_type_name, &function)?;
-//             let result_type = type_to_type_name(&aggregate_function.result_type)?;
-//             let target = v2::OrderByTarget::SingleColumnAggregate {
-//                 column,
-//                 function,
-//                 result_type,
-//             };
-//             (target, path)
-//         }
-//         ndc::OrderByTarget::StarCountAggregate { path } => {
-//             (v2::OrderByTarget::StarCountAggregate {}, path)
-//         }
-//     };
-//     let (target_path, relations) = ndc_to_v2_target_path(
-//         context,
-//         collection_relationships,
-//         root_collection_object_type,
-//         target_path,
-//     )?;
-//     let order_by_element = v2::OrderByElement {
-//         order_direction: match elem.order_direction {
-//             ndc::OrderDirection::Asc => v2::OrderDirection::Asc,
-//             ndc::OrderDirection::Desc => v2::OrderDirection::Desc,
-//         },
-//         target,
-//         target_path,
-//     };
-//     Ok((order_by_element, relations))
-// }
-//
-// fn ndc_to_v2_target_path(
-//     context: &QueryContext,
-//     collection_relationships: &BTreeMap<String, ndc::Relationship>,
-//     root_collection_object_type: &WithNameRef<plan::ObjectType>,
-//     path: Vec<ndc::PathElement>,
-// ) -> Result<(Vec<String>, HashMap<String, v2::OrderByRelation>)> {
-//     let mut v2_path = vec![];
-//     let v2_relations = ndc_to_v2_target_path_step::<Vec<_>>(
-//         context,
-//         collection_relationships,
-//         root_collection_object_type,
-//         path.into_iter(),
-//         &mut v2_path,
-//     )?;
-//     Ok((v2_path, v2_relations))
-// }
-//
-// fn ndc_to_v2_target_path_step<T: IntoIterator<Item = ndc::PathElement>>(
-//     context: &QueryContext,
-//     collection_relationships: &BTreeMap<String, ndc::Relationship>,
-//     root_collection_object_type: &WithNameRef<plan::ObjectType>,
-//     mut path_iter: T::IntoIter,
-//     v2_path: &mut Vec<String>,
-// ) -> Result<HashMap<String, v2::OrderByRelation>> {
-//     let mut v2_relations = HashMap::new();
-//
-//     if let Some(path_element) = path_iter.next() {
-//         v2_path.push(path_element.relationship.clone());
-//
-//         let where_expr = path_element
-//             .predicate
-//             .map(|expression| {
-//                 let ndc_relationship =
-//                     lookup_relationship(collection_relationships, &path_element.relationship)?;
-//                 let target_object_type =
-//                     context.find_collection_object_type(&ndc_relationship.target_collection)?;
-//                 let v2_expression = ndc_to_v2_expression(
-//                     context,
-//                     collection_relationships,
-//                     root_collection_object_type,
-//                     &target_object_type,
-//                     *expression,
-//                 )?;
-//                 Ok(Box::new(v2_expression))
-//             })
-//             .transpose()?;
-//
-//         let subrelations = ndc_to_v2_target_path_step::<T>(
-//             context,
-//             collection_relationships,
-//             root_collection_object_type,
-//             path_iter,
-//             v2_path,
-//         )?;
-//
-//         v2_relations.insert(
-//             path_element.relationship,
-//             v2::OrderByRelation {
-//                 r#where: where_expr,
-//                 subrelations,
-//             },
-//         );
-//     }
-//
-//     Ok(v2_relations)
-// }
-//
-// /// Like v2, a ndc QueryRequest has a map of Relationships. Unlike v2, ndc does not indicate the
-// /// source collection for each relationship. Instead we are supposed to keep track of the "current"
-// /// collection so that when we hit a Field that refers to a Relationship we infer that the source
-// /// is the "current" collection. This means that to produce a v2 Relationship mapping we need to
-// /// traverse the query here.
-// fn ndc_to_v2_relationships(
-//     query_request: &ndc::QueryRequest,
-// ) -> Result<Vec<v2::TableRelationships>> {
-//     // This only captures relationships that are referenced by a Field or an OrderBy in the query.
-//     // We might record a relationship more than once, but we are recording to maps so that doesn't
-//     // matter. We might capture the same relationship multiple times with different source
-//     // collections, but that is by design.
-//     let relationships_by_source_and_name: Vec<(Vec<String>, (String, v2::Relationship))> =
-//         query_traversal(query_request)
-//             .filter_map_ok(|TraversalStep { collection, node }| match node {
-//                 Node::Field {
-//                     field:
-//                         ndc::Field::Relationship {
-//                             relationship,
-//                             arguments,
-//                             ..
-//                         },
-//                     ..
-//                 } => Some((collection, relationship, arguments)),
-//                 Node::ExistsInCollection(ndc::ExistsInCollection::Related {
-//                     relationship,
-//                     arguments,
-//                 }) => Some((collection, relationship, arguments)),
-//                 Node::PathElement(ndc::PathElement {
-//                     relationship,
-//                     arguments,
-//                     ..
-//                 }) => Some((collection, relationship, arguments)),
-//                 _ => None,
-//             })
-//             .map_ok(|(collection_name, relationship_name, arguments)| {
-//                 let ndc_relationship = lookup_relationship(
-//                     &query_request.collection_relationships,
-//                     relationship_name,
-//                 )?;
-//
-//                 // TODO: Functions (native queries) may be referenced multiple times in a query
-//                 // request with different arguments. To accommodate that we will need to record
-//                 // separate v2 relations for each reference with different names. In the current
-//                 // implementation one set of arguments will override arguments to all occurrences of
-//                 // a given function. MDB-106
-//                 let v2_relationship = v2::Relationship {
-//                     column_mapping: v2::ColumnMapping(
-//                         ndc_relationship
-//                             .column_mapping
-//                             .iter()
-//                             .map(|(source_col, target_col)| {
-//                                 (
-//                                     ColumnSelector::Column(source_col.clone()),
-//                                     ColumnSelector::Column(target_col.clone()),
-//                                 )
-//                             })
-//                             .collect(),
-//                     ),
-//                     relationship_type: match ndc_relationship.relationship_type {
-//                         ndc::RelationshipType::Object => v2::RelationshipType::Object,
-//                         ndc::RelationshipType::Array => v2::RelationshipType::Array,
-//                     },
-//                     target: v2::Target::TTable {
-//                         name: vec![ndc_relationship.target_collection.clone()],
-//                         arguments: ndc_to_v2_relationship_arguments(arguments.clone()),
-//                     },
-//                 };
-//
-//                 Ok((
-//                     vec![collection_name.to_owned()], // put in vec to match v2 namespaced format
-//                     (relationship_name.clone(), v2_relationship),
-//                 )) as Result<_>
-//             })
-//             // The previous step produced Result<Result<_>,_> values. Flatten them to Result<_,_>.
-//             // We can't use the flatten() Iterator method because that loses the outer Result errors.
-//             .map(|result| match result {
-//                 Ok(Ok(v)) => Ok(v),
-//                 Ok(Err(e)) => Err(e),
-//                 Err(e) => Err(e),
-//             })
-//             .collect::<Result<_, _>>()?;
-//
-//     let grouped_by_source: HashMap<Vec<String>, Vec<(String, v2::Relationship)>> =
-//         relationships_by_source_and_name
-//             .into_iter()
-//             .into_group_map();
-//
-//     let v2_relationships = grouped_by_source
-//         .into_iter()
-//         .map(|(source_table, relationships)| v2::TableRelationships {
-//             source_table,
-//             relationships: relationships.into_iter().collect(),
-//         })
-//         .collect();
-//
-//     Ok(v2_relationships)
-// }
-//
 fn plan_for_expression<T: QueryContext>(
     plan_state: &mut QueryPlanState<T>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
@@ -637,7 +406,7 @@ fn plan_for_expression<T: QueryContext>(
         } => {
             let mut nested_state = plan_state.state_for_subquery();
 
-            let in_collection = match in_collection {
+            let (in_collection, predicate) = match in_collection {
                 ndc::ExistsInCollection::Related {
                     relationship,
                     arguments,
@@ -660,8 +429,7 @@ fn plan_for_expression<T: QueryContext>(
                         .transpose()?;
 
                     let relationship_query = plan::Query {
-                        limit: Some(1),
-                        predicate,
+                        predicate: predicate.clone(),
                         relationships: nested_state.into_relationships(),
                         ..Default::default()
                     };
@@ -676,7 +444,7 @@ fn plan_for_expression<T: QueryContext>(
                         relationship: relationship_key.to_owned(),
                     };
 
-                    Ok(in_collection)
+                    Ok((in_collection, predicate))
                 }
                 ndc::ExistsInCollection::Unrelated {
                     collection,
@@ -698,8 +466,7 @@ fn plan_for_expression<T: QueryContext>(
                         .transpose()?;
 
                     let join_query = plan::Query {
-                        limit: Some(1),
-                        predicate,
+                        predicate: predicate.clone(),
                         relationships: nested_state.into_relationships(),
                         ..Default::default()
                     };
@@ -710,11 +477,14 @@ fn plan_for_expression<T: QueryContext>(
                     let in_collection = plan::ExistsInCollection::Unrelated {
                         unrelated_collection: join_key,
                     };
-                    Ok(in_collection)
+                    Ok((in_collection, predicate))
                 }
             }?;
 
-            Ok(plan::Expression::Exists { in_collection })
+            Ok(plan::Expression::Exists {
+                in_collection,
+                predicate: predicate.map(Box::new),
+            })
         }
     }
 }
