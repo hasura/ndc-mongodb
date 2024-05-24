@@ -135,40 +135,31 @@ fn parse_native_procedure(string: &str) -> Vec<NativeProcedurePart> {
 
 #[cfg(test)]
 mod tests {
-    use configuration::{
-        native_procedure::NativeProcedure,
-        schema::{ObjectField, ObjectType, Type},
-    };
+    use configuration::{native_procedure::NativeProcedure, MongoScalarType};
     use mongodb::bson::doc;
     use mongodb_support::BsonScalarType as S;
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
-    use crate::query::arguments::resolve_arguments;
+    use crate::{
+        mongo_query_plan::{ObjectType, Type},
+        query::arguments::resolve_arguments,
+    };
 
     use super::*;
-
-    // TODO: key
-    // TODO: key with multiple placeholders
 
     #[test]
     fn interpolates_non_string_type() -> anyhow::Result<()> {
         let native_procedure = NativeProcedure {
-            result_type: Type::Object("InsertArtist".to_owned()),
+            result_type: Type::Object(ObjectType {
+                name: Some("InsertArtist".into()),
+                fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
+            }),
             arguments: [
-                (
-                    "id".to_owned(),
-                    ObjectField {
-                        r#type: Type::Scalar(S::Int),
-                        description: Default::default(),
-                    },
-                ),
+                ("id".to_owned(), Type::Scalar(MongoScalarType::Bson(S::Int))),
                 (
                     "name".to_owned(),
-                    ObjectField {
-                        r#type: Type::Scalar(S::String),
-                        description: Default::default(),
-                    },
+                    Type::Scalar(MongoScalarType::Bson(S::String)),
                 ),
             ]
             .into(),
@@ -190,11 +181,7 @@ mod tests {
         .into_iter()
         .collect();
 
-        let arguments = resolve_arguments(
-            &Default::default(),
-            &native_procedure.arguments,
-            input_arguments,
-        )?;
+        let arguments = resolve_arguments(&native_procedure.arguments, input_arguments)?;
         let command = interpolated_command(&native_procedure.command, &arguments)?;
 
         assert_eq!(
@@ -213,13 +200,26 @@ mod tests {
     #[test]
     fn interpolates_array_argument() -> anyhow::Result<()> {
         let native_procedure = NativeProcedure {
-            result_type: Type::Object("InsertArtist".to_owned()),
+            result_type: Type::Object(ObjectType {
+                name: Some("InsertArtist".into()),
+                fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
+            }),
             arguments: [(
                 "documents".to_owned(),
-                ObjectField {
-                    r#type: Type::ArrayOf(Box::new(Type::Object("ArtistInput".to_owned()))),
-                    description: Default::default(),
-                },
+                Type::ArrayOf(Box::new(Type::Object(ObjectType {
+                    name: Some("ArtistInput".into()),
+                    fields: [
+                        (
+                            "ArtistId".into(),
+                            Type::Scalar(MongoScalarType::Bson(S::Int)),
+                        ),
+                        (
+                            "Name".into(),
+                            Type::Scalar(MongoScalarType::Bson(S::String)),
+                        ),
+                    ]
+                    .into(),
+                }))),
             )]
             .into(),
             command: doc! {
@@ -229,31 +229,6 @@ mod tests {
             selection_criteria: Default::default(),
             description: Default::default(),
         };
-
-        let object_types = [(
-            "ArtistInput".to_owned(),
-            ObjectType {
-                fields: [
-                    (
-                        "ArtistId".to_owned(),
-                        ObjectField {
-                            r#type: Type::Scalar(S::Int),
-                            description: Default::default(),
-                        },
-                    ),
-                    (
-                        "Name".to_owned(),
-                        ObjectField {
-                            r#type: Type::Scalar(S::String),
-                            description: Default::default(),
-                        },
-                    ),
-                ]
-                .into(),
-                description: Default::default(),
-            },
-        )]
-        .into();
 
         let input_arguments = [(
             "documents".to_owned(),
@@ -265,8 +240,7 @@ mod tests {
         .into_iter()
         .collect();
 
-        let arguments =
-            resolve_arguments(&object_types, &native_procedure.arguments, input_arguments)?;
+        let arguments = resolve_arguments(&native_procedure.arguments, input_arguments)?;
         let command = interpolated_command(&native_procedure.command, &arguments)?;
 
         assert_eq!(
@@ -291,21 +265,18 @@ mod tests {
     #[test]
     fn interpolates_arguments_within_string() -> anyhow::Result<()> {
         let native_procedure = NativeProcedure {
-            result_type: Type::Object("Insert".to_owned()),
+            result_type: Type::Object(ObjectType {
+                name: Some("Insert".into()),
+                fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool))).into()].into(),
+            }),
             arguments: [
                 (
                     "prefix".to_owned(),
-                    ObjectField {
-                        r#type: Type::Scalar(S::String),
-                        description: Default::default(),
-                    },
+                    Type::Scalar(MongoScalarType::Bson(S::String)),
                 ),
                 (
                     "basename".to_owned(),
-                    ObjectField {
-                        r#type: Type::Scalar(S::String),
-                        description: Default::default(),
-                    },
+                    Type::Scalar(MongoScalarType::Bson(S::String)),
                 ),
             ]
             .into(),
@@ -324,11 +295,7 @@ mod tests {
         .into_iter()
         .collect();
 
-        let arguments = resolve_arguments(
-            &Default::default(),
-            &native_procedure.arguments,
-            input_arguments,
-        )?;
+        let arguments = resolve_arguments(&native_procedure.arguments, input_arguments)?;
         let command = interpolated_command(&native_procedure.command, &arguments)?;
 
         assert_eq!(
