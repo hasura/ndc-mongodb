@@ -77,12 +77,14 @@ fn argument_to_mongodb_expression(
 #[cfg(test)]
 mod tests {
     use configuration::{
-        native_query::{NativeQuery, NativeQueryRepresentation},
+        native_query::NativeQueryRepresentation,
+        schema::{ObjectField, ObjectType, Type},
+        serialized::NativeQuery,
         Configuration, MongoScalarType,
     };
     use mongodb::bson::{bson, doc};
     use mongodb_support::BsonScalarType as S;
-    use ndc_models::Argument;
+    use ndc_models::{Argument, CollectionInfo};
     use ndc_test_helpers::{
         array_of, field, named_type, object_type, query, query_request, row_set,
     };
@@ -90,9 +92,8 @@ mod tests {
     use serde_json::json;
 
     use crate::{
-        mongo_query_plan::{MongoConfiguration, Type},
-        mongodb::test_helpers::mock_aggregate_response_for_pipeline,
-        query::execute_query_request,
+        mongo_query_plan::MongoConfiguration,
+        mongodb::test_helpers::mock_aggregate_response_for_pipeline, query::execute_query_request,
     };
 
     #[tokio::test]
@@ -103,23 +104,73 @@ mod tests {
             arguments: [
                 (
                     "filter".to_string(),
-                    Type::Scalar(MongoScalarType::ExtendedJSON),
+                    ObjectField {
+                        r#type: Type::ExtendedJSON,
+                        description: None,
+                    },
                 ),
                 (
                     "queryVector".to_string(),
-                    Type::ArrayOf(Box::new(Type::Scalar(MongoScalarType::Bson(S::Double)))),
+                    ObjectField {
+                        r#type: Type::ArrayOf(Box::new(Type::Scalar(S::Double))),
+                        description: None,
+                    },
                 ),
                 (
                     "numCandidates".to_string(),
-                    Type::Scalar(MongoScalarType::Bson(S::Int)),
+                    ObjectField {
+                        r#type: Type::Scalar(S::Int),
+                        description: None,
+                    },
                 ),
                 (
                     "limit".to_string(),
-                    Type::Scalar(MongoScalarType::Bson(S::Int)),
+                    ObjectField {
+                        r#type: Type::Scalar(S::Int),
+                        description: None,
+                    },
                 ),
             ]
             .into(),
             result_document_type: "VectorResult".to_owned(),
+            object_types: [(
+                "VectorResult".to_owned(),
+                ObjectType {
+                    description: None,
+                    fields: [
+                        (
+                            "_id".to_owned(),
+                            ObjectField {
+                                r#type: Type::Scalar(S::ObjectId),
+                                description: None,
+                            },
+                        ),
+                        (
+                            "title".to_owned(),
+                            ObjectField {
+                                r#type: Type::Scalar(S::String),
+                                description: None,
+                            },
+                        ),
+                        (
+                            "genres".to_owned(),
+                            ObjectField {
+                                r#type: Type::ArrayOf(Box::new(Type::Scalar(S::String))),
+                                description: None,
+                            },
+                        ),
+                        (
+                            "year".to_owned(),
+                            ObjectField {
+                                r#type: Type::Scalar(S::Int),
+                                description: None,
+                            },
+                        ),
+                    ]
+                    .into(),
+                },
+            )]
+            .into(),
             pipeline: vec![doc! {
               "$vectorSearch": {
                 "index": "movie-vector-index",
@@ -133,26 +184,12 @@ mod tests {
             description: None,
         };
 
-        let object_types = [(
-            "VectorResult".to_owned(),
-            object_type([
-                ("_id", named_type("ObjectId")),
-                ("title", named_type("String")),
-                ("genres", array_of(named_type("String"))),
-                ("year", array_of(named_type("Int"))),
-            ]),
-        )]
-        .into();
-
-        let config = MongoConfiguration(Configuration {
-            native_queries: [("vectorSearch".to_owned(), native_query.clone())].into(),
-            object_types,
-            collections: Default::default(),
-            functions: Default::default(),
-            procedures: Default::default(),
-            native_procedures: Default::default(),
-            options: Default::default(),
-        });
+        let config = MongoConfiguration(Configuration::validate(
+            Default::default(),
+            Default::default(),
+            [("vectorSearch".into(), native_query)].into(),
+            Default::default(),
+        )?);
 
         let request = query_request()
             .collection("vectorSearch")

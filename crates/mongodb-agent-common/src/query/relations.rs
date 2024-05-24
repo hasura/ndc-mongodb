@@ -211,7 +211,7 @@ mod tests {
                             },
                         }
                     ],
-                    "as": "students",
+                    "as": "class_students",
                 },
             },
             {
@@ -219,7 +219,7 @@ mod tests {
                     "class_title": { "$ifNull": ["$title", null] },
                     "students": {
                         "rows": {
-                            "$getField": { "$literal": "students" },
+                            "$getField": { "$literal": "class_students" },
                         },
                     },
                 },
@@ -292,14 +292,14 @@ mod tests {
                             },
                         }
                     ],
-                    "as": "class",
+                    "as": "student_class",
                 },
             },
             {
                 "$replaceWith": {
                     "student_name": { "$ifNull": ["$name", null] },
                     "class": { "rows": {
-                        "$getField": { "$literal": "class" } }
+                        "$getField": { "$literal": "student_class" } }
                     },
                 },
             },
@@ -547,7 +547,14 @@ mod tests {
             .into();
 
         let expected_response = row_set()
-            .aggregates([("aggregate_count", 2)])
+            .row([(
+                "students_aggregate",
+                json!({
+                    "aggregates": {
+                        "aggregate_count": { "$numberInt": "2" }
+                    }
+                }),
+            )])
             .into_response();
 
         let expected_pipeline = bson!([
@@ -577,13 +584,13 @@ mod tests {
                             },
                         }
                     ],
-                    "as": "students_aggregate",
+                    "as": "students",
                 },
             },
             {
                 "$replaceWith": {
                     "students_aggregate": { "$first": {
-                        "$getField": { "$literal": "students_aggregate" }
+                        "$getField": { "$literal": "students" }
                     } }
                 },
             },
@@ -602,7 +609,7 @@ mod tests {
         );
 
         let result = execute_query_request(db, &students_config(), query_request).await?;
-        assert_eq!(expected_response, result);
+        assert_eq!(result, expected_response);
 
         Ok(())
     }
@@ -671,8 +678,8 @@ mod tests {
           },
           {
             "$match": {
-              "movie.title": {
-                "$eq": "The Land Beyond the Sunset"
+              "movie": {
+                "$elemMatch": { "title": { "$eq": "The Land Beyond the Sunset" } }
               }
             }
           },
@@ -706,7 +713,7 @@ mod tests {
         );
 
         let result = execute_query_request(db, &mflix_config(), query_request).await?;
-        assert_eq!(expected_response, result);
+        assert_eq!(result, expected_response);
 
         Ok(())
     }
@@ -822,7 +829,12 @@ mod tests {
 
     fn students_config() -> MongoConfiguration {
         MongoConfiguration(Configuration {
-            collections: [collection("classes"), collection("students")].into(),
+            collections: [
+                collection("assignments"),
+                collection("classes"),
+                collection("students"),
+            ]
+            .into(),
             object_types: [
                 (
                     "assignments".into(),

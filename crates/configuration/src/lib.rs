@@ -4,7 +4,7 @@ mod mongo_scalar_type;
 pub mod native_procedure;
 pub mod native_query;
 pub mod schema;
-mod serialized;
+pub mod serialized;
 mod with_name;
 
 pub use crate::configuration::Configuration;

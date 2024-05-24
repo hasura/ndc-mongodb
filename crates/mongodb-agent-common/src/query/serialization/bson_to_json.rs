@@ -226,19 +226,12 @@ mod tests {
     #[test]
     fn serializes_document_with_missing_nullable_field() -> anyhow::Result<()> {
         let expected_type = Type::Object(ObjectType {
-            name: None,
+            name: Some("test_object".into()),
             fields: [(
-                "test_object".to_owned(),
-                Type::Object(ObjectType {
-                    name: None,
-                    fields: [(
-                        "field".to_owned(),
-                        Type::Nullable(Box::new(Type::Scalar(MongoScalarType::Bson(
-                            BsonScalarType::String,
-                        )))),
-                    )]
-                    .into(),
-                }),
+                "field".to_owned(),
+                Type::Nullable(Box::new(Type::Scalar(MongoScalarType::Bson(
+                    BsonScalarType::String,
+                )))),
             )]
             .into(),
         });

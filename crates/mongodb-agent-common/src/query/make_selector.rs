@@ -50,9 +50,9 @@ pub fn make_selector(
         } => Ok(match in_collection {
             ExistsInCollection::Related { relationship } => match predicate {
                 Some(predicate) => doc! {
-                    format!("${relationship}"): { "$elemMatch": make_selector(variables, predicate)? }
+                    relationship: { "$elemMatch": make_selector(variables, predicate)? }
                 },
-                None => doc! { format!("${relationship}.0"): { "$exists": true } },
+                None => doc! { format!("{relationship}.0"): { "$exists": true } },
             },
             ExistsInCollection::Unrelated {
                 unrelated_collection,

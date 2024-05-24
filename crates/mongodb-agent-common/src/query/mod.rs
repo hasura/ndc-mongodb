@@ -47,6 +47,7 @@ mod tests {
         object_type, query, query_request, row_set, target, value,
     };
     use pretty_assertions::assert_eq;
+    use serde_json::json;
 
     use super::execute_query_request;
     use crate::{
@@ -63,12 +64,12 @@ mod tests {
             .query(
                 query()
                     .fields([field!("student_gpa" => "gpa")])
-                    .predicate(binop("less_than", target!("gpa"), value!(4.0))),
+                    .predicate(binop("_lt", target!("gpa"), value!(4.0))),
             )
             .into();
 
         let expected_response = row_set()
-            .row([("student_gpa", 3.1), ("student_gpa", 3.6)])
+            .rows([[("student_gpa", 3.1)], [("student_gpa", 3.6)]])
             .into_response();
 
         let expected_pipeline = bson!([
@@ -100,22 +101,11 @@ mod tests {
             ]))
             .into();
 
-        let config = MongoConfiguration(Configuration {
-            collections: [collection("students")].into(),
-            object_types: [(
-                "students".into(),
-                object_type([("student_gpa", named_type("double"))]),
-            )]
-            .into(),
-            functions: Default::default(),
-            procedures: Default::default(),
-            native_procedures: Default::default(),
-            native_queries: Default::default(),
-            options: Default::default(),
-        });
-
         let expected_response = row_set()
-            .aggregates([("count", 11), ("avg", 3)])
+            .aggregates([
+                ("count", json!({ "$numberInt": "11" })),
+                ("avg", json!({ "$numberInt": "3" })),
+            ])
             .into_response();
 
         let expected_pipeline = bson!([
@@ -160,7 +150,7 @@ mod tests {
         );
 
         let result = execute_query_request(db, &students_config(), query_request).await?;
-        assert_eq!(expected_response, result);
+        assert_eq!(result, expected_response);
         Ok(())
     }
 
@@ -177,8 +167,8 @@ mod tests {
             .into();
 
         let expected_response = row_set()
-            .aggregates([("avg", 3.1), ("gpa", 3.1)])
-            .row([("gpa", 3.1)])
+            .aggregates([("avg", json!({ "$numberDouble": "3.1" }))])
+            .row([("student_gpa", 3.1)])
             .into_response();
 
         let expected_pipeline = bson!([
@@ -217,13 +207,13 @@ mod tests {
                     "avg": 3.1,
                 },
                 "rows": [{
-                    "gpa": 3.1,
+                    "student_gpa": 3.1,
                 }],
             }]),
         );
 
         let result = execute_query_request(db, &students_config(), query_request).await?;
-        assert_eq!(expected_response, result);
+        assert_eq!(result, expected_response);
         Ok(())
     }
 
@@ -239,7 +229,7 @@ mod tests {
             .into();
 
         let expected_response = row_set()
-            .row([("date", "2018-08-14T15:05:03.142Z")])
+            .row([("date", "2018-08-14T15:05:00.000000000Z")])
             .into_response();
 
         let expected_pipeline = bson!([
@@ -250,11 +240,7 @@ mod tests {
             },
             {
                 "$replaceWith": {
-                    "date": {
-                        "$dateToString": {
-                            "date": { "$ifNull": ["$date", null] },
-                        },
-                    },
+                    "date": { "$ifNull": ["$date", null] },
                 }
             },
         ]);
@@ -263,7 +249,7 @@ mod tests {
             "comments",
             expected_pipeline,
             bson!([{
-                "date": "2018-08-14T15:05:03.142Z",
+                "date": bson::DateTime::builder().year(2018).month(8).day(14).hour(15).minute(5).build().unwrap(),
             }]),
         );
 

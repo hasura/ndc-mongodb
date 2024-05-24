@@ -80,14 +80,14 @@ mod tests {
             {
                 "$facet": {
                     "__FACET___0": [
-                        { "$match": { "$and": [{ "artistId": {"$eq":1 }}]}},
+                        { "$match": { "artistId": { "$eq": 1 } } },
                         { "$replaceWith": {
                             "albumId": { "$ifNull": ["$albumId", null] },
                             "title": { "$ifNull": ["$title", null] }
                         } },
                     ],
                     "__FACET___1": [
-                        { "$match": { "$and": [{ "artistId": {"$eq":2}}]}},
+                        { "$match": { "artistId": { "$eq": 2 } } },
                         { "$replaceWith": {
                             "albumId": { "$ifNull": ["$albumId", null] },
                             "title": { "$ifNull": ["$title", null] }
@@ -149,7 +149,8 @@ mod tests {
             .query(
                 query()
                     .aggregates([star_count_aggregate!("count")])
-                    .fields([field!("albumId"), field!("title")]),
+                    .fields([field!("albumId"), field!("title")])
+                    .predicate(binop("_eq", target!("artistId"), variable!(artistId))),
             )
             .variables([[("artistId", 1)], [("artistId", 2)]])
             .into();
@@ -158,7 +159,7 @@ mod tests {
             {
                 "$facet": {
                     "__FACET___0": [
-                        { "$match": { "$and": [{ "artistId": {"$eq": 1 }}]}},
+                        { "$match": { "artistId": {"$eq": 1 }}},
                         { "$facet": {
                             "__ROWS__": [{ "$replaceWith": {
                                 "albumId": { "$ifNull": ["$albumId", null] },
@@ -177,7 +178,7 @@ mod tests {
                         } },
                     ],
                     "__FACET___1": [
-                        { "$match": { "$and": [{ "artistId": {"$eq": 2 }}]}},
+                        { "$match": { "artistId": {"$eq": 2 }}},
                         { "$facet": {
                             "__ROWS__": [{ "$replaceWith": {
                                 "albumId": { "$ifNull": ["$albumId", null] },
@@ -374,8 +375,8 @@ mod tests {
             object_types: [(
                 "tracks".into(),
                 object_type([
-                    ("albumId", named_type("ObjectId")),
-                    ("artistId", named_type("ObjectId")),
+                    ("albumId", named_type("Int")),
+                    ("artistId", named_type("Int")),
                     ("title", named_type("String")),
                 ]),
             )]

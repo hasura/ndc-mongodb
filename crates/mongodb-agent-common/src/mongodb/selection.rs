@@ -4,9 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     interface_types::MongoAgentError,
-    mongo_query_plan::{Field, NestedArray, NestedField, NestedObject, QueryPlan, Type},
+    mongo_query_plan::{Field, NestedArray, NestedField, NestedObject, QueryPlan},
     mongodb::sanitize::get_field,
-    query::serialization::is_nullable,
 };
 
 /// Wraps a BSON document that represents a MongoDB "expression" that constructs a document based
@@ -108,7 +107,7 @@ fn selection_for_array(
 ) -> Result<Bson, MongoAgentError> {
     match field {
         NestedField::Object(NestedObject { fields }) => {
-            let nested_parent_col_path = parent_columns.join(".");
+            let nested_parent_col_path = format!("${}", parent_columns.join("."));
             let mut nested_selection = from_query_request_helper(&["$this"], fields)?;
             for _ in 0..array_nesting_level {
                 nested_selection = doc! {"$map": {"input": "$$this", "in": nested_selection}}
@@ -216,14 +215,14 @@ mod tests {
                         "else": null
                     }
                },
-               "array_of_scalars": { "$ifNull": ["$foo", null] },
+               "array_of_scalars": { "$ifNull": ["$xs", null] },
                "array_of_objects": {
                     "$cond": {
-                        "if": "$foo",
+                        "if": "$os",
                         "then": {
                             "$map": {
-                                "input": "$foo",
-                                "in": {"baz": { "$ifNull": ["$$this.baz", null] }}
+                                "input": "$os",
+                                "in": {"cat": { "$ifNull": ["$$this.cat", null] }}
                             }
                         },
                         "else": null
@@ -231,14 +230,14 @@ mod tests {
                },
                "array_of_arrays_of_objects": {
                     "$cond": {
-                        "if": "$foo",
+                        "if": "$oss",
                         "then": {
                             "$map": {
-                                "input": "$foo",
+                                "input": "$oss",
                                 "in": {
                                     "$map": {
                                         "input": "$$this",
-                                        "in": {"baz": { "$ifNull": ["$$this.baz", null] }}
+                                        "in": {"cat": { "$ifNull": ["$$this.cat", null] }}
                                     }
                                 }
                             }
@@ -282,7 +281,7 @@ mod tests {
                 },
                 "students": {
                     "rows": {
-                        "$getField": { "$literal": "students" }
+                        "$getField": { "$literal": "class_students" }
                     },
                 },
             }
