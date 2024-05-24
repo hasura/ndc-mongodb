@@ -3097,7 +3097,6 @@ dependencies = [
  "configuration",
  "enum-iterator",
  "mongodb",
- "mongodb-agent-common",
  "mongodb-support",
  "ndc-models",
  "ndc-test-helpers",

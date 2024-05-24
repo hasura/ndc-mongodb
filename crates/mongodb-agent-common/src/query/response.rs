@@ -283,20 +283,23 @@ fn path_to_owned(path: &[&str]) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use std::{borrow::Cow, collections::BTreeMap, str::FromStr};
+    use std::str::FromStr;
 
-    use configuration::schema::{ObjectType, Type};
+    use configuration::{Configuration, MongoScalarType};
     use mongodb::bson::{self, Bson};
     use mongodb_support::BsonScalarType;
     use ndc_models::{QueryRequest, QueryResponse, RowFieldValue, RowSet};
+    use ndc_query_plan::plan_for_query_request;
     use ndc_test_helpers::{
-        array, collection, field, object, query, query_request, relation_field, relationship,
+        array, collection, field, named_type, object, object_type, query, query_request,
+        relation_field, relationship,
     };
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
-    use test_helpers::connector_configurations::{
-        make_nested_schema, make_scalar_types, object_type,
+    use crate::{
+        mongo_query_plan::{MongoConfiguration, ObjectType, Type},
+        test_helpers::make_nested_schema,
     };
 
     use super::{serialize_query_response, type_for_row_set};
@@ -313,6 +316,7 @@ mod tests {
                 ])),
             ]))]))
             .into();
+        let query_plan = plan_for_query_request(&make_nested_schema(), request)?;
 
         let response_documents = vec![bson::doc! {
             "address": {
@@ -323,7 +327,7 @@ mod tests {
             },
         }];
 
-        let response = serialize_query_response(&request, response_documents)?;
+        let response = serialize_query_response(&query_plan, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -354,6 +358,7 @@ mod tests {
                 ])
             ))]))
             .into();
+        let query_plan = plan_for_query_request(&make_nested_schema(), request)?;
 
         let response_documents = vec![bson::doc! {
             "articles": [
@@ -362,7 +367,7 @@ mod tests {
             ],
         }];
 
-        let response = serialize_query_response(&request, response_documents)?;
+        let response = serialize_query_response(&query_plan, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -396,6 +401,7 @@ mod tests {
                 ])),
             ]))
             .into();
+        let query_plan = plan_for_query_request(&make_nested_schema(), request)?;
 
         let response_documents = vec![bson::doc! {
             "address1": {
@@ -408,7 +414,7 @@ mod tests {
             },
         }];
 
-        let response = serialize_query_response(&request, response_documents)?;
+        let response = serialize_query_response(&query_plan, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -437,33 +443,36 @@ mod tests {
 
     #[test]
     fn serializes_response_with_decimal_128_fields() -> anyhow::Result<()> {
-        let query_context = QueryContext {
-            collections: Cow::Owned([collection("business")].into()),
+        let query_context = MongoConfiguration(Configuration {
+            collections: [collection("business")].into(),
+            object_types: [(
+                "business".into(),
+                object_type([
+                    ("price", named_type("Decimal")),
+                    ("price_extjson", named_type("ExtendedJSON")),
+                ]),
+            )]
+            .into(),
             functions: Default::default(),
-            object_types: Cow::Owned(
-                [(
-                    "business".to_owned(),
-                    object_type([
-                        ("price", Type::Scalar(BsonScalarType::Decimal)),
-                        ("price_extjson", Type::ExtendedJSON),
-                    ]),
-                )]
-                .into(),
-            ),
-            scalar_types: Cow::Owned(make_scalar_types()),
-        };
+            procedures: Default::default(),
+            native_procedures: Default::default(),
+            native_queries: Default::default(),
+            options: Default::default(),
+        });
 
         let request = query_request()
             .collection("business")
             .query(query().fields([field!("price"), field!("price_extjson")]))
             .into();
 
+        let query_plan = plan_for_query_request(&query_context, request)?;
+
         let response_documents = vec![bson::doc! {
             "price": Bson::Decimal128(bson::Decimal128::from_str("127.6486654").unwrap()),
             "price_extjson": Bson::Decimal128(bson::Decimal128::from_str("-4.9999999999").unwrap()),
         }];
 
-        let response = serialize_query_response(&request, response_documents)?;
+        let response = serialize_query_response(&query_plan, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -485,23 +494,26 @@ mod tests {
 
     #[test]
     fn serializes_response_with_nested_extjson() -> anyhow::Result<()> {
-        let query_context = QueryContext {
-            collections: Cow::Owned([collection("data")].into()),
+        let query_context = MongoConfiguration(Configuration {
+            collections: [collection("data")].into(),
+            object_types: [(
+                "data".into(),
+                object_type([("value", named_type("ExtendedJSON"))]),
+            )]
+            .into(),
             functions: Default::default(),
-            object_types: Cow::Owned(
-                [(
-                    "data".to_owned(),
-                    object_type([("value", Type::ExtendedJSON)]),
-                )]
-                .into(),
-            ),
-            scalar_types: Cow::Owned(make_scalar_types()),
-        };
+            procedures: Default::default(),
+            native_procedures: Default::default(),
+            native_queries: Default::default(),
+            options: Default::default(),
+        });
 
         let request = query_request()
             .collection("data")
             .query(query().fields([field!("value")]))
             .into();
+
+        let query_plan = plan_for_query_request(&query_context, request)?;
 
         let response_documents = vec![bson::doc! {
             "value": {
@@ -517,7 +529,7 @@ mod tests {
             },
         }];
 
-        let response = serialize_query_response(&request, response_documents)?;
+        let response = serialize_query_response(&query_plan, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -544,7 +556,6 @@ mod tests {
 
     #[test]
     fn uses_field_path_to_guarantee_distinct_type_names() -> anyhow::Result<()> {
-        let query_context = make_nested_schema();
         let collection_name = "appearances";
         let request: QueryRequest = query_request()
             .collection(collection_name)
@@ -564,87 +575,56 @@ mod tests {
                 ]))]),
             )
             .into();
+        let query_plan = plan_for_query_request(&make_nested_schema(), request)?;
         let path = [collection_name];
 
-        let row_set_type = type_for_row_set(&path, collection_name, &request.query)?;
+        let row_set_type = type_for_row_set(
+            &path,
+            &query_plan.query.aggregates,
+            &query_plan.query.fields,
+        )?;
 
-        // Convert object types into a map so we can compare without worrying about order
-        let object_types: BTreeMap<String, ObjectType> = object_types.into_iter().collect();
+        let expected = Type::Object(ObjectType {
+            name: None,
+            fields: [
+                ("rows".into(), Type::ArrayOf(Box::new(Type::Object(ObjectType {
+                    name: None,
+                    fields: [
+                        ("presenter".into(), Type::Object(ObjectType {
+                            name: None,
+                            fields: [
+                                ("rows".into(), Type::ArrayOf(Box::new(Type::Object(ObjectType {
+                                    name: None,
+                                    fields: [
+                                        ("addr".into(), Type::Object(ObjectType {
+                                            name: None,
+                                            fields: [
+                                                ("geocode".into(), Type::Nullable(Box::new(Type::Object(ObjectType {
+                                                    name: None,
+                                                    fields: [
+                                                        ("latitude".into(), Type::Scalar(MongoScalarType::Bson(BsonScalarType::Double))),
+                                                        ("long".into(), Type::Scalar(MongoScalarType::Bson(BsonScalarType::Double))),
+                                                    ].into(),
+                                                })))),
+                                                ("street".into(), Type::Scalar(MongoScalarType::Bson(BsonScalarType::String))),
+                                            ].into(),
+                                        })),
+                                        ("articles".into(), Type::ArrayOf(Box::new(Type::Object(ObjectType {
+                                            name: None,
+                                            fields: [
+                                                ("article_title".into(), Type::Scalar(MongoScalarType::Bson(BsonScalarType::String))),
+                                            ].into(),
+                                        })))),
+                                    ].into(),
+                                }))))
+                            ].into(),
+                        }))
+                    ].into()
+                }))))
+            ].into(),
+        });
 
-        assert_eq!(
-            (row_set_type, object_types),
-            (
-                Type::Object("__query__appearances_row_set".to_owned()),
-                [
-                    (
-                        "__query__appearances_row_set".to_owned(),
-                        object_type([(
-                            "rows".to_owned(),
-                            Type::ArrayOf(Box::new(Type::Object(
-                                "__query__appearances_row".to_owned()
-                            )))
-                        )]),
-                    ),
-                    (
-                        "__query__appearances_row".to_owned(),
-                        object_type([(
-                            "presenter".to_owned(),
-                            Type::Object("__query__appearances_presenter_row_set".to_owned())
-                        )]),
-                    ),
-                    (
-                        "__query__appearances_presenter_row_set".to_owned(),
-                        object_type([(
-                            "rows",
-                            Type::ArrayOf(Box::new(Type::Object(
-                                "__query__appearances_presenter_row".to_owned()
-                            )))
-                        )]),
-                    ),
-                    (
-                        "__query__appearances_presenter_row".to_owned(),
-                        object_type([
-                            (
-                                "addr",
-                                Type::Object(
-                                    "__query__appearances_presenter_addr_fields".to_owned()
-                                )
-                            ),
-                            (
-                                "articles",
-                                Type::ArrayOf(Box::new(Type::Object(
-                                    "__query__appearances_presenter_articles_fields".to_owned()
-                                )))
-                            ),
-                        ]),
-                    ),
-                    (
-                        "__query__appearances_presenter_addr_fields".to_owned(),
-                        object_type([
-                            (
-                                "geocode",
-                                Type::Nullable(Box::new(Type::Object(
-                                    "__query__appearances_presenter_addr_geocode_fields".to_owned()
-                                )))
-                            ),
-                            ("street", Type::Scalar(BsonScalarType::String)),
-                        ]),
-                    ),
-                    (
-                        "__query__appearances_presenter_addr_geocode_fields".to_owned(),
-                        object_type([
-                            ("latitude", Type::Scalar(BsonScalarType::Double)),
-                            ("long", Type::Scalar(BsonScalarType::Double)),
-                        ]),
-                    ),
-                    (
-                        "__query__appearances_presenter_articles_fields".to_owned(),
-                        object_type([("article_title", Type::Scalar(BsonScalarType::String))]),
-                    ),
-                ]
-                .into()
-            )
-        );
+        assert_eq!(row_set_type, expected);
         Ok(())
     }
 }

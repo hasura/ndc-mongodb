@@ -11,3 +11,6 @@ pub mod query;
 pub mod scalar_types_capabilities;
 pub mod schema;
 pub mod state;
+
+#[cfg(test)]
+mod test_helpers;

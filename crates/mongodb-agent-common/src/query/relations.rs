@@ -155,14 +155,13 @@ fn multiple_column_mapping_lookup(
 #[cfg(test)]
 mod tests {
     use configuration::Configuration;
-    use mongodb::bson::{bson, doc, Bson};
+    use mongodb::bson::{bson, Bson};
     use ndc_test_helpers::{
-        binop, collection, collection_relationships, exists, field, named_type, object,
-        object_type, query, query_request, query_response, relation_field, relationship, row_set,
-        star_count_aggregate, target,
+        binop, collection, exists, field, named_type, object_type, query, query_request,
+        relation_field, relationship, row_set, star_count_aggregate, target, value,
     };
     use pretty_assertions::assert_eq;
-    use serde_json::{from_value, json};
+    use serde_json::json;
 
     use super::super::execute_query_request;
     use crate::{
@@ -180,15 +179,15 @@ mod tests {
                     field!("student_name" => "name")
                 ])),
             ]))
-            .relationships(collection_relationships([(
+            .relationships([(
                 "class_students",
                 relationship("students", [("_id", "classId")]),
-            )]))
+            )])
             .into();
 
         let expected_response = row_set()
             .row([
-                ("class_title", "MongoDB 101"),
+                ("class_title", json!("MongoDB 101")),
                 (
                     "students",
                     json!({ "rows": [
@@ -197,7 +196,7 @@ mod tests {
                     ]}),
                 ),
             ])
-            .into();
+            .into_response();
 
         let expected_pipeline = bson!([
             {
@@ -264,21 +263,21 @@ mod tests {
         let expected_response = row_set()
             .rows([
                 [
-                    ("student_name", "Alice"),
+                    ("student_name", json!("Alice")),
                     (
                         "class",
                         json!({ "rows": [{ "class_title": "MongoDB 101" }] }),
                     ),
                 ],
                 [
-                    ("student_name", "Alice"),
+                    ("student_name", json!("Bob")),
                     (
                         "class",
                         json!({ "rows": [{ "class_title": "MongoDB 101" }] }),
                     ),
                 ],
             ])
-            .into();
+            .into_response();
 
         let expected_pipeline = bson!([
             {
@@ -345,7 +344,7 @@ mod tests {
 
         let expected_response = row_set()
             .row([
-                ("class_title", "MongoDB 101"),
+                ("class_title", json!("MongoDB 101")),
                 (
                     "students",
                     json!({ "rows": [
@@ -354,7 +353,7 @@ mod tests {
                     ]}),
                 ),
             ])
-            .into();
+            .into_response();
 
         let expected_pipeline = bson!([
             {
@@ -434,7 +433,7 @@ mod tests {
 
         let expected_response = row_set()
             .row([
-                ("class_title", "MongoDB 101"),
+                ("class_title", json!("MongoDB 101")),
                 (
                     "students",
                     json!({ "rows": [
@@ -454,7 +453,7 @@ mod tests {
                     ]}),
                 ),
             ])
-            .into();
+            .into_response();
 
         let expected_pipeline = bson!([
             {
@@ -547,7 +546,9 @@ mod tests {
             .relationships([("students", relationship("students", [("_id", "classId")]))])
             .into();
 
-        let expected_response = row_set().aggregates([("aggregate_count", 2)]).into();
+        let expected_response = row_set()
+            .aggregates([("aggregate_count", 2)])
+            .into_response();
 
         let expected_pipeline = bson!([
             {
@@ -640,7 +641,7 @@ mod tests {
 
         let expected_response = row_set()
             .row([
-                ("name", "Mercedes Tyler"),
+                ("name", json!("Mercedes Tyler")),
                 (
                     "movie",
                     json!({ "rows": [{
@@ -649,7 +650,7 @@ mod tests {
                     }]}),
                 ),
             ])
-            .into();
+            .into_response();
 
         let expected_pipeline = bson!([
           {
