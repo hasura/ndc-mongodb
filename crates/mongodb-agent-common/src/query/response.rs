@@ -42,8 +42,13 @@ type Result<T> = std::result::Result<T, QueryResponseError>;
 // These structs describe possible shapes of data returned by MongoDB query plans
 
 #[derive(Debug, Deserialize)]
-struct ResponsesForVariableSets {
+struct ResponseForVariableSetsRowsOnly {
     row_sets: Vec<Vec<bson::Document>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ResponseForVariableSetsAggregates {
+    row_sets: Vec<BsonRowSet>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -63,15 +68,34 @@ pub fn serialize_query_response(
 
     // If the query request specified variable sets then we should have gotten a single document
     // from MongoDB with fields for multiple sets of results - one for each set of variables.
-    let row_sets = if query_plan.variables.is_some() {
-        let responses: ResponsesForVariableSets = parse_single_document(response_documents)?;
+    let row_sets = if query_plan.has_variables() && query_plan.query.has_aggregates() {
+        let responses: ResponseForVariableSetsAggregates =
+            parse_single_document(response_documents)?;
         responses
             .row_sets
             .into_iter()
-            .map(|docs| serialize_row_set(&[collection_name], &query_plan.query, docs))
+            .map(|row_set| {
+                serialize_row_set_with_aggregates(&[collection_name], &query_plan.query, row_set)
+            })
             .try_collect()
+    } else if query_plan.variables.is_some() {
+        let responses: ResponseForVariableSetsRowsOnly = parse_single_document(response_documents)?;
+        responses
+            .row_sets
+            .into_iter()
+            .map(|row_set| {
+                serialize_row_set_rows_only(&[collection_name], &query_plan.query, row_set)
+            })
+            .try_collect()
+    } else if query_plan.query.has_aggregates() {
+        let row_set = parse_single_document(response_documents)?;
+        Ok(vec![serialize_row_set_with_aggregates(
+            &[],
+            &query_plan.query,
+            row_set,
+        )?])
     } else {
-        Ok(vec![serialize_row_set(
+        Ok(vec![serialize_row_set_rows_only(
             &[],
             &query_plan.query,
             response_documents,
@@ -82,38 +106,44 @@ pub fn serialize_query_response(
     Ok(response)
 }
 
-fn serialize_row_set(path: &[&str], query: &Query, docs: Vec<bson::Document>) -> Result<RowSet> {
-    if !query.has_aggregates() {
-        // When there are no aggregates we expect a list of rows
-        let rows = query
-            .fields
-            .as_ref()
-            .map(|fields| serialize_rows(path, fields, docs))
-            .transpose()?;
+// When there are no aggregates we expect a list of rows
+fn serialize_row_set_rows_only(
+    path: &[&str],
+    query: &Query,
+    docs: Vec<bson::Document>,
+) -> Result<RowSet> {
+    let rows = query
+        .fields
+        .as_ref()
+        .map(|fields| serialize_rows(path, fields, docs))
+        .transpose()?;
 
-        Ok(RowSet {
-            aggregates: None,
-            rows,
-        })
-    } else {
-        // When there are aggregates we expect a single document with `rows` and `aggregates`
-        // fields
-        let row_set: BsonRowSet = parse_single_document(docs)?;
+    Ok(RowSet {
+        aggregates: None,
+        rows,
+    })
+}
 
-        let aggregates = query
-            .aggregates
-            .as_ref()
-            .map(|aggregates| serialize_aggregates(path, aggregates, row_set.aggregates))
-            .transpose()?;
+// When there are aggregates we expect a single document with `rows` and `aggregates`
+// fields
+fn serialize_row_set_with_aggregates(
+    path: &[&str],
+    query: &Query,
+    row_set: BsonRowSet,
+) -> Result<RowSet> {
+    let aggregates = query
+        .aggregates
+        .as_ref()
+        .map(|aggregates| serialize_aggregates(path, aggregates, row_set.aggregates))
+        .transpose()?;
 
-        let rows = query
-            .fields
-            .as_ref()
-            .map(|fields| serialize_rows(path, fields, row_set.rows))
-            .transpose()?;
+    let rows = query
+        .fields
+        .as_ref()
+        .map(|fields| serialize_rows(path, fields, row_set.rows))
+        .transpose()?;
 
-        Ok(RowSet { aggregates, rows })
-    }
+    Ok(RowSet { aggregates, rows })
 }
 
 fn serialize_aggregates(

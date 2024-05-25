@@ -27,6 +27,12 @@ pub struct QueryPlan<T: ConnectorTypes> {
     pub unrelated_collections: BTreeMap<String, UnrelatedJoin<T>>,
 }
 
+impl<T: ConnectorTypes> QueryPlan<T> {
+    pub fn has_variables(&self) -> bool {
+        self.variables.is_some()
+    }
+}
+
 pub type VariableSet = BTreeMap<String, serde_json::Value>;
 pub type Relationships<T> = BTreeMap<String, Relationship<T>>;
 
