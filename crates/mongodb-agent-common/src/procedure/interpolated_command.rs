@@ -267,7 +267,7 @@ mod tests {
         let native_procedure = NativeProcedure {
             result_type: Type::Object(ObjectType {
                 name: Some("Insert".into()),
-                fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool))).into()].into(),
+                fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
             }),
             arguments: [
                 (
