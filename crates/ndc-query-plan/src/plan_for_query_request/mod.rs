@@ -587,6 +587,7 @@ mod tests {
     use ndc_models::{self as ndc, OrderByTarget, OrderDirection, RelationshipType};
     use ndc_test_helpers::*;
     use pretty_assertions::assert_eq;
+    use serde_json::json;
 
     use crate::{
         self as plan,
@@ -664,10 +665,10 @@ mod tests {
                         },
                     }])
                     // The `And` layer checks that we properly recursive into Expressions
-                    .predicate(and([exists(
-                        related!("existence_check"),
-                        empty_expression(),
-                    )])),
+                    .predicate(and([ndc::Expression::Exists {
+                        in_collection: related!("existence_check"),
+                        predicate: None,
+                    }])),
             )
             .into();
 
@@ -682,6 +683,7 @@ mod tests {
                         in_collection: ExistsInCollection::Related {
                             relationship: "existence_check".into(),
                         },
+                        predicate: None,
                     }],
                 }),
                 order_by: Some(OrderBy {
@@ -755,10 +757,7 @@ mod tests {
                             target_collection: "some_collection".to_owned(),
                             arguments: Default::default(),
                             query: Query {
-                                predicate: Some(plan::Expression::Or {
-                                    expressions: vec![],
-                                }),
-                                limit: Some(1),
+                                predicate: None,
                                 ..Default::default()
                             },
                         },
@@ -879,6 +878,47 @@ mod tests {
                     in_collection: plan::ExistsInCollection::Unrelated {
                         unrelated_collection: "__join_articles_0".into(),
                     },
+                    predicate: Some(Box::new(plan::Expression::And {
+                        expressions: vec![
+                            plan::Expression::BinaryComparisonOperator {
+                                column: plan::ComparisonTarget::Column {
+                                    name: "author_id".into(),
+                                    field_path: Default::default(),
+                                    column_type: plan::Type::Scalar(
+                                        plan_test_helpers::ScalarType::Int,
+                                    ),
+                                    path: Default::default(),
+                                },
+                                operator: plan_test_helpers::ComparisonOperator::Equal,
+                                value: plan::ComparisonValue::Column {
+                                    column: plan::ComparisonTarget::RootCollectionColumn {
+                                        name: "id".into(),
+                                        field_path: Default::default(),
+                                        column_type: plan::Type::Scalar(
+                                            plan_test_helpers::ScalarType::Int,
+                                        ),
+                                    },
+                                },
+                            },
+                            plan::Expression::BinaryComparisonOperator {
+                                column: plan::ComparisonTarget::Column {
+                                    name: "title".into(),
+                                    field_path: Default::default(),
+                                    column_type: plan::Type::Scalar(
+                                        plan_test_helpers::ScalarType::String,
+                                    ),
+                                    path: Default::default(),
+                                },
+                                operator: plan_test_helpers::ComparisonOperator::Regex,
+                                value: plan::ComparisonValue::Scalar {
+                                    value: json!("Functional.*"),
+                                    value_type: plan::Type::Scalar(
+                                        plan_test_helpers::ScalarType::String,
+                                    ),
+                                },
+                            },
+                        ],
+                    })),
                 }),
                 fields: Some(
                     [(
@@ -899,7 +939,6 @@ mod tests {
                     target_collection: "articles".into(),
                     arguments: Default::default(),
                     query: plan::Query {
-                        limit: Some(1),
                         predicate: Some(plan::Expression::And {
                             expressions: vec![
                                 plan::Expression::BinaryComparisonOperator {
@@ -1054,6 +1093,19 @@ mod tests {
                     in_collection: plan::ExistsInCollection::Related {
                         relationship: "author_articles".into(),
                     },
+                    predicate: Some(Box::new(plan::Expression::BinaryComparisonOperator {
+                        column: plan::ComparisonTarget::Column {
+                            name: "title".into(),
+                            field_path: Default::default(),
+                            column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
+                            path: Default::default(),
+                        },
+                        operator: plan_test_helpers::ComparisonOperator::Regex,
+                        value: plan::ComparisonValue::Scalar {
+                            value: "Functional.*".into(),
+                            value_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
+                        },
+                    })),
                 }),
                 order_by: Some(plan::OrderBy {
                     elements: vec![
