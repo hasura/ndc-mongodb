@@ -336,7 +336,6 @@ mod tests {
 
     #[test]
     fn serializes_response_with_nested_fields() -> anyhow::Result<()> {
-        let query_context = make_nested_schema();
         let request = query_request()
             .collection("authors")
             .query(query().fields([field!("address" => "address", object!([
@@ -379,7 +378,6 @@ mod tests {
 
     #[test]
     fn serializes_response_with_nested_object_inside_array() -> anyhow::Result<()> {
-        let query_context = make_nested_schema();
         let request = query_request()
             .collection("authors")
             .query(query().fields([field!("articles" => "articles", array!(
@@ -417,7 +415,6 @@ mod tests {
 
     #[test]
     fn serializes_response_with_aliased_fields() -> anyhow::Result<()> {
-        let query_context = make_nested_schema();
         let request = query_request()
             .collection("authors")
             .query(query().fields([

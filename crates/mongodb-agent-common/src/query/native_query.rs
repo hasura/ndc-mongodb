@@ -80,14 +80,12 @@ mod tests {
         native_query::NativeQueryRepresentation,
         schema::{ObjectField, ObjectType, Type},
         serialized::NativeQuery,
-        Configuration, MongoScalarType,
+        Configuration,
     };
     use mongodb::bson::{bson, doc};
     use mongodb_support::BsonScalarType as S;
-    use ndc_models::{Argument, CollectionInfo};
-    use ndc_test_helpers::{
-        array_of, field, named_type, object_type, query, query_request, row_set,
-    };
+    use ndc_models::Argument;
+    use ndc_test_helpers::{field, query, query_request, row_set};
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
