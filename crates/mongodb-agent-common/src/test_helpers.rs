@@ -7,60 +7,6 @@ use ndc_test_helpers::{collection, make_primary_key_uniqueness_constraint, objec
 
 use crate::mongo_query_plan::MongoConfiguration;
 
-pub fn make_flat_schema() -> MongoConfiguration {
-    MongoConfiguration(Configuration {
-        collections: BTreeMap::from([
-            (
-                "authors".into(),
-                CollectionInfo {
-                    name: "authors".to_owned(),
-                    description: None,
-                    collection_type: "Author".into(),
-                    arguments: Default::default(),
-                    uniqueness_constraints: make_primary_key_uniqueness_constraint("authors"),
-                    foreign_keys: Default::default(),
-                },
-            ),
-            (
-                "articles".into(),
-                CollectionInfo {
-                    name: "articles".to_owned(),
-                    description: None,
-                    collection_type: "Article".into(),
-                    arguments: Default::default(),
-                    uniqueness_constraints: make_primary_key_uniqueness_constraint("articles"),
-                    foreign_keys: Default::default(),
-                },
-            ),
-        ]),
-        functions: Default::default(),
-        object_types: BTreeMap::from([
-            (
-                "Author".into(),
-                object_type([
-                    ("id", schema::Type::Scalar(BsonScalarType::Int)),
-                    ("last_name", schema::Type::Scalar(BsonScalarType::String)),
-                ]),
-            ),
-            (
-                "Article".into(),
-                object_type([
-                    ("author_id", schema::Type::Scalar(BsonScalarType::Int)),
-                    ("title", schema::Type::Scalar(BsonScalarType::String)),
-                    (
-                        "year",
-                        schema::Type::Nullable(Box::new(schema::Type::Scalar(BsonScalarType::Int))),
-                    ),
-                ]),
-            ),
-        ]),
-        procedures: Default::default(),
-        native_procedures: Default::default(),
-        native_queries: Default::default(),
-        options: Default::default(),
-    })
-}
-
 pub fn make_nested_schema() -> MongoConfiguration {
     MongoConfiguration(Configuration {
         collections: BTreeMap::from([
