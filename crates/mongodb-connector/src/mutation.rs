@@ -56,9 +56,9 @@ fn look_up_procedures<'a, 'b>(
                 arguments,
                 fields,
             } => {
-                let native_procedure = config.native_procedures().get(name);
-                let procedure = native_procedure.ok_or(name).map(|native_procedure| {
-                    Procedure::from_native_procedure(native_procedure, arguments.clone())
+                let native_mutation = config.native_mutations().get(name);
+                let procedure = native_mutation.ok_or(name).map(|native_mutation| {
+                    Procedure::from_native_mutation(native_mutation, arguments.clone())
                 })?;
                 Ok((procedure, fields.as_ref()))
             }
@@ -67,7 +67,7 @@ fn look_up_procedures<'a, 'b>(
 
     if !not_found.is_empty() {
         return Err(MutationError::UnprocessableContent(format!(
-            "request includes unknown procedures: {}",
+            "request includes unknown mutations: {}",
             not_found.join(", ")
         )));
     }

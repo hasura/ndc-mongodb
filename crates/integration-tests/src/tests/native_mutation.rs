@@ -3,7 +3,7 @@ use insta::assert_yaml_snapshot;
 use serde_json::json;
 
 #[tokio::test]
-async fn updates_with_native_procedure() -> anyhow::Result<()> {
+async fn updates_with_native_mutation() -> anyhow::Result<()> {
     let id_1 = 5471;
     let id_2 = 5472;
     let mutation = r#"

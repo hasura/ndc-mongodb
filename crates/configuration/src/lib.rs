@@ -1,7 +1,7 @@
 mod configuration;
 mod directory;
 mod mongo_scalar_type;
-pub mod native_procedure;
+pub mod native_mutation;
 pub mod native_query;
 pub mod schema;
 pub mod serialized;

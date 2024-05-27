@@ -1610,7 +1610,7 @@ dependencies = [
 
 [[package]]
 name = "mongodb-cli-plugin"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "anyhow",
  "clap",
@@ -3092,7 +3092,7 @@ checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 
 [[package]]
 name = "test-helpers"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "configuration",
  "enum-iterator",

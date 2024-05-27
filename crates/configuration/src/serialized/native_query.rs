@@ -66,7 +66,7 @@ pub struct NativeQuery {
     /// The pipeline may include Extended JSON.
     ///
     /// Keys and values in the pipeline may contain placeholders of the form `{{variableName}}`
-    /// which will be substituted when the native procedure is executed according to the given
+    /// which will be substituted when the native query is executed according to the given
     /// arguments.
     ///
     /// Placeholders must be inside quotes so that the pipeline can be stored in JSON format. If

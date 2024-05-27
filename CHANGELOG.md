@@ -2,12 +2,16 @@
 This changelog documents the changes between release versions.
 
 ## [Unreleased]
+
+## [0.0.6] - 2024-05-01
 - Enables logging events from the MongoDB driver by setting the `RUST_LOG` variable ([#67](https://github.com/hasura/ndc-mongodb/pull/67))
   - To log all events set `RUST_LOG=mongodb::command=debug,mongodb::connection=debug,mongodb::server_selection=debug,mongodb::topology=debug`
 - Relations with a single column mapping now use concise correlated subquery syntax in `$lookup` stage ([#65](https://github.com/hasura/ndc-mongodb/pull/65))
 - Add root `configuration.json` or `configuration.yaml` file to allow editing cli options. ([#68](https://github.com/hasura/ndc-mongodb/pull/68))
 - Update default sample size to 100. ([#68](https://github.com/hasura/ndc-mongodb/pull/68))
 - Add `all_schema_nullable` option defaulted to true. ([#68](https://github.com/hasura/ndc-mongodb/pull/68))
+- Change `native_procedure` to `native_mutation` along with code renaming ([#70](https://github.com/hasura/ndc-mongodb/pull/70))
+  - Note: `native_procedures` folder in configuration is not deprecated. It will continue to work for a few releases, but renaming your folder is all that is needed.
 
 ## [0.0.5] - 2024-04-26
 - Fix incorrect order of results for query requests with more than 10 variable sets (#37)

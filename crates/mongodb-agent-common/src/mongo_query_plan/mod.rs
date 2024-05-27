@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use configuration::{
-    native_procedure::NativeProcedure, native_query::NativeQuery, Configuration, MongoScalarType,
+    native_mutation::NativeMutation, native_query::NativeQuery, Configuration, MongoScalarType,
 };
 use mongodb_support::EXTENDED_JSON_TYPE_NAME;
 use ndc_models as ndc;
@@ -21,8 +21,8 @@ impl MongoConfiguration {
         &self.0.native_queries
     }
 
-    pub fn native_procedures(&self) -> &BTreeMap<String, NativeProcedure> {
-        &self.0.native_procedures
+    pub fn native_mutations(&self) -> &BTreeMap<String, NativeMutation> {
+        &self.0.native_mutations
     }
 }
 

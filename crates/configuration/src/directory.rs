@@ -3,18 +3,27 @@ use futures::stream::TryStreamExt as _;
 use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, HashSet}, fs::Metadata, path::{Path, PathBuf}
+    collections::{BTreeMap, HashSet},
+    fs::Metadata,
+    path::{Path, PathBuf},
 };
 use tokio::{fs, io::AsyncWriteExt};
 use tokio_stream::wrappers::ReadDirStream;
 
-use crate::{configuration::ConfigurationOptions, serialized::Schema, with_name::WithName, Configuration};
+use crate::{
+    configuration::ConfigurationOptions, serialized::Schema, with_name::WithName, Configuration,
+};
 
 pub const SCHEMA_DIRNAME: &str = "schema";
-pub const NATIVE_PROCEDURES_DIRNAME: &str = "native_procedures";
+pub const NATIVE_MUTATIONS_DIRNAME: &str = "native_mutations";
 pub const NATIVE_QUERIES_DIRNAME: &str = "native_queries";
 pub const CONFIGURATION_OPTIONS_BASENAME: &str = "configuration";
 pub const CONFIGURATION_OPTIONS_METADATA: &str = ".configuration_metadata";
+
+// Deprecated: Discussion came out that we standardize names and the decision
+// was to use `native_mutations`. We should leave this in for a few releases
+// with some CHANGELOG/Docs messaging around deprecation
+pub const NATIVE_PROCEDURES_DIRNAME: &str = "native_procedures";
 
 pub const CONFIGURATION_EXTENSIONS: [(&str, FileFormat); 3] =
     [("json", JSON), ("yaml", YAML), ("yml", YAML)];
@@ -40,7 +49,13 @@ pub async fn read_directory(
         .unwrap_or_default();
     let schema = schemas.into_values().fold(Schema::default(), Schema::merge);
 
+    // Deprecated see message above at NATIVE_PROCEDURES_DIRNAME
     let native_procedures = read_subdir_configs(&dir.join(NATIVE_PROCEDURES_DIRNAME))
+        .await?
+        .unwrap_or_default();
+
+    // TODO: Once we fully remove `native_procedures` after a deprecation period we can remove `mut`
+    let mut native_mutations = read_subdir_configs(&dir.join(NATIVE_MUTATIONS_DIRNAME))
         .await?
         .unwrap_or_default();
 
@@ -48,15 +63,16 @@ pub async fn read_directory(
         .await?
         .unwrap_or_default();
 
-    let options = parse_configuration_options_file(dir)
-        .await;
+    let options = parse_configuration_options_file(dir).await;
 
-    Configuration::validate(schema, native_procedures, native_queries, options)
+    native_mutations.extend(native_procedures.into_iter());
+
+    Configuration::validate(schema, native_mutations, native_queries, options)
 }
 
 /// Parse all files in a directory with one of the allowed configuration extensions according to
-/// the given type argument. For example if `T` is `NativeProcedure` this function assumes that all
-/// json and yaml files in the given directory should be parsed as native procedure configurations.
+/// the given type argument. For example if `T` is `NativeMutation` this function assumes that all
+/// json and yaml files in the given directory should be parsed as native mutation configurations.
 ///
 /// Assumes that every configuration file has a `name` field.
 async fn read_subdir_configs<T>(subdir: &Path) -> anyhow::Result<Option<BTreeMap<String, T>>>
@@ -116,13 +132,13 @@ pub async fn parse_configuration_options_file(dir: &Path) -> ConfigurationOption
     let json_filename = CONFIGURATION_OPTIONS_BASENAME.to_owned() + ".json";
     let json_config_file = parse_config_file(&dir.join(json_filename), JSON).await;
     if let Ok(config_options) = json_config_file {
-        return config_options
+        return config_options;
     }
 
     let yaml_filename = CONFIGURATION_OPTIONS_BASENAME.to_owned() + ".yaml";
     let yaml_config_file = parse_config_file(&dir.join(yaml_filename), YAML).await;
     if let Ok(config_options) = yaml_config_file {
-        return config_options
+        return config_options;
     }
 
     // If a configuration file does not exist use defaults and write the file
@@ -192,7 +208,7 @@ where
     // Don't write the file if it hasn't changed.
     if let Ok(existing_bytes) = fs::read(&path).await {
         if bytes == existing_bytes {
-            return Ok(())
+            return Ok(());
         }
     }
     fs::write(&path, bytes)
@@ -215,9 +231,7 @@ pub async fn list_existing_schemas(
 
 // Metadata file is just a dot filed used for the purposes of know if the user has updated their config to force refresh
 // of the schema introspection.
-async fn write_config_metadata_file(
-    configuration_dir: impl AsRef<Path>
-) {
+async fn write_config_metadata_file(configuration_dir: impl AsRef<Path>) {
     let dir = configuration_dir.as_ref();
     let file_result = fs::OpenOptions::new()
         .write(true)
@@ -231,26 +245,20 @@ async fn write_config_metadata_file(
     };
 }
 
-pub async fn get_config_file_changed(
-    dir: impl AsRef<Path>
-) -> anyhow::Result<bool> {
+pub async fn get_config_file_changed(dir: impl AsRef<Path>) -> anyhow::Result<bool> {
     let path = dir.as_ref();
-    let dot_metadata: Result<Metadata, std::io::Error> = fs::metadata(
-        &path.join(CONFIGURATION_OPTIONS_METADATA)
-    ).await;
-    let json_metadata = fs::metadata(
-        &path.join(CONFIGURATION_OPTIONS_BASENAME.to_owned() + ".json")
-    ).await;
-    let yaml_metadata = fs::metadata(
-        &path.join(CONFIGURATION_OPTIONS_BASENAME.to_owned() + ".yaml")
-    ).await;
+    let dot_metadata: Result<Metadata, std::io::Error> =
+        fs::metadata(&path.join(CONFIGURATION_OPTIONS_METADATA)).await;
+    let json_metadata =
+        fs::metadata(&path.join(CONFIGURATION_OPTIONS_BASENAME.to_owned() + ".json")).await;
+    let yaml_metadata =
+        fs::metadata(&path.join(CONFIGURATION_OPTIONS_BASENAME.to_owned() + ".yaml")).await;
 
     let compare = |dot_date, config_date| async move {
         if dot_date < config_date {
             let _ = write_config_metadata_file(path).await;
             Ok(true)
-        }
-        else {
+        } else {
             Ok(false)
         }
     };
@@ -258,6 +266,6 @@ pub async fn get_config_file_changed(
     match (dot_metadata, json_metadata, yaml_metadata) {
         (Ok(dot), Ok(json), _) => compare(dot.modified()?, json.modified()?).await,
         (Ok(dot), _, Ok(yaml)) => compare(dot.modified()?, yaml.modified()?).await,
-        _ => Ok(true)
+        _ => Ok(true),
     }
 }

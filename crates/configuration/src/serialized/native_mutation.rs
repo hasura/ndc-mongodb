@@ -12,19 +12,19 @@ use crate::schema::{ObjectField, ObjectType, Type};
 /// Native Procedures appear as "procedures" in your data graph.
 #[derive(Clone, Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct NativeProcedure {
+pub struct NativeMutation {
     /// You may define object types here to reference in `result_type`. Any types defined here will
     /// be merged with the definitions in `schema.json`. This allows you to maintain hand-written
-    /// types for native procedures without having to edit a generated `schema.json` file.
+    /// types for native mutations without having to edit a generated `schema.json` file.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub object_types: BTreeMap<String, ObjectType>,
 
-    /// Type of data returned by the procedure. You may reference object types defined in the
+    /// Type of data returned by the mutation. You may reference object types defined in the
     /// `object_types` list in this definition, or you may reference object types from
     /// `schema.json`.
     pub result_type: Type,
 
-    /// Arguments to be supplied for each procedure invocation. These will be substituted into the
+    /// Arguments to be supplied for each mutation invocation. These will be substituted into the
     /// given `command`.
     ///
     /// Argument values are standard JSON mapped from GraphQL input types, not Extended JSON.
@@ -40,7 +40,7 @@ pub struct NativeProcedure {
     /// See https://www.mongodb.com/docs/manual/reference/mongodb-extended-json/
     ///
     /// Keys and values in the command may contain placeholders of the form `{{variableName}}`
-    /// which will be substituted when the native procedure is executed according to the given
+    /// which will be substituted when the native mutation is executed according to the given
     /// arguments.
     ///
     /// Placeholders must be inside quotes so that the command can be stored in JSON format. If the
