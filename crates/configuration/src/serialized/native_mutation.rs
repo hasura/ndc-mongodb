@@ -9,7 +9,7 @@ use crate::schema::{ObjectField, ObjectType, Type};
 /// An arbitrary database command using MongoDB's runCommand API.
 /// See https://www.mongodb.com/docs/manual/reference/method/db.runCommand/
 ///
-/// Native Mutations appear as "mutations" in your data graph.
+/// Native Procedures appear as "procedures" in your data graph.
 #[derive(Clone, Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct NativeMutation {

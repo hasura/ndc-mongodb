@@ -1,24 +1,23 @@
-use lazy_static::lazy_static;
-use std::collections::BTreeMap;
-
-use configuration::Configuration;
+use mongodb_agent_common::{
+    mongo_query_plan::MongoConfiguration, scalar_types_capabilities::SCALAR_TYPES,
+};
+use ndc_query_plan::QueryContext as _;
 use ndc_sdk::{connector::SchemaError, models as ndc};
 
-use crate::capabilities;
-
-lazy_static! {
-    pub static ref SCALAR_TYPES: BTreeMap<String, ndc::ScalarType> = capabilities::scalar_types();
-}
-
-pub async fn get_schema(config: &Configuration) -> Result<ndc::SchemaResponse, SchemaError> {
+pub async fn get_schema(config: &MongoConfiguration) -> Result<ndc::SchemaResponse, SchemaError> {
     Ok(ndc::SchemaResponse {
-        collections: config.collections.values().cloned().collect(),
-        functions: config.functions.values().map(|(f, _)| f).cloned().collect(),
-        procedures: config.mutations.values().cloned().collect(),
+        collections: config.collections().values().cloned().collect(),
+        functions: config
+            .functions()
+            .values()
+            .map(|(f, _)| f)
+            .cloned()
+            .collect(),
+        procedures: config.procedures().values().cloned().collect(),
         object_types: config
-            .object_types
+            .object_types()
             .iter()
-            .map(|(name, object_type)| (name.clone(), object_type.clone().into()))
+            .map(|(name, object_type)| (name.clone(), object_type.clone()))
             .collect(),
         scalar_types: SCALAR_TYPES.clone(),
     })

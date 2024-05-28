@@ -1,7 +1,9 @@
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::BTreeMap, fmt::Display};
 
-use configuration::{native_query::NativeQuery, Configuration};
-use dc_api_types::{Argument, QueryRequest};
+use configuration::native_query::NativeQuery;
+use ndc_models::Argument;
+
+use crate::mongo_query_plan::{MongoConfiguration, QueryPlan};
 
 #[derive(Clone, Debug)]
 pub enum QueryTarget<'a> {
@@ -9,24 +11,23 @@ pub enum QueryTarget<'a> {
     NativeQuery {
         name: String,
         native_query: &'a NativeQuery,
-        arguments: &'a HashMap<String, Argument>,
+        arguments: &'a BTreeMap<String, Argument>,
     },
 }
 
 impl QueryTarget<'_> {
     pub fn for_request<'a>(
-        config: &'a Configuration,
-        query_request: &'a QueryRequest,
+        config: &'a MongoConfiguration,
+        query_request: &'a QueryPlan,
     ) -> QueryTarget<'a> {
-        let target = &query_request.target;
-        let target_name = target.name().join(".");
-        match config.native_queries.get(&target_name) {
+        let collection = &query_request.collection;
+        match config.native_queries().get(collection) {
             Some(native_query) => QueryTarget::NativeQuery {
-                name: target_name,
+                name: collection.to_owned(),
                 native_query,
-                arguments: target.arguments(),
+                arguments: &query_request.arguments,
             },
-            None => QueryTarget::Collection(target_name),
+            None => QueryTarget::Collection(collection.to_owned()),
         }
     }
 

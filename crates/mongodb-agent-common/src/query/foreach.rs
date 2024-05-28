@@ -1,14 +1,8 @@
-use std::collections::HashMap;
-
-use configuration::Configuration;
-use dc_api_types::comparison_column::ColumnSelector;
-use dc_api_types::{
-    BinaryComparisonOperator, ComparisonColumn, ComparisonValue, Expression, QueryRequest,
-    ScalarValue, VariableSet,
-};
 use mongodb::bson::{doc, Bson};
+use ndc_query_plan::VariableSet;
 
 use super::pipeline::pipeline_for_non_foreach;
+use crate::mongo_query_plan::{MongoConfiguration, QueryPlan};
 use crate::mongodb::Selection;
 use crate::{
     interface_types::MongoAgentError,
@@ -17,66 +11,21 @@ use crate::{
 
 const FACET_FIELD: &str = "__FACET__";
 
-/// If running a native v2 query we will get `Expression` values. If the query is translated from
-/// v3 we will get variable sets instead.
-#[derive(Clone, Debug)]
-pub enum ForeachVariant {
-    Predicate(Expression),
-    VariableSet(VariableSet),
-}
-
-/// If the query request represents a "foreach" query then we will need to run multiple variations
-/// of the query represented by added predicates and variable sets. This function returns a vec in
-/// that case. If the returned map is `None` then the request is not a "foreach" query.
-pub fn foreach_variants(query_request: &QueryRequest) -> Option<Vec<ForeachVariant>> {
-    if let Some(Some(foreach)) = &query_request.foreach {
-        let expressions = foreach
-            .iter()
-            .map(make_expression)
-            .map(ForeachVariant::Predicate)
-            .collect();
-        Some(expressions)
-    } else if let Some(variables) = &query_request.variables {
-        let variable_sets = variables
-            .iter()
-            .cloned()
-            .map(ForeachVariant::VariableSet)
-            .collect();
-        Some(variable_sets)
-    } else {
-        None
-    }
-}
-
 /// Produces a complete MongoDB pipeline for a foreach query.
 ///
 /// For symmetry with [`super::execute_query_request::pipeline_for_query`] and
 /// [`pipeline_for_non_foreach`] this function returns a pipeline paired with a value that
 /// indicates whether the response requires post-processing in the agent.
 pub fn pipeline_for_foreach(
-    foreach: Vec<ForeachVariant>,
-    config: &Configuration,
-    query_request: &QueryRequest,
+    variable_sets: &[VariableSet],
+    config: &MongoConfiguration,
+    query_request: &QueryPlan,
 ) -> Result<Pipeline, MongoAgentError> {
-    let pipelines: Vec<(String, Pipeline)> = foreach
-        .into_iter()
+    let pipelines: Vec<(String, Pipeline)> = variable_sets
+        .iter()
         .enumerate()
-        .map(|(index, foreach_variant)| {
-            let (predicate, variables) = match foreach_variant {
-                ForeachVariant::Predicate(expression) => (Some(expression), None),
-                ForeachVariant::VariableSet(variables) => (None, Some(variables)),
-            };
-            let mut q = query_request.clone();
-
-            if let Some(predicate) = predicate {
-                q.query.r#where = match q.query.r#where {
-                    Some(e_old) => e_old.and(predicate),
-                    None => predicate,
-                }
-                .into();
-            }
-
-            let pipeline = pipeline_for_non_foreach(config, variables.as_ref(), &q)?;
+        .map(|(index, variables)| {
+            let pipeline = pipeline_for_non_foreach(config, Some(variables), query_request)?;
             Ok((facet_name(index), pipeline))
         })
         .collect::<Result<_, MongoAgentError>>()?;
@@ -94,85 +43,51 @@ pub fn pipeline_for_foreach(
     })
 }
 
-/// Fold a 'foreach' HashMap into an Expression.
-fn make_expression(column_values: &HashMap<String, ScalarValue>) -> Expression {
-    let sub_exps: Vec<Expression> = column_values
-        .clone()
-        .into_iter()
-        .map(
-            |(column_name, scalar_value)| Expression::ApplyBinaryComparison {
-                column: ComparisonColumn {
-                    column_type: scalar_value.value_type.clone(),
-                    name: ColumnSelector::new(column_name),
-                    path: None,
-                },
-                operator: BinaryComparisonOperator::Equal,
-                value: ComparisonValue::ScalarValueComparison {
-                    value: scalar_value.value,
-                    value_type: scalar_value.value_type,
-                },
-            },
-        )
-        .collect();
-
-    Expression::And {
-        expressions: sub_exps,
-    }
-}
-
 fn facet_name(index: usize) -> String {
     format!("{FACET_FIELD}_{index}")
 }
 
 #[cfg(test)]
 mod tests {
-    use dc_api_types::{BinaryComparisonOperator, ComparisonColumn, Field, Query, QueryRequest};
-    use mongodb::bson::{bson, doc, Bson};
+    use configuration::Configuration;
+    use mongodb::bson::{bson, Bson};
+    use ndc_test_helpers::{
+        binop, collection, field, named_type, object_type, query, query_request, query_response,
+        row_set, star_count_aggregate, target, variable,
+    };
     use pretty_assertions::assert_eq;
-    use serde_json::{from_value, json};
+    use serde_json::json;
 
     use crate::{
+        mongo_query_plan::MongoConfiguration,
         mongodb::test_helpers::mock_collection_aggregate_response_for_pipeline,
         query::execute_query_request::execute_query_request,
     };
 
     #[tokio::test]
-    async fn executes_foreach_with_fields() -> Result<(), anyhow::Error> {
-        let query_request: QueryRequest = from_value(json!({
-            "query": {
-                "fields": {
-                  "albumId": {
-                    "type": "column",
-                    "column": "albumId",
-                    "column_type": "number"
-                  },
-                  "title": {
-                    "type": "column",
-                    "column": "title",
-                    "column_type": "string"
-                  }
-                }
-            },
-            "target": {"name": ["tracks"], "type": "table"},
-            "relationships": [],
-            "foreach": [
-                { "artistId": {"value": 1, "value_type": "int"} },
-                { "artistId": {"value": 2, "value_type": "int"} }
-            ]
-        }))?;
+    async fn executes_query_with_variables_and_fields() -> Result<(), anyhow::Error> {
+        let query_request = query_request()
+            .collection("tracks")
+            .query(
+                query()
+                    .fields([field!("albumId"), field!("title")])
+                    .predicate(binop("_eq", target!("artistId"), variable!(artistId))),
+            )
+            .variables([[("artistId", json!(1))], [("artistId", json!(2))]])
+            .into();
 
         let expected_pipeline = bson!([
             {
                 "$facet": {
                     "__FACET___0": [
-                        { "$match": { "$and": [{ "artistId": {"$eq":1 }}]}},
+                        { "$match": { "artistId": { "$eq": 1 } } },
                         { "$replaceWith": {
                             "albumId": { "$ifNull": ["$albumId", null] },
                             "title": { "$ifNull": ["$title", null] }
                         } },
                     ],
                     "__FACET___1": [
-                        { "$match": { "$and": [{ "artistId": {"$eq":2}}]}},
+                        { "$match": { "artistId": { "$eq": 2 } } },
                         { "$replaceWith": {
                             "albumId": { "$ifNull": ["$albumId", null] },
                             "title": { "$ifNull": ["$title", null] }
@@ -190,18 +105,19 @@ mod tests {
             }
         ]);
 
-        let expected_response = vec![doc! {
-            "row_sets": [
+        let expected_response = query_response()
+            .row_set_rows([
                 [
-                    { "albumId": 1, "title": "For Those About To Rock We Salute You" },
-                    { "albumId": 4, "title": "Let There Be Rock" },
+                    ("albumId", json!(1)),
+                    ("title", json!("For Those About To Rock We Salute You")),
                 ],
-                [
-                    { "albumId": 2, "title": "Balls to the Wall" },
-                    { "albumId": 3, "title": "Restless and Wild" },
-                ],
-            ]
-        }];
+                [("albumId", json!(4)), ("title", json!("Let There Be Rock"))],
+            ])
+            .row_set_rows([
+                [("albumId", json!(2)), ("title", json!("Balls to the Wall"))],
+                [("albumId", json!(3)), ("title", json!("Restless and Wild"))],
+            ])
+            .build();
 
         let db = mock_collection_aggregate_response_for_pipeline(
             "tracks",
@@ -220,45 +136,30 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, &Default::default(), query_request).await?;
+        let result = execute_query_request(db, &music_config(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
     }
 
     #[tokio::test]
-    async fn executes_foreach_with_aggregates() -> Result<(), anyhow::Error> {
-        let query_request: QueryRequest = from_value(json!({
-            "query": {
-                "aggregates": {
-                   "count": { "type": "star_count" },
-                },
-                "fields": {
-                  "albumId": {
-                    "type": "column",
-                    "column": "albumId",
-                    "column_type": "number"
-                  },
-                  "title": {
-                    "type": "column",
-                    "column": "title",
-                    "column_type": "string"
-                  }
-                }
-            },
-            "target": {"name": ["tracks"], "type": "table"},
-            "relationships": [],
-            "foreach": [
-                { "artistId": {"value": 1, "value_type": "int"} },
-                { "artistId": {"value": 2, "value_type": "int"} }
-            ]
-        }))?;
+    async fn executes_query_with_variables_and_aggregates() -> Result<(), anyhow::Error> {
+        let query_request = query_request()
+            .collection("tracks")
+            .query(
+                query()
+                    .aggregates([star_count_aggregate!("count")])
+                    .fields([field!("albumId"), field!("title")])
+                    .predicate(binop("_eq", target!("artistId"), variable!(artistId))),
+            )
+            .variables([[("artistId", 1)], [("artistId", 2)]])
+            .into();
 
         let expected_pipeline = bson!([
             {
                 "$facet": {
                     "__FACET___0": [
-                        { "$match": { "$and": [{ "artistId": {"$eq": 1 }}]}},
+                        { "$match": { "artistId": {"$eq": 1 }}},
                         { "$facet": {
                             "__ROWS__": [{ "$replaceWith": {
                                 "albumId": { "$ifNull": ["$albumId", null] },
@@ -277,7 +178,7 @@ mod tests {
                         } },
                     ],
                     "__FACET___1": [
-                        { "$match": { "$and": [{ "artistId": {"$eq": 2 }}]}},
+                        { "$match": { "artistId": {"$eq": 2 }}},
                         { "$facet": {
                             "__ROWS__": [{ "$replaceWith": {
                                 "albumId": { "$ifNull": ["$albumId", null] },
@@ -307,28 +208,27 @@ mod tests {
             }
         ]);
 
-        let expected_response = vec![doc! {
-            "row_sets": [
-                {
-                    "aggregates": {
-                        "count": 2,
-                    },
-                    "rows": [
-                        { "albumId": 1, "title": "For Those About To Rock We Salute You" },
-                        { "albumId": 4, "title": "Let There Be Rock" },
-                    ]
-                },
-                {
-                    "aggregates": {
-                        "count": 2,
-                    },
-                    "rows": [
-                        { "albumId": 2, "title": "Balls to the Wall" },
-                        { "albumId": 3, "title": "Restless and Wild" },
-                    ]
-                },
-            ]
-        }];
+        let expected_response = query_response()
+            .row_set(
+                row_set()
+                    .aggregates([("count", json!({ "$numberInt": "2" }))])
+                    .rows([
+                        [
+                            ("albumId", json!(1)),
+                            ("title", json!("For Those About To Rock We Salute You")),
+                        ],
+                        [("albumId", json!(4)), ("title", json!("Let There Be Rock"))],
+                    ]),
+            )
+            .row_set(
+                row_set()
+                    .aggregates([("count", json!({ "$numberInt": "2" }))])
+                    .rows([
+                        [("albumId", json!(2)), ("title", json!("Balls to the Wall"))],
+                        [("albumId", json!(3)), ("title", json!("Restless and Wild"))],
+                    ]),
+            )
+            .build();
 
         let db = mock_collection_aggregate_response_for_pipeline(
             "tracks",
@@ -357,63 +257,23 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, &Default::default(), query_request).await?;
+        let result = execute_query_request(db, &music_config(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
     }
 
     #[tokio::test]
-    async fn executes_foreach_with_variables() -> Result<(), anyhow::Error> {
-        let query_request = QueryRequest {
-            foreach: None,
-            variables: Some(
-                (1..=12)
-                    .map(|artist_id| [("artistId".to_owned(), json!(artist_id))].into())
-                    .collect(),
-            ),
-            target: dc_api_types::Target::TTable {
-                name: vec!["tracks".to_owned()],
-                arguments: Default::default(),
-            },
-            relationships: Default::default(),
-            query: Box::new(Query {
-                r#where: Some(dc_api_types::Expression::ApplyBinaryComparison {
-                    column: ComparisonColumn::new(
-                        "int".to_owned(),
-                        dc_api_types::ColumnSelector::Column("artistId".to_owned()),
-                    ),
-                    operator: BinaryComparisonOperator::Equal,
-                    value: dc_api_types::ComparisonValue::Variable {
-                        name: "artistId".to_owned(),
-                    },
-                }),
-                fields: Some(
-                    [
-                        (
-                            "albumId".to_owned(),
-                            Field::Column {
-                                column: "albumId".to_owned(),
-                                column_type: "int".to_owned(),
-                            },
-                        ),
-                        (
-                            "title".to_owned(),
-                            Field::Column {
-                                column: "title".to_owned(),
-                                column_type: "string".to_owned(),
-                            },
-                        ),
-                    ]
-                    .into(),
-                ),
-                aggregates: None,
-                aggregates_limit: None,
-                limit: None,
-                offset: None,
-                order_by: None,
-            }),
-        };
+    async fn executes_request_with_more_than_ten_variable_sets() -> Result<(), anyhow::Error> {
+        let query_request = query_request()
+            .variables((1..=12).map(|artist_id| [("artistId", artist_id)]))
+            .collection("tracks")
+            .query(
+                query()
+                    .predicate(binop("_eq", target!("artistId"), variable!(artistId)))
+                    .fields([field!("albumId"), field!("title")]),
+            )
+            .into();
 
         fn facet(artist_id: i32) -> Bson {
             bson!([
@@ -462,27 +322,28 @@ mod tests {
             }
         ]);
 
-        let expected_response = vec![doc! {
-            "row_sets": [
+        let expected_response = query_response()
+            .row_set_rows([
                 [
-                    { "albumId": 1, "title": "For Those About To Rock We Salute You" },
-                    { "albumId": 4, "title": "Let There Be Rock" }
+                    ("albumId", json!(1)),
+                    ("title", json!("For Those About To Rock We Salute You")),
                 ],
-                [],
-                [
-                    { "albumId": 2, "title": "Balls to the Wall" },
-                    { "albumId": 3, "title": "Restless and Wild" }
-                ],
-                [],
-                [],
-                [],
-                [],
-                [],
-                [],
-                [],
-                [],
-            ]
-        }];
+                [("albumId", json!(4)), ("title", json!("Let There Be Rock"))],
+            ])
+            .empty_row_set()
+            .row_set_rows([
+                [("albumId", json!(2)), ("title", json!("Balls to the Wall"))],
+                [("albumId", json!(3)), ("title", json!("Restless and Wild"))],
+            ])
+            .empty_row_set()
+            .empty_row_set()
+            .empty_row_set()
+            .empty_row_set()
+            .empty_row_set()
+            .empty_row_set()
+            .empty_row_set()
+            .empty_row_set()
+            .build();
 
         let db = mock_collection_aggregate_response_for_pipeline(
             "tracks",
@@ -510,9 +371,29 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, &Default::default(), query_request).await?;
+        let result = execute_query_request(db, &music_config(), query_request).await?;
         assert_eq!(expected_response, result);
 
         Ok(())
+    }
+
+    fn music_config() -> MongoConfiguration {
+        MongoConfiguration(Configuration {
+            collections: [collection("tracks")].into(),
+            object_types: [(
+                "tracks".into(),
+                object_type([
+                    ("albumId", named_type("Int")),
+                    ("artistId", named_type("Int")),
+                    ("title", named_type("String")),
+                ]),
+            )]
+            .into(),
+            functions: Default::default(),
+            procedures: Default::default(),
+            native_mutations: Default::default(),
+            native_queries: Default::default(),
+            options: Default::default(),
+        })
     }
 }

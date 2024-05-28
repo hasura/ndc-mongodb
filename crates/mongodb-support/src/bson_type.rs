@@ -1,4 +1,3 @@
-use dc_api_types::GraphQlType;
 use enum_iterator::{all, Sequence};
 use mongodb::bson::Bson;
 use schemars::JsonSchema;
@@ -141,17 +140,27 @@ impl BsonScalarType {
         }
     }
 
-    pub fn graphql_name(self) -> String {
-        capitalize(self.bson_name())
-    }
-
-    pub fn graphql_type(self) -> Option<GraphQlType> {
+    pub fn graphql_name(self) -> &'static str {
         match self {
-            S::Double => Some(GraphQlType::Float),
-            S::String => Some(GraphQlType::String),
-            S::Int => Some(GraphQlType::Int),
-            S::Bool => Some(GraphQlType::Boolean),
-            _ => None,
+            S::Double => "Double",
+            S::Decimal => "Decimal",
+            S::Int => "Int",
+            S::Long => "Long",
+            S::String => "String",
+            S::Date => "Date",
+            S::Timestamp => "Timestamp",
+            S::BinData => "BinData",
+            S::ObjectId => "ObjectId",
+            S::Bool => "Bool",
+            S::Null => "Null",
+            S::Regex => "Regex",
+            S::Javascript => "Javascript",
+            S::JavascriptWithScope => "JavascriptWithScope",
+            S::MinKey => "MinKey",
+            S::MaxKey => "MaxKey",
+            S::Undefined => "Undefined",
+            S::DbPointer => "DbPointer",
+            S::Symbol => "Symbol",
         }
     }
 
@@ -285,15 +294,6 @@ impl TryFrom<BsonType> for BsonScalarType {
             BsonType::Scalar(scalar_type) => Ok(scalar_type),
             _ => Err(Error::ExpectedScalarType(value)),
         }
-    }
-}
-
-/// Capitalizes the first character in s.
-fn capitalize(s: &str) -> String {
-    let mut c = s.chars();
-    match c.next() {
-        None => String::new(),
-        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
     }
 }
 

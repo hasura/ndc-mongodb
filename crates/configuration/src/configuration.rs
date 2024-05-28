@@ -28,11 +28,11 @@ pub struct Configuration {
     /// response.
     pub functions: BTreeMap<String, (ndc::FunctionInfo, ndc::CollectionInfo)>,
 
-    /// Mutations are based on native mutations.
-    pub mutations: BTreeMap<String, ndc::ProcedureInfo>,
+    /// Procedures are based on native mutations.
+    pub procedures: BTreeMap<String, ndc::ProcedureInfo>,
 
-    /// Native murations allow arbitrary MongoDB commands where types of results are
-    /// specified via user configuration.
+    /// Native mutations allow arbitrary MongoDB commands where types of results are specified via
+    /// user configuration.
     pub native_mutations: BTreeMap<String, NativeMutation>,
 
     /// Native queries allow arbitrary aggregation pipelines that can be included in a query plan.
@@ -45,7 +45,7 @@ pub struct Configuration {
     /// The object types here combine object type defined in files in the `schema/`,
     /// `native_queries/`, and `native_mutations/` subdirectories in the connector configuration
     /// directory.
-    pub object_types: BTreeMap<String, schema::ObjectType>,
+    pub object_types: BTreeMap<String, ndc::ObjectType>,
 
     pub options: ConfigurationOptions,
 }
@@ -55,7 +55,7 @@ impl Configuration {
         schema: serialized::Schema,
         native_mutations: BTreeMap<String, serialized::NativeMutation>,
         native_queries: BTreeMap<String, serialized::NativeQuery>,
-        options: ConfigurationOptions
+        options: ConfigurationOptions,
     ) -> anyhow::Result<Self> {
         let object_types_iter = || merge_object_types(&schema, &native_mutations, &native_queries);
         let object_type_errors = {
@@ -76,16 +76,6 @@ impl Configuration {
             .map(|(name, ot)| (name.to_owned(), ot.clone()))
             .collect();
 
-        let internal_native_queries: BTreeMap<_, _> = native_queries
-            .into_iter()
-            .map(|(name, nq)| (name, nq.into()))
-            .collect();
-
-        let internal_native_mutations: BTreeMap<_, _> = native_mutations
-            .into_iter()
-            .map(|(name, np)| (name, np.into()))
-            .collect();
-
         let collections = {
             let regular_collections = schema.collections.into_iter().map(|(name, collection)| {
                 (
@@ -93,8 +83,8 @@ impl Configuration {
                     collection_to_collection_info(&object_types, name, collection),
                 )
             });
-            let native_query_collections = internal_native_queries.iter().filter_map(
-                |(name, native_query): (&String, &NativeQuery)| {
+            let native_query_collections = native_queries.iter().filter_map(
+                |(name, native_query): (&String, &serialized::NativeQuery)| {
                     if native_query.representation == NativeQueryRepresentation::Collection {
                         Some((
                             name.to_owned(),
@@ -110,7 +100,7 @@ impl Configuration {
                 .collect()
         };
 
-        let (functions, function_errors): (BTreeMap<_, _>, Vec<_>) = internal_native_queries
+        let (functions, function_errors): (BTreeMap<_, _>, Vec<_>) = native_queries
             .iter()
             .filter_map(|(name, native_query)| {
                 if native_query.representation == NativeQueryRepresentation::Function {
@@ -129,15 +119,38 @@ impl Configuration {
             })
             .partition_result();
 
-        let mutations = internal_native_mutations
+        let procedures = native_mutations
             .iter()
             .map(|(name, native_mutation)| {
                 (
                     name.to_owned(),
-                    native_mutation_to_mutation_info(name, native_mutation),
+                    native_mutation_to_procedure_info(name, native_mutation),
                 )
             })
             .collect();
+
+        let ndc_object_types = object_types
+            .into_iter()
+            .map(|(name, ot)| (name, ot.into()))
+            .collect();
+
+        let internal_native_queries: BTreeMap<_, _> = native_queries
+            .into_iter()
+            .map(|(name, nq)| {
+                Ok((name, NativeQuery::from_serialized(&ndc_object_types, nq)?))
+                    as Result<_, anyhow::Error>
+            })
+            .try_collect()?;
+
+        let internal_native_mutations: BTreeMap<_, _> = native_mutations
+            .into_iter()
+            .map(|(name, np)| {
+                Ok((
+                    name,
+                    NativeMutation::from_serialized(&ndc_object_types, np)?,
+                )) as Result<_, anyhow::Error>
+            })
+            .try_collect()?;
 
         let errors: Vec<String> = object_type_errors
             .into_iter()
@@ -153,16 +166,21 @@ impl Configuration {
         Ok(Configuration {
             collections,
             functions,
-            mutations,
+            procedures,
             native_mutations: internal_native_mutations,
             native_queries: internal_native_queries,
-            object_types,
-            options
+            object_types: ndc_object_types,
+            options,
         })
     }
 
     pub fn from_schema(schema: serialized::Schema) -> anyhow::Result<Self> {
-        Self::validate(schema, Default::default(), Default::default(), Default::default())
+        Self::validate(
+            schema,
+            Default::default(),
+            Default::default(),
+            Default::default(),
+        )
     }
 
     pub async fn parse_configuration(
@@ -240,7 +258,7 @@ fn collection_to_collection_info(
 fn native_query_to_collection_info(
     object_types: &BTreeMap<String, schema::ObjectType>,
     name: &str,
-    native_query: &NativeQuery,
+    native_query: &serialized::NativeQuery,
 ) -> ndc::CollectionInfo {
     let pk_constraint = get_primary_key_uniqueness_constraint(
         object_types,
@@ -282,7 +300,7 @@ fn get_primary_key_uniqueness_constraint(
 fn native_query_to_function_info(
     object_types: &BTreeMap<String, schema::ObjectType>,
     name: &str,
-    native_query: &NativeQuery,
+    native_query: &serialized::NativeQuery,
 ) -> anyhow::Result<ndc::FunctionInfo> {
     Ok(ndc::FunctionInfo {
         name: name.to_owned(),
@@ -305,9 +323,9 @@ fn function_result_type(
     Ok(value_field.r#type.clone().into())
 }
 
-fn native_mutation_to_mutation_info(
+fn native_mutation_to_procedure_info(
     mutation_name: &str,
-    mutation: &NativeMutation,
+    mutation: &serialized::NativeMutation,
 ) -> ndc::ProcedureInfo {
     ndc::ProcedureInfo {
         name: mutation_name.to_owned(),
@@ -385,7 +403,12 @@ mod tests {
         )]
         .into_iter()
         .collect();
-        let result = Configuration::validate(schema, native_mutations, Default::default(), Default::default());
+        let result = Configuration::validate(
+            schema,
+            native_mutations,
+            Default::default(),
+            Default::default(),
+        );
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("multiple definitions"));
         assert!(error_msg.contains("Album"));

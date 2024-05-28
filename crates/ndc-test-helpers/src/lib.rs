@@ -8,6 +8,10 @@ mod comparison_value;
 mod exists_in_collection;
 mod expressions;
 mod field;
+mod object_type;
+mod query_response;
+mod relationships;
+mod type_helpers;
 
 use std::collections::BTreeMap;
 
@@ -26,6 +30,10 @@ pub use comparison_value::*;
 pub use exists_in_collection::*;
 pub use expressions::*;
 pub use field::*;
+pub use object_type::*;
+pub use query_response::*;
+pub use relationships::*;
+pub use type_helpers::*;
 
 #[derive(Clone, Debug, Default)]
 pub struct QueryRequestBuilder {
@@ -84,9 +92,11 @@ impl QueryRequestBuilder {
         self
     }
 
-    pub fn variables<const S: usize>(
+    pub fn variables(
         mut self,
-        variables: [Vec<(&str, serde_json::Value)>; S],
+        variables: impl IntoIterator<
+            Item = impl IntoIterator<Item = (impl ToString, impl Into<serde_json::Value>)>,
+        >,
     ) -> Self {
         self.variables = Some(
             variables
@@ -94,7 +104,7 @@ impl QueryRequestBuilder {
                 .map(|var_map| {
                     var_map
                         .into_iter()
-                        .map(|(name, value)| (name.to_owned(), value))
+                        .map(|(name, value)| (name.to_string(), value.into()))
                         .collect()
                 })
                 .collect(),
@@ -197,61 +207,6 @@ impl From<QueryBuilder> for Query {
 pub fn empty_expression() -> Expression {
     Expression::Or {
         expressions: vec![],
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct RelationshipBuilder {
-    column_mapping: BTreeMap<String, String>,
-    relationship_type: RelationshipType,
-    target_collection: String,
-    arguments: BTreeMap<String, RelationshipArgument>,
-}
-
-pub fn relationship<const S: usize>(
-    target: &str,
-    column_mapping: [(&str, &str); S],
-) -> RelationshipBuilder {
-    RelationshipBuilder::new(target, column_mapping)
-}
-
-impl RelationshipBuilder {
-    pub fn new<const S: usize>(target: &str, column_mapping: [(&str, &str); S]) -> Self {
-        RelationshipBuilder {
-            column_mapping: column_mapping
-                .into_iter()
-                .map(|(source, target)| (source.to_owned(), target.to_owned()))
-                .collect(),
-            relationship_type: RelationshipType::Array,
-            target_collection: target.to_owned(),
-            arguments: Default::default(),
-        }
-    }
-
-    pub fn relationship_type(mut self, relationship_type: RelationshipType) -> Self {
-        self.relationship_type = relationship_type;
-        self
-    }
-
-    pub fn object_type(mut self) -> Self {
-        self.relationship_type = RelationshipType::Object;
-        self
-    }
-
-    pub fn arguments(mut self, arguments: BTreeMap<String, RelationshipArgument>) -> Self {
-        self.arguments = arguments;
-        self
-    }
-}
-
-impl From<RelationshipBuilder> for Relationship {
-    fn from(value: RelationshipBuilder) -> Self {
-        Relationship {
-            column_mapping: value.column_mapping,
-            relationship_type: value.relationship_type,
-            target_collection: value.target_collection,
-            arguments: value.arguments,
-        }
     }
 }
 

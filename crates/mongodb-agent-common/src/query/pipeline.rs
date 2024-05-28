@@ -1,18 +1,19 @@
 use std::collections::BTreeMap;
 
-use configuration::Configuration;
-use dc_api_types::{Aggregate, Query, QueryRequest, VariableSet};
 use mongodb::bson::{self, doc, Bson};
+use ndc_query_plan::VariableSet;
+use tracing::instrument;
 
 use crate::{
     aggregation_function::AggregationFunction,
     interface_types::MongoAgentError,
+    mongo_query_plan::{Aggregate, MongoConfiguration, Query, QueryPlan},
     mongodb::{sanitize::get_field, Accumulator, Pipeline, Selection, Stage},
 };
 
 use super::{
     constants::{RESULT_FIELD, ROWS_FIELD},
-    foreach::{foreach_variants, pipeline_for_foreach},
+    foreach::pipeline_for_foreach,
     make_selector, make_sort,
     native_query::pipeline_for_native_query,
     relations::pipeline_for_relations,
@@ -25,25 +26,22 @@ use super::{
 /// one) in a single facet stage. If we have fields, and no aggregates then the fields pipeline
 /// can instead be appended to `pipeline`.
 pub fn is_response_faceted(query: &Query) -> bool {
-    match &query.aggregates {
-        Some(aggregates) => !aggregates.is_empty(),
-        _ => false,
-    }
+    query.has_aggregates()
 }
 
 /// Shared logic to produce a MongoDB aggregation pipeline for a query request.
 ///
 /// Returns a pipeline paired with a value that indicates whether the response requires
 /// post-processing in the agent.
+#[instrument(name = "Build Query Pipeline" skip_all, fields(internal.visibility = "user"))]
 pub fn pipeline_for_query_request(
-    config: &Configuration,
-    query_request: &QueryRequest,
+    config: &MongoConfiguration,
+    query_plan: &QueryPlan,
 ) -> Result<Pipeline, MongoAgentError> {
-    let foreach = foreach_variants(query_request);
-    if let Some(foreach) = foreach {
-        pipeline_for_foreach(foreach, config, query_request)
+    if let Some(variable_sets) = &query_plan.variables {
+        pipeline_for_foreach(variable_sets, config, query_plan)
     } else {
-        pipeline_for_non_foreach(config, None, query_request)
+        pipeline_for_non_foreach(config, None, query_plan)
     }
 }
 
@@ -53,31 +51,35 @@ pub fn pipeline_for_query_request(
 /// Returns a pipeline paired with a value that indicates whether the response requires
 /// post-processing in the agent.
 pub fn pipeline_for_non_foreach(
-    config: &Configuration,
+    config: &MongoConfiguration,
     variables: Option<&VariableSet>,
-    query_request: &QueryRequest,
+    query_plan: &QueryPlan,
 ) -> Result<Pipeline, MongoAgentError> {
-    let query = &*query_request.query;
+    let query = &query_plan.query;
     let Query {
         offset,
         order_by,
-        r#where,
+        predicate,
         ..
     } = query;
     let mut pipeline = Pipeline::empty();
 
     // If this is a native query then we start with the native query's pipeline
-    pipeline.append(pipeline_for_native_query(config, variables, query_request)?);
+    pipeline.append(pipeline_for_native_query(config, variables, query_plan)?);
 
     // Stages common to aggregate and row queries.
-    pipeline.append(pipeline_for_relations(config, variables, query_request)?);
+    pipeline.append(pipeline_for_relations(config, variables, query_plan)?);
 
-    let match_stage = r#where
+    let match_stage = predicate
         .as_ref()
         .map(|expression| make_selector(variables, expression))
         .transpose()?
         .map(Stage::Match);
-    let sort_stage: Option<Stage> = order_by.iter().map(|o| Stage::Sort(make_sort(o))).next();
+    let sort_stage: Option<Stage> = order_by
+        .iter()
+        .map(|o| Ok(Stage::Sort(make_sort(o)?)) as Result<_, MongoAgentError>)
+        .next()
+        .transpose()?;
     let skip_stage = offset.map(Stage::Skip);
 
     [match_stage, sort_stage, skip_stage]
@@ -89,12 +91,12 @@ pub fn pipeline_for_non_foreach(
     // sort and limit stages if we are requesting rows only. In both cases the last stage is
     // a $replaceWith.
     let diverging_stages = if is_response_faceted(query) {
-        let (facet_pipelines, select_facet_results) = facet_pipelines_for_query(query_request)?;
+        let (facet_pipelines, select_facet_results) = facet_pipelines_for_query(query_plan)?;
         let aggregation_stages = Stage::Facet(facet_pipelines);
         let replace_with_stage = Stage::ReplaceWith(select_facet_results);
         Pipeline::from_iter([aggregation_stages, replace_with_stage])
     } else {
-        pipeline_for_fields_facet(query_request)?
+        pipeline_for_fields_facet(query_plan)?
     };
 
     pipeline.append(diverging_stages);
@@ -105,14 +107,11 @@ pub fn pipeline_for_non_foreach(
 /// within a $facet stage. We assume that the query's `where`, `order_by`, `offset` criteria (which
 /// are shared with aggregates) have already been applied, and that we have already joined
 /// relations.
-pub fn pipeline_for_fields_facet(
-    query_request: &QueryRequest,
-) -> Result<Pipeline, MongoAgentError> {
-    let Query { limit, .. } = &*query_request.query;
+pub fn pipeline_for_fields_facet(query_plan: &QueryPlan) -> Result<Pipeline, MongoAgentError> {
+    let Query { limit, .. } = &query_plan.query;
 
     let limit_stage = limit.map(Stage::Limit);
-    let replace_with_stage: Stage =
-        Stage::ReplaceWith(Selection::from_query_request(query_request)?);
+    let replace_with_stage: Stage = Stage::ReplaceWith(Selection::from_query_request(query_plan)?);
 
     Ok(Pipeline::from_iter(
         [limit_stage, replace_with_stage.into()]
@@ -125,9 +124,9 @@ pub fn pipeline_for_fields_facet(
 /// a `Selection` that converts results of each pipeline to a format compatible with
 /// `QueryResponse`.
 fn facet_pipelines_for_query(
-    query_request: &QueryRequest,
+    query_plan: &QueryPlan,
 ) -> Result<(BTreeMap<String, Pipeline>, Selection), MongoAgentError> {
-    let query = &*query_request.query;
+    let query = &query_plan.query;
     let Query {
         aggregates,
         aggregates_limit,
@@ -146,7 +145,7 @@ fn facet_pipelines_for_query(
         .collect::<Result<BTreeMap<_, _>, MongoAgentError>>()?;
 
     if fields.is_some() {
-        let fields_pipeline = pipeline_for_fields_facet(query_request)?;
+        let fields_pipeline = pipeline_for_fields_facet(query_plan)?;
         facet_pipelines.insert(ROWS_FIELD.to_owned(), fields_pipeline);
     }
 
@@ -197,7 +196,7 @@ fn facet_pipelines_for_query(
 
 fn pipeline_for_aggregate(
     aggregate: Aggregate,
-    limit: Option<i64>,
+    limit: Option<u32>,
 ) -> Result<Pipeline, MongoAgentError> {
     // Group expressions use a dollar-sign prefix to indicate a reference to a document field.
     // TODO: I don't think we need sanitizing, but I could use a second opinion -Jesse H.
@@ -250,7 +249,7 @@ fn pipeline_for_aggregate(
         } => {
             use AggregationFunction::*;
 
-            let accumulator = match AggregationFunction::from_graphql_name(&function)? {
+            let accumulator = match function {
                 Avg => Accumulator::Avg(field_ref(&column)),
                 Count => Accumulator::Count,
                 Min => Accumulator::Min(field_ref(&column)),

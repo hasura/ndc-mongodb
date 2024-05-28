@@ -33,14 +33,6 @@ pub fn is_null(target: ComparisonTarget) -> Expression {
     }
 }
 
-pub fn equal(op1: ComparisonTarget, op2: ComparisonValue) -> Expression {
-    Expression::BinaryComparisonOperator {
-        column: op1,
-        operator: "_eq".to_owned(),
-        value: op2,
-    }
-}
-
 pub fn binop<S>(oper: S, op1: ComparisonTarget, op2: ComparisonValue) -> Expression
 where
     S: ToString,

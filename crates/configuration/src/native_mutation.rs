@@ -1,11 +1,12 @@
 use std::collections::BTreeMap;
 
+use itertools::Itertools as _;
 use mongodb::{bson, options::SelectionCriteria};
+use ndc_models as ndc;
+use ndc_query_plan as plan;
+use plan::{inline_object_types, QueryPlanError};
 
-use crate::{
-    schema::{ObjectField, Type},
-    serialized::{self},
-};
+use crate::{serialized, MongoScalarType};
 
 /// Internal representation of Native Mutations. For doc comments see
 /// [crate::serialized::NativeMutation]
@@ -15,21 +16,45 @@ use crate::{
 /// Native query values are stored in maps so names should be taken from map keys.
 #[derive(Clone, Debug)]
 pub struct NativeMutation {
-    pub result_type: Type,
-    pub arguments: BTreeMap<String, ObjectField>,
+    pub result_type: plan::Type<MongoScalarType>,
+    pub arguments: BTreeMap<String, plan::Type<MongoScalarType>>,
     pub command: bson::Document,
     pub selection_criteria: Option<SelectionCriteria>,
     pub description: Option<String>,
 }
 
-impl From<serialized::NativeMutation> for NativeMutation {
-    fn from(value: serialized::NativeMutation) -> Self {
-        NativeMutation {
-            result_type: value.result_type,
-            arguments: value.arguments,
-            command: value.command,
-            selection_criteria: value.selection_criteria,
-            description: value.description,
-        }
+impl NativeMutation {
+    pub fn from_serialized(
+        object_types: &BTreeMap<String, ndc::ObjectType>,
+        input: serialized::NativeMutation,
+    ) -> Result<NativeMutation, QueryPlanError> {
+        let arguments = input
+            .arguments
+            .into_iter()
+            .map(|(name, object_field)| {
+                Ok((
+                    name,
+                    inline_object_types(
+                        object_types,
+                        &object_field.r#type.into(),
+                        MongoScalarType::lookup_scalar_type,
+                    )?,
+                ))
+            })
+            .try_collect()?;
+
+        let result_type = inline_object_types(
+            object_types,
+            &input.result_type.into(),
+            MongoScalarType::lookup_scalar_type,
+        )?;
+
+        Ok(NativeMutation {
+            result_type,
+            arguments,
+            command: input.command,
+            selection_criteria: input.selection_criteria,
+            description: input.description,
+        })
     }
 }

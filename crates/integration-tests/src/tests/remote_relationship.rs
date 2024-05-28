@@ -1,6 +1,6 @@
 use crate::{graphql_query, run_connector_query};
 use insta::assert_yaml_snapshot;
-use ndc_test_helpers::{equal, field, query, query_request, target, variable};
+use ndc_test_helpers::{binop, field, query, query_request, target, variable};
 use serde_json::json;
 
 #[tokio::test]
@@ -33,10 +33,10 @@ async fn handles_request_with_single_variable_set() -> anyhow::Result<()> {
         run_connector_query(
             query_request()
                 .collection("movies")
-                .variables([vec![("id", json!("573a1390f29313caabcd50e5"))]])
+                .variables([[("id", json!("573a1390f29313caabcd50e5"))]])
                 .query(
                     query()
-                        .predicate(equal(target!("_id"), variable!(id)))
+                        .predicate(binop("_eq", target!("_id"), variable!(id)))
                         .fields([field!("title")]),
                 ),
         )

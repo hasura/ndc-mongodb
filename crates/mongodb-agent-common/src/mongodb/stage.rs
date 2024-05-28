@@ -37,7 +37,7 @@ pub enum Stage {
     ///
     /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/limit/#mongodb-pipeline-pipe.-limit
     #[serde(rename = "$limit")]
-    Limit(i64),
+    Limit(u32),
 
     /// Performs a left outer join to another collection in the same database to filter in
     /// documents from the "joined" collection for processing.
@@ -95,7 +95,7 @@ pub enum Stage {
     ///
     /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/skip/#mongodb-pipeline-pipe.-skip
     #[serde(rename = "$skip")]
-    Skip(u64),
+    Skip(u32),
 
     /// Groups input documents by a specified identifier expression and applies the accumulator
     /// expression(s), if specified, to each group. Consumes all input documents and outputs one

@@ -9,11 +9,10 @@ mod native_query;
 mod pipeline;
 mod query_target;
 mod relations;
+pub mod response;
 pub mod serialization;
 
-use configuration::Configuration;
-use dc_api_types::QueryRequest;
-use mongodb::bson;
+use ndc_models::{QueryRequest, QueryResponse};
 
 use self::execute_query_request::execute_query_request;
 pub use self::{
@@ -21,14 +20,17 @@ pub use self::{
     make_sort::make_sort,
     pipeline::{is_response_faceted, pipeline_for_non_foreach, pipeline_for_query_request},
     query_target::QueryTarget,
+    response::QueryResponseError,
 };
-use crate::{interface_types::MongoAgentError, state::ConnectorState};
+use crate::{
+    interface_types::MongoAgentError, mongo_query_plan::MongoConfiguration, state::ConnectorState,
+};
 
 pub async fn handle_query_request(
-    config: &Configuration,
+    config: &MongoConfiguration,
     state: &ConnectorState,
     query_request: QueryRequest,
-) -> Result<Vec<bson::Document>, MongoAgentError> {
+) -> Result<QueryResponse, MongoAgentError> {
     let database = state.database();
     // This function delegates to another function which gives is a point to inject a mock database
     // implementation for testing.
@@ -37,35 +39,38 @@ pub async fn handle_query_request(
 
 #[cfg(test)]
 mod tests {
-    use dc_api_types::QueryRequest;
-    use mongodb::bson::{self, bson, doc};
+    use configuration::Configuration;
+    use mongodb::bson::{self, bson};
+    use ndc_models::{QueryResponse, RowSet};
+    use ndc_test_helpers::{
+        binop, collection, column_aggregate, column_count_aggregate, field, named_type,
+        object_type, query, query_request, row_set, target, value,
+    };
     use pretty_assertions::assert_eq;
-    use serde_json::{from_value, json};
+    use serde_json::json;
 
     use super::execute_query_request;
-    use crate::mongodb::test_helpers::{
-        mock_collection_aggregate_response, mock_collection_aggregate_response_for_pipeline,
+    use crate::{
+        mongo_query_plan::MongoConfiguration,
+        mongodb::test_helpers::{
+            mock_collection_aggregate_response, mock_collection_aggregate_response_for_pipeline,
+        },
     };
 
     #[tokio::test]
     async fn executes_query() -> Result<(), anyhow::Error> {
-        let query_request: QueryRequest = from_value(json!({
-            "query": {
-                "fields": {
-                    "student_gpa": { "type": "column", "column": "gpa", "column_type": "double" },
-                },
-                "where": {
-                    "type": "binary_op",
-                    "column": { "name": "gpa", "column_type": "double" },
-                    "operator": "less_than",
-                    "value": { "type": "scalar", "value": 4.0, "value_type": "double" }
-                },
-            },
-            "target": {"name": ["students"], "type": "table"},
-            "relationships": [],
-        }))?;
+        let query_request = query_request()
+            .collection("students")
+            .query(
+                query()
+                    .fields([field!("student_gpa" => "gpa")])
+                    .predicate(binop("_lt", target!("gpa"), value!(4.0))),
+            )
+            .into();
 
-        let expected_response = vec![doc! { "student_gpa": 3.1 }, doc! { "student_gpa": 3.6 }];
+        let expected_response = row_set()
+            .rows([[("student_gpa", 3.1)], [("student_gpa", 3.6)]])
+            .into_response();
 
         let expected_pipeline = bson!([
             { "$match": { "gpa": { "$lt": 4.0 } } },
@@ -81,39 +86,27 @@ mod tests {
             ]),
         );
 
-        let result = execute_query_request(db, &Default::default(), query_request).await?;
+        let result = execute_query_request(db, &students_config(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
 
     #[tokio::test]
     async fn executes_aggregation() -> Result<(), anyhow::Error> {
-        let query_request: QueryRequest = from_value(json!({
-            "query": {
-                "aggregates": {
-                    "count": {
-                        "type": "column_count",
-                        "column": "gpa",
-                        "distinct": true,
-                    },
-                    "avg": {
-                        "type": "single_column",
-                        "column": "gpa",
-                        "function": "avg",
-                        "result_type": "double",
-                    },
-                },
-            },
-            "target": {"name": ["students"], "type": "table"},
-            "relationships": [],
-        }))?;
+        let query_request = query_request()
+            .collection("students")
+            .query(query().aggregates([
+                column_count_aggregate!("count" => "gpa", distinct: true),
+                column_aggregate!("avg" => "gpa", "avg"),
+            ]))
+            .into();
 
-        let expected_response = vec![doc! {
-            "aggregates": {
-                "count": 11,
-                "avg": 3,
-            }
-        }];
+        let expected_response = row_set()
+            .aggregates([
+                ("count", json!({ "$numberInt": "11" })),
+                ("avg", json!({ "$numberInt": "3" })),
+            ])
+            .into_response();
 
         let expected_pipeline = bson!([
             {
@@ -156,45 +149,27 @@ mod tests {
             }]),
         );
 
-        let result = execute_query_request(db, &Default::default(), query_request).await?;
-        assert_eq!(expected_response, result);
+        let result = execute_query_request(db, &students_config(), query_request).await?;
+        assert_eq!(result, expected_response);
         Ok(())
     }
 
     #[tokio::test]
     async fn executes_aggregation_with_fields() -> Result<(), anyhow::Error> {
-        let query_request: QueryRequest = from_value(json!({
-            "query": {
-                "aggregates": {
-                    "avg": {
-                        "type": "single_column",
-                        "column": "gpa",
-                        "function": "avg",
-                        "result_type": "double",
-                    },
-                },
-                "fields": {
-                    "student_gpa": { "type": "column", "column": "gpa", "column_type": "double" },
-                },
-                "where": {
-                    "type": "binary_op",
-                    "column": { "name": "gpa", "column_type": "double" },
-                    "operator": "less_than",
-                    "value": { "type": "scalar", "value": 4.0, "value_type": "double" }
-                },
-            },
-            "target": {"name": ["students"], "type": "table"},
-            "relationships": [],
-        }))?;
+        let query_request = query_request()
+            .collection("students")
+            .query(
+                query()
+                    .aggregates([column_aggregate!("avg" => "gpa", "avg")])
+                    .fields([field!("student_gpa" => "gpa")])
+                    .predicate(binop("_lt", target!("gpa"), value!(4.0))),
+            )
+            .into();
 
-        let expected_response = vec![doc! {
-            "aggregates": {
-                "avg": 3.1,
-            },
-            "rows": [{
-                "gpa": 3.1,
-            }],
-        }];
+        let expected_response = row_set()
+            .aggregates([("avg", json!({ "$numberDouble": "3.1" }))])
+            .row([("student_gpa", 3.1)])
+            .into_response();
 
         let expected_pipeline = bson!([
             { "$match": { "gpa": { "$lt": 4.0 } } },
@@ -232,39 +207,30 @@ mod tests {
                     "avg": 3.1,
                 },
                 "rows": [{
-                    "gpa": 3.1,
+                    "student_gpa": 3.1,
                 }],
             }]),
         );
 
-        let result = execute_query_request(db, &Default::default(), query_request).await?;
-        assert_eq!(expected_response, result);
+        let result = execute_query_request(db, &students_config(), query_request).await?;
+        assert_eq!(result, expected_response);
         Ok(())
     }
 
     #[tokio::test]
     async fn converts_date_inputs_to_bson() -> Result<(), anyhow::Error> {
-        let query_request: QueryRequest = from_value(json!({
-          "query": {
-            "fields": {
-              "date": { "type": "column", "column": "date", "column_type": "date", },
-            },
-            "where": {
-              "type": "binary_op",
-              "column": { "column_type": "date", "name": "date" },
-              "operator": "greater_than_or_equal",
-              "value": {
-                "type": "scalar",
-                "value": "2018-08-14T07:05-0800",
-                "value_type": "date"
-              }
-            }
-          },
-          "target": { "type": "table", "name": [ "comments" ] },
-          "relationships": []
-        }))?;
+        let query_request = query_request()
+            .collection("comments")
+            .query(query().fields([field!("date")]).predicate(binop(
+                "_gte",
+                target!("date"),
+                value!("2018-08-14T07:05-0800"),
+            )))
+            .into();
 
-        let expected_response = vec![doc! { "date": "2018-08-14T15:05:03.142Z" }];
+        let expected_response = row_set()
+            .row([("date", "2018-08-14T15:05:00.000000000Z")])
+            .into_response();
 
         let expected_pipeline = bson!([
             {
@@ -274,11 +240,7 @@ mod tests {
             },
             {
                 "$replaceWith": {
-                    "date": {
-                        "$dateToString": {
-                            "date": { "$ifNull": ["$date", null] },
-                        },
-                    },
+                    "date": { "$ifNull": ["$date", null] },
                 }
             },
         ]);
@@ -287,33 +249,63 @@ mod tests {
             "comments",
             expected_pipeline,
             bson!([{
-                "date": "2018-08-14T15:05:03.142Z",
+                "date": bson::DateTime::builder().year(2018).month(8).day(14).hour(15).minute(5).build().unwrap(),
             }]),
         );
 
-        let result = execute_query_request(db, &Default::default(), query_request).await?;
+        let result = execute_query_request(db, &comments_config(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
     }
 
     #[tokio::test]
     async fn parses_empty_response() -> Result<(), anyhow::Error> {
-        let query_request: QueryRequest = from_value(json!({
-          "query": {
-            "fields": {
-              "date": { "type": "column", "column": "date", "column_type": "date", },
-            },
-          },
-          "target": { "type": "table", "name": [ "comments" ] },
-          "relationships": [],
-        }))?;
+        let query_request = query_request()
+            .collection("comments")
+            .query(query().fields([field!("date")]))
+            .into();
 
-        let expected_response: Vec<bson::Document> = vec![];
+        let expected_response = QueryResponse(vec![RowSet {
+            aggregates: None,
+            rows: Some(vec![]),
+        }]);
 
         let db = mock_collection_aggregate_response("comments", bson!([]));
 
-        let result = execute_query_request(db, &Default::default(), query_request).await?;
+        let result = execute_query_request(db, &comments_config(), query_request).await?;
         assert_eq!(expected_response, result);
         Ok(())
+    }
+
+    fn students_config() -> MongoConfiguration {
+        MongoConfiguration(Configuration {
+            collections: [collection("students")].into(),
+            object_types: [(
+                "students".into(),
+                object_type([("gpa", named_type("Double"))]),
+            )]
+            .into(),
+            functions: Default::default(),
+            procedures: Default::default(),
+            native_mutations: Default::default(),
+            native_queries: Default::default(),
+            options: Default::default(),
+        })
+    }
+
+    fn comments_config() -> MongoConfiguration {
+        MongoConfiguration(Configuration {
+            collections: [collection("comments")].into(),
+            object_types: [(
+                "comments".into(),
+                object_type([("date", named_type("Date"))]),
+            )]
+            .into(),
+            functions: Default::default(),
+            procedures: Default::default(),
+            native_mutations: Default::default(),
+            native_queries: Default::default(),
+            options: Default::default(),
+        })
     }
 }

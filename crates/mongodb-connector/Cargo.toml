@@ -4,20 +4,19 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+configuration = { path = "../configuration" }
+mongodb-agent-common = { path = "../mongodb-agent-common" }
+mongodb-support = { path = "../mongodb-support" }
+ndc-query-plan = { path = "../ndc-query-plan" }
+
 anyhow = "1"
 async-trait = "^0.1"
-configuration = { path = "../configuration" }
-dc-api = { path = "../dc-api" }
-dc-api-types = { path = "../dc-api-types" }
 enum-iterator = "^2.0.0"
 futures = "^0.3"
 http = "^0.2"
-indexmap = { version = "2.1.0", features = ["serde"] }
+indexmap = { workspace = true }
 itertools = { workspace = true }
-lazy_static = "^1.4.0"
 mongodb = { workspace = true }
-mongodb-agent-common = { path = "../mongodb-agent-common" }
-mongodb-support = { path = "../mongodb-support" }
 ndc-sdk = { workspace = true }
 prometheus = "*" # share version from ndc-sdk
 serde = { version = "1.0", features = ["derive"] }
@@ -27,6 +26,5 @@ tokio = { version = "1.28.1", features = ["full"] }
 tracing = "0.1"
 
 [dev-dependencies]
-dc-api-test-helpers = { path = "../dc-api-test-helpers" }
 ndc-test-helpers = { path = "../ndc-test-helpers" }
 pretty_assertions = "1"
