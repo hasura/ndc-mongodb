@@ -22,7 +22,6 @@ pub enum ComparisonFunction {
 }
 
 use ndc_query_plan::QueryPlanError;
-// use BinaryComparisonOperator as B;
 use ComparisonFunction as C;
 
 impl ComparisonFunction {
