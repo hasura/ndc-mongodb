@@ -149,25 +149,6 @@ pub fn comparison_operators(
     })
 }
 
-// fn capabilities(scalar_type: BsonScalarType) -> ScalarTypeCapabilities {
-//     let aggregations: HashMap<String, String> = aggregate_functions(scalar_type)
-//         .map(|(a, t)| (a.graphql_name().to_owned(), t.graphql_name()))
-//         .collect();
-//     let comparisons: HashMap<String, String> = comparison_operators(scalar_type)
-//         .map(|(c, t)| (c.graphql_name().to_owned(), t.graphql_name()))
-//         .collect();
-//     ScalarTypeCapabilities {
-//         graphql_type: scalar_type.graphql_type(),
-//         aggregate_functions: Some(aggregations),
-//         comparison_operators: if comparisons.is_empty() {
-//             None
-//         } else {
-//             Some(comparisons)
-//         },
-//         update_column_operators: None,
-//     }
-// }
-
 /// If `condition` is true returns an iterator with the same items as the given `iter` input.
 /// Otherwise returns an empty iterator.
 fn iter_if<Item>(condition: bool, iter: impl Iterator<Item = Item>) -> impl Iterator<Item = Item> {
