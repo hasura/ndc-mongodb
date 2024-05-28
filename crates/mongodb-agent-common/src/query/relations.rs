@@ -866,7 +866,7 @@ mod tests {
             .into(),
             functions: Default::default(),
             procedures: Default::default(),
-            native_procedures: Default::default(),
+            native_mutations: Default::default(),
             native_queries: Default::default(),
             options: Default::default(),
         })
@@ -901,7 +901,7 @@ mod tests {
             .into(),
             functions: Default::default(),
             procedures: Default::default(),
-            native_procedures: Default::default(),
+            native_mutations: Default::default(),
             native_queries: Default::default(),
             options: Default::default(),
         })
