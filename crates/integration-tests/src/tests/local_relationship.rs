@@ -50,7 +50,7 @@ async fn filters_by_field_of_related_collection() -> anyhow::Result<()> {
         graphql_query(
             r#"
             query {
-              comments(limit: 10, where: {movie: {title: {_is_null: false}}}) {
+              comments(where: {movie: {rated: {_eq: "G"}}}, limit: 10, order_by: {id: Asc}) {
                 movie {
                   title
                 }
