@@ -167,6 +167,7 @@ mod tests {
     use crate::{
         mongo_query_plan::MongoConfiguration,
         mongodb::test_helpers::mock_collection_aggregate_response_for_pipeline,
+        test_helpers::mflix_config,
     };
 
     #[tokio::test]
@@ -859,41 +860,6 @@ mod tests {
                         ("classId", named_type("ObjectId")),
                         ("gpa", named_type("Double")),
                         ("name", named_type("String")),
-                        ("year", named_type("Int")),
-                    ]),
-                ),
-            ]
-            .into(),
-            functions: Default::default(),
-            procedures: Default::default(),
-            native_mutations: Default::default(),
-            native_queries: Default::default(),
-            options: Default::default(),
-        })
-    }
-
-    fn mflix_config() -> MongoConfiguration {
-        MongoConfiguration(Configuration {
-            collections: [collection("comments"), collection("movies")].into(),
-            object_types: [
-                (
-                    "comments".into(),
-                    object_type([
-                        ("_id", named_type("ObjectId")),
-                        ("movie_id", named_type("ObjectId")),
-                        ("name", named_type("String")),
-                    ]),
-                ),
-                (
-                    "credits".into(),
-                    object_type([("director", named_type("String"))]),
-                ),
-                (
-                    "movies".into(),
-                    object_type([
-                        ("_id", named_type("ObjectId")),
-                        ("credits", named_type("credits")),
-                        ("title", named_type("String")),
                         ("year", named_type("Int")),
                     ]),
                 ),

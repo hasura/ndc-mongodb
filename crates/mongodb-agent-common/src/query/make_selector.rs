@@ -1,13 +1,14 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap, iter::once};
 
 use anyhow::anyhow;
+use itertools::Either;
 use mongodb::bson::{self, doc, Document};
 use ndc_models::UnaryComparisonOperator;
 
 use crate::{
     interface_types::MongoAgentError,
-    mongo_query_plan::{ComparisonValue, ExistsInCollection, Expression, Type},
-    query::column_ref::column_ref,
+    mongo_query_plan::{ComparisonTarget, ComparisonValue, ExistsInCollection, Expression, Type},
+    mongodb::sanitize::safe_name,
 };
 
 use super::serialization::json_to_bson;
@@ -63,7 +64,6 @@ pub fn make_selector(
             operator,
             value,
         } => {
-            let col = column_ref(column)?;
             let comparison_value = match value {
                 // TODO: MDB-152 To compare to another column we need to wrap the entire expression in
                 // an `$expr` aggregation operator (assuming the expression is not already in
@@ -79,20 +79,34 @@ pub fn make_selector(
                     variable_type,
                 } => variable_to_mongo_expression(variables, name, variable_type).map(Into::into),
             }?;
-            Ok(operator.mongodb_expression(col.into_owned(), comparison_value))
+            Ok(traverse_relationship_path(
+                column.relationship_path(),
+                operator.mongodb_expression(column_ref(column)?, comparison_value),
+            ))
         }
         Expression::UnaryComparisonOperator { column, operator } => match operator {
-            UnaryComparisonOperator::IsNull => {
-                // Checks the type of the column - type 10 is the code for null. This differs from
-                // `{ "$eq": null }` in that the checking equality with null returns true if the
-                // value is null or is absent. Checking for type 10 returns true if the value is
-                // null, but false if it is absent.
-                Ok(doc! {
-                    column_ref(column)?: { "$type": 10 }
-                })
-            }
+            UnaryComparisonOperator::IsNull => Ok(traverse_relationship_path(
+                column.relationship_path(),
+                doc! { column_ref(column)?: { "$eq": null } },
+            )),
         },
     }
+}
+
+/// For simple cases the target of an expression is a field reference. But if the target is
+/// a column of a related collection then we're implicitly making an array comparison (because
+/// related documents always come as an array, even for object relationships), so we have to wrap
+/// the starting expression with an `$elemMatch` for each relationship that is traversed to reach
+/// the target column.
+fn traverse_relationship_path(path: &[String], mut expression: Document) -> Document {
+    for path_element in path.iter().rev() {
+        expression = doc! {
+            path_element: {
+                "$elemMatch": expression
+            }
+        }
+    }
+    expression
 }
 
 fn variable_to_mongo_expression(
@@ -105,4 +119,128 @@ fn variable_to_mongo_expression(
         .ok_or_else(|| MongoAgentError::VariableNotDefined(variable.to_owned()))?;
 
     bson_from_scalar_value(value, value_type)
+}
+
+/// Given a column target returns a MongoDB expression that resolves to the value of the
+/// corresponding field, either in the target collection of a query request, or in the related
+/// collection. Resolves nested fields, but does not traverse relationships.
+fn column_ref(column: &ComparisonTarget) -> Result<Cow<'_, str>> {
+    let path = match column {
+        ComparisonTarget::Column {
+            name,
+            field_path,
+            // path,
+            ..
+        } => Either::Left(
+            once(name)
+                .chain(field_path.iter().flatten())
+                .map(AsRef::as_ref),
+        ),
+        ComparisonTarget::RootCollectionColumn {
+            name, field_path, ..
+        } => Either::Right(
+            once("$$ROOT")
+                .chain(once(name.as_ref()))
+                .chain(field_path.iter().flatten().map(AsRef::as_ref)),
+        ),
+    };
+    safe_selector(path)
+}
+
+/// Given an iterable of fields to access, ensures that each field name does not include characters
+/// that could be interpereted as a MongoDB expression.
+fn safe_selector<'a>(path: impl IntoIterator<Item = &'a str>) -> Result<Cow<'a, str>> {
+    let mut safe_elements = path
+        .into_iter()
+        .map(safe_name)
+        .collect::<Result<Vec<Cow<str>>>>()?;
+    if safe_elements.len() == 1 {
+        Ok(safe_elements.pop().unwrap())
+    } else {
+        Ok(Cow::Owned(safe_elements.join(".")))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use configuration::MongoScalarType;
+    use mongodb::bson::doc;
+    use mongodb_support::BsonScalarType;
+    use ndc_models::UnaryComparisonOperator;
+    use pretty_assertions::assert_eq;
+
+    use crate::{
+        comparison_function::ComparisonFunction,
+        mongo_query_plan::{ComparisonTarget, ComparisonValue, Expression, Type},
+    };
+
+    use super::make_selector;
+
+    #[test]
+    fn compares_fields_of_related_documents_using_elem_match_in_binary_comparison(
+    ) -> anyhow::Result<()> {
+        let selector = make_selector(
+            None,
+            &Expression::BinaryComparisonOperator {
+                column: ComparisonTarget::Column {
+                    name: "Name".to_owned(),
+                    field_path: None,
+                    column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                    path: vec!["Albums".into(), "Tracks".into()],
+                },
+                operator: ComparisonFunction::Equal,
+                value: ComparisonValue::Scalar {
+                    value: "Helter Skelter".into(),
+                    value_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                },
+            },
+        )?;
+
+        let expected = doc! {
+            "Albums": {
+                "$elemMatch": {
+                    "Tracks": {
+                        "$elemMatch": {
+                            "Name": { "$eq": "Helter Skelter" }
+                        }
+                    }
+                }
+            }
+        };
+
+        assert_eq!(selector, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn compares_fields_of_related_documents_using_elem_match_in_unary_comparison(
+    ) -> anyhow::Result<()> {
+        let selector = make_selector(
+            None,
+            &Expression::UnaryComparisonOperator {
+                column: ComparisonTarget::Column {
+                    name: "Name".to_owned(),
+                    field_path: None,
+                    column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                    path: vec!["Albums".into(), "Tracks".into()],
+                },
+                operator: UnaryComparisonOperator::IsNull,
+            },
+        )?;
+
+        let expected = doc! {
+            "Albums": {
+                "$elemMatch": {
+                    "Tracks": {
+                        "$elemMatch": {
+                            "Name": { "$eq": null }
+                        }
+                    }
+                }
+            }
+        };
+
+        assert_eq!(selector, expected);
+        Ok(())
+    }
 }

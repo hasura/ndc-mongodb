@@ -261,6 +261,15 @@ pub enum ComparisonTarget<T: ConnectorTypes> {
 }
 
 impl<T: ConnectorTypes> ComparisonTarget<T> {
+    pub fn relationship_path(&self) -> &[String] {
+        match self {
+            ComparisonTarget::Column { path, .. } => path,
+            ComparisonTarget::RootCollectionColumn { .. } => &[],
+        }
+    }
+}
+
+impl<T: ConnectorTypes> ComparisonTarget<T> {
     pub fn get_column_type(&self) -> &Type<T::ScalarType> {
         match self {
             ComparisonTarget::Column { column_type, .. } => column_type,

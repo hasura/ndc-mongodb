@@ -58,7 +58,11 @@ impl ComparisonFunction {
     }
 
     /// Produce a MongoDB expression that applies this function to the given operands.
-    pub fn mongodb_expression(self, column_ref: String, comparison_value: Bson) -> Document {
+    pub fn mongodb_expression(
+        self,
+        column_ref: impl Into<String>,
+        comparison_value: Bson,
+    ) -> Document {
         match self {
             C::IRegex => {
                 doc! { column_ref: { self.mongodb_name(): comparison_value, "$options": "i" } }
