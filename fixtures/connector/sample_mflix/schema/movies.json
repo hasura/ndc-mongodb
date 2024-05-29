@@ -167,9 +167,7 @@
           }
         },
         "rating": {
-          "type": {
-            "scalar": "double"
-          }
+          "type": "extendedJSON"
         },
         "votes": {
           "type": {
