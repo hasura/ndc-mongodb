@@ -3,6 +3,7 @@ pub mod query_context;
 pub mod query_plan_error;
 mod query_plan_state;
 pub mod type_annotated_field;
+mod unify_relationship_references;
 
 #[cfg(test)]
 mod plan_test_helpers;
@@ -444,7 +445,7 @@ fn plan_for_expression<T: QueryContext>(
                         relationship: relationship_key.to_owned(),
                     };
 
-                    Ok((in_collection, predicate))
+                    Ok((in_collection, predicate)) as Result<_>
                 }
                 ndc::ExistsInCollection::Unrelated {
                     collection,

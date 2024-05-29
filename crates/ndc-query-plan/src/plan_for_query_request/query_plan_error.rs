@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use super::unify_relationship_references::RelationshipUnificationError;
+
 #[derive(Clone, Debug, Error)]
 pub enum QueryPlanError {
     #[error("expected an array at path {}", path.join("."))]
@@ -10,6 +12,9 @@ pub enum QueryPlanError {
 
     #[error("The connector does not yet support {0}")]
     NotImplemented(&'static str),
+
+    #[error("{0}")]
+    RelationshipUnification(#[from] RelationshipUnificationError),
 
     #[error("The target of the query, {0}, is a function whose result type is not an object type")]
     RootTypeIsNotObject(String),

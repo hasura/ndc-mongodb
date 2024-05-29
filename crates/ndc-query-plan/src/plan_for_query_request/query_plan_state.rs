@@ -12,6 +12,8 @@ use crate::{
     QueryContext, QueryPlanError, Relationship,
 };
 
+use super::unify_relationship_references::unify_relationship_references;
+
 type Result<T> = std::result::Result<T, QueryPlanError>;
 
 /// Records relationship and other join references in a mutable struct. Relations are scoped to
@@ -68,23 +70,26 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
         arguments: BTreeMap<String, RelationshipArgument>,
         query: Query<T>,
     ) -> Result<(&str, &Relationship<T>)> {
-        let already_registered = self.relationships.contains_key(&ndc_relationship_name);
+        let ndc_relationship =
+            lookup_relationship(self.collection_relationships, &ndc_relationship_name)?;
 
-        if !already_registered {
-            let ndc_relationship =
-                lookup_relationship(self.collection_relationships, &ndc_relationship_name)?;
+        let relationship = Relationship {
+            column_mapping: ndc_relationship.column_mapping.clone(),
+            relationship_type: ndc_relationship.relationship_type,
+            target_collection: ndc_relationship.target_collection.clone(),
+            arguments,
+            query,
+        };
 
-            let relationship = Relationship {
-                column_mapping: ndc_relationship.column_mapping.clone(),
-                relationship_type: ndc_relationship.relationship_type,
-                target_collection: ndc_relationship.target_collection.clone(),
-                arguments,
-                query,
-            };
+        let relationship = match self.relationships.remove(&ndc_relationship_name) {
+            Some(already_registered_relationship) => {
+                unify_relationship_references(already_registered_relationship, relationship)?
+            }
+            None => relationship,
+        };
 
-            self.relationships
-                .insert(ndc_relationship_name.clone(), relationship);
-        }
+        self.relationships
+            .insert(ndc_relationship_name.clone(), relationship);
 
         // Safety: we just inserted this key
         let (key, relationship) = self

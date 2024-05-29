@@ -39,7 +39,7 @@ impl NativeMutation {
                         &object_field.r#type.into(),
                         MongoScalarType::lookup_scalar_type,
                     )?,
-                ))
+                )) as Result<_, QueryPlanError>
             })
             .try_collect()?;
 

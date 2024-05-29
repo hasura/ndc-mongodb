@@ -132,7 +132,7 @@ fn type_annotated_nested_field_helper<T: QueryContext>(
                                 field.clone(),
                                 &append_to_path(path, [name.as_ref()]),
                             )?,
-                        ))
+                        )) as Result<_>
                     })
                     .try_collect()?,
             })
