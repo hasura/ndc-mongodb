@@ -7,7 +7,7 @@ in
   service = {
     useHostStore = true;
     command = [
-      "${dev-auth-webhook}/bin/hasura-dev-auth-webhook"
+      "${dev-auth-webhook}/bin/dev-auth-webhook"
     ];
   };
 }

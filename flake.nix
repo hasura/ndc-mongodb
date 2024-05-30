@@ -45,13 +45,6 @@
       url = "github:hasura/graphql-engine";
       flake = false;
     };
-
-    # This is a copy of graphql-engine-source that is pinned to a revision where
-    # dev-auth-webhook can be built independently.
-    dev-auth-webhook-source = {
-      url = "github:hasura/graphql-engine/50f1243a46e22f0fecca03364b0b181fbb3735c6";
-      flake = false;
-    };
   };
 
   outputs =
@@ -62,7 +55,6 @@
     , advisory-db
     , arion
     , graphql-engine-source
-    , dev-auth-webhook-source
     , systems
     , ...
     }:
@@ -93,7 +85,7 @@
           mongodb-cli-plugin = final.mongodb-connector-workspace.override { package = "mongodb-cli-plugin"; };
           graphql-engine = final.callPackage ./nix/graphql-engine.nix { src = "${graphql-engine-source}/v3"; package = "engine"; };
           integration-tests = final.callPackage ./nix/integration-tests.nix { };
-          dev-auth-webhook = final.callPackage ./nix/dev-auth-webhook.nix { src = "${dev-auth-webhook-source}/v3/crates/hasura-authn-webhook/dev-auth-webhook"; };
+          dev-auth-webhook = final.callPackage ./nix/graphql-engine.nix { src = "${graphql-engine-source}/v3"; package = "dev-auth-webhook"; };
 
           # Provide cross-compiled versions of each of our packages under
           # `pkgs.pkgsCross.${system}.${package-name}`
