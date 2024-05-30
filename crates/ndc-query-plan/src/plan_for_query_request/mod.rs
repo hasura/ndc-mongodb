@@ -467,7 +467,6 @@ fn plan_for_expression<T: QueryContext>(
                         .transpose()?;
 
                     let relationship_query = plan::Query {
-                        predicate: predicate.clone(),
                         relationships: nested_state.into_relationships(),
                         ..Default::default()
                     };

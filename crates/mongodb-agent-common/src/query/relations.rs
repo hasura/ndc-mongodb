@@ -659,7 +659,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn filters_by_field_of_related_collection() -> Result<(), anyhow::Error> {
+    async fn filters_by_field_of_related_collection_using_exists() -> Result<(), anyhow::Error> {
         let query_request = query_request()
             .collection("comments")
             .query(
@@ -734,9 +734,13 @@ mod tests {
             "$replaceWith": {
               "movie": {
                 "rows": {
-                  "$getField": {
-                    "$literal": "movie"
-                  }
+                  "$map": {
+                    "input": { "$getField": { "$literal": "movie" } },
+                    "in": {
+                        "year": "$$this.year",
+                        "title": "$$this.title",
+                    }
+                  }  
                 }
               },
               "name": { "$ifNull": ["$name", null] }
