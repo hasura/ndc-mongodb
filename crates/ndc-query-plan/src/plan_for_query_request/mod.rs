@@ -267,7 +267,7 @@ fn plan_for_relationship_path<T: QueryContext>(
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
     object_type: &plan::ObjectType<T::ScalarType>,
     relationship_path: Vec<ndc::PathElement>,
-    requested_fields: Vec<String>, // fields to select from last path element
+    requested_columns: Vec<String>, // columns to select from last path element
 ) -> Result<(Vec<String>, ObjectType<T::ScalarType>)> {
     let end_of_relationship_path_object_type = relationship_path
         .last()
@@ -293,7 +293,7 @@ fn plan_for_relationship_path<T: QueryContext>(
         plan_state,
         root_collection_object_type,
         reversed_relationship_path,
-        requested_fields,
+        requested_columns,
     )?;
     let aliases = vec_deque.into_iter().collect();
 
@@ -304,7 +304,7 @@ fn plan_for_relationship_path_helper<T: QueryContext>(
     plan_state: &mut QueryPlanState<'_, T>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
     mut reversed_relationship_path: Vec<ndc::PathElement>,
-    requested_fields: Vec<String>, // fields to select from last path element
+    requested_columns: Vec<String>, // columns to select from last path element
 ) -> Result<VecDeque<String>> {
     if reversed_relationship_path.is_empty() {
         return Ok(VecDeque::new());
@@ -329,9 +329,9 @@ fn plan_for_relationship_path_helper<T: QueryContext>(
 
     // If this is the last path element then we need to apply the requested fields to the
     // relationship query. Otherwise we need to recursively process the rest of the path. Both
-    // cases take ownership of `requested_fields` so we group them together.
+    // cases take ownership of `requested_columns` so we group them together.
     let (mut rest_path, fields) = if is_last {
-        let fields = requested_fields
+        let fields = requested_columns
             .into_iter()
             .map(|column_name| {
                 let column_type =
@@ -352,7 +352,7 @@ fn plan_for_relationship_path_helper<T: QueryContext>(
             &mut nested_state,
             root_collection_object_type,
             tail,
-            requested_fields,
+            requested_columns,
         )?;
         (rest, None)
     };
@@ -568,13 +568,13 @@ fn plan_for_comparison_target<T: QueryContext>(
 ) -> Result<plan::ComparisonTarget<T>> {
     match target {
         ndc::ComparisonTarget::Column { name, path } => {
-            let requested_fields = vec![name.clone()];
+            let requested_columns = vec![name.clone()];
             let (path, target_object_type) = plan_for_relationship_path(
                 plan_state,
                 root_collection_object_type,
                 object_type,
                 path,
-                requested_fields,
+                requested_columns,
             )?;
             let column_type = find_object_field(&target_object_type, &name)?.clone();
             Ok(plan::ComparisonTarget::Column {

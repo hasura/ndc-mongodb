@@ -89,12 +89,23 @@ fn selection_for_field(parent_columns: &[&str], field: &Field) -> Result<Bson, M
         Field::Relationship {
             relationship,
             aggregates,
+            fields,
             ..
         } => {
             if aggregates.is_some() {
                 Ok(doc! { "$first": get_field(relationship) }.into())
             } else {
-                Ok(doc! { "rows": get_field(relationship) }.into())
+                let empty_map = Default::default();
+                let fields = fields.as_ref().unwrap_or(&empty_map);
+                Ok(doc! {
+                    "rows": {
+                        "$map": {
+                            "input": get_field(relationship),
+                            "in": from_query_request_helper(&["$this"], fields)?
+                        }
+                    }
+                }
+                .into())
             }
         }
     }
@@ -276,12 +287,22 @@ mod tests {
             doc! {
                 "class_students": {
                     "rows": {
-                        "$getField": { "$literal": "class_students" }
+                        "$map": {
+                            "input": { "$getField": { "$literal": "class_students" } },
+                            "in": {
+                                "name": { "$ifNull": ["$$this.name", null] }
+                            },
+                        },
                     },
                 },
                 "students": {
                     "rows": {
-                        "$getField": { "$literal": "class_students" }
+                        "$map": {
+                            "input": { "$getField": { "$literal": "class_students" } },
+                            "in": {
+                                "student_name": { "$ifNull": ["$$this.name", null] }
+                            },
+                        },
                     },
                 },
             }

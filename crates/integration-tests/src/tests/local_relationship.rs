@@ -53,6 +53,7 @@ async fn filters_by_field_of_related_collection() -> anyhow::Result<()> {
               comments(where: {movie: {rated: {_eq: "G"}}}, limit: 10, order_by: {id: Asc}) {
                 movie {
                   title
+                  year
                 }
               }
             }
