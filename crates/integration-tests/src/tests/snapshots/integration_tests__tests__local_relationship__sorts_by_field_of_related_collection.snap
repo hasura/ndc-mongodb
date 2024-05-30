@@ -1,0 +1,47 @@
+---
+source: crates/integration-tests/src/tests/local_relationship.rs
+expression: "graphql_query(r#\"\n            query {\n              comments(\n                limit: 10\n                order_by: [{movie: {title: Asc}}, {date: Asc}]\n                where: {movie: {rated: {_eq: \"G\"}}}\n              ) {\n                movie {\n                  title\n                  year\n                }\n                text\n              }\n            }\n            \"#).run().await?"
+---
+data:
+  comments:
+    - movie:
+        title: 101 Dalmatians
+        year: 1961
+      text: Ipsam cumque facilis officiis ipsam molestiae veniam rerum. Voluptatibus totam eius repellendus sint. Dignissimos distinctio accusantium ad voluptas laboriosam.
+    - movie:
+        title: 101 Dalmatians
+        year: 1961
+      text: Consequatur aliquam commodi quod ad. Id autem rerum reiciendis. Delectus suscipit optio ratione.
+    - movie:
+        title: 101 Dalmatians
+        year: 1961
+      text: Sequi minima veritatis nobis impedit saepe. Quia consequatur sunt commodi laboriosam ducimus illum nostrum facilis. Fugit nam in ipsum incidunt.
+    - movie:
+        title: 101 Dalmatians
+        year: 1961
+      text: Cumque maiores dignissimos nostrum aut autem iusto voluptatum. Voluptatum maiores excepturi ea. Quasi expedita dolorum similique aperiam.
+    - movie:
+        title: 101 Dalmatians
+        year: 1961
+      text: Quo rem tempore repudiandae assumenda. Totam quas fugiat impedit soluta doloremque repellat error. Nesciunt aspernatur quis veritatis dignissimos commodi a. Ullam neque fugiat culpa distinctio.
+    - movie:
+        title: 101 Dalmatians
+        year: 1961
+      text: Similique unde est dolore amet cum. Molestias debitis laudantium quae animi. Ipsa veniam quos beatae sed facilis omnis est. Aliquid ipsum temporibus dignissimos nostrum.
+    - movie:
+        title: 101 Dalmatians
+        year: 1961
+      text: Quisquam iusto numquam perferendis. Labore dolorem corporis aperiam dolor officia natus. Officiis debitis cumque pariatur alias. Mollitia commodi aliquid fugiat excepturi veritatis.
+    - movie:
+        title: 101 Dalmatians
+        year: 1961
+      text: Atque nemo pariatur ipsam magnam sit impedit. Fuga earum laudantium iste laboriosam debitis. Possimus eaque vero consequuntur voluptates.
+    - movie:
+        title: 101 Dalmatians
+        year: 1961
+      text: Sapiente facilis fugiat labore quo mollitia. Omnis dolor perferendis at et. Maiores voluptates eaque iste quidem praesentium saepe temporibus. Unde occaecati magnam aspernatur repudiandae occaecati.
+    - movie:
+        title: 101 Dalmatians
+        year: 1961
+      text: A porro temporibus quisquam dolore atque itaque nobis debitis. Dolorum voluptatem qui odit itaque quas quis quidem. Culpa doloribus ut non aut illum quae in. Vero aspernatur excepturi pariatur.
+errors: ~
