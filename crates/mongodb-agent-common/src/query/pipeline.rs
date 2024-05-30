@@ -108,26 +108,15 @@ pub fn pipeline_for_non_foreach(
 /// are shared with aggregates) have already been applied, and that we have already joined
 /// relations.
 pub fn pipeline_for_fields_facet(query_plan: &QueryPlan) -> Result<Pipeline, MongoAgentError> {
-    let Query {
-        aggregates,
-        fields,
-        limit,
-        ..
-    } = &query_plan.query;
+    let Query { limit, .. } = &query_plan.query;
 
     let limit_stage = limit.map(Stage::Limit);
-    let replace_with_stage = if aggregates.is_some() || fields.is_some() {
-        Some(Stage::ReplaceWith(Selection::from_query_request(
-            query_plan,
-        )?))
-    } else {
-        // If we're building a query for a relationship reference we shouldn't have selected any
-        // fields or aggregates. In this case we want everything, so we skip the replaceWith stage.
-        None
-    };
+    let replace_with_stage: Stage = Stage::ReplaceWith(Selection::from_query_request(query_plan)?);
 
     Ok(Pipeline::from_iter(
-        [limit_stage, replace_with_stage].into_iter().flatten(),
+        [limit_stage, replace_with_stage.into()]
+            .into_iter()
+            .flatten(),
     ))
 }
 

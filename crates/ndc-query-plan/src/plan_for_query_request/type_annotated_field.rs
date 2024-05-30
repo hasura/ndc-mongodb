@@ -69,13 +69,12 @@ fn type_annotated_field_helper<T: QueryContext>(
                 .context
                 .find_collection_object_type(&relationship_def.target_collection)?;
 
-            let mut query_plan = plan_for_query(
+            let query_plan = plan_for_query(
                 &mut plan_state.state_for_subquery(),
                 root_collection_object_type,
                 &related_collection_type,
                 *query,
             )?;
-            query_plan.fields = None; // We select fields at a different point
 
             let (relationship_key, plan_relationship) =
                 plan_state.register_relationship(relationship, arguments, query_plan)?;
