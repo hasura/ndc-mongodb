@@ -92,20 +92,62 @@ fn selection_for_field(parent_columns: &[&str], field: &Field) -> Result<Bson, M
             fields,
             ..
         } => {
-            if aggregates.is_some() {
-                Ok(doc! { "$first": get_field(relationship) }.into())
-            } else {
-                let empty_map = Default::default();
-                let fields = fields.as_ref().unwrap_or(&empty_map);
+            // The pipeline for the relationship has already selected the requested fields with the
+            // appropriate aliases. At this point all we need to do is to prune the selection down
+            // to requested fields, omitting fields of the relationship that were selected for
+            // filtering and sorting.
+            let field_selection: Option<Document> = fields.as_ref().map(|fields| {
+                fields
+                    .iter()
+                    .map(|(field_name, _)| {
+                        (field_name.to_owned(), format!("$$this.{field_name}").into())
+                    })
+                    .collect()
+            });
+
+            if let Some(aggregates) = aggregates {
+                let aggregate_selecion: Document = aggregates
+                    .iter()
+                    .map(|(aggregate_name, _)| {
+                        (
+                            aggregate_name.to_owned(),
+                            format!("$$row_set.{aggregate_name}").into(),
+                        )
+                    })
+                    .collect();
+                let mut new_row_set = doc! { "aggregates": aggregate_selecion };
+
+                if let Some(field_selection) = field_selection {
+                    new_row_set.insert(
+                        "rows",
+                        doc! {
+                            "$map": {
+                                "input": get_field(relationship),
+                                "in": field_selection,
+                            }
+                        },
+                    );
+                }
+
+                Ok(doc! {
+                    "$let": {
+                        "vars": { "row_set": { "$first": get_field(relationship) } },
+                        "in": new_row_set,
+                    }
+                }
+                .into())
+            } else if let Some(field_selection) = field_selection {
                 Ok(doc! {
                     "rows": {
                         "$map": {
                             "input": get_field(relationship),
-                            "in": from_query_request_helper(&["$this"], fields)?
+                            "in": field_selection,
                         }
                     }
                 }
                 .into())
+            } else {
+                Ok(doc! { "rows": [] }.into())
             }
         }
     }
@@ -290,7 +332,7 @@ mod tests {
                         "$map": {
                             "input": { "$getField": { "$literal": "class_students" } },
                             "in": {
-                                "name": { "$ifNull": ["$$this.name", null] }
+                                "name": "$$this.name"
                             },
                         },
                     },
@@ -300,7 +342,7 @@ mod tests {
                         "$map": {
                             "input": { "$getField": { "$literal": "class_students" } },
                             "in": {
-                                "student_name": { "$ifNull": ["$$this.name", null] }
+                                "student_name": "$$this.student_name"
                             },
                         },
                     },

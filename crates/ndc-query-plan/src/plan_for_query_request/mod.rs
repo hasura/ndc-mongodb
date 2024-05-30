@@ -375,10 +375,10 @@ fn plan_for_relationship_path_helper<T: QueryContext>(
         ..Default::default()
     };
 
-    let (relation_key, _) =
+    let relation_key =
         plan_state.register_relationship(relationship, arguments, relationship_query)?;
 
-    rest_path.push_front(relation_key.to_owned());
+    rest_path.push_front(relation_key);
     Ok(rest_path)
 }
 
@@ -472,14 +472,14 @@ fn plan_for_expression<T: QueryContext>(
                         ..Default::default()
                     };
 
-                    let (relationship_key, _) = plan_state.register_relationship(
+                    let relationship_key = plan_state.register_relationship(
                         relationship,
                         arguments,
                         relationship_query,
                     )?;
 
                     let in_collection = plan::ExistsInCollection::Related {
-                        relationship: relationship_key.to_owned(),
+                        relationship: relationship_key,
                     };
 
                     Ok((in_collection, predicate)) as Result<_>

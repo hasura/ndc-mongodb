@@ -69,7 +69,7 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
         ndc_relationship_name: String,
         arguments: BTreeMap<String, RelationshipArgument>,
         query: Query<T>,
-    ) -> Result<(&str, &Relationship<T>)> {
+    ) -> Result<String> {
         let ndc_relationship =
             lookup_relationship(self.collection_relationships, &ndc_relationship_name)?;
 
@@ -91,12 +91,7 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
         self.relationships
             .insert(ndc_relationship_name.clone(), relationship);
 
-        // Safety: we just inserted this key
-        let (key, relationship) = self
-            .relationships
-            .get_key_value(&ndc_relationship_name)
-            .unwrap();
-        Ok((key, relationship))
+        Ok(ndc_relationship_name)
     }
 
     /// Record a collection reference so that it is added to the list of joins for the query
