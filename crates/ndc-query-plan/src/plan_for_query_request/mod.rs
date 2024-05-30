@@ -207,13 +207,14 @@ fn plan_for_order_by_element<T: QueryContext>(
 ) -> Result<plan::OrderByElement<T>> {
     let target = match element.target {
         ndc::OrderByTarget::Column { name, path } => plan::OrderByTarget::Column {
-            name,
+            name: name.clone(),
             field_path: Default::default(), // TODO: propagate this after ndc-spec update
             path: plan_for_relationship_path(
                 plan_state,
                 root_collection_object_type,
                 object_type,
                 path,
+                vec![name],
             )?
             .0,
         },
@@ -227,6 +228,7 @@ fn plan_for_order_by_element<T: QueryContext>(
                 root_collection_object_type,
                 object_type,
                 path,
+                vec![], // TODO: MDB-156 propagate requested aggregate to relationship query
             )?;
             let column_type = find_object_field(&target_object_type, &column)?;
             let (function, function_definition) = plan_state
@@ -246,6 +248,7 @@ fn plan_for_order_by_element<T: QueryContext>(
                 root_collection_object_type,
                 object_type,
                 path,
+                vec![], // TODO: MDB-157 propagate requested aggregate to relationship query
             )?;
             plan::OrderByTarget::StarCountAggregate { path: plan_path }
         }
@@ -264,6 +267,7 @@ fn plan_for_relationship_path<T: QueryContext>(
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
     object_type: &plan::ObjectType<T::ScalarType>,
     relationship_path: Vec<ndc::PathElement>,
+    requested_fields: Vec<String>, // fields to select from last path element
 ) -> Result<(Vec<String>, ObjectType<T::ScalarType>)> {
     let end_of_relationship_path_object_type = relationship_path
         .last()
@@ -279,10 +283,17 @@ fn plan_for_relationship_path<T: QueryContext>(
         .transpose()?;
     let target_object_type = end_of_relationship_path_object_type.unwrap_or(object_type.clone());
 
+    let reversed_relationship_path = {
+        let mut path = relationship_path;
+        path.reverse();
+        path
+    };
+
     let vec_deque = plan_for_relationship_path_helper(
         plan_state,
         root_collection_object_type,
-        relationship_path,
+        reversed_relationship_path,
+        requested_fields,
     )?;
     let aliases = vec_deque.into_iter().collect();
 
@@ -292,57 +303,83 @@ fn plan_for_relationship_path<T: QueryContext>(
 fn plan_for_relationship_path_helper<T: QueryContext>(
     plan_state: &mut QueryPlanState<'_, T>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
-    relationship_path: impl IntoIterator<Item = ndc::PathElement>,
+    mut reversed_relationship_path: Vec<ndc::PathElement>,
+    requested_fields: Vec<String>, // fields to select from last path element
 ) -> Result<VecDeque<String>> {
-    let (head, tail) = {
-        let mut path_iter = relationship_path.into_iter();
-        let head = path_iter.next();
-        (head, path_iter)
-    };
-    if let Some(ndc::PathElement {
+    if reversed_relationship_path.is_empty() {
+        return Ok(VecDeque::new());
+    }
+
+    // safety: we just made an early return if the path is empty
+    let head = reversed_relationship_path.pop().unwrap();
+    let tail = reversed_relationship_path;
+    let is_last = tail.is_empty();
+
+    let ndc::PathElement {
         relationship,
         arguments,
         predicate,
-    }) = head
-    {
-        let relationship_def =
-            lookup_relationship(plan_state.collection_relationships, &relationship)?;
-        let related_collection_type = plan_state
-            .context
-            .find_collection_object_type(&relationship_def.target_collection)?;
-        let mut nested_state = plan_state.state_for_subquery();
+    } = head;
 
-        let mut rest_path = plan_for_relationship_path_helper(
+    let relationship_def = lookup_relationship(plan_state.collection_relationships, &relationship)?;
+    let related_collection_type = plan_state
+        .context
+        .find_collection_object_type(&relationship_def.target_collection)?;
+    let mut nested_state = plan_state.state_for_subquery();
+
+    // If this is the last path element then we need to apply the requested fields to the
+    // relationship query. Otherwise we need to recursively process the rest of the path. Both
+    // cases take ownership of `requested_fields` so we group them together.
+    let (mut rest_path, fields) = if is_last {
+        let fields = requested_fields
+            .into_iter()
+            .map(|column_name| {
+                let column_type =
+                    find_object_field(&related_collection_type, &column_name)?.clone();
+                Ok((
+                    column_name.clone(),
+                    plan::Field::Column {
+                        column: column_name,
+                        fields: None,
+                        column_type,
+                    },
+                ))
+            })
+            .collect::<Result<_>>()?;
+        (VecDeque::new(), Some(fields))
+    } else {
+        let rest = plan_for_relationship_path_helper(
             &mut nested_state,
             root_collection_object_type,
             tail,
+            requested_fields,
         )?;
+        (rest, None)
+    };
 
-        let nested_relationships = nested_state.into_relationships();
+    let nested_relationships = nested_state.into_relationships();
 
-        let relationship_query = plan::Query {
-            predicate: predicate
-                .map(|p| {
-                    plan_for_expression(
-                        plan_state,
-                        root_collection_object_type,
-                        &related_collection_type,
-                        *p,
-                    )
-                })
-                .transpose()?,
-            relationships: nested_relationships,
-            ..Default::default()
-        };
+    let relationship_query = plan::Query {
+        predicate: predicate
+            .map(|p| {
+                plan_for_expression(
+                    plan_state,
+                    root_collection_object_type,
+                    &related_collection_type,
+                    *p,
+                )
+            })
+            .transpose()?,
+        relationships: nested_relationships,
+        fields,
+        ..Default::default()
+    };
 
-        let (relation_key, _) =
-            plan_state.register_relationship(relationship, arguments, relationship_query)?;
+    let (relation_key, _) =
+        plan_state.register_relationship(relationship, arguments, relationship_query)?;
 
-        rest_path.push_front(relation_key.to_owned());
-        Ok(rest_path)
-    } else {
-        Ok(VecDeque::new())
-    }
+    rest_path.push_front(relation_key.to_owned());
+    Ok(rest_path)
 }
 
 fn plan_for_expression<T: QueryContext>(
@@ -531,11 +568,13 @@ fn plan_for_comparison_target<T: QueryContext>(
 ) -> Result<plan::ComparisonTarget<T>> {
     match target {
         ndc::ComparisonTarget::Column { name, path } => {
+            let requested_fields = vec![name.clone()];
             let (path, target_object_type) = plan_for_relationship_path(
                 plan_state,
                 root_collection_object_type,
                 object_type,
                 path,
+                requested_fields,
             )?;
             let column_type = find_object_field(&target_object_type, &name)?.clone();
             Ok(plan::ComparisonTarget::Column {
