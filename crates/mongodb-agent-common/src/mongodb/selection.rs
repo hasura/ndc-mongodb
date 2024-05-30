@@ -111,7 +111,7 @@ fn selection_for_field(parent_columns: &[&str], field: &Field) -> Result<Bson, M
                     .map(|(aggregate_name, _)| {
                         (
                             aggregate_name.to_owned(),
-                            format!("$$row_set.{aggregate_name}").into(),
+                            format!("$$row_set.aggregates.{aggregate_name}").into(),
                         )
                     })
                     .collect();
@@ -122,7 +122,7 @@ fn selection_for_field(parent_columns: &[&str], field: &Field) -> Result<Bson, M
                         "rows",
                         doc! {
                             "$map": {
-                                "input": get_field(relationship),
+                                "input": "$$row_set.rows",
                                 "in": field_selection,
                             }
                         },

@@ -220,8 +220,13 @@ mod tests {
                     "class_title": { "$ifNull": ["$title", null] },
                     "students": {
                         "rows": {
-                            "$getField": { "$literal": "class_students" },
-                        },
+                            "$map": {
+                                "input": { "$getField": { "$literal": "class_students" } },
+                                "in": {
+                                    "student_name": "$$this.student_name"
+                                }
+                            }
+                        }
                     },
                 },
             },
@@ -299,8 +304,15 @@ mod tests {
             {
                 "$replaceWith": {
                     "student_name": { "$ifNull": ["$name", null] },
-                    "class": { "rows": {
-                        "$getField": { "$literal": "student_class" } }
+                    "class": {
+                        "rows": {
+                            "$map": {
+                                "input": { "$getField": { "$literal": "student_class" } },
+                                "in": {
+                                    "class_title": "$$this.class_title"
+                                }
+                            }
+                        }
                     },
                 },
             },
@@ -386,7 +398,14 @@ mod tests {
                 "$replaceWith": {
                     "class_title": { "$ifNull": ["$title", null] },
                     "students": {
-                        "rows": { "$getField": { "$literal": "students" } },
+                        "rows": {
+                            "$map": {
+                                "input": { "$getField": { "$literal": "students" } },
+                                "in": {
+                                    "student_name": "$$this.student_name"
+                                }
+                            }
+                        }
                     },
                 },
             },
@@ -481,7 +500,14 @@ mod tests {
                         {
                             "$replaceWith": {
                                 "assignments": {
-                                    "rows": { "$getField": { "$literal": "assignments" } },
+                                    "rows": {
+                                        "$map": {
+                                            "input": { "$getField": { "$literal": "assignments" } },
+                                            "in": {
+                                                "assignment_title": "$$this.assignment_title"
+                                            }
+                                        }
+                                    }
                                 },
                                 "student_name": { "$ifNull": ["$name", null] },
                             },
@@ -494,7 +520,15 @@ mod tests {
                 "$replaceWith": {
                     "class_title": { "$ifNull": ["$title", null] },
                     "students": {
-                        "rows": { "$getField": { "$literal": "students" } },
+                        "rows": {
+                            "$map": {
+                                "input": { "$getField": { "$literal": "students" } },
+                                "in": {
+                                    "assignments": "$$this.assignments",
+                                    "student_name": "$$this.student_name",
+                                }
+                            }
+                        }
                     },
                 },
             },
@@ -590,9 +624,18 @@ mod tests {
             },
             {
                 "$replaceWith": {
-                    "students_aggregate": { "$first": {
-                        "$getField": { "$literal": "students" }
-                    } }
+                    "students_aggregate": {
+                        "$let": {
+                            "vars": {
+                                "row_set": { "$first": { "$getField": { "$literal": "students" } } }
+                            },
+                            "in": {
+                                "aggregates": {
+                                    "aggregate_count": "$$row_set.aggregates.aggregate_count"
+                                }
+                            }
+                        }
+                    }
                 },
             },
         ]);
