@@ -1,0 +1,37 @@
+---
+source: crates/integration-tests/src/tests/local_relationship.rs
+expression: "graphql_query(r#\"\n            query {\n              comments(where: {movie: {rated: {_eq: \"G\"}}}, limit: 10, order_by: {id: Asc}) {\n                movie {\n                  title\n                  year\n                }\n              }\n            }\n            \"#).variables(json!({\n                        \"limit\": 11, \"movies_limit\": 2\n                    })).run().await?"
+---
+data:
+  comments:
+    - movie:
+        title: A Corner in Wheat
+        year: 1909
+    - movie:
+        title: Naughty Marietta
+        year: 1935
+    - movie:
+        title: Modern Times
+        year: 1936
+    - movie:
+        title: The Man Who Came to Dinner
+        year: 1942
+    - movie:
+        title: National Velvet
+        year: 1944
+    - movie:
+        title: National Velvet
+        year: 1944
+    - movie:
+        title: Alice in Wonderland
+        year: 1951
+    - movie:
+        title: The King and I
+        year: 1956
+    - movie:
+        title: 101 Dalmatians
+        year: 1961
+    - movie:
+        title: 101 Dalmatians
+        year: 1961
+errors: ~
