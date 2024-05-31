@@ -12,8 +12,8 @@ use std::collections::VecDeque;
 
 use crate::{self as plan, type_annotated_field, ObjectType, QueryPlan};
 use indexmap::IndexMap;
-use itertools::Itertools as _;
-use ndc::QueryRequest;
+use itertools::Itertools;
+use ndc::{ExistsInCollection, QueryRequest};
 use ndc_models as ndc;
 
 use self::{
@@ -421,9 +421,7 @@ fn plan_for_expression<T: QueryContext>(
                     object_type,
                     column,
                 )?,
-                operator: match operator {
-                    ndc::UnaryComparisonOperator::IsNull => ndc::UnaryComparisonOperator::IsNull,
-                },
+                operator,
             })
         }
         ndc::Expression::BinaryComparisonOperator {
@@ -441,88 +439,12 @@ fn plan_for_expression<T: QueryContext>(
         ndc::Expression::Exists {
             in_collection,
             predicate,
-        } => {
-            let mut nested_state = plan_state.state_for_subquery();
-
-            let (in_collection, predicate) = match in_collection {
-                ndc::ExistsInCollection::Related {
-                    relationship,
-                    arguments,
-                } => {
-                    let ndc_relationship =
-                        lookup_relationship(plan_state.collection_relationships, &relationship)?;
-                    let collection_object_type = plan_state
-                        .context
-                        .find_collection_object_type(&ndc_relationship.target_collection)?;
-
-                    let predicate = predicate
-                        .map(|expression| {
-                            plan_for_expression(
-                                &mut nested_state,
-                                root_collection_object_type,
-                                &collection_object_type,
-                                *expression,
-                            )
-                        })
-                        .transpose()?;
-
-                    let relationship_query = plan::Query {
-                        relationships: nested_state.into_relationships(),
-                        ..Default::default()
-                    };
-
-                    let relationship_key = plan_state.register_relationship(
-                        relationship,
-                        arguments,
-                        relationship_query,
-                    )?;
-
-                    let in_collection = plan::ExistsInCollection::Related {
-                        relationship: relationship_key,
-                    };
-
-                    Ok((in_collection, predicate)) as Result<_>
-                }
-                ndc::ExistsInCollection::Unrelated {
-                    collection,
-                    arguments,
-                } => {
-                    let collection_object_type = plan_state
-                        .context
-                        .find_collection_object_type(&collection)?;
-
-                    let predicate = predicate
-                        .map(|expression| {
-                            plan_for_expression(
-                                &mut nested_state,
-                                root_collection_object_type,
-                                &collection_object_type,
-                                *expression,
-                            )
-                        })
-                        .transpose()?;
-
-                    let join_query = plan::Query {
-                        predicate: predicate.clone(),
-                        relationships: nested_state.into_relationships(),
-                        ..Default::default()
-                    };
-
-                    let join_key =
-                        plan_state.register_unrelated_join(collection, arguments, join_query);
-
-                    let in_collection = plan::ExistsInCollection::Unrelated {
-                        unrelated_collection: join_key,
-                    };
-                    Ok((in_collection, predicate))
-                }
-            }?;
-
-            Ok(plan::Expression::Exists {
-                in_collection,
-                predicate: predicate.map(Box::new),
-            })
-        }
+        } => plan_for_exists(
+            plan_state,
+            root_collection_object_type,
+            in_collection,
+            predicate,
+        ),
     }
 }
 
@@ -619,6 +541,106 @@ fn plan_for_comparison_value<T: QueryContext>(
             variable_type: expected_type,
         }),
     }
+}
+
+fn plan_for_exists<T: QueryContext>(
+    plan_state: &mut QueryPlanState<'_, T>,
+    root_collection_object_type: &plan::ObjectType<T::ScalarType>,
+    in_collection: ExistsInCollection,
+    predicate: Option<Box<ndc::Expression>>,
+) -> Result<plan::Expression<T>> {
+    let mut nested_state = plan_state.state_for_subquery();
+
+    let (in_collection, predicate) = match in_collection {
+        ndc::ExistsInCollection::Related {
+            relationship,
+            arguments,
+        } => {
+            let ndc_relationship =
+                lookup_relationship(plan_state.collection_relationships, &relationship)?;
+            let collection_object_type = plan_state
+                .context
+                .find_collection_object_type(&ndc_relationship.target_collection)?;
+
+            let predicate = predicate
+                .map(|expression| {
+                    plan_for_expression(
+                        &mut nested_state,
+                        root_collection_object_type,
+                        &collection_object_type,
+                        *expression,
+                    )
+                })
+                .transpose()?;
+
+            let fields = predicate.as_ref().map(|p| {
+                p.query_local_comparison_targets()
+                    .map(|comparison_target| {
+                        (
+                            comparison_target.column_name().to_owned(),
+                            plan::Field::Column {
+                                column: comparison_target.column_name().to_string(),
+                                column_type: comparison_target.get_column_type().clone(),
+                                fields: None,
+                            },
+                        )
+                    })
+                    .collect()
+            });
+
+            let relationship_query = plan::Query {
+                fields,
+                relationships: nested_state.into_relationships(),
+                ..Default::default()
+            };
+
+            let relationship_key =
+                plan_state.register_relationship(relationship, arguments, relationship_query)?;
+
+            let in_collection = plan::ExistsInCollection::Related {
+                relationship: relationship_key,
+            };
+
+            Ok((in_collection, predicate)) as Result<_>
+        }
+        ndc::ExistsInCollection::Unrelated {
+            collection,
+            arguments,
+        } => {
+            let collection_object_type = plan_state
+                .context
+                .find_collection_object_type(&collection)?;
+
+            let predicate = predicate
+                .map(|expression| {
+                    plan_for_expression(
+                        &mut nested_state,
+                        root_collection_object_type,
+                        &collection_object_type,
+                        *expression,
+                    )
+                })
+                .transpose()?;
+
+            let join_query = plan::Query {
+                predicate: predicate.clone(),
+                relationships: nested_state.into_relationships(),
+                ..Default::default()
+            };
+
+            let join_key = plan_state.register_unrelated_join(collection, arguments, join_query);
+
+            let in_collection = plan::ExistsInCollection::Unrelated {
+                unrelated_collection: join_key,
+            };
+            Ok((in_collection, predicate))
+        }
+    }?;
+
+    Ok(plan::Expression::Exists {
+        in_collection,
+        predicate: predicate.map(Box::new),
+    })
 }
 
 #[cfg(test)]

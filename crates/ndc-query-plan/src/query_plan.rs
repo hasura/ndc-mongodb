@@ -1,8 +1,8 @@
-use std::collections::BTreeMap;
-use std::fmt::Debug;
+use std::{collections::BTreeMap, fmt::Debug, iter};
 
 use derivative::Derivative;
 use indexmap::IndexMap;
+use itertools::Either;
 use ndc_models::{
     Argument, OrderDirection, RelationshipArgument, RelationshipType, UnaryComparisonOperator,
 };
@@ -182,6 +182,56 @@ pub enum Expression<T: ConnectorTypes> {
     },
 }
 
+impl<T: ConnectorTypes> Expression<T> {
+    /// Get an iterator of columns referenced by the expression, not including columns of related
+    /// collections
+    pub fn query_local_comparison_targets<'a>(
+        &'a self,
+    ) -> Box<dyn Iterator<Item = &'a ComparisonTarget<T>> + 'a> {
+        match self {
+            Expression::And { expressions } => Box::new(
+                expressions
+                    .iter()
+                    .flat_map(|e| e.query_local_comparison_targets()),
+            ),
+            Expression::Or { expressions } => Box::new(
+                expressions
+                    .iter()
+                    .flat_map(|e| e.query_local_comparison_targets()),
+            ),
+            Expression::Not { expression } => expression.query_local_comparison_targets(),
+            Expression::UnaryComparisonOperator { column, .. } => {
+                Box::new(Self::local_columns_from_comparison_target(column))
+            }
+            Expression::BinaryComparisonOperator { column, value, .. } => {
+                let value_targets = match value {
+                    ComparisonValue::Column { column } => {
+                        Either::Left(Self::local_columns_from_comparison_target(column))
+                    }
+                    _ => Either::Right(iter::empty()),
+                };
+                Box::new(Self::local_columns_from_comparison_target(column).chain(value_targets))
+            }
+            Expression::Exists { .. } => Box::new(iter::empty()),
+        }
+    }
+
+    fn local_columns_from_comparison_target(
+        target: &ComparisonTarget<T>,
+    ) -> impl Iterator<Item = &ComparisonTarget<T>> {
+        match target {
+            t @ ComparisonTarget::Column { path, .. } => {
+                if path.is_empty() {
+                    Either::Left(iter::once(t))
+                } else {
+                    Either::Right(iter::empty())
+                }
+            }
+            t @ ComparisonTarget::RootCollectionColumn { .. } => Either::Left(iter::once(t)),
+        }
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub struct OrderBy<T: ConnectorTypes> {
@@ -261,6 +311,13 @@ pub enum ComparisonTarget<T: ConnectorTypes> {
 }
 
 impl<T: ConnectorTypes> ComparisonTarget<T> {
+    pub fn column_name(&self) -> &str {
+        match self {
+            ComparisonTarget::Column { name, .. } => name,
+            ComparisonTarget::RootCollectionColumn { name, .. } => name,
+        }
+    }
+
     pub fn relationship_path(&self) -> &[String] {
         match self {
             ComparisonTarget::Column { path, .. } => path,
