@@ -3,7 +3,9 @@ use std::collections::BTreeMap;
 use configuration::{schema, Configuration};
 use mongodb_support::BsonScalarType;
 use ndc_models::CollectionInfo;
-use ndc_test_helpers::{collection, make_primary_key_uniqueness_constraint, object_type};
+use ndc_test_helpers::{
+    collection, make_primary_key_uniqueness_constraint, named_type, object_type,
+};
 
 use crate::mongo_query_plan::MongoConfiguration;
 
