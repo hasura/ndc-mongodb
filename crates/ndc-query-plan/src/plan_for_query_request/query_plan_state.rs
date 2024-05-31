@@ -81,17 +81,30 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
             query,
         };
 
-        let relationship = match self.relationships.remove(&ndc_relationship_name) {
-            Some(already_registered_relationship) => {
-                unify_relationship_references(already_registered_relationship, relationship)?
+        let (key, relationship) = match self.relationships.remove_entry(&ndc_relationship_name) {
+            Some((existing_key, already_registered_relationship)) => {
+                match unify_relationship_references(
+                    already_registered_relationship.clone(),
+                    relationship.clone(),
+                ) {
+                    Ok(unified_relationship) => (ndc_relationship_name, unified_relationship),
+                    Err(_) => {
+                        // If relationships couldn't be unified then we need to store the new
+                        // relationship under a new key. We also need to put back the existing
+                        // relationship that we just removed.
+                        self.relationships
+                            .insert(existing_key, already_registered_relationship);
+                        let key = self.unique_name(ndc_relationship_name);
+                        (key, relationship)
+                    }
+                }
             }
-            None => relationship,
+            None => (ndc_relationship_name, relationship),
         };
 
-        self.relationships
-            .insert(ndc_relationship_name.clone(), relationship);
+        self.relationships.insert(key.clone(), relationship);
 
-        Ok(ndc_relationship_name)
+        Ok(key)
     }
 
     /// Record a collection reference so that it is added to the list of joins for the query
