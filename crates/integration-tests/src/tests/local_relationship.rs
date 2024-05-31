@@ -64,6 +64,31 @@ async fn filters_by_field_of_related_collection() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn filters_by_non_null_field_of_related_collection() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+            query {
+              comments(
+                limit: 10
+                where: {movie: {title: {_is_null: false}}}
+                order_by: {id: Asc}
+              ) {
+                movie {
+                  title
+                  year
+                }
+              }
+            }
+            "#
+        )
+        .run()
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn sorts_by_field_of_related_collection() -> anyhow::Result<()> {
     // Filter by rating to filter out comments whose movie relation is null.
     assert_yaml_snapshot!(
