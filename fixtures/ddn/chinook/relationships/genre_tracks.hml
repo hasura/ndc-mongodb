@@ -1,34 +1,34 @@
 kind: Relationship
 version: v1
 definition:
-  name: artist
-  source: Album
+  name: tracks
+  source: Genre
   target:
     model:
-      name: Artist
-      relationshipType: Object
+      name: Track
+      relationshipType: Array
   mapping:
     - source:
         fieldPath:
-          - fieldName: artistId
+          - fieldName: genreId
       target:
         modelField:
-          - fieldName: artistId
+          - fieldName: genreId
 
 ---
 kind: Relationship
 version: v1
 definition:
-  name: albums
-  source: Artist
+  name: genre
+  source: Track
   target:
     model:
-      name: Album
-      relationshipType: Array
+      name: Genre
+      relationshipType: Object
   mapping:
     - source:
         fieldPath:
-          - fieldName: artistId
+          - fieldName: genreId
       target:
         modelField:
-          - fieldName: artistId
+          - fieldName: genreId
