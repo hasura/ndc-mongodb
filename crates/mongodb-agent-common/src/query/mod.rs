@@ -6,6 +6,7 @@ mod make_selector;
 mod make_sort;
 mod native_query;
 mod pipeline;
+mod query_level;
 mod query_target;
 mod relations;
 pub mod response;

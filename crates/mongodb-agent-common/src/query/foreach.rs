@@ -2,6 +2,7 @@ use mongodb::bson::{doc, Bson};
 use ndc_query_plan::VariableSet;
 
 use super::pipeline::pipeline_for_non_foreach;
+use super::query_level::QueryLevel;
 use crate::mongo_query_plan::{MongoConfiguration, QueryPlan};
 use crate::mongodb::Selection;
 use crate::{
@@ -25,7 +26,8 @@ pub fn pipeline_for_foreach(
         .iter()
         .enumerate()
         .map(|(index, variables)| {
-            let pipeline = pipeline_for_non_foreach(config, Some(variables), query_request)?;
+            let pipeline =
+                pipeline_for_non_foreach(config, Some(variables), query_request, QueryLevel::Top)?;
             Ok((facet_name(index), pipeline))
         })
         .collect::<Result<_, MongoAgentError>>()?;

@@ -89,6 +89,27 @@ async fn filters_by_non_null_field_of_related_collection() -> anyhow::Result<()>
 }
 
 #[tokio::test]
+async fn filters_by_field_of_relationship_of_relationship() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+            query {
+              artist(where: {albums: {tracks: {name: {_eq: "Princess of the Dawn"}}}}) {
+                name
+                albums(order_by: {title: Asc}) {
+                  title
+                }
+              }
+            }
+            "#
+        )
+        .run()
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn sorts_by_field_of_related_collection() -> anyhow::Result<()> {
     // Filter by rating to filter out comments whose movie relation is null.
     assert_yaml_snapshot!(

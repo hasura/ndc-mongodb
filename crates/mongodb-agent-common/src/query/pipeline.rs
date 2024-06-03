@@ -16,6 +16,7 @@ use super::{
     foreach::pipeline_for_foreach,
     make_selector, make_sort,
     native_query::pipeline_for_native_query,
+    query_level::QueryLevel,
     relations::pipeline_for_relations,
 };
 
@@ -41,7 +42,7 @@ pub fn pipeline_for_query_request(
     if let Some(variable_sets) = &query_plan.variables {
         pipeline_for_foreach(variable_sets, config, query_plan)
     } else {
-        pipeline_for_non_foreach(config, None, query_plan)
+        pipeline_for_non_foreach(config, None, query_plan, QueryLevel::Top)
     }
 }
 
@@ -54,6 +55,7 @@ pub fn pipeline_for_non_foreach(
     config: &MongoConfiguration,
     variables: Option<&VariableSet>,
     query_plan: &QueryPlan,
+    query_level: QueryLevel,
 ) -> Result<Pipeline, MongoAgentError> {
     let query = &query_plan.query;
     let Query {
@@ -91,12 +93,13 @@ pub fn pipeline_for_non_foreach(
     // sort and limit stages if we are requesting rows only. In both cases the last stage is
     // a $replaceWith.
     let diverging_stages = if is_response_faceted(query) {
-        let (facet_pipelines, select_facet_results) = facet_pipelines_for_query(query_plan)?;
+        let (facet_pipelines, select_facet_results) =
+            facet_pipelines_for_query(query_plan, query_level)?;
         let aggregation_stages = Stage::Facet(facet_pipelines);
         let replace_with_stage = Stage::ReplaceWith(select_facet_results);
         Pipeline::from_iter([aggregation_stages, replace_with_stage])
     } else {
-        pipeline_for_fields_facet(query_plan)?
+        pipeline_for_fields_facet(query_plan, query_level)?
     };
 
     pipeline.append(diverging_stages);
@@ -107,11 +110,29 @@ pub fn pipeline_for_non_foreach(
 /// within a $facet stage. We assume that the query's `where`, `order_by`, `offset` criteria (which
 /// are shared with aggregates) have already been applied, and that we have already joined
 /// relations.
-pub fn pipeline_for_fields_facet(query_plan: &QueryPlan) -> Result<Pipeline, MongoAgentError> {
-    let Query { limit, .. } = &query_plan.query;
+pub fn pipeline_for_fields_facet(
+    query_plan: &QueryPlan,
+    query_level: QueryLevel,
+) -> Result<Pipeline, MongoAgentError> {
+    let Query {
+        limit,
+        relationships,
+        ..
+    } = &query_plan.query;
+
+    let mut selection = Selection::from_query_request(query_plan)?;
+    if query_level != QueryLevel::Top {
+        // Queries higher up the chain might need to reference relationships from this query. So we
+        // forward relationship arrays if this is not the top-level query.
+        for relationship_key in relationships.keys() {
+            selection
+                .0
+                .insert(relationship_key.to_owned(), get_field(relationship_key));
+        }
+    }
 
     let limit_stage = limit.map(Stage::Limit);
-    let replace_with_stage: Stage = Stage::ReplaceWith(Selection::from_query_request(query_plan)?);
+    let replace_with_stage: Stage = Stage::ReplaceWith(selection);
 
     Ok(Pipeline::from_iter(
         [limit_stage, replace_with_stage.into()]
@@ -125,6 +146,7 @@ pub fn pipeline_for_fields_facet(query_plan: &QueryPlan) -> Result<Pipeline, Mon
 /// `QueryResponse`.
 fn facet_pipelines_for_query(
     query_plan: &QueryPlan,
+    query_level: QueryLevel,
 ) -> Result<(BTreeMap<String, Pipeline>, Selection), MongoAgentError> {
     let query = &query_plan.query;
     let Query {
@@ -145,7 +167,7 @@ fn facet_pipelines_for_query(
         .collect::<Result<BTreeMap<_, _>, MongoAgentError>>()?;
 
     if fields.is_some() {
-        let fields_pipeline = pipeline_for_fields_facet(query_plan)?;
+        let fields_pipeline = pipeline_for_fields_facet(query_plan, query_level)?;
         facet_pipelines.insert(ROWS_FIELD.to_owned(), fields_pipeline);
     }
 

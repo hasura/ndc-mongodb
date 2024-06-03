@@ -13,6 +13,7 @@ use crate::{
 };
 
 use super::pipeline::pipeline_for_non_foreach;
+use super::query_level::QueryLevel;
 
 type Result<T> = std::result::Result<T, MongoAgentError>;
 
@@ -40,6 +41,7 @@ pub fn pipeline_for_relations(
                     collection: relationship.target_collection.clone(),
                     ..query_plan.clone()
                 },
+                QueryLevel::Relationship,
             )?;
 
             make_lookup_stage(
@@ -499,16 +501,7 @@ mod tests {
                         },
                         {
                             "$replaceWith": {
-                                "assignments": {
-                                    "rows": {
-                                        "$map": {
-                                            "input": { "$getField": { "$literal": "assignments" } },
-                                            "in": {
-                                                "assignment_title": "$$this.assignment_title"
-                                            }
-                                        }
-                                    }
-                                },
+                                "assignments": { "$getField": { "$literal": "assignments" } },
                                 "student_name": { "$ifNull": ["$name", null] },
                             },
                         },
@@ -564,7 +557,7 @@ mod tests {
         );
 
         let result = execute_query_request(db, &students_config(), query_request).await?;
-        assert_eq!(expected_response, result);
+        assert_eq!(result, expected_response);
 
         Ok(())
     }
@@ -740,7 +733,7 @@ mod tests {
                         "year": "$$this.year",
                         "title": "$$this.title",
                     }
-                  }  
+                  }
                 }
               },
               "name": { "$ifNull": ["$name", null] }
