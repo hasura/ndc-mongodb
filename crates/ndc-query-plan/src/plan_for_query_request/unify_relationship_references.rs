@@ -61,9 +61,9 @@ where
     Ok(relationship)
 }
 
-// TODO: The engine may be set up to avoid a situation where we encounter a mismatch. If we run
-// into an error here we'll have to make a change to create multiple relationship references with
-// different names instead of unifying.
+// TODO: The engine may be set up to avoid a situation where we encounter a mismatch. For now we're
+// being pessimistic, and if we get an error here we record the two relationships under separate
+// keys instead of recording one, unified relationship.
 fn unify_arguments(
     a: BTreeMap<String, RelationshipArgument>,
     b: BTreeMap<String, RelationshipArgument>,
@@ -312,4 +312,112 @@ where
     merge_join_by(entries_a, entries_b, |(key_a, _), (key_b, _)| {
         key_a.cmp(key_b)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use pretty_assertions::assert_eq;
+
+    use crate::{
+        field, object,
+        plan_for_query_request::plan_test_helpers::{
+            date, double, int, object_type, relationship, string, TestContext,
+        },
+        Relationship,
+    };
+
+    use super::unify_relationship_references;
+
+    #[test]
+    fn unifies_relationships_with_differing_fields() -> anyhow::Result<()> {
+        let a: Relationship<TestContext> = relationship("movies")
+            .fields([field!("title": string()), field!("year": int())])
+            .into();
+
+        let b = relationship("movies")
+            .fields([field!("year": int()), field!("rated": string())])
+            .into();
+
+        let expected = relationship("movies")
+            .fields([
+                field!("title": string()),
+                field!("year": int()),
+                field!("rated": string()),
+            ])
+            .into();
+
+        let unified = unify_relationship_references(a, b)?;
+        assert_eq!(unified, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn unifies_relationships_with_differing_aliases_for_field() -> anyhow::Result<()> {
+        let a: Relationship<TestContext> = relationship("movies")
+            .fields([field!("title": string())])
+            .into();
+
+        let b: Relationship<TestContext> = relationship("movies")
+            .fields([field!("movie_title" => "title": string())])
+            .into();
+
+        let expected = relationship("movies")
+            .fields([
+                field!("title": string()),
+                field!("movie_title" => "title": string()),
+            ])
+            .into();
+
+        let unified = unify_relationship_references(a, b)?;
+        assert_eq!(unified, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn unifies_nested_field_selections() -> anyhow::Result<()> {
+        let tomatoes_type = object_type([
+            (
+                "viewer",
+                object_type([("numReviews", int()), ("rating", double())]),
+            ),
+            ("lastUpdated", date()),
+        ]);
+
+        let a: Relationship<TestContext> = relationship("movies")
+            .fields([
+                field!("tomatoes" => "tomatoes": tomatoes_type.clone(), object!([
+                    field!("viewer" => "viewer": string(), object!([
+                        field!("rating": double())
+                    ]))
+                ])),
+            ])
+            .into();
+
+        let b: Relationship<TestContext> = relationship("movies")
+            .fields([
+                field!("tomatoes" => "tomatoes": tomatoes_type.clone(), object!([
+                    field!("viewer" => "viewer": string(), object!([
+                        field!("numReviews": int())
+                    ])),
+                    field!("lastUpdated": date())
+                ])),
+            ])
+            .into();
+
+        let expected: Relationship<TestContext> = relationship("movies")
+            .fields([
+                field!("tomatoes" => "tomatoes": tomatoes_type.clone(), object!([
+                    field!("viewer" => "viewer": string(), object!([
+                        field!("rating": double()),
+                        field!("numReviews": int())
+                    ])),
+                    field!("lastUpdated": date())
+                ])),
+            ])
+            .into();
+
+        let unified = unify_relationship_references(a, b)?;
+        assert_eq!(unified, expected);
+        Ok(())
+    }
 }

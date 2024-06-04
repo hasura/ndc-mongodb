@@ -1,0 +1,78 @@
+#[macro_export]
+macro_rules! field {
+    ($name:literal: $typ:expr) => {
+        (
+            $name,
+            $crate::Field::Column {
+                column: $name.to_owned(),
+                column_type: $typ,
+                fields: None,
+            },
+        )
+    };
+    ($name:literal => $column_name:literal: $typ:expr) => {
+        (
+            $name,
+            $crate::Field::Column {
+                column: $column_name.to_owned(),
+                column_type: $typ,
+                fields: None,
+            },
+        )
+    };
+    ($name:literal => $column_name:literal: $typ:expr, $fields:expr) => {
+        (
+            $name,
+            $crate::Field::Column {
+                column: $column_name.to_owned(),
+                column_type: $typ,
+                fields: Some($fields.into()),
+            },
+        )
+    };
+}
+
+#[macro_export]
+macro_rules! object {
+    ($fields:expr) => {
+        $crate::NestedField::Object($crate::NestedObject {
+            fields: $fields
+                .into_iter()
+                .map(|(name, field)| (name.to_owned(), field))
+                .collect(),
+        })
+    };
+}
+
+#[macro_export]
+macro_rules! array {
+    ($fields:expr) => {
+        $crate::NestedField::Array($crate::NestedArray {
+            fields: Box::new($fields),
+        })
+    };
+}
+
+#[macro_export]
+macro_rules! relation_field {
+    ($name:literal => $relationship:literal) => {
+        (
+            $name,
+            $crate::Field::Relationship {
+                query: Box::new($crate::query().into()),
+                relationship: $relationship.to_owned(),
+                arguments: Default::default(),
+            },
+        )
+    };
+    ($name:literal => $relationship:literal, $query:expr) => {
+        (
+            $name,
+            $crate::Field::Relationship {
+                query: Box::new($query.into()),
+                relationship: $relationship.to_owned(),
+                arguments: Default::default(),
+            },
+        )
+    };
+}
