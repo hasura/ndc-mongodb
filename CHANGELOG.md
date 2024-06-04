@@ -2,6 +2,7 @@
 This changelog documents the changes between release versions.
 
 ## [Unreleased]
+- Support filtering and sorting by fields of related collections ([#72](https://github.com/hasura/ndc-mongodb/pull/72))
 
 ## [0.0.6] - 2024-05-01
 - Enables logging events from the MongoDB driver by setting the `RUST_LOG` variable ([#67](https://github.com/hasura/ndc-mongodb/pull/67))

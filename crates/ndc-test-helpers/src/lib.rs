@@ -79,14 +79,14 @@ impl QueryRequestBuilder {
         self
     }
 
-    pub fn relationships<const S: usize>(
+    pub fn relationships(
         mut self,
-        relationships: [(&str, impl Into<Relationship>); S],
+        relationships: impl IntoIterator<Item = (impl ToString, impl Into<Relationship>)>,
     ) -> Self {
         self.collection_relationships = Some(
             relationships
                 .into_iter()
-                .map(|(name, r)| (name.to_owned(), r.into()))
+                .map(|(name, r)| (name.to_string(), r.into()))
                 .collect(),
         );
         self

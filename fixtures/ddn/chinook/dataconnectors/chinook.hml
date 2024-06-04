@@ -647,7 +647,7 @@ definition:
                 type: nullable
                 underlying_type:
                   type: named
-                  name: ExtendedJSON
+                  name: Int
             State:
               type:
                 type: named

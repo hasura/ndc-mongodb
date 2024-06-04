@@ -13,6 +13,7 @@ use crate::{
 };
 
 use super::pipeline::pipeline_for_non_foreach;
+use super::query_level::QueryLevel;
 
 type Result<T> = std::result::Result<T, MongoAgentError>;
 
@@ -40,6 +41,7 @@ pub fn pipeline_for_relations(
                     collection: relationship.target_collection.clone(),
                     ..query_plan.clone()
                 },
+                QueryLevel::Relationship,
             )?;
 
             make_lookup_stage(
@@ -167,6 +169,7 @@ mod tests {
     use crate::{
         mongo_query_plan::MongoConfiguration,
         mongodb::test_helpers::mock_collection_aggregate_response_for_pipeline,
+        test_helpers::mflix_config,
     };
 
     #[tokio::test]
@@ -219,8 +222,13 @@ mod tests {
                     "class_title": { "$ifNull": ["$title", null] },
                     "students": {
                         "rows": {
-                            "$getField": { "$literal": "class_students" },
-                        },
+                            "$map": {
+                                "input": { "$getField": { "$literal": "class_students" } },
+                                "in": {
+                                    "student_name": "$$this.student_name"
+                                }
+                            }
+                        }
                     },
                 },
             },
@@ -298,8 +306,15 @@ mod tests {
             {
                 "$replaceWith": {
                     "student_name": { "$ifNull": ["$name", null] },
-                    "class": { "rows": {
-                        "$getField": { "$literal": "student_class" } }
+                    "class": {
+                        "rows": {
+                            "$map": {
+                                "input": { "$getField": { "$literal": "student_class" } },
+                                "in": {
+                                    "class_title": "$$this.class_title"
+                                }
+                            }
+                        }
                     },
                 },
             },
@@ -385,7 +400,14 @@ mod tests {
                 "$replaceWith": {
                     "class_title": { "$ifNull": ["$title", null] },
                     "students": {
-                        "rows": { "$getField": { "$literal": "students" } },
+                        "rows": {
+                            "$map": {
+                                "input": { "$getField": { "$literal": "students" } },
+                                "in": {
+                                    "student_name": "$$this.student_name"
+                                }
+                            }
+                        }
                     },
                 },
             },
@@ -479,9 +501,7 @@ mod tests {
                         },
                         {
                             "$replaceWith": {
-                                "assignments": {
-                                    "rows": { "$getField": { "$literal": "assignments" } },
-                                },
+                                "assignments": { "$getField": { "$literal": "assignments" } },
                                 "student_name": { "$ifNull": ["$name", null] },
                             },
                         },
@@ -493,7 +513,15 @@ mod tests {
                 "$replaceWith": {
                     "class_title": { "$ifNull": ["$title", null] },
                     "students": {
-                        "rows": { "$getField": { "$literal": "students" } },
+                        "rows": {
+                            "$map": {
+                                "input": { "$getField": { "$literal": "students" } },
+                                "in": {
+                                    "assignments": "$$this.assignments",
+                                    "student_name": "$$this.student_name",
+                                }
+                            }
+                        }
                     },
                 },
             },
@@ -529,7 +557,7 @@ mod tests {
         );
 
         let result = execute_query_request(db, &students_config(), query_request).await?;
-        assert_eq!(expected_response, result);
+        assert_eq!(result, expected_response);
 
         Ok(())
     }
@@ -589,9 +617,18 @@ mod tests {
             },
             {
                 "$replaceWith": {
-                    "students_aggregate": { "$first": {
-                        "$getField": { "$literal": "students" }
-                    } }
+                    "students_aggregate": {
+                        "$let": {
+                            "vars": {
+                                "row_set": { "$first": { "$getField": { "$literal": "students" } } }
+                            },
+                            "in": {
+                                "aggregates": {
+                                    "aggregate_count": "$$row_set.aggregates.aggregate_count"
+                                }
+                            }
+                        }
+                    }
                 },
             },
         ]);
@@ -615,7 +652,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn filters_by_field_of_related_collection() -> Result<(), anyhow::Error> {
+    async fn filters_by_field_of_related_collection_using_exists() -> Result<(), anyhow::Error> {
         let query_request = query_request()
             .collection("comments")
             .query(
@@ -690,8 +727,12 @@ mod tests {
             "$replaceWith": {
               "movie": {
                 "rows": {
-                  "$getField": {
-                    "$literal": "movie"
+                  "$map": {
+                    "input": { "$getField": { "$literal": "movie" } },
+                    "in": {
+                        "year": "$$this.year",
+                        "title": "$$this.title",
+                    }
                   }
                 }
               },
@@ -859,41 +900,6 @@ mod tests {
                         ("classId", named_type("ObjectId")),
                         ("gpa", named_type("Double")),
                         ("name", named_type("String")),
-                        ("year", named_type("Int")),
-                    ]),
-                ),
-            ]
-            .into(),
-            functions: Default::default(),
-            procedures: Default::default(),
-            native_mutations: Default::default(),
-            native_queries: Default::default(),
-            options: Default::default(),
-        })
-    }
-
-    fn mflix_config() -> MongoConfiguration {
-        MongoConfiguration(Configuration {
-            collections: [collection("comments"), collection("movies")].into(),
-            object_types: [
-                (
-                    "comments".into(),
-                    object_type([
-                        ("_id", named_type("ObjectId")),
-                        ("movie_id", named_type("ObjectId")),
-                        ("name", named_type("String")),
-                    ]),
-                ),
-                (
-                    "credits".into(),
-                    object_type([("director", named_type("String"))]),
-                ),
-                (
-                    "movies".into(),
-                    object_type([
-                        ("_id", named_type("ObjectId")),
-                        ("credits", named_type("credits")),
-                        ("title", named_type("String")),
                         ("year", named_type("Int")),
                     ]),
                 ),

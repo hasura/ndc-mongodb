@@ -96,7 +96,7 @@ fn lookup_object_type_helper<ScalarType>(
                 Ok((
                     name.to_owned(),
                     inline_object_types(object_types, &field.r#type, lookup_scalar_type)?,
-                ))
+                )) as Result<_, QueryPlanError>
             })
             .try_collect()?,
     };

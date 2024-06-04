@@ -1,3 +1,8 @@
+pub mod field;
+mod query;
+mod relationships;
+mod type_helpers;
+
 use std::{collections::BTreeMap, fmt::Display};
 
 use enum_iterator::Sequence;
@@ -5,10 +10,17 @@ use lazy_static::lazy_static;
 use ndc::TypeRepresentation;
 use ndc_models as ndc;
 use ndc_test_helpers::{
-    array_of, collection, make_primary_key_uniqueness_constraint, named_type, nullable, object_type,
+    array_of, collection, make_primary_key_uniqueness_constraint, named_type, nullable,
 };
 
 use crate::{ConnectorTypes, QueryContext, QueryPlanError, Type};
+
+#[allow(unused_imports)]
+pub use self::{
+    query::{query, QueryBuilder},
+    relationships::{relationship, RelationshipBuilder},
+    type_helpers::{date, double, int, object_type, string},
+};
 
 #[derive(Clone, Debug, Default)]
 pub struct TestContext {
@@ -113,6 +125,7 @@ impl NamedEnum for ComparisonOperator {
 #[derive(Clone, Copy, Debug, PartialEq, Sequence)]
 pub enum ScalarType {
     Bool,
+    Date,
     Double,
     Int,
     String,
@@ -122,6 +135,7 @@ impl NamedEnum for ScalarType {
     fn name(self) -> &'static str {
         match self {
             ScalarType::Bool => "Bool",
+            ScalarType::Date => "Date",
             ScalarType::Double => "Double",
             ScalarType::Int => "Int",
             ScalarType::String => "String",
@@ -253,14 +267,14 @@ pub fn make_flat_schema() -> TestContext {
         object_types: BTreeMap::from([
             (
                 "Author".into(),
-                object_type([
+                ndc_test_helpers::object_type([
                     ("id", named_type(ScalarType::Int)),
                     ("last_name", named_type(ScalarType::String)),
                 ]),
             ),
             (
                 "Article".into(),
-                object_type([
+                ndc_test_helpers::object_type([
                     ("author_id", named_type(ScalarType::Int)),
                     ("title", named_type(ScalarType::String)),
                     ("year", nullable(named_type(ScalarType::Int))),
@@ -291,7 +305,7 @@ pub fn make_nested_schema() -> TestContext {
         object_types: BTreeMap::from([
             (
                 "Author".to_owned(),
-                object_type([
+                ndc_test_helpers::object_type([
                     ("name", named_type(ScalarType::String)),
                     ("address", named_type("Address")),
                     ("articles", array_of(named_type("Article"))),
@@ -300,7 +314,7 @@ pub fn make_nested_schema() -> TestContext {
             ),
             (
                 "Address".into(),
-                object_type([
+                ndc_test_helpers::object_type([
                     ("country", named_type(ScalarType::String)),
                     ("street", named_type(ScalarType::String)),
                     ("apartment", nullable(named_type(ScalarType::String))),
@@ -309,18 +323,18 @@ pub fn make_nested_schema() -> TestContext {
             ),
             (
                 "Article".into(),
-                object_type([("title", named_type(ScalarType::String))]),
+                ndc_test_helpers::object_type([("title", named_type(ScalarType::String))]),
             ),
             (
                 "Geocode".into(),
-                object_type([
+                ndc_test_helpers::object_type([
                     ("latitude", named_type(ScalarType::Double)),
                     ("longitude", named_type(ScalarType::Double)),
                 ]),
             ),
             (
                 "appearances".to_owned(),
-                object_type([("authorId", named_type(ScalarType::Int))]),
+                ndc_test_helpers::object_type([("authorId", named_type(ScalarType::Int))]),
             ),
         ]),
         procedures: Default::default(),

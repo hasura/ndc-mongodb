@@ -31,7 +31,7 @@ definition:
     - name: postalCode
       type: String!
     - name: reportsTo
-      type: Chinook_ExtendedJson
+      type: Int
     - name: state
       type: String!
     - name: title

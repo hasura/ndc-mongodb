@@ -76,12 +76,18 @@ fn type_annotated_field_helper<T: QueryContext>(
                 *query,
             )?;
 
-            let (relationship_key, plan_relationship) =
+            // It's important to get fields and aggregates from the constructed relationship query
+            // before it is registered because at that point fields and aggregates will be merged
+            // with fields and aggregates from other references to the same relationship.
+            let aggregates = query_plan.aggregates.clone();
+            let fields = query_plan.fields.clone();
+
+            let relationship_key =
                 plan_state.register_relationship(relationship, arguments, query_plan)?;
             Field::Relationship {
-                relationship: relationship_key.to_owned(),
-                aggregates: plan_relationship.query.aggregates.clone(),
-                fields: plan_relationship.query.fields.clone(),
+                relationship: relationship_key,
+                aggregates,
+                fields,
             }
         }
     };
@@ -132,7 +138,7 @@ fn type_annotated_nested_field_helper<T: QueryContext>(
                                 field.clone(),
                                 &append_to_path(path, [name.as_ref()]),
                             )?,
-                        ))
+                        )) as Result<_>
                     })
                     .try_collect()?,
             })

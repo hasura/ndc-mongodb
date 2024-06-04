@@ -1,0 +1,70 @@
+kind: Relationship
+version: v1
+definition:
+  name: playlistTracks
+  source: Playlist
+  target:
+    model:
+      name: PlaylistTrack
+      relationshipType: Array
+  mapping:
+    - source:
+        fieldPath:
+          - fieldName: playlistId
+      target:
+        modelField:
+          - fieldName: playlistId
+
+---
+kind: Relationship
+version: v1
+definition:
+  name: playlist
+  source: PlaylistTrack
+  target:
+    model:
+      name: Playlist
+      relationshipType: Object
+  mapping:
+    - source:
+        fieldPath:
+          - fieldName: playlistId
+      target:
+        modelField:
+          - fieldName: playlistId
+
+---
+kind: Relationship
+version: v1
+definition:
+  name: track
+  source: PlaylistTrack
+  target:
+    model:
+      name: Track
+      relationshipType: Object
+  mapping:
+    - source:
+        fieldPath:
+          - fieldName: trackId
+      target:
+        modelField:
+          - fieldName: trackId
+
+---
+kind: Relationship
+version: v1
+definition:
+  name: playlistTracks
+  source: Track
+  target:
+    model:
+      name: PlaylistTrack
+      relationshipType: Array
+  mapping:
+    - source:
+        fieldPath:
+          - fieldName: trackId
+      target:
+        modelField:
+          - fieldName: trackId

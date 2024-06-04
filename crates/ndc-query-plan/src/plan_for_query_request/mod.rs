@@ -3,16 +3,19 @@ pub mod query_context;
 pub mod query_plan_error;
 mod query_plan_state;
 pub mod type_annotated_field;
+mod unify_relationship_references;
 
 #[cfg(test)]
 mod plan_test_helpers;
+#[cfg(test)]
+mod tests;
 
 use std::collections::VecDeque;
 
 use crate::{self as plan, type_annotated_field, ObjectType, QueryPlan};
 use indexmap::IndexMap;
-use itertools::Itertools as _;
-use ndc::QueryRequest;
+use itertools::Itertools;
+use ndc::{ExistsInCollection, QueryRequest};
 use ndc_models as ndc;
 
 use self::{
@@ -206,13 +209,14 @@ fn plan_for_order_by_element<T: QueryContext>(
 ) -> Result<plan::OrderByElement<T>> {
     let target = match element.target {
         ndc::OrderByTarget::Column { name, path } => plan::OrderByTarget::Column {
-            name,
+            name: name.clone(),
             field_path: Default::default(), // TODO: propagate this after ndc-spec update
             path: plan_for_relationship_path(
                 plan_state,
                 root_collection_object_type,
                 object_type,
                 path,
+                vec![name],
             )?
             .0,
         },
@@ -226,6 +230,7 @@ fn plan_for_order_by_element<T: QueryContext>(
                 root_collection_object_type,
                 object_type,
                 path,
+                vec![], // TODO: MDB-156 propagate requested aggregate to relationship query
             )?;
             let column_type = find_object_field(&target_object_type, &column)?;
             let (function, function_definition) = plan_state
@@ -245,6 +250,7 @@ fn plan_for_order_by_element<T: QueryContext>(
                 root_collection_object_type,
                 object_type,
                 path,
+                vec![], // TODO: MDB-157 propagate requested aggregate to relationship query
             )?;
             plan::OrderByTarget::StarCountAggregate { path: plan_path }
         }
@@ -263,6 +269,7 @@ fn plan_for_relationship_path<T: QueryContext>(
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
     object_type: &plan::ObjectType<T::ScalarType>,
     relationship_path: Vec<ndc::PathElement>,
+    requested_columns: Vec<String>, // columns to select from last path element
 ) -> Result<(Vec<String>, ObjectType<T::ScalarType>)> {
     let end_of_relationship_path_object_type = relationship_path
         .last()
@@ -278,10 +285,17 @@ fn plan_for_relationship_path<T: QueryContext>(
         .transpose()?;
     let target_object_type = end_of_relationship_path_object_type.unwrap_or(object_type.clone());
 
+    let reversed_relationship_path = {
+        let mut path = relationship_path;
+        path.reverse();
+        path
+    };
+
     let vec_deque = plan_for_relationship_path_helper(
         plan_state,
         root_collection_object_type,
-        relationship_path,
+        reversed_relationship_path,
+        requested_columns,
     )?;
     let aliases = vec_deque.into_iter().collect();
 
@@ -291,57 +305,85 @@ fn plan_for_relationship_path<T: QueryContext>(
 fn plan_for_relationship_path_helper<T: QueryContext>(
     plan_state: &mut QueryPlanState<'_, T>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
-    relationship_path: impl IntoIterator<Item = ndc::PathElement>,
+    mut reversed_relationship_path: Vec<ndc::PathElement>,
+    requested_columns: Vec<String>, // columns to select from last path element
 ) -> Result<VecDeque<String>> {
-    let (head, tail) = {
-        let mut path_iter = relationship_path.into_iter();
-        let head = path_iter.next();
-        (head, path_iter)
-    };
-    if let Some(ndc::PathElement {
+    if reversed_relationship_path.is_empty() {
+        return Ok(VecDeque::new());
+    }
+
+    // safety: we just made an early return if the path is empty
+    let head = reversed_relationship_path.pop().unwrap();
+    let tail = reversed_relationship_path;
+    let is_last = tail.is_empty();
+
+    let ndc::PathElement {
         relationship,
         arguments,
         predicate,
-    }) = head
-    {
-        let relationship_def =
-            lookup_relationship(plan_state.collection_relationships, &relationship)?;
-        let related_collection_type = plan_state
-            .context
-            .find_collection_object_type(&relationship_def.target_collection)?;
-        let mut nested_state = plan_state.state_for_subquery();
+    } = head;
 
-        let mut rest_path = plan_for_relationship_path_helper(
+    let relationship_def = lookup_relationship(plan_state.collection_relationships, &relationship)?;
+    let related_collection_type = plan_state
+        .context
+        .find_collection_object_type(&relationship_def.target_collection)?;
+    let mut nested_state = plan_state.state_for_subquery();
+
+    // If this is the last path element then we need to apply the requested fields to the
+    // relationship query. Otherwise we need to recursively process the rest of the path. Both
+    // cases take ownership of `requested_columns` so we group them together.
+    let (mut rest_path, fields) = if is_last {
+        let fields = requested_columns
+            .into_iter()
+            .map(|column_name| {
+                let column_type =
+                    find_object_field(&related_collection_type, &column_name)?.clone();
+                Ok((
+                    column_name.clone(),
+                    plan::Field::Column {
+                        column: column_name,
+                        fields: None,
+                        column_type,
+                    },
+                ))
+            })
+            .collect::<Result<_>>()?;
+        (VecDeque::new(), Some(fields))
+    } else {
+        let rest = plan_for_relationship_path_helper(
             &mut nested_state,
             root_collection_object_type,
             tail,
+            requested_columns,
         )?;
+        (rest, None)
+    };
 
-        let nested_relationships = nested_state.into_relationships();
+    let predicate_plan = predicate
+        .map(|p| {
+            plan_for_expression(
+                &mut nested_state,
+                root_collection_object_type,
+                &related_collection_type,
+                *p,
+            )
+        })
+        .transpose()?;
 
-        let relationship_query = plan::Query {
-            predicate: predicate
-                .map(|p| {
-                    plan_for_expression(
-                        plan_state,
-                        root_collection_object_type,
-                        &related_collection_type,
-                        *p,
-                    )
-                })
-                .transpose()?,
-            relationships: nested_relationships,
-            ..Default::default()
-        };
+    let nested_relationships = nested_state.into_relationships();
 
-        let (relation_key, _) =
-            plan_state.register_relationship(relationship, arguments, relationship_query)?;
+    let relationship_query = plan::Query {
+        predicate: predicate_plan,
+        relationships: nested_relationships,
+        fields,
+        ..Default::default()
+    };
 
-        rest_path.push_front(relation_key.to_owned());
-        Ok(rest_path)
-    } else {
-        Ok(VecDeque::new())
-    }
+    let relation_key =
+        plan_state.register_relationship(relationship, arguments, relationship_query)?;
+
+    rest_path.push_front(relation_key);
+    Ok(rest_path)
 }
 
 fn plan_for_expression<T: QueryContext>(
@@ -383,9 +425,7 @@ fn plan_for_expression<T: QueryContext>(
                     object_type,
                     column,
                 )?,
-                operator: match operator {
-                    ndc::UnaryComparisonOperator::IsNull => ndc::UnaryComparisonOperator::IsNull,
-                },
+                operator,
             })
         }
         ndc::Expression::BinaryComparisonOperator {
@@ -403,89 +443,12 @@ fn plan_for_expression<T: QueryContext>(
         ndc::Expression::Exists {
             in_collection,
             predicate,
-        } => {
-            let mut nested_state = plan_state.state_for_subquery();
-
-            let (in_collection, predicate) = match in_collection {
-                ndc::ExistsInCollection::Related {
-                    relationship,
-                    arguments,
-                } => {
-                    let ndc_relationship =
-                        lookup_relationship(plan_state.collection_relationships, &relationship)?;
-                    let collection_object_type = plan_state
-                        .context
-                        .find_collection_object_type(&ndc_relationship.target_collection)?;
-
-                    let predicate = predicate
-                        .map(|expression| {
-                            plan_for_expression(
-                                &mut nested_state,
-                                root_collection_object_type,
-                                &collection_object_type,
-                                *expression,
-                            )
-                        })
-                        .transpose()?;
-
-                    let relationship_query = plan::Query {
-                        predicate: predicate.clone(),
-                        relationships: nested_state.into_relationships(),
-                        ..Default::default()
-                    };
-
-                    let (relationship_key, _) = plan_state.register_relationship(
-                        relationship,
-                        arguments,
-                        relationship_query,
-                    )?;
-
-                    let in_collection = plan::ExistsInCollection::Related {
-                        relationship: relationship_key.to_owned(),
-                    };
-
-                    Ok((in_collection, predicate))
-                }
-                ndc::ExistsInCollection::Unrelated {
-                    collection,
-                    arguments,
-                } => {
-                    let collection_object_type = plan_state
-                        .context
-                        .find_collection_object_type(&collection)?;
-
-                    let predicate = predicate
-                        .map(|expression| {
-                            plan_for_expression(
-                                &mut nested_state,
-                                root_collection_object_type,
-                                &collection_object_type,
-                                *expression,
-                            )
-                        })
-                        .transpose()?;
-
-                    let join_query = plan::Query {
-                        predicate: predicate.clone(),
-                        relationships: nested_state.into_relationships(),
-                        ..Default::default()
-                    };
-
-                    let join_key =
-                        plan_state.register_unrelated_join(collection, arguments, join_query);
-
-                    let in_collection = plan::ExistsInCollection::Unrelated {
-                        unrelated_collection: join_key,
-                    };
-                    Ok((in_collection, predicate))
-                }
-            }?;
-
-            Ok(plan::Expression::Exists {
-                in_collection,
-                predicate: predicate.map(Box::new),
-            })
-        }
+        } => plan_for_exists(
+            plan_state,
+            root_collection_object_type,
+            in_collection,
+            predicate,
+        ),
     }
 }
 
@@ -530,11 +493,13 @@ fn plan_for_comparison_target<T: QueryContext>(
 ) -> Result<plan::ComparisonTarget<T>> {
     match target {
         ndc::ComparisonTarget::Column { name, path } => {
+            let requested_columns = vec![name.clone()];
             let (path, target_object_type) = plan_for_relationship_path(
                 plan_state,
                 root_collection_object_type,
                 object_type,
                 path,
+                requested_columns,
             )?;
             let column_type = find_object_field(&target_object_type, &name)?.clone();
             Ok(plan::ComparisonTarget::Column {
@@ -582,853 +547,102 @@ fn plan_for_comparison_value<T: QueryContext>(
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use ndc_models::{self as ndc, OrderByTarget, OrderDirection, RelationshipType};
-    use ndc_test_helpers::*;
-    use pretty_assertions::assert_eq;
-    use serde_json::json;
+fn plan_for_exists<T: QueryContext>(
+    plan_state: &mut QueryPlanState<'_, T>,
+    root_collection_object_type: &plan::ObjectType<T::ScalarType>,
+    in_collection: ExistsInCollection,
+    predicate: Option<Box<ndc::Expression>>,
+) -> Result<plan::Expression<T>> {
+    let mut nested_state = plan_state.state_for_subquery();
 
-    use crate::{
-        self as plan,
-        plan_for_query_request::plan_test_helpers::{
-            self, make_flat_schema, make_nested_schema, TestContext,
-        },
-        query_plan::UnrelatedJoin,
-        ExistsInCollection, Expression, Field, OrderBy, Query, QueryContext, QueryPlan,
-        Relationship,
-    };
+    let (in_collection, predicate) = match in_collection {
+        ndc::ExistsInCollection::Related {
+            relationship,
+            arguments,
+        } => {
+            let ndc_relationship =
+                lookup_relationship(plan_state.collection_relationships, &relationship)?;
+            let collection_object_type = plan_state
+                .context
+                .find_collection_object_type(&ndc_relationship.target_collection)?;
 
-    use super::plan_for_query_request;
+            let predicate = predicate
+                .map(|expression| {
+                    plan_for_expression(
+                        &mut nested_state,
+                        root_collection_object_type,
+                        &collection_object_type,
+                        *expression,
+                    )
+                })
+                .transpose()?;
 
-    #[test]
-    fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
-        let request = query_request()
-            .collection("schools")
-            .relationships([
-                (
-                    "school_classes",
-                    relationship("classes", [("_id", "school_id")]),
-                ),
-                (
-                    "class_students",
-                    relationship("students", [("_id", "class_id")]),
-                ),
-                (
-                    "class_department",
-                    relationship("departments", [("department_id", "_id")]).object_type(),
-                ),
-                (
-                    "school_directory",
-                    relationship("directory", [("_id", "school_id")]).object_type(),
-                ),
-                (
-                    "student_advisor",
-                    relationship("advisors", [("advisor_id", "_id")]).object_type(),
-                ),
-                (
-                    "existence_check",
-                    relationship("some_collection", [("some_id", "_id")]),
-                ),
-            ])
-            .query(
-                query()
-                    .fields([relation_field!("class_name" => "school_classes", query()
-                        .fields([
-                            relation_field!("student_name" => "class_students")
-                        ])
-                    )])
-                    .order_by(vec![ndc::OrderByElement {
-                        order_direction: OrderDirection::Asc,
-                        target: OrderByTarget::Column {
-                            name: "advisor_name".to_owned(),
-                            path: vec![
-                                path_element("school_classes")
-                                    .predicate(binop(
-                                        "Equal",
-                                        target!(
-                                            "_id",
-                                            relations: [
-                                                path_element("school_classes"),
-                                                path_element("class_department"),
-                                            ],
-                                        ),
-                                        column_value!(
-                                            "math_department_id",
-                                            relations: [path_element("school_directory")],
-                                        ),
-                                    ))
-                                    .into(),
-                                path_element("class_students").into(),
-                                path_element("student_advisor").into(),
-                            ],
-                        },
-                    }])
-                    // The `And` layer checks that we properly recursive into Expressions
-                    .predicate(and([ndc::Expression::Exists {
-                        in_collection: related!("existence_check"),
-                        predicate: None,
-                    }])),
-            )
-            .into();
-
-        let expected = QueryPlan {
-            collection: "schools".to_owned(),
-            arguments: Default::default(),
-            variables: None,
-            unrelated_collections: Default::default(),
-            query: Query {
-                predicate: Some(Expression::And {
-                    expressions: vec![Expression::Exists {
-                        in_collection: ExistsInCollection::Related {
-                            relationship: "existence_check".into(),
-                        },
-                        predicate: None,
-                    }],
-                }),
-                order_by: Some(OrderBy {
-                    elements: [plan::OrderByElement {
-                        order_direction: OrderDirection::Asc,
-                        target: plan::OrderByTarget::Column {
-                            name: "advisor_name".into(),
-                            field_path: Default::default(),
-                            path: [
-                                "school_classes".into(),
-                                "class_students".into(),
-                                "student_advisor".into(),
-                            ]
-                            .into(),
-                        },
-                    }]
-                    .into(),
-                }),
-                relationships: [
-                    (
-                        "school_classes".to_owned(),
-                        Relationship {
-                            column_mapping: [("_id".to_owned(), "school_id".to_owned())].into(),
-                            relationship_type: RelationshipType::Array,
-                            target_collection: "classes".to_owned(),
-                            arguments: Default::default(),
-                            query: Query {
-                                fields: Some(
-                                    [(
-                                        "student_name".into(),
-                                        plan::Field::Relationship {
-                                            relationship: "class_students".into(),
-                                            aggregates: None,
-                                            fields: None,
-                                        },
-                                    )]
-                                    .into(),
-                                ),
-                                relationships: [(
-                                    "class_students".into(),
-                                    plan::Relationship {
-                                        target_collection: "students".into(),
-                                        column_mapping: [("_id".into(), "class_id".into())].into(),
-                                        relationship_type: RelationshipType::Array,
-                                        arguments: Default::default(),
-                                        query: Default::default(),
-                                    },
-                                )]
-                                .into(),
-                                ..Default::default()
-                            },
-                        },
-                    ),
-                    (
-                        "school_directory".to_owned(),
-                        Relationship {
-                            target_collection: "directory".to_owned(),
-                            column_mapping: [("_id".to_owned(), "school_id".to_owned())].into(),
-                            relationship_type: RelationshipType::Object,
-                            arguments: Default::default(),
-                            query: Query {
-                                ..Default::default()
-                            },
-                        },
-                    ),
-                    (
-                        "existence_check".to_owned(),
-                        Relationship {
-                            column_mapping: [("some_id".to_owned(), "_id".to_owned())].into(),
-                            relationship_type: RelationshipType::Array,
-                            target_collection: "some_collection".to_owned(),
-                            arguments: Default::default(),
-                            query: Query {
-                                predicate: None,
-                                ..Default::default()
-                            },
-                        },
-                    ),
-                ]
-                .into(),
-                fields: Some(
-                    [(
-                        "class_name".into(),
-                        Field::Relationship {
-                            relationship: "school_classes".into(),
-                            aggregates: None,
-                            fields: Some(
-                                [(
-                                    "student_name".into(),
-                                    Field::Relationship {
-                                        relationship: "class_students".into(),
-                                        aggregates: None,
-                                        fields: None,
-                                    },
-                                )]
-                                .into(),
-                            ),
-                        },
-                    )]
-                    .into(),
-                ),
-                ..Default::default()
-            },
-        };
-
-        let context = TestContext {
-            collections: [
-                collection("schools"),
-                collection("classes"),
-                collection("students"),
-                collection("departments"),
-                collection("directory"),
-                collection("advisors"),
-                collection("some_collection"),
-            ]
-            .into(),
-            object_types: [
-                (
-                    "schools".to_owned(),
-                    object_type([("_id", named_type("Int"))]),
-                ),
-                (
-                    "classes".to_owned(),
-                    object_type([
-                        ("_id", named_type("Int")),
-                        ("school_id", named_type("Int")),
-                        ("department_id", named_type("Int")),
-                    ]),
-                ),
-                (
-                    "students".to_owned(),
-                    object_type([
-                        ("_id", named_type("Int")),
-                        ("class_id", named_type("Int")),
-                        ("advisor_id", named_type("Int")),
-                        ("student_name", named_type("String")),
-                    ]),
-                ),
-                (
-                    "departments".to_owned(),
-                    object_type([("_id", named_type("Int"))]),
-                ),
-                (
-                    "directory".to_owned(),
-                    object_type([
-                        ("_id", named_type("Int")),
-                        ("school_id", named_type("Int")),
-                        ("math_department_id", named_type("Int")),
-                    ]),
-                ),
-                (
-                    "advisors".to_owned(),
-                    object_type([
-                        ("_id", named_type("Int")),
-                        ("advisor_name", named_type("String")),
-                    ]),
-                ),
-                (
-                    "some_collection".to_owned(),
-                    object_type([("_id", named_type("Int")), ("some_id", named_type("Int"))]),
-                ),
-            ]
-            .into(),
-            ..Default::default()
-        };
-
-        let query_plan = plan_for_query_request(&context, request)?;
-
-        assert_eq!(query_plan, expected);
-        Ok(())
-    }
-
-    #[test]
-    fn translates_root_column_references() -> Result<(), anyhow::Error> {
-        let query_context = make_flat_schema();
-        let query = query_request()
-            .collection("authors")
-            .query(query().fields([field!("last_name")]).predicate(exists(
-                unrelated!("articles"),
-                and([
-                    binop("Equal", target!("author_id"), column_value!(root("id"))),
-                    binop("Regex", target!("title"), value!("Functional.*")),
-                ]),
-            )))
-            .into();
-        let query_plan = plan_for_query_request(&query_context, query)?;
-
-        let expected = QueryPlan {
-            collection: "authors".into(),
-            query: plan::Query {
-                predicate: Some(plan::Expression::Exists {
-                    in_collection: plan::ExistsInCollection::Unrelated {
-                        unrelated_collection: "__join_articles_0".into(),
-                    },
-                    predicate: Some(Box::new(plan::Expression::And {
-                        expressions: vec![
-                            plan::Expression::BinaryComparisonOperator {
-                                column: plan::ComparisonTarget::Column {
-                                    name: "author_id".into(),
-                                    field_path: Default::default(),
-                                    column_type: plan::Type::Scalar(
-                                        plan_test_helpers::ScalarType::Int,
-                                    ),
-                                    path: Default::default(),
-                                },
-                                operator: plan_test_helpers::ComparisonOperator::Equal,
-                                value: plan::ComparisonValue::Column {
-                                    column: plan::ComparisonTarget::RootCollectionColumn {
-                                        name: "id".into(),
-                                        field_path: Default::default(),
-                                        column_type: plan::Type::Scalar(
-                                            plan_test_helpers::ScalarType::Int,
-                                        ),
-                                    },
-                                },
-                            },
-                            plan::Expression::BinaryComparisonOperator {
-                                column: plan::ComparisonTarget::Column {
-                                    name: "title".into(),
-                                    field_path: Default::default(),
-                                    column_type: plan::Type::Scalar(
-                                        plan_test_helpers::ScalarType::String,
-                                    ),
-                                    path: Default::default(),
-                                },
-                                operator: plan_test_helpers::ComparisonOperator::Regex,
-                                value: plan::ComparisonValue::Scalar {
-                                    value: json!("Functional.*"),
-                                    value_type: plan::Type::Scalar(
-                                        plan_test_helpers::ScalarType::String,
-                                    ),
-                                },
-                            },
-                        ],
-                    })),
-                }),
-                fields: Some(
-                    [(
-                        "last_name".into(),
-                        plan::Field::Column {
-                            column: "last_name".into(),
-                            fields: None,
-                            column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
-                        },
-                    )]
-                    .into(),
-                ),
-                ..Default::default()
-            },
-            unrelated_collections: [(
-                "__join_articles_0".into(),
-                UnrelatedJoin {
-                    target_collection: "articles".into(),
-                    arguments: Default::default(),
-                    query: plan::Query {
-                        predicate: Some(plan::Expression::And {
-                            expressions: vec![
-                                plan::Expression::BinaryComparisonOperator {
-                                    column: plan::ComparisonTarget::Column {
-                                        name: "author_id".into(),
-                                        column_type: plan::Type::Scalar(
-                                            plan_test_helpers::ScalarType::Int,
-                                        ),
-                                        field_path: None,
-                                        path: vec![],
-                                    },
-                                    operator: plan_test_helpers::ComparisonOperator::Equal,
-                                    value: plan::ComparisonValue::Column {
-                                        column: plan::ComparisonTarget::RootCollectionColumn {
-                                            name: "id".into(),
-                                            column_type: plan::Type::Scalar(
-                                                plan_test_helpers::ScalarType::Int,
-                                            ),
-                                            field_path: None,
-                                        },
-                                    },
-                                },
-                                plan::Expression::BinaryComparisonOperator {
-                                    column: plan::ComparisonTarget::Column {
-                                        name: "title".into(),
-                                        column_type: plan::Type::Scalar(
-                                            plan_test_helpers::ScalarType::String,
-                                        ),
-                                        field_path: None,
-                                        path: vec![],
-                                    },
-                                    operator: plan_test_helpers::ComparisonOperator::Regex,
-                                    value: plan::ComparisonValue::Scalar {
-                                        value: "Functional.*".into(),
-                                        value_type: plan::Type::Scalar(
-                                            plan_test_helpers::ScalarType::String,
-                                        ),
-                                    },
-                                },
-                            ],
-                        }),
-                        ..Default::default()
-                    },
-                },
-            )]
-            .into(),
-            arguments: Default::default(),
-            variables: Default::default(),
-        };
-
-        assert_eq!(query_plan, expected);
-        Ok(())
-    }
-
-    #[test]
-    fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
-        let query_context = make_flat_schema();
-        let query = query_request()
-            .collection("authors")
-            .query(query().aggregates([
-                star_count_aggregate!("count_star"),
-                column_count_aggregate!("count_id" => "last_name", distinct: true),
-                column_aggregate!("avg_id" => "id", "Average"),
-            ]))
-            .into();
-        let query_plan = plan_for_query_request(&query_context, query)?;
-
-        let expected = QueryPlan {
-            collection: "authors".into(),
-            query: plan::Query {
-                aggregates: Some(
-                    [
-                        ("count_star".into(), plan::Aggregate::StarCount),
+            let fields = predicate.as_ref().map(|p| {
+                p.query_local_comparison_targets()
+                    .map(|comparison_target| {
                         (
-                            "count_id".into(),
-                            plan::Aggregate::ColumnCount {
-                                column: "last_name".into(),
-                                distinct: true,
-                            },
-                        ),
-                        (
-                            "avg_id".into(),
-                            plan::Aggregate::SingleColumn {
-                                column: "id".into(),
-                                function: plan_test_helpers::AggregateFunction::Average,
-                                result_type: plan::Type::Scalar(
-                                    plan_test_helpers::ScalarType::Double,
-                                ),
-                            },
-                        ),
-                    ]
-                    .into(),
-                ),
-                ..Default::default()
-            },
-            arguments: Default::default(),
-            variables: Default::default(),
-            unrelated_collections: Default::default(),
-        };
-
-        assert_eq!(query_plan, expected);
-        Ok(())
-    }
-
-    #[test]
-    fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), anyhow::Error> {
-        let query_context = make_flat_schema();
-        let query = query_request()
-            .collection("authors")
-            .query(
-                query()
-                    .fields([
-                        field!("last_name"),
-                        relation_field!(
-                            "articles" => "author_articles",
-                            query().fields([field!("title"), field!("year")])
-                        ),
-                    ])
-                    .predicate(exists(
-                        related!("author_articles"),
-                        binop("Regex", target!("title"), value!("Functional.*")),
-                    ))
-                    .order_by(vec![
-                        ndc::OrderByElement {
-                            order_direction: OrderDirection::Asc,
-                            target: OrderByTarget::SingleColumnAggregate {
-                                column: "year".into(),
-                                function: "Average".into(),
-                                path: vec![path_element("author_articles").into()],
-                            },
-                        },
-                        ndc::OrderByElement {
-                            order_direction: OrderDirection::Desc,
-                            target: OrderByTarget::Column {
-                                name: "id".into(),
-                                path: vec![],
-                            },
-                        },
-                    ]),
-            )
-            .relationships([(
-                "author_articles",
-                relationship("articles", [("id", "author_id")]),
-            )])
-            .into();
-        let query_plan = plan_for_query_request(&query_context, query)?;
-
-        let expected = QueryPlan {
-            collection: "authors".into(),
-            query: plan::Query {
-                predicate: Some(plan::Expression::Exists {
-                    in_collection: plan::ExistsInCollection::Related {
-                        relationship: "author_articles".into(),
-                    },
-                    predicate: Some(Box::new(plan::Expression::BinaryComparisonOperator {
-                        column: plan::ComparisonTarget::Column {
-                            name: "title".into(),
-                            field_path: Default::default(),
-                            column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
-                            path: Default::default(),
-                        },
-                        operator: plan_test_helpers::ComparisonOperator::Regex,
-                        value: plan::ComparisonValue::Scalar {
-                            value: "Functional.*".into(),
-                            value_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
-                        },
-                    })),
-                }),
-                order_by: Some(plan::OrderBy {
-                    elements: vec![
-                        plan::OrderByElement {
-                            order_direction: OrderDirection::Asc,
-                            target: plan::OrderByTarget::SingleColumnAggregate {
-                                column: "year".into(),
-                                function: plan_test_helpers::AggregateFunction::Average,
-                                result_type: plan::Type::Scalar(
-                                    plan_test_helpers::ScalarType::Double,
-                                ),
-                                path: vec!["author_articles".into()],
-                            },
-                        },
-                        plan::OrderByElement {
-                            order_direction: OrderDirection::Desc,
-                            target: plan::OrderByTarget::Column {
-                                name: "id".into(),
-                                field_path: None,
-                                path: vec![],
-                            },
-                        },
-                    ],
-                }),
-                fields: Some(
-                    [
-                        (
-                            "last_name".into(),
+                            comparison_target.column_name().to_owned(),
                             plan::Field::Column {
-                                column: "last_name".into(),
-                                column_type: plan::Type::Scalar(
-                                    plan_test_helpers::ScalarType::String,
-                                ),
+                                column: comparison_target.column_name().to_string(),
+                                column_type: comparison_target.get_column_type().clone(),
                                 fields: None,
                             },
-                        ),
-                        (
-                            "articles".into(),
-                            plan::Field::Relationship {
-                                relationship: "author_articles".into(),
-                                aggregates: None,
-                                fields: Some(
-                                    [
-                                        (
-                                            "title".into(),
-                                            plan::Field::Column {
-                                                column: "title".into(),
-                                                column_type: plan::Type::Scalar(
-                                                    plan_test_helpers::ScalarType::String,
-                                                ),
-                                                fields: None,
-                                            },
-                                        ),
-                                        (
-                                            "year".into(),
-                                            plan::Field::Column {
-                                                column: "year".into(),
-                                                column_type: plan::Type::Nullable(Box::new(
-                                                    plan::Type::Scalar(
-                                                        plan_test_helpers::ScalarType::Int,
-                                                    ),
-                                                )),
-                                                fields: None,
-                                            },
-                                        ),
-                                    ]
-                                    .into(),
-                                ),
-                            },
-                        ),
-                    ]
-                    .into(),
-                ),
-                relationships: [(
-                    "author_articles".into(),
-                    plan::Relationship {
-                        target_collection: "articles".into(),
-                        column_mapping: [("id".into(), "author_id".into())].into(),
-                        relationship_type: RelationshipType::Array,
-                        arguments: Default::default(),
-                        query: plan::Query {
-                            fields: Some(
-                                [
-                                    (
-                                        "title".into(),
-                                        plan::Field::Column {
-                                            column: "title".into(),
-                                            column_type: plan::Type::Scalar(
-                                                plan_test_helpers::ScalarType::String,
-                                            ),
-                                            fields: None,
-                                        },
-                                    ),
-                                    (
-                                        "year".into(),
-                                        plan::Field::Column {
-                                            column: "year".into(),
-                                            column_type: plan::Type::Nullable(Box::new(
-                                                plan::Type::Scalar(
-                                                    plan_test_helpers::ScalarType::Int,
-                                                ),
-                                            )),
-                                            fields: None,
-                                        },
-                                    ),
-                                ]
-                                .into(),
-                            ),
-                            ..Default::default()
-                        },
-                    },
-                )]
-                .into(),
+                        )
+                    })
+                    .collect()
+            });
+
+            let relationship_query = plan::Query {
+                fields,
+                relationships: nested_state.into_relationships(),
                 ..Default::default()
-            },
-            arguments: Default::default(),
-            variables: Default::default(),
-            unrelated_collections: Default::default(),
-        };
+            };
 
-        assert_eq!(query_plan, expected);
-        Ok(())
-    }
+            let relationship_key =
+                plan_state.register_relationship(relationship, arguments, relationship_query)?;
 
-    #[test]
-    fn translates_nested_fields() -> Result<(), anyhow::Error> {
-        let query_context = make_nested_schema();
-        let query_request = query_request()
-            .collection("authors")
-            .query(query().fields([
-                field!("author_address" => "address", object!([field!("address_country" => "country")])),
-                field!("author_articles" => "articles", array!(object!([field!("article_title" => "title")]))),
-                field!("author_array_of_arrays" => "array_of_arrays", array!(array!(object!([field!("article_title" => "title")]))))
-            ]))
-            .into();
-        let query_plan = plan_for_query_request(&query_context, query_request)?;
+            let in_collection = plan::ExistsInCollection::Related {
+                relationship: relationship_key,
+            };
 
-        let expected = QueryPlan {
-            collection: "authors".into(),
-            query: plan::Query {
-                fields: Some(
-                    [
-                        (
-                            "author_address".into(),
-                            plan::Field::Column {
-                                column: "address".into(),
-                                column_type: plan::Type::Object(
-                                    query_context.find_object_type("Address")?,
-                                ),
-                                fields: Some(plan::NestedField::Object(plan::NestedObject {
-                                    fields: [(
-                                        "address_country".into(),
-                                        plan::Field::Column {
-                                            column: "country".into(),
-                                            column_type: plan::Type::Scalar(
-                                                plan_test_helpers::ScalarType::String,
-                                            ),
-                                            fields: None,
-                                        },
-                                    )]
-                                    .into(),
-                                })),
-                            },
-                        ),
-                        (
-                            "author_articles".into(),
-                            plan::Field::Column {
-                                column: "articles".into(),
-                                column_type: plan::Type::ArrayOf(Box::new(plan::Type::Object(
-                                    query_context.find_object_type("Article")?,
-                                ))),
-                                fields: Some(plan::NestedField::Array(plan::NestedArray {
-                                    fields: Box::new(plan::NestedField::Object(
-                                        plan::NestedObject {
-                                            fields: [(
-                                                "article_title".into(),
-                                                plan::Field::Column {
-                                                    column: "title".into(),
-                                                    fields: None,
-                                                    column_type: plan::Type::Scalar(
-                                                        plan_test_helpers::ScalarType::String,
-                                                    ),
-                                                },
-                                            )]
-                                            .into(),
-                                        },
-                                    )),
-                                })),
-                            },
-                        ),
-                        (
-                            "author_array_of_arrays".into(),
-                            plan::Field::Column {
-                                column: "array_of_arrays".into(),
-                                fields: Some(plan::NestedField::Array(plan::NestedArray {
-                                    fields: Box::new(plan::NestedField::Array(plan::NestedArray {
-                                        fields: Box::new(plan::NestedField::Object(
-                                            plan::NestedObject {
-                                                fields: [(
-                                                    "article_title".into(),
-                                                    plan::Field::Column {
-                                                        column: "title".into(),
-                                                        fields: None,
-                                                        column_type: plan::Type::Scalar(
-                                                            plan_test_helpers::ScalarType::String,
-                                                        ),
-                                                    },
-                                                )]
-                                                .into(),
-                                            },
-                                        )),
-                                    })),
-                                })),
-                                column_type: plan::Type::ArrayOf(Box::new(plan::Type::ArrayOf(
-                                    Box::new(plan::Type::Object(
-                                        query_context.find_object_type("Article")?,
-                                    )),
-                                ))),
-                            },
-                        ),
-                    ]
-                    .into(),
-                ),
+            Ok((in_collection, predicate)) as Result<_>
+        }
+        ndc::ExistsInCollection::Unrelated {
+            collection,
+            arguments,
+        } => {
+            let collection_object_type = plan_state
+                .context
+                .find_collection_object_type(&collection)?;
+
+            let predicate = predicate
+                .map(|expression| {
+                    plan_for_expression(
+                        &mut nested_state,
+                        root_collection_object_type,
+                        &collection_object_type,
+                        *expression,
+                    )
+                })
+                .transpose()?;
+
+            let join_query = plan::Query {
+                predicate: predicate.clone(),
+                relationships: nested_state.into_relationships(),
                 ..Default::default()
-            },
-            arguments: Default::default(),
-            variables: Default::default(),
-            unrelated_collections: Default::default(),
-        };
+            };
 
-        assert_eq!(query_plan, expected);
-        Ok(())
-    }
+            let join_key = plan_state.register_unrelated_join(collection, arguments, join_query);
 
-    #[test]
-    fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Result<()> {
-        let query_context = make_nested_schema();
-        let request = query_request()
-            .collection("appearances")
-            .relationships([("author", relationship("authors", [("authorId", "id")]))])
-            .query(
-                query()
-                    .fields([relation_field!("presenter" => "author", query().fields([
-                        field!("name"),
-                    ]))])
-                    .predicate(not(is_null(
-                        target!("name", relations: [path_element("author")]),
-                    ))),
-            )
-            .into();
-        let query_plan = plan_for_query_request(&query_context, request)?;
+            let in_collection = plan::ExistsInCollection::Unrelated {
+                unrelated_collection: join_key,
+            };
+            Ok((in_collection, predicate))
+        }
+    }?;
 
-        let expected = QueryPlan {
-            collection: "appearances".into(),
-            query: plan::Query {
-                predicate: Some(plan::Expression::Not {
-                    expression: Box::new(plan::Expression::UnaryComparisonOperator {
-                        column: plan::ComparisonTarget::Column {
-                            name: "name".into(),
-                            field_path: None,
-                            column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
-                            path: vec!["author".into()],
-                        },
-                        operator: ndc_models::UnaryComparisonOperator::IsNull,
-                    }),
-                }),
-                fields: Some(
-                    [(
-                        "presenter".into(),
-                        plan::Field::Relationship {
-                            relationship: "author".into(),
-                            aggregates: None,
-                            fields: Some(
-                                [(
-                                    "name".into(),
-                                    plan::Field::Column {
-                                        column: "name".into(),
-                                        fields: None,
-                                        column_type: plan::Type::Scalar(
-                                            plan_test_helpers::ScalarType::String,
-                                        ),
-                                    },
-                                )]
-                                .into(),
-                            ),
-                        },
-                    )]
-                    .into(),
-                ),
-                relationships: [(
-                    "author".into(),
-                    plan::Relationship {
-                        column_mapping: [("authorId".into(), "id".into())].into(),
-                        relationship_type: RelationshipType::Array,
-                        target_collection: "authors".into(),
-                        arguments: Default::default(),
-                        query: plan::Query {
-                            fields: Some(
-                                [(
-                                    "name".into(),
-                                    plan::Field::Column {
-                                        column: "name".into(),
-                                        fields: None,
-                                        column_type: plan::Type::Scalar(
-                                            plan_test_helpers::ScalarType::String,
-                                        ),
-                                    },
-                                )]
-                                .into(),
-                            ),
-                            ..Default::default()
-                        },
-                    },
-                )]
-                .into(),
-                ..Default::default()
-            },
-            arguments: Default::default(),
-            variables: Default::default(),
-            unrelated_collections: Default::default(),
-        };
-
-        assert_eq!(query_plan, expected);
-        Ok(())
-    }
+    Ok(plan::Expression::Exists {
+        in_collection,
+        predicate: predicate.map(Box::new),
+    })
 }

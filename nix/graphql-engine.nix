@@ -33,13 +33,7 @@ let
     {
       inherit src;
 
-      # craneLib wants a name for the workspace root
-      pname = if package != null then "hasura-${package}" else "graphql-engine-workspace";
-
-      cargoExtraArgs =
-        if package == null
-        then "--locked"
-        else "--locked --package ${package}";
+      pname = "graphql-engine-workspace";
 
       buildInputs = [
         openssl
@@ -60,6 +54,12 @@ in
 craneLib.buildPackage
   (buildArgs // {
     inherit cargoArtifacts;
+    pname = if package != null then package else buildArgs.pname;
+
+    cargoExtraArgs =
+      if package == null
+      then "--locked"
+      else "--locked --package ${package}";
 
     # The engine's `build.rs` script does a git hash lookup when building in
     # release mode that fails if building with nix.

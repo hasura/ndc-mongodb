@@ -12,6 +12,8 @@ use crate::{
     QueryContext, QueryPlanError, Relationship,
 };
 
+use super::unify_relationship_references::unify_relationship_references;
+
 type Result<T> = std::result::Result<T, QueryPlanError>;
 
 /// Records relationship and other join references in a mutable struct. Relations are scoped to
@@ -67,31 +69,42 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
         ndc_relationship_name: String,
         arguments: BTreeMap<String, RelationshipArgument>,
         query: Query<T>,
-    ) -> Result<(&str, &Relationship<T>)> {
-        let already_registered = self.relationships.contains_key(&ndc_relationship_name);
+    ) -> Result<String> {
+        let ndc_relationship =
+            lookup_relationship(self.collection_relationships, &ndc_relationship_name)?;
 
-        if !already_registered {
-            let ndc_relationship =
-                lookup_relationship(self.collection_relationships, &ndc_relationship_name)?;
+        let relationship = Relationship {
+            column_mapping: ndc_relationship.column_mapping.clone(),
+            relationship_type: ndc_relationship.relationship_type,
+            target_collection: ndc_relationship.target_collection.clone(),
+            arguments,
+            query,
+        };
 
-            let relationship = Relationship {
-                column_mapping: ndc_relationship.column_mapping.clone(),
-                relationship_type: ndc_relationship.relationship_type,
-                target_collection: ndc_relationship.target_collection.clone(),
-                arguments,
-                query,
-            };
+        let (key, relationship) = match self.relationships.remove_entry(&ndc_relationship_name) {
+            Some((existing_key, already_registered_relationship)) => {
+                match unify_relationship_references(
+                    already_registered_relationship.clone(),
+                    relationship.clone(),
+                ) {
+                    Ok(unified_relationship) => (ndc_relationship_name, unified_relationship),
+                    Err(_) => {
+                        // If relationships couldn't be unified then we need to store the new
+                        // relationship under a new key. We also need to put back the existing
+                        // relationship that we just removed.
+                        self.relationships
+                            .insert(existing_key, already_registered_relationship);
+                        let key = self.unique_name(ndc_relationship_name);
+                        (key, relationship)
+                    }
+                }
+            }
+            None => (ndc_relationship_name, relationship),
+        };
 
-            self.relationships
-                .insert(ndc_relationship_name.clone(), relationship);
-        }
+        self.relationships.insert(key.clone(), relationship);
 
-        // Safety: we just inserted this key
-        let (key, relationship) = self
-            .relationships
-            .get_key_value(&ndc_relationship_name)
-            .unwrap();
-        Ok((key, relationship))
+        Ok(key)
     }
 
     /// Record a collection reference so that it is added to the list of joins for the query

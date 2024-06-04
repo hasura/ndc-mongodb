@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use ndc_models as ndc;
+
 use crate as plan;
 
 use super::query_plan_error::QueryPlanError;
