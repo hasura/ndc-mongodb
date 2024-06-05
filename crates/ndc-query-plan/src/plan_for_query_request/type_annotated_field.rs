@@ -71,7 +71,7 @@ fn type_annotated_field_helper<T: QueryContext>(
 
             let query_plan = plan_for_query(
                 &mut plan_state.state_for_subquery(),
-                root_collection_object_type,
+                &related_collection_type,
                 &related_collection_type,
                 *query,
             )?;
