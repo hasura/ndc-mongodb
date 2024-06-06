@@ -208,9 +208,9 @@ fn plan_for_order_by_element<T: QueryContext>(
     element: ndc::OrderByElement,
 ) -> Result<plan::OrderByElement<T>> {
     let target = match element.target {
-        ndc::OrderByTarget::Column { name, path } => plan::OrderByTarget::Column {
+        ndc::OrderByTarget::Column { name, field_path, path } => plan::OrderByTarget::Column {
             name: name.clone(),
-            field_path: Default::default(), // TODO: propagate this after ndc-spec update
+            field_path,
             path: plan_for_relationship_path(
                 plan_state,
                 root_collection_object_type,
@@ -492,7 +492,7 @@ fn plan_for_comparison_target<T: QueryContext>(
     target: ndc::ComparisonTarget,
 ) -> Result<plan::ComparisonTarget<T>> {
     match target {
-        ndc::ComparisonTarget::Column { name, path } => {
+        ndc::ComparisonTarget::Column { name, field_path, path } => {
             let requested_columns = vec![name.clone()];
             let (path, target_object_type) = plan_for_relationship_path(
                 plan_state,
@@ -504,16 +504,16 @@ fn plan_for_comparison_target<T: QueryContext>(
             let column_type = find_object_field(&target_object_type, &name)?.clone();
             Ok(plan::ComparisonTarget::Column {
                 name,
-                field_path: Default::default(), // TODO: propagate this after ndc-spec update
+                field_path,
                 path,
                 column_type,
             })
         }
-        ndc::ComparisonTarget::RootCollectionColumn { name } => {
+        ndc::ComparisonTarget::RootCollectionColumn { name, field_path } => {
             let column_type = find_object_field(root_collection_object_type, &name)?.clone();
             Ok(plan::ComparisonTarget::RootCollectionColumn {
                 name,
-                field_path: Default::default(), // TODO: propagate this after ndc-spec update
+                field_path,
                 column_type,
             })
         }

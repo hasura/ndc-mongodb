@@ -39,7 +39,7 @@ fn type_annotated_field_helper<T: QueryContext>(
     path: &[&str],
 ) -> Result<Field<T>> {
     let field = match field {
-        ndc::Field::Column { column, fields } => {
+        ndc::Field::Column { column, fields, arguments: _ } => {
             let column_type = find_object_field(collection_object_type, &column)?;
             let fields = fields
                 .map(|nested_field| {

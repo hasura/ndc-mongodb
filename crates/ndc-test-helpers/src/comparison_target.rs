@@ -37,5 +37,6 @@ where
 {
     ndc_models::ComparisonTarget::RootCollectionColumn {
         name: name.to_string(),
+        field_path: None,
     }
 }

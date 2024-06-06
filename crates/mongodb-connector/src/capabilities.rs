@@ -1,15 +1,20 @@
 use ndc_sdk::models::{
-    Capabilities, CapabilitiesResponse, LeafCapability, QueryCapabilities, RelationshipCapabilities,
+    Capabilities, CapabilitiesResponse, LeafCapability, NestedFieldCapabilities, QueryCapabilities,
+    RelationshipCapabilities,
 };
 
 pub fn mongo_capabilities_response() -> CapabilitiesResponse {
     ndc_sdk::models::CapabilitiesResponse {
-        version: "0.1.2".to_owned(),
+        version: "0.1.3".to_owned(),
         capabilities: Capabilities {
             query: QueryCapabilities {
                 aggregates: Some(LeafCapability {}),
                 variables: Some(LeafCapability {}),
                 explain: Some(LeafCapability {}),
+                nested_fields: NestedFieldCapabilities {
+                    filter_by: Some(LeafCapability {}),
+                    order_by: Some(LeafCapability {}),
+                },
             },
             mutation: ndc_sdk::models::MutationCapabilities {
                 transactional: None,
