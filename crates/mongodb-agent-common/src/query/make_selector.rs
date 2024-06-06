@@ -6,6 +6,7 @@ use mongodb::bson::{self, doc, Document};
 use ndc_models::UnaryComparisonOperator;
 
 use crate::{
+    comparison_function::ComparisonFunction,
     interface_types::MongoAgentError,
     mongo_query_plan::{ComparisonTarget, ComparisonValue, ExistsInCollection, Expression, Type},
     mongodb::sanitize::safe_name,
@@ -55,6 +56,7 @@ pub fn make_selector(
                 },
                 None => doc! { format!("{relationship}.0"): { "$exists": true } },
             },
+            // TODO: This doesn't work - we can't use a variable as the key in a match query
             ExistsInCollection::Unrelated {
                 unrelated_collection,
             } => doc! { format!("$$ROOT.{unrelated_collection}.0"): { "$exists": true } },
@@ -63,27 +65,7 @@ pub fn make_selector(
             column,
             operator,
             value,
-        } => {
-            let comparison_value = match value {
-                // TODO: MDB-152 To compare to another column we need to wrap the entire expression in
-                // an `$expr` aggregation operator (assuming the expression is not already in
-                // an aggregation expression context)
-                ComparisonValue::Column { .. } => Err(MongoAgentError::NotImplemented(
-                    "comparisons between columns",
-                )),
-                ComparisonValue::Scalar { value, value_type } => {
-                    bson_from_scalar_value(value, value_type)
-                }
-                ComparisonValue::Variable {
-                    name,
-                    variable_type,
-                } => variable_to_mongo_expression(variables, name, variable_type).map(Into::into),
-            }?;
-            Ok(traverse_relationship_path(
-                column.relationship_path(),
-                operator.mongodb_expression(column_ref(column)?, comparison_value),
-            ))
-        }
+        } => make_binary_comparison_selector(variables, column, operator, value),
         Expression::UnaryComparisonOperator { column, operator } => match operator {
             UnaryComparisonOperator::IsNull => Ok(traverse_relationship_path(
                 column.relationship_path(),
@@ -91,6 +73,45 @@ pub fn make_selector(
             )),
         },
     }
+}
+
+fn make_binary_comparison_selector(
+    variables: Option<&BTreeMap<String, serde_json::Value>>,
+    target_column: &ComparisonTarget,
+    operator: &ComparisonFunction,
+    value: &ComparisonValue,
+) -> Result<Document> {
+    let selector = match value {
+        ComparisonValue::Column {
+            column: value_column,
+        } => {
+            doc! {
+                "$expr": operator.mongodb_aggregation_expression(
+                    column_expression(target_column)?,
+                    column_expression(value_column)?
+                )
+            }
+        }
+        ComparisonValue::Scalar { value, value_type } => {
+            let comparison_value = bson_from_scalar_value(value, value_type)?;
+            traverse_relationship_path(
+                target_column.relationship_path(),
+                operator.mongodb_match_query(column_ref(target_column)?, comparison_value),
+            )
+        }
+        ComparisonValue::Variable {
+            name,
+            variable_type,
+        } => {
+            let comparison_value =
+                variable_to_mongo_expression(variables, name, variable_type).map(Into::into)?;
+            traverse_relationship_path(
+                target_column.relationship_path(),
+                operator.mongodb_match_query(column_ref(target_column)?, comparison_value),
+            )
+        }
+    };
+    Ok(selector)
 }
 
 /// For simple cases the target of an expression is a field reference. But if the target is
@@ -121,9 +142,12 @@ fn variable_to_mongo_expression(
     bson_from_scalar_value(value, value_type)
 }
 
-/// Given a column target returns a MongoDB expression that resolves to the value of the
-/// corresponding field, either in the target collection of a query request, or in the related
-/// collection. Resolves nested fields, but does not traverse relationships.
+/// Given a column target returns a string that can be used in a MongoDB match query that
+/// references the corresponding field, either in the target collection of a query request, or in
+/// the related collection. Resolves nested fields, but does not traverse relationships.
+///
+/// The string produced by this function cannot be used as an aggregation expression, only as
+/// a match query key (a key in the document used in a `$match` stage).
 fn column_ref(column: &ComparisonTarget) -> Result<Cow<'_, str>> {
     let path = match column {
         ComparisonTarget::Column {
@@ -139,12 +163,20 @@ fn column_ref(column: &ComparisonTarget) -> Result<Cow<'_, str>> {
         ComparisonTarget::RootCollectionColumn {
             name, field_path, ..
         } => Either::Right(
+            // TODO: This doesn't work - we can't use a variable as the key in a match query
             once("$$ROOT")
                 .chain(once(name.as_ref()))
                 .chain(field_path.iter().flatten().map(AsRef::as_ref)),
         ),
     };
     safe_selector(path)
+}
+
+/// Produces an aggregation expression that evaluates to the value of a given document field.
+/// Unlike `column_ref` this expression cannot be used as a match query key - it can only be used
+/// as an expression.
+fn column_expression(column: &ComparisonTarget) -> Result<String> {
+    Ok(format!("${}", column_ref(column)?))
 }
 
 /// Given an iterable of fields to access, ensures that each field name does not include characters
@@ -244,6 +276,39 @@ mod tests {
                         }
                     }
                 }
+            }
+        };
+
+        assert_eq!(selector, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn compares_two_columns() -> anyhow::Result<()> {
+        let selector = make_selector(
+            None,
+            &Expression::BinaryComparisonOperator {
+                column: ComparisonTarget::Column {
+                    name: "Name".to_owned(),
+                    field_path: None,
+                    column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                    path: Default::default(),
+                },
+                operator: ComparisonFunction::Equal,
+                value: ComparisonValue::Column {
+                    column: ComparisonTarget::Column {
+                        name: "Title".to_owned(),
+                        field_path: None,
+                        column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                        path: Default::default(),
+                    },
+                },
+            },
+        )?;
+
+        let expected = doc! {
+            "$expr": {
+                "$eq": ["$Name", "$Title"]
             }
         };
 
