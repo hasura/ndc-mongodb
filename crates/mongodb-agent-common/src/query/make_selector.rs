@@ -85,13 +85,19 @@ fn make_binary_comparison_selector(
         ComparisonValue::Column {
             column: value_column,
         } => {
-            let comparison_expr = doc! {
+            if !target_column.relationship_path().is_empty()
+                || !value_column.relationship_path().is_empty()
+            {
+                return Err(MongoAgentError::NotImplemented(
+                    "binary comparisons between two fields where either field is in a related collection",
+                ));
+            }
+            doc! {
                 "$expr": operator.mongodb_aggregation_expression(
                     column_expression(target_column)?,
                     column_expression(value_column)?
                 )
-            };
-            traverse_relationship_path(target_column.relationship_path(), comparison_expr)
+            }
         }
         ComparisonValue::Scalar { value, value_type } => {
             let comparison_value = bson_from_scalar_value(value, value_type)?;
@@ -310,43 +316,6 @@ mod tests {
         let expected = doc! {
             "$expr": {
                 "$eq": ["$Name", "$Title"]
-            }
-        };
-
-        assert_eq!(selector, expected);
-        Ok(())
-    }
-
-    #[test]
-    fn compares_column_of_relationship_to_local_column() -> anyhow::Result<()> {
-        let selector = make_selector(
-            None,
-            &Expression::BinaryComparisonOperator {
-                column: ComparisonTarget::Column {
-                    name: "Name".to_owned(),
-                    field_path: None,
-                    column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
-                    path: vec!["Artist".into()],
-                },
-                operator: ComparisonFunction::Equal,
-                value: ComparisonValue::Column {
-                    column: ComparisonTarget::Column {
-                        name: "Title".to_owned(),
-                        field_path: None,
-                        column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
-                        path: Default::default(),
-                    },
-                },
-            },
-        )?;
-
-        let expected = doc! {
-            "Artist": {
-                "$elemMatch": {
-                    "$expr": {
-                        "$eq": ["$Name", "$Title"]
-                    }
-                }
             }
         };
 
