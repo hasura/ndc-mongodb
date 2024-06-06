@@ -149,57 +149,6 @@ fn variable_to_mongo_expression(
     bson_from_scalar_value(value, value_type)
 }
 
-/// Given a column target returns a string that can be used in a MongoDB match query that
-/// references the corresponding field, either in the target collection of a query request, or in
-/// the related collection. Resolves nested fields, but does not traverse relationships.
-///
-/// The string produced by this function cannot be used as an aggregation expression, only as
-/// a match query key (a key in the document used in a `$match` stage).
-fn column_ref(column: &ComparisonTarget) -> Result<Cow<'_, str>> {
-    let path = match column {
-        ComparisonTarget::Column {
-            name,
-            field_path,
-            // path,
-            ..
-        } => Either::Left(
-            once(name)
-                .chain(field_path.iter().flatten())
-                .map(AsRef::as_ref),
-        ),
-        ComparisonTarget::RootCollectionColumn {
-            name, field_path, ..
-        } => Either::Right(
-            // TODO: This doesn't work - we can't use a variable as the key in a match query
-            once("$$ROOT")
-                .chain(once(name.as_ref()))
-                .chain(field_path.iter().flatten().map(AsRef::as_ref)),
-        ),
-    };
-    safe_selector(path)
-}
-
-/// Produces an aggregation expression that evaluates to the value of a given document field.
-/// Unlike `column_ref` this expression cannot be used as a match query key - it can only be used
-/// as an expression.
-fn column_expression(column: &ComparisonTarget) -> Result<String> {
-    Ok(format!("${}", column_ref(column)?))
-}
-
-/// Given an iterable of fields to access, ensures that each field name does not include characters
-/// that could be interpereted as a MongoDB expression.
-fn safe_selector<'a>(path: impl IntoIterator<Item = &'a str>) -> Result<Cow<'a, str>> {
-    let mut safe_elements = path
-        .into_iter()
-        .map(safe_name)
-        .collect::<Result<Vec<Cow<str>>>>()?;
-    if safe_elements.len() == 1 {
-        Ok(safe_elements.pop().unwrap())
-    } else {
-        Ok(Cow::Owned(safe_elements.join(".")))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use configuration::MongoScalarType;
