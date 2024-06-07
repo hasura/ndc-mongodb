@@ -55,6 +55,7 @@ fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
                     order_direction: OrderDirection::Asc,
                     target: OrderByTarget::Column {
                         name: "advisor_name".to_owned(),
+                        field_path: None,
                         path: vec![
                             path_element("school_classes")
                                 .predicate(binop(
@@ -575,6 +576,7 @@ fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), a
                         order_direction: OrderDirection::Desc,
                         target: OrderByTarget::Column {
                             name: "id".into(),
+                            field_path: None,
                             path: vec![],
                         },
                     },

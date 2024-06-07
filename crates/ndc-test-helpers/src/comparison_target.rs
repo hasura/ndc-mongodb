@@ -3,6 +3,7 @@ macro_rules! target {
     ($column:literal) => {
         $crate::ndc_models::ComparisonTarget::Column {
             name: $column.to_owned(),
+            field_path: None,
             path: vec![],
         }
     };
@@ -16,6 +17,7 @@ macro_rules! target {
     ($column:literal, relations:$path:expr $(,)?) => {
         $crate::ndc_models::ComparisonTarget::Column {
             name: $column.to_owned(),
+            field_path: None,
             path: $path.into_iter().map(|x| x.into()).collect(),
         }
     };
