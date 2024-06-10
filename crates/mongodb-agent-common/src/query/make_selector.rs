@@ -55,10 +55,13 @@ pub fn make_selector(
                 },
                 None => doc! { format!("{relationship}.0"): { "$exists": true } },
             },
-            // TODO: This doesn't work - we can't use a variable as the key in a match query
             ExistsInCollection::Unrelated {
                 unrelated_collection,
-            } => doc! { format!("$$ROOT.{unrelated_collection}.0"): { "$exists": true } },
+            } => doc! {
+                "$expr": {
+                    "$ne": [format!("$$ROOT.{unrelated_collection}.0"), null]
+                }
+            },
         }),
         Expression::BinaryComparisonOperator {
             column,
