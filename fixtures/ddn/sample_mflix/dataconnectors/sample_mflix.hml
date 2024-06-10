@@ -663,7 +663,7 @@ definition:
                 type: nullable
                 underlying_type:
                   type: named
-                  name: ExtendedJSON
+                  name: Double
             votes:
               type:
                 type: named
@@ -741,7 +741,7 @@ definition:
                 type: nullable
                 underlying_type:
                   type: named
-                  name: ExtendedJSON
+                  name: Double
         movies_tomatoes_viewer:
           fields:
             meter:
@@ -757,7 +757,7 @@ definition:
                 type: nullable
                 underlying_type:
                   type: named
-                  name: ExtendedJSON
+                  name: Double
         sessions:
           fields:
             _id:
