@@ -1,4 +1,4 @@
-use itertools::Itertools;
+use itertools::Itertools as _;
 use mongodb::bson::{bson, Document};
 use ndc_models::OrderDirection;
 
@@ -49,6 +49,7 @@ pub fn make_sort(order_by: &OrderBy) -> Result<Document, MongoAgentError> {
         .collect()
 }
 
+// TODO: MDB-159 Replace use of [safe_name] with [ColumnRef].
 fn column_ref_with_path(
     name: &String,
     field_path: Option<&[String]>,

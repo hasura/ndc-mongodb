@@ -79,6 +79,7 @@ fn make_lookup_stage(
     }
 }
 
+// TODO: MDB-160 Replace uses of [safe_name] with [ColumnRef].
 fn single_column_mapping_lookup(
     from: String,
     source_selector: &str,

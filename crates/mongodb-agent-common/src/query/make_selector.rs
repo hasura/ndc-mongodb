@@ -1,7 +1,6 @@
-use std::{borrow::Cow, collections::BTreeMap, iter::once};
+use std::collections::BTreeMap;
 
 use anyhow::anyhow;
-use itertools::Either;
 use mongodb::bson::{self, doc, Document};
 use ndc_models::UnaryComparisonOperator;
 
@@ -9,7 +8,7 @@ use crate::{
     comparison_function::ComparisonFunction,
     interface_types::MongoAgentError,
     mongo_query_plan::{ComparisonTarget, ComparisonValue, ExistsInCollection, Expression, Type},
-    mongodb::sanitize::safe_name,
+    query::column_ref::{column_expression, ColumnRef},
 };
 
 use super::serialization::json_to_bson;
@@ -67,10 +66,22 @@ pub fn make_selector(
             value,
         } => make_binary_comparison_selector(variables, column, operator, value),
         Expression::UnaryComparisonOperator { column, operator } => match operator {
-            UnaryComparisonOperator::IsNull => Ok(traverse_relationship_path(
-                column.relationship_path(),
-                doc! { column_ref(column)?: { "$eq": null } },
-            )),
+            UnaryComparisonOperator::IsNull => {
+                let match_doc = match ColumnRef::from_comparison_target(column) {
+                    ColumnRef::MatchKey(key) => doc! {
+                        key: { "$eq": null }
+                    },
+                    ColumnRef::Expression(expr) => doc! {
+                        "$expr": {
+                            "$eq": [expr, null]
+                        }
+                    },
+                };
+                Ok(traverse_relationship_path(
+                    column.relationship_path(),
+                    match_doc,
+                ))
+            }
         },
     }
 }
@@ -94,17 +105,20 @@ fn make_binary_comparison_selector(
             }
             doc! {
                 "$expr": operator.mongodb_aggregation_expression(
-                    column_expression(target_column)?,
-                    column_expression(value_column)?
+                    column_expression(target_column),
+                    column_expression(value_column)
                 )
             }
         }
         ComparisonValue::Scalar { value, value_type } => {
             let comparison_value = bson_from_scalar_value(value, value_type)?;
-            traverse_relationship_path(
-                target_column.relationship_path(),
-                operator.mongodb_match_query(column_ref(target_column)?, comparison_value),
-            )
+            let match_doc = match ColumnRef::from_comparison_target(target_column) {
+                ColumnRef::MatchKey(key) => operator.mongodb_match_query(key, comparison_value),
+                ColumnRef::Expression(expr) => {
+                    operator.mongodb_aggregation_expression(expr, comparison_value)
+                }
+            };
+            traverse_relationship_path(target_column.relationship_path(), match_doc)
         }
         ComparisonValue::Variable {
             name,
@@ -112,10 +126,13 @@ fn make_binary_comparison_selector(
         } => {
             let comparison_value =
                 variable_to_mongo_expression(variables, name, variable_type).map(Into::into)?;
-            traverse_relationship_path(
-                target_column.relationship_path(),
-                operator.mongodb_match_query(column_ref(target_column)?, comparison_value),
-            )
+            let match_doc = match ColumnRef::from_comparison_target(target_column) {
+                ColumnRef::MatchKey(key) => operator.mongodb_match_query(key, comparison_value),
+                ColumnRef::Expression(expr) => {
+                    operator.mongodb_aggregation_expression(expr, comparison_value)
+                }
+            };
+            traverse_relationship_path(target_column.relationship_path(), match_doc)
         }
     };
     Ok(selector)
