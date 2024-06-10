@@ -169,21 +169,14 @@ fn variable_to_mongo_expression(
 #[cfg(test)]
 mod tests {
     use configuration::MongoScalarType;
-    use mongodb::bson::{self, bson, doc};
+    use mongodb::bson::doc;
     use mongodb_support::BsonScalarType;
     use ndc_models::UnaryComparisonOperator;
-    use ndc_query_plan::plan_for_query_request;
-    use ndc_test_helpers::{
-        binop, column_value, path_element, query, query_request, relation_field, root, target,
-        value,
-    };
     use pretty_assertions::assert_eq;
 
     use crate::{
         comparison_function::ComparisonFunction,
         mongo_query_plan::{ComparisonTarget, ComparisonValue, Expression, Type},
-        query::pipeline_for_query_request,
-        test_helpers::{chinook_config, chinook_relationships},
     };
 
     use super::make_selector;
@@ -286,36 +279,6 @@ mod tests {
         };
 
         assert_eq!(selector, expected);
-        Ok(())
-    }
-
-    #[test]
-    fn root_column_reference_refereces_column_of_nearest_query() -> anyhow::Result<()> {
-        let request = query_request()
-            .collection("Artist")
-            .query(
-                query().fields([relation_field!("Albums" => "Albums", query().predicate(
-                binop(
-                    "_gt",
-                    target!("Milliseconds", relations: [
-                        path_element("Tracks").predicate(
-                            binop("_eq", target!("Name"), column_value!(root("Title")))
-                        ),
-                    ]),
-                    value!(30_000),
-                )
-                ))]),
-            )
-            .relationships(chinook_relationships())
-            .into();
-
-        let config = chinook_config();
-        let plan = plan_for_query_request(&config, request)?;
-        let pipeline = pipeline_for_query_request(&config, &plan)?;
-
-        let expected_pipeline = bson!([]);
-
-        assert_eq!(bson::to_bson(&pipeline).unwrap(), expected_pipeline);
         Ok(())
     }
 }

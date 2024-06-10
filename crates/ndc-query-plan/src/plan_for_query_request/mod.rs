@@ -52,7 +52,6 @@ pub fn plan_for_query_request<T: QueryContext>(
     })
 }
 
-/// root_collection_object_type references the collection type of the nearest enclosing [ndc::Query]
 pub fn plan_for_query<T: QueryContext>(
     plan_state: &mut QueryPlanState<'_, T>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
