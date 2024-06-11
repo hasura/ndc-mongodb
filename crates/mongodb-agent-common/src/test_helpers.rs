@@ -143,11 +143,11 @@ pub fn chinook_relationships() -> BTreeMap<String, ndc_models::Relationship> {
     [
         (
             "Albums",
-            ndc_test_helpers::relationship("Album", [("AlbumId", "AlbumId")]),
+            ndc_test_helpers::relationship("Album", [("ArtistId", "ArtistId")]),
         ),
         (
             "Tracks",
-            ndc_test_helpers::relationship("Track", [("TrackId", "TrackId")]),
+            ndc_test_helpers::relationship("Track", [("AlbumId", "AlbumId")]),
         ),
         (
             "Genre",

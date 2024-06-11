@@ -316,7 +316,62 @@ mod tests {
         let plan = plan_for_query_request(&config, request)?;
         let pipeline = pipeline_for_query_request(&config, &plan)?;
 
-        let expected_pipeline = bson!([]);
+        let expected_pipeline = bson!([
+            {
+                "$lookup": {
+                    "from": "Album",
+                    "localField": "AlbumId",
+                    "foreignField": "AlbumId",
+                    "as": "Albums",
+                    "pipeline": [
+                        {
+                            "$lookup": {
+                                "from": "Track",
+                                "localField": "AlbumId",
+                                "foreignField": "AlbumId",
+                                "as": "Tracks",
+                                "let": {
+                                    "scope_0": "$$ROOT",
+                                },
+                                "pipeline": [
+                                    {
+                                        "$match": {
+                                            "$expr": { "$eq": ["$Name", "$$scope_0.Title"] },
+                                        },
+                                    },
+                                    {
+                                        "$replaceWith": {
+                                            "Milliseconds": { "$ifNull": ["$Milliseconds", null] }
+                                        }
+                                    },
+                                ]
+                            }
+                        },
+                        {
+                            "$match": {
+                                "Tracks": {
+                                    "$elemMatch": {
+                                        "Milliseconds": { "$gt": 30_000 }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "$replaceWith": {
+                                "Tracks": { "$getField": { "$literal": "Tracks" } }
+                            }
+                        },
+                    ],
+                },
+            },
+            {
+                "$replaceWith": {
+                    "Albums": {
+                        "rows": []
+                    }
+                }
+            },
+        ]);
 
         assert_eq!(bson::to_bson(&pipeline).unwrap(), expected_pipeline);
         Ok(())
