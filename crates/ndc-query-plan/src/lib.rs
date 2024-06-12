@@ -12,6 +12,6 @@ pub use query_plan::{
     Aggregate, AggregateFunctionDefinition, ComparisonOperatorDefinition, ComparisonTarget,
     ComparisonValue, ConnectorTypes, ExistsInCollection, Expression, Field, NestedArray,
     NestedField, NestedObject, OrderBy, OrderByElement, OrderByTarget, Query, QueryPlan,
-    Relationship, Relationships, VariableSet,
+    Relationship, Relationships, Scope, VariableSet,
 };
 pub use type_system::{inline_object_types, ObjectType, Type};

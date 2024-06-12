@@ -88,6 +88,7 @@ where
         (a.offset != b.offset, "offset"),
         (a.order_by != b.order_by, "order_by"),
         (predicate_a != predicate_b, "predicate"),
+        (a.scope != b.scope, "scope"),
     ]
     .into_iter()
     .filter_map(|(is_mismatch, field_name)| if is_mismatch { Some(field_name) } else { None })
@@ -106,6 +107,7 @@ where
         order_by: a.order_by,
         predicate: predicate_a,
         relationships: unify_nested_relationships(a.relationships, b.relationships)?,
+        scope: a.scope,
     };
     Ok(query)
 }

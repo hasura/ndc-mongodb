@@ -394,12 +394,13 @@ fn translates_root_column_references() -> Result<(), anyhow::Error> {
                             },
                             operator: plan_test_helpers::ComparisonOperator::Equal,
                             value: plan::ComparisonValue::Column {
-                                column: plan::ComparisonTarget::RootCollectionColumn {
+                                column: plan::ComparisonTarget::ColumnInScope {
                                     name: "id".into(),
                                     field_path: Default::default(),
                                     column_type: plan::Type::Scalar(
                                         plan_test_helpers::ScalarType::Int,
                                     ),
+                                    scope: plan::Scope::Root,
                                 },
                             },
                         },
@@ -455,8 +456,9 @@ fn translates_root_column_references() -> Result<(), anyhow::Error> {
                                 },
                                 operator: plan_test_helpers::ComparisonOperator::Equal,
                                 value: plan::ComparisonValue::Column {
-                                    column: plan::ComparisonTarget::RootCollectionColumn {
+                                    column: plan::ComparisonTarget::ColumnInScope {
                                         name: "id".into(),
+                                        scope: plan::Scope::Root,
                                         column_type: plan::Type::Scalar(
                                             plan_test_helpers::ScalarType::Int,
                                         ),

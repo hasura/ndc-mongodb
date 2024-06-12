@@ -320,9 +320,12 @@ mod tests {
             {
                 "$lookup": {
                     "from": "Album",
-                    "localField": "AlbumId",
-                    "foreignField": "AlbumId",
+                    "localField": "ArtistId",
+                    "foreignField": "ArtistId",
                     "as": "Albums",
+                    "let": {
+                        "scope_root": "$$ROOT",
+                    },
                     "pipeline": [
                         {
                             "$lookup": {

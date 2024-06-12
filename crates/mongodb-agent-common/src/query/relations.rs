@@ -2,11 +2,12 @@ use std::collections::BTreeMap;
 
 use itertools::Itertools as _;
 use mongodb::bson::{doc, Bson, Document};
-use ndc_query_plan::VariableSet;
+use ndc_query_plan::{Scope, VariableSet};
 
 use crate::mongo_query_plan::{MongoConfiguration, Query, QueryPlan};
 use crate::mongodb::sanitize::safe_name;
 use crate::mongodb::Pipeline;
+use crate::query::column_ref::name_from_scope;
 use crate::{
     interface_types::MongoAgentError,
     mongodb::{sanitize::variable, Stage},
@@ -25,7 +26,11 @@ pub fn pipeline_for_relations(
     query_plan: &QueryPlan,
 ) -> Result<Pipeline> {
     let QueryPlan { query, .. } = query_plan;
-    let Query { relationships, .. } = query;
+    let Query {
+        relationships,
+        scope,
+        ..
+    } = query;
 
     // Lookup stages perform the join for each relationship, and assign the list of rows or mapping
     // of aggregate results to a field in the parent document.
@@ -49,6 +54,7 @@ pub fn pipeline_for_relations(
                 &relationship.column_mapping,
                 name.to_owned(),
                 lookup_pipeline,
+                scope.as_ref(),
             )
         })
         .try_collect()?;
@@ -61,6 +67,7 @@ fn make_lookup_stage(
     column_mapping: &BTreeMap<String, String>,
     r#as: String,
     lookup_pipeline: Pipeline,
+    scope: Option<&Scope>,
 ) -> Result<Stage> {
     // If we are mapping a single field in the source collection to a single field in the target
     // collection then we can use the correlated subquery syntax.
@@ -73,9 +80,10 @@ fn make_lookup_stage(
             target_selector,
             r#as,
             lookup_pipeline,
+            scope,
         )
     } else {
-        multiple_column_mapping_lookup(from, column_mapping, r#as, lookup_pipeline)
+        multiple_column_mapping_lookup(from, column_mapping, r#as, lookup_pipeline, scope)
     }
 }
 
@@ -86,12 +94,17 @@ fn single_column_mapping_lookup(
     target_selector: &str,
     r#as: String,
     lookup_pipeline: Pipeline,
+    scope: Option<&Scope>,
 ) -> Result<Stage> {
     Ok(Stage::Lookup {
         from: Some(from),
         local_field: Some(safe_name(source_selector)?.into_owned()),
         foreign_field: Some(safe_name(target_selector)?.into_owned()),
-        r#let: None,
+        r#let: scope.map(|scope| {
+            doc! {
+                name_from_scope(scope): "$$ROOT"
+            }
+        }),
         pipeline: if lookup_pipeline.is_empty() {
             None
         } else {
@@ -106,8 +119,9 @@ fn multiple_column_mapping_lookup(
     column_mapping: &BTreeMap<String, String>,
     r#as: String,
     lookup_pipeline: Pipeline,
+    scope: Option<&Scope>,
 ) -> Result<Stage> {
-    let let_bindings: Document = column_mapping
+    let mut let_bindings: Document = column_mapping
         .keys()
         .map(|local_field| {
             Ok((
@@ -116,6 +130,10 @@ fn multiple_column_mapping_lookup(
             ))
         })
         .collect::<Result<_>>()?;
+
+    if let Some(scope) = scope {
+        let_bindings.insert(name_from_scope(scope), "$$ROOT");
+    }
 
     // Creating an intermediate Vec and sorting it is done just to help with testing.
     // A stable order for matchers makes it easier to assert equality between actual
@@ -208,6 +226,9 @@ mod tests {
                     "from": "students",
                     "localField": "_id",
                     "foreignField": "classId",
+                    "let": {
+                        "scope_root": "$$ROOT",
+                    },
                     "pipeline": [
                         {
                             "$replaceWith": {
@@ -294,6 +315,9 @@ mod tests {
                     "from": "classes",
                     "localField": "classId",
                     "foreignField": "_id",
+                    "let": {
+                        "scope_root": "$$ROOT",
+                    },
                     "pipeline": [
                         {
                             "$replaceWith": {
@@ -378,6 +402,7 @@ mod tests {
                     "let": {
                         "v_year": "$year",
                         "v_title": "$title",
+                        "scope_root": "$$ROOT",
                     },
                     "pipeline": [
                         {
@@ -484,12 +509,18 @@ mod tests {
                     "from": "students",
                     "localField": "_id",
                     "foreignField": "class_id",
+                    "let": {
+                        "scope_root": "$$ROOT",
+                    },
                     "pipeline": [
                         {
                             "$lookup": {
                                 "from": "assignments",
                                 "localField": "_id",
                                 "foreignField": "student_id",
+                                "let": {
+                                    "scope_0": "$$ROOT",
+                                },
                                 "pipeline": [
                                     {
                                         "$replaceWith": {
@@ -592,6 +623,9 @@ mod tests {
                     "from": "students",
                     "localField": "_id",
                     "foreignField": "classId",
+                    "let": {
+                        "scope_root": "$$ROOT",
+                    },
                     "pipeline": [
                         {
                             "$facet": {
@@ -703,6 +737,9 @@ mod tests {
               "from": "movies",
               "localField": "movie_id",
               "foreignField": "_id",
+              "let": {
+                "scope_root": "$$ROOT",
+              },
               "pipeline": [
                 {
                   "$replaceWith": {

@@ -55,6 +55,11 @@ pub struct Query<T: ConnectorTypes> {
     /// Relationships referenced by fields and expressions in this query or sub-query. Does not
     /// include relationships in sub-queries nested under this one.
     pub relationships: Relationships<T>,
+
+    /// Some relationship references may introduce a named "scope" so that other parts of the query
+    /// request can reference fields of documents in the related collection. The connector must
+    /// introduce a variable, or something similar, for such references.
+    pub scope: Option<Scope>,
 }
 
 impl<T: ConnectorTypes> Query<T> {
@@ -91,6 +96,12 @@ pub struct UnrelatedJoin<T: ConnectorTypes> {
     pub target_collection: String,
     pub arguments: BTreeMap<String, RelationshipArgument>,
     pub query: Query<T>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Scope {
+    Root,
+    Named(String),
 }
 
 #[derive(Derivative)]
@@ -227,7 +238,7 @@ impl<T: ConnectorTypes> Expression<T> {
                     Either::Right(iter::empty())
                 }
             }
-            t @ ComparisonTarget::RootCollectionColumn { .. } => Either::Left(iter::once(t)),
+            t @ ComparisonTarget::ColumnInScope { .. } => Either::Left(iter::once(t)),
         }
     }
 }
@@ -299,9 +310,13 @@ pub enum ComparisonTarget<T: ConnectorTypes> {
         /// fields for the [QueryPlan].
         path: Vec<String>,
     },
-    RootCollectionColumn {
+    ColumnInScope {
         /// The name of the column
         name: String,
+
+        /// The named scope that identifies the collection to reference. This corresponds to the
+        /// `scope` field of the [Query] type.
+        scope: Scope,
 
         /// Path to a nested field within an object column
         field_path: Option<Vec<String>>,
@@ -314,14 +329,14 @@ impl<T: ConnectorTypes> ComparisonTarget<T> {
     pub fn column_name(&self) -> &str {
         match self {
             ComparisonTarget::Column { name, .. } => name,
-            ComparisonTarget::RootCollectionColumn { name, .. } => name,
+            ComparisonTarget::ColumnInScope { name, .. } => name,
         }
     }
 
     pub fn relationship_path(&self) -> &[String] {
         match self {
             ComparisonTarget::Column { path, .. } => path,
-            ComparisonTarget::RootCollectionColumn { .. } => &[],
+            ComparisonTarget::ColumnInScope { .. } => &[],
         }
     }
 }
@@ -330,7 +345,7 @@ impl<T: ConnectorTypes> ComparisonTarget<T> {
     pub fn get_column_type(&self) -> &Type<T::ScalarType> {
         match self {
             ComparisonTarget::Column { column_type, .. } => column_type,
-            ComparisonTarget::RootCollectionColumn { column_type, .. } => column_type,
+            ComparisonTarget::ColumnInScope { column_type, .. } => column_type,
         }
     }
 }
