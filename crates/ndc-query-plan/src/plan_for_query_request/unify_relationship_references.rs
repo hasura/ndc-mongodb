@@ -88,7 +88,6 @@ where
         (a.offset != b.offset, "offset"),
         (a.order_by != b.order_by, "order_by"),
         (predicate_a != predicate_b, "predicate"),
-        (a.scope != b.scope, "scope"),
     ]
     .into_iter()
     .filter_map(|(is_mismatch, field_name)| if is_mismatch { Some(field_name) } else { None })
@@ -97,6 +96,14 @@ where
     if !mismatching_fields.is_empty() {
         return Err(RelationshipUnificationError::Mismatch(mismatching_fields));
     }
+
+    let scope = unify_options(a.scope, b.scope, |a, b| {
+        if a == b {
+            Ok(a)
+        } else {
+            Err(RelationshipUnificationError::Mismatch(vec!["scope"]))
+        }
+    })?;
 
     let query = Query {
         aggregates: unify_aggregates(a.aggregates, b.aggregates)?,
@@ -107,7 +114,7 @@ where
         order_by: a.order_by,
         predicate: predicate_a,
         relationships: unify_nested_relationships(a.relationships, b.relationships)?,
-        scope: a.scope,
+        scope,
     };
     Ok(query)
 }
