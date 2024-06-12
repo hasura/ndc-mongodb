@@ -9,6 +9,7 @@ mod exists_in_collection;
 mod expressions;
 mod field;
 mod object_type;
+mod path_element;
 mod query_response;
 mod relationships;
 mod type_helpers;
@@ -31,6 +32,7 @@ pub use exists_in_collection::*;
 pub use expressions::*;
 pub use field::*;
 pub use object_type::*;
+pub use path_element::*;
 pub use query_response::*;
 pub use relationships::*;
 pub use type_helpers::*;
@@ -207,41 +209,5 @@ impl From<QueryBuilder> for Query {
 pub fn empty_expression() -> Expression {
     Expression::Or {
         expressions: vec![],
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct PathElementBuilder {
-    relationship: String,
-    arguments: Option<BTreeMap<String, RelationshipArgument>>,
-    predicate: Option<Box<Expression>>,
-}
-
-pub fn path_element(relationship: &str) -> PathElementBuilder {
-    PathElementBuilder::new(relationship)
-}
-
-impl PathElementBuilder {
-    pub fn new(relationship: &str) -> Self {
-        PathElementBuilder {
-            relationship: relationship.to_owned(),
-            arguments: None,
-            predicate: None,
-        }
-    }
-
-    pub fn predicate(mut self, expression: Expression) -> Self {
-        self.predicate = Some(Box::new(expression));
-        self
-    }
-}
-
-impl From<PathElementBuilder> for PathElement {
-    fn from(value: PathElementBuilder) -> Self {
-        PathElement {
-            relationship: value.relationship,
-            arguments: value.arguments.unwrap_or_default(),
-            predicate: value.predicate,
-        }
     }
 }

@@ -57,8 +57,8 @@ impl ComparisonFunction {
             .ok_or(QueryPlanError::UnknownComparisonOperator(s.to_owned()))
     }
 
-    /// Produce a MongoDB expression that applies this function to the given operands.
-    pub fn mongodb_expression(
+    /// Produce a MongoDB expression for use in a match query that applies this function to the given operands.
+    pub fn mongodb_match_query(
         self,
         column_ref: impl Into<String>,
         comparison_value: Bson,
@@ -68,6 +68,24 @@ impl ComparisonFunction {
                 doc! { column_ref: { self.mongodb_name(): comparison_value, "$options": "i" } }
             }
             _ => doc! { column_ref: { self.mongodb_name(): comparison_value } },
+        }
+    }
+
+    /// Produce a MongoDB expression for use in an aggregation expression that applies this
+    /// function to the given operands.
+    pub fn mongodb_aggregation_expression(
+        self,
+        column_ref: impl Into<Bson>,
+        comparison_value: impl Into<Bson>,
+    ) -> Document {
+        match self {
+            C::Regex => {
+                doc! { "$regexMatch": { "input": column_ref, "regex": comparison_value } }
+            }
+            C::IRegex => {
+                doc! { "$regexMatch": { "input": column_ref, "regex": comparison_value, "options": "i" } }
+            }
+            _ => doc! { self.mongodb_name(): [column_ref, comparison_value] },
         }
     }
 }

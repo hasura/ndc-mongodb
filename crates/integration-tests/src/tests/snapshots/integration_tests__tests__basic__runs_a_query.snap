@@ -6,52 +6,42 @@ data:
   movies:
     - title: Blacksmith Scene
       imdb:
-        rating:
-          $numberDouble: "6.2"
+        rating: 6.2
         votes: 1189
     - title: The Great Train Robbery
       imdb:
-        rating:
-          $numberDouble: "7.4"
+        rating: 7.4
         votes: 9847
     - title: The Land Beyond the Sunset
       imdb:
-        rating:
-          $numberDouble: "7.1"
+        rating: 7.1
         votes: 448
     - title: A Corner in Wheat
       imdb:
-        rating:
-          $numberDouble: "6.6"
+        rating: 6.6
         votes: 1375
     - title: "Winsor McCay, the Famous Cartoonist of the N.Y. Herald and His Moving Comics"
       imdb:
-        rating:
-          $numberDouble: "7.3"
+        rating: 7.3
         votes: 1034
     - title: Traffic in Souls
       imdb:
-        rating:
-          $numberInt: "6"
+        rating: 6
         votes: 371
     - title: Gertie the Dinosaur
       imdb:
-        rating:
-          $numberDouble: "7.3"
+        rating: 7.3
         votes: 1837
     - title: In the Land of the Head Hunters
       imdb:
-        rating:
-          $numberDouble: "5.8"
+        rating: 5.8
         votes: 223
     - title: The Perils of Pauline
       imdb:
-        rating:
-          $numberDouble: "7.6"
+        rating: 7.6
         votes: 744
     - title: The Birth of a Nation
       imdb:
-        rating:
-          $numberDouble: "6.8"
+        rating: 6.8
         votes: 15715
 errors: ~

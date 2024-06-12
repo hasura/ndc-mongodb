@@ -1,14 +1,14 @@
-use std::{borrow::Cow, collections::BTreeMap, iter::once};
+use std::collections::BTreeMap;
 
 use anyhow::anyhow;
-use itertools::Either;
 use mongodb::bson::{self, doc, Document};
 use ndc_models::UnaryComparisonOperator;
 
 use crate::{
+    comparison_function::ComparisonFunction,
     interface_types::MongoAgentError,
     mongo_query_plan::{ComparisonTarget, ComparisonValue, ExistsInCollection, Expression, Type},
-    mongodb::sanitize::safe_name,
+    query::column_ref::{column_expression, ColumnRef},
 };
 
 use super::serialization::json_to_bson;
@@ -57,40 +57,88 @@ pub fn make_selector(
             },
             ExistsInCollection::Unrelated {
                 unrelated_collection,
-            } => doc! { format!("$$ROOT.{unrelated_collection}.0"): { "$exists": true } },
+            } => doc! {
+                "$expr": {
+                    "$ne": [format!("$$ROOT.{unrelated_collection}.0"), null]
+                }
+            },
         }),
         Expression::BinaryComparisonOperator {
             column,
             operator,
             value,
-        } => {
-            let comparison_value = match value {
-                // TODO: MDB-152 To compare to another column we need to wrap the entire expression in
-                // an `$expr` aggregation operator (assuming the expression is not already in
-                // an aggregation expression context)
-                ComparisonValue::Column { .. } => Err(MongoAgentError::NotImplemented(
-                    "comparisons between columns",
-                )),
-                ComparisonValue::Scalar { value, value_type } => {
-                    bson_from_scalar_value(value, value_type)
-                }
-                ComparisonValue::Variable {
-                    name,
-                    variable_type,
-                } => variable_to_mongo_expression(variables, name, variable_type).map(Into::into),
-            }?;
-            Ok(traverse_relationship_path(
-                column.relationship_path(),
-                operator.mongodb_expression(column_ref(column)?, comparison_value),
-            ))
-        }
+        } => make_binary_comparison_selector(variables, column, operator, value),
         Expression::UnaryComparisonOperator { column, operator } => match operator {
-            UnaryComparisonOperator::IsNull => Ok(traverse_relationship_path(
-                column.relationship_path(),
-                doc! { column_ref(column)?: { "$eq": null } },
-            )),
+            UnaryComparisonOperator::IsNull => {
+                let match_doc = match ColumnRef::from_comparison_target(column) {
+                    ColumnRef::MatchKey(key) => doc! {
+                        key: { "$eq": null }
+                    },
+                    ColumnRef::Expression(expr) => doc! {
+                        "$expr": {
+                            "$eq": [expr, null]
+                        }
+                    },
+                };
+                Ok(traverse_relationship_path(
+                    column.relationship_path(),
+                    match_doc,
+                ))
+            }
         },
     }
+}
+
+fn make_binary_comparison_selector(
+    variables: Option<&BTreeMap<String, serde_json::Value>>,
+    target_column: &ComparisonTarget,
+    operator: &ComparisonFunction,
+    value: &ComparisonValue,
+) -> Result<Document> {
+    let selector = match value {
+        ComparisonValue::Column {
+            column: value_column,
+        } => {
+            if !target_column.relationship_path().is_empty()
+                || !value_column.relationship_path().is_empty()
+            {
+                return Err(MongoAgentError::NotImplemented(
+                    "binary comparisons between two fields where either field is in a related collection",
+                ));
+            }
+            doc! {
+                "$expr": operator.mongodb_aggregation_expression(
+                    column_expression(target_column),
+                    column_expression(value_column)
+                )
+            }
+        }
+        ComparisonValue::Scalar { value, value_type } => {
+            let comparison_value = bson_from_scalar_value(value, value_type)?;
+            let match_doc = match ColumnRef::from_comparison_target(target_column) {
+                ColumnRef::MatchKey(key) => operator.mongodb_match_query(key, comparison_value),
+                ColumnRef::Expression(expr) => {
+                    operator.mongodb_aggregation_expression(expr, comparison_value)
+                }
+            };
+            traverse_relationship_path(target_column.relationship_path(), match_doc)
+        }
+        ComparisonValue::Variable {
+            name,
+            variable_type,
+        } => {
+            let comparison_value =
+                variable_to_mongo_expression(variables, name, variable_type).map(Into::into)?;
+            let match_doc = match ColumnRef::from_comparison_target(target_column) {
+                ColumnRef::MatchKey(key) => operator.mongodb_match_query(key, comparison_value),
+                ColumnRef::Expression(expr) => {
+                    operator.mongodb_aggregation_expression(expr, comparison_value)
+                }
+            };
+            traverse_relationship_path(target_column.relationship_path(), match_doc)
+        }
+    };
+    Ok(selector)
 }
 
 /// For simple cases the target of an expression is a field reference. But if the target is
@@ -119,46 +167,6 @@ fn variable_to_mongo_expression(
         .ok_or_else(|| MongoAgentError::VariableNotDefined(variable.to_owned()))?;
 
     bson_from_scalar_value(value, value_type)
-}
-
-/// Given a column target returns a MongoDB expression that resolves to the value of the
-/// corresponding field, either in the target collection of a query request, or in the related
-/// collection. Resolves nested fields, but does not traverse relationships.
-fn column_ref(column: &ComparisonTarget) -> Result<Cow<'_, str>> {
-    let path = match column {
-        ComparisonTarget::Column {
-            name,
-            field_path,
-            // path,
-            ..
-        } => Either::Left(
-            once(name)
-                .chain(field_path.iter().flatten())
-                .map(AsRef::as_ref),
-        ),
-        ComparisonTarget::RootCollectionColumn {
-            name, field_path, ..
-        } => Either::Right(
-            once("$$ROOT")
-                .chain(once(name.as_ref()))
-                .chain(field_path.iter().flatten().map(AsRef::as_ref)),
-        ),
-    };
-    safe_selector(path)
-}
-
-/// Given an iterable of fields to access, ensures that each field name does not include characters
-/// that could be interpereted as a MongoDB expression.
-fn safe_selector<'a>(path: impl IntoIterator<Item = &'a str>) -> Result<Cow<'a, str>> {
-    let mut safe_elements = path
-        .into_iter()
-        .map(safe_name)
-        .collect::<Result<Vec<Cow<str>>>>()?;
-    if safe_elements.len() == 1 {
-        Ok(safe_elements.pop().unwrap())
-    } else {
-        Ok(Cow::Owned(safe_elements.join(".")))
-    }
 }
 
 #[cfg(test)]
@@ -237,6 +245,39 @@ mod tests {
                         }
                     }
                 }
+            }
+        };
+
+        assert_eq!(selector, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn compares_two_columns() -> anyhow::Result<()> {
+        let selector = make_selector(
+            None,
+            &Expression::BinaryComparisonOperator {
+                column: ComparisonTarget::Column {
+                    name: "Name".to_owned(),
+                    field_path: None,
+                    column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                    path: Default::default(),
+                },
+                operator: ComparisonFunction::Equal,
+                value: ComparisonValue::Column {
+                    column: ComparisonTarget::Column {
+                        name: "Title".to_owned(),
+                        field_path: None,
+                        column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                        path: Default::default(),
+                    },
+                },
+            },
+        )?;
+
+        let expected = doc! {
+            "$expr": {
+                "$eq": ["$Name", "$Title"]
             }
         };
 
