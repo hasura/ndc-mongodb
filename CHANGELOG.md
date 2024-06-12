@@ -6,7 +6,7 @@ This changelog documents the changes between release versions.
 - Support for root collection column references ([#75](https://github.com/hasura/ndc-mongodb/pull/75))
 - Fix for databases with field names that begin with a dollar sign, or that contain dots ([#74](https://github.com/hasura/ndc-mongodb/pull/74))
 - Implement column-to-column comparisons within the same collection ([#74](https://github.com/hasura/ndc-mongodb/pull/74))
-- For fields that contain different numeric types the inferred type may be a numeric type instead of `ExtendedJSON` if one type is a superset of the others ([#76](https://github.com/hasura/ndc-mongodb/pull/76))
+- If a field contains both `int` and `double` values then the field type is inferred as `double` instead of `ExtendedJSON` ([#76](https://github.com/hasura/ndc-mongodb/pull/76))
 
 ## [0.0.6] - 2024-05-01
 - Enables logging events from the MongoDB driver by setting the `RUST_LOG` variable ([#67](https://github.com/hasura/ndc-mongodb/pull/67))

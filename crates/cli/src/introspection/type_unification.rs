@@ -175,10 +175,7 @@ pub fn unify_object_types(
 }
 
 fn is_supertype(a: &BsonScalarType, b: &BsonScalarType) -> bool {
-    matches!(
-        (a, b),
-        (Double, Int) | (Long, Int) | (Decimal, Int) | (Decimal, Double) | (Decimal, Long)
-    )
+    matches!((a, b), (Double, Int))
 }
 
 #[cfg(test)]
