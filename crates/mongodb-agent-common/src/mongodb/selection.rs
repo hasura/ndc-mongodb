@@ -323,10 +323,10 @@ mod tests {
 
         let query_plan = plan_for_query_request(&students_config(), query_request)?;
 
-        // TODO: This selection illustrates that we end up looking up the relationship twice (once
-        // with the key `class_students`, and then with the key `class_students_0`). This is
-        // because the queries on the two relationships have different scope names. The query would
-        // work with just one lookup. Can we do that optimization?
+        // TODO: MDB-164 This selection illustrates that we end up looking up the relationship
+        // twice (once with the key `class_students`, and then with the key `class_students_0`).
+        // This is because the queries on the two relationships have different scope names. The
+        // query would work with just one lookup. Can we do that optimization?
         let selection = Selection::from_query_request(&query_plan)?;
         assert_eq!(
             Into::<Document>::into(selection),
