@@ -57,6 +57,15 @@ definition:
           - movieId
           - name
           - text
+    - role: user
+      output:
+        allowedFields:
+          - id
+          - date
+          - email
+          - movieId
+          - name
+          - text
 
 ---
 kind: ObjectBooleanExpressionType
@@ -135,4 +144,14 @@ definition:
     - role: admin
       select:
         filter: null
-
+    - role: user
+      select:
+        filter: 
+          relationship:
+            name: user
+            predicate: 
+              fieldComparison:
+                field: id
+                operator: _eq
+                value:  
+                  sessionVariable: x-hasura-user-id

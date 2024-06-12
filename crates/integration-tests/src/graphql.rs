@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::{to_value, Value};
@@ -12,6 +14,8 @@ pub struct GraphQLRequest {
     operation_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     variables: Option<Value>,
+    #[serde(skip_serializing)]
+    headers: BTreeMap<String, String>,
 }
 
 impl GraphQLRequest {
@@ -20,6 +24,7 @@ impl GraphQLRequest {
             query,
             operation_name: Default::default(),
             variables: Default::default(),
+            headers: [("x-hasura-role".into(), "admin".into())].into(),
         }
     }
 
@@ -33,15 +38,25 @@ impl GraphQLRequest {
         self
     }
 
+    pub fn headers(
+        mut self,
+        headers: impl IntoIterator<Item = (impl ToString, impl ToString)>,
+    ) -> Self {
+        self.headers = headers
+            .into_iter()
+            .map(|(key, value)| (key.to_string(), value.to_string()))
+            .collect();
+        self
+    }
+
     pub async fn run(&self) -> anyhow::Result<GraphQLResponse> {
         let graphql_url = get_graphql_url()?;
         let client = Client::new();
-        let response = client
-            .post(graphql_url)
-            .header("x-hasura-role", "admin")
-            .json(self)
-            .send()
-            .await?;
+        let mut request_builder = client.post(graphql_url).json(self);
+        for (key, value) in self.headers.iter() {
+            request_builder = request_builder.header(key, value);
+        }
+        let response = request_builder.send().await?;
         let graphql_response = response.json().await?;
         Ok(graphql_response)
     }

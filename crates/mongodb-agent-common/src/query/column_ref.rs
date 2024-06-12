@@ -1,6 +1,7 @@
 use std::{borrow::Cow, iter::once};
 
 use mongodb::bson::{doc, Bson};
+use ndc_query_plan::Scope;
 
 use crate::{mongo_query_plan::ComparisonTarget, mongodb::sanitize::is_name_safe};
 
@@ -49,13 +50,16 @@ fn from_target(column: &ComparisonTarget) -> ColumnRef<'_> {
             // one element, and we know it does because we start the iterable with `name`
             from_path(None, name_and_path).unwrap()
         }
-        ComparisonTarget::RootCollectionColumn {
-            name, field_path, ..
+        ComparisonTarget::ColumnInScope {
+            name,
+            field_path,
+            scope,
+            ..
         } => {
             // "$$ROOT" is not actually a valid match key, but cheating here makes the
             // implementation much simpler. This match branch produces a ColumnRef::Expression
             // in all cases.
-            let init = ColumnRef::MatchKey("$ROOT".into());
+            let init = ColumnRef::MatchKey(format!("${}", name_from_scope(scope)).into());
             // The None case won't come up if the input to [from_target_helper] has at least
             // one element, and we know it does because we start the iterable with `name`
             let col_ref =
@@ -66,6 +70,13 @@ fn from_target(column: &ComparisonTarget) -> ColumnRef<'_> {
                 e @ ColumnRef::Expression(_) => e,
             }
         }
+    }
+}
+
+pub fn name_from_scope(scope: &Scope) -> Cow<'_, str> {
+    match scope {
+        Scope::Root => "scope_root".into(),
+        Scope::Named(name) => name.into(),
     }
 }
 
@@ -140,6 +151,7 @@ mod tests {
     use configuration::MongoScalarType;
     use mongodb::bson::doc;
     use mongodb_support::BsonScalarType;
+    use ndc_query_plan::Scope;
     use pretty_assertions::assert_eq;
 
     use crate::mongo_query_plan::{ComparisonTarget, Type};
@@ -255,29 +267,31 @@ mod tests {
 
     #[test]
     fn produces_dot_separated_root_column_reference() -> anyhow::Result<()> {
-        let target = ComparisonTarget::RootCollectionColumn {
+        let target = ComparisonTarget::ColumnInScope {
             name: "field".into(),
             field_path: Some(vec!["prop1".into(), "prop2".into()]),
             column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+            scope: Scope::Root,
         };
         let actual = ColumnRef::from_comparison_target(&target);
-        let expected = ColumnRef::Expression("$$ROOT.field.prop1.prop2".into());
+        let expected = ColumnRef::Expression("$$scope_root.field.prop1.prop2".into());
         assert_eq!(actual, expected);
         Ok(())
     }
 
     #[test]
     fn escapes_unsafe_field_name_in_root_column_reference() -> anyhow::Result<()> {
-        let target = ComparisonTarget::RootCollectionColumn {
+        let target = ComparisonTarget::ColumnInScope {
             name: "$field".into(),
             field_path: Default::default(),
             column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+            scope: Scope::Named("scope_0".into()),
         };
         let actual = ColumnRef::from_comparison_target(&target);
         let expected = ColumnRef::Expression(
             doc! {
                 "$getField": {
-                    "input": "$$ROOT",
+                    "input": "$$scope_0",
                     "field": { "$literal": "$field" },
                 }
             }
@@ -289,16 +303,17 @@ mod tests {
 
     #[test]
     fn escapes_unsafe_nested_property_name_in_root_column_reference() -> anyhow::Result<()> {
-        let target = ComparisonTarget::RootCollectionColumn {
+        let target = ComparisonTarget::ColumnInScope {
             name: "field".into(),
             field_path: Some(vec!["$unsafe_name".into()]),
             column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+            scope: Scope::Root,
         };
         let actual = ColumnRef::from_comparison_target(&target);
         let expected = ColumnRef::Expression(
             doc! {
                 "$getField": {
-                    "input": "$$ROOT.field",
+                    "input": "$$scope_root.field",
                     "field": { "$literal": "$unsafe_name" },
                 }
             }
@@ -311,10 +326,11 @@ mod tests {
     #[test]
     fn escapes_multiple_layers_of_nested_property_names_in_root_column_reference(
     ) -> anyhow::Result<()> {
-        let target = ComparisonTarget::RootCollectionColumn {
+        let target = ComparisonTarget::ColumnInScope {
             name: "$field".into(),
             field_path: Some(vec!["$unsafe_name1".into(), "$unsafe_name2".into()]),
             column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+            scope: Scope::Root,
         };
         let actual = ColumnRef::from_comparison_target(&target);
         let expected = ColumnRef::Expression(
@@ -324,7 +340,7 @@ mod tests {
                         "$getField": {
                             "input": {
                                 "$getField": {
-                                    "input": "$$ROOT",
+                                    "input": "$$scope_root",
                                     "field": { "$literal": "$field" },
                                 }
                             },
@@ -342,16 +358,17 @@ mod tests {
 
     #[test]
     fn escapes_unsafe_deeply_nested_property_name_in_root_column_reference() -> anyhow::Result<()> {
-        let target = ComparisonTarget::RootCollectionColumn {
+        let target = ComparisonTarget::ColumnInScope {
             name: "field".into(),
             field_path: Some(vec!["prop1".into(), "$unsafe_name".into()]),
             column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+            scope: Scope::Root,
         };
         let actual = ColumnRef::from_comparison_target(&target);
         let expected = ColumnRef::Expression(
             doc! {
                 "$getField": {
-                    "input": "$$ROOT.field.prop1",
+                    "input": "$$scope_root.field.prop1",
                     "field": { "$literal": "$unsafe_name" },
                 }
             }
