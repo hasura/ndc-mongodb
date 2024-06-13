@@ -1,0 +1,56 @@
+{
+  "name": "comments",
+  "collections": {
+    "comments": {
+      "type": "comments"
+    }
+  },
+  "objectTypes": {
+    "comments": {
+      "fields": {
+        "_id": {
+          "type": {
+            "nullable": {
+              "scalar": "objectId"
+            }
+          }
+        },
+        "date": {
+          "type": {
+            "nullable": {
+              "scalar": "date"
+            }
+          }
+        },
+        "email": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "movie_id": {
+          "type": {
+            "nullable": {
+              "scalar": "objectId"
+            }
+          }
+        },
+        "name": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "text": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

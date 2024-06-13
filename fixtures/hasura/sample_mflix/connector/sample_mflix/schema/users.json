@@ -1,0 +1,52 @@
+{
+  "name": "users",
+  "collections": {
+    "users": {
+      "type": "users"
+    }
+  },
+  "objectTypes": {
+    "users": {
+      "fields": {
+        "_id": {
+          "type": {
+            "nullable": {
+              "scalar": "objectId"
+            }
+          }
+        },
+        "email": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "name": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "password": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "preferences": {
+          "type": {
+            "nullable": {
+              "object": "users_preferences"
+            }
+          }
+        }
+      }
+    },
+    "users_preferences": {
+      "fields": {}
+    }
+  }
+}

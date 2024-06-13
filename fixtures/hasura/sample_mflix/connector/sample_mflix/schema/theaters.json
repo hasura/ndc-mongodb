@@ -1,0 +1,112 @@
+{
+  "name": "theaters",
+  "collections": {
+    "theaters": {
+      "type": "theaters"
+    }
+  },
+  "objectTypes": {
+    "theaters": {
+      "fields": {
+        "_id": {
+          "type": {
+            "nullable": {
+              "scalar": "objectId"
+            }
+          }
+        },
+        "location": {
+          "type": {
+            "nullable": {
+              "object": "theaters_location"
+            }
+          }
+        },
+        "theaterId": {
+          "type": {
+            "nullable": {
+              "scalar": "int"
+            }
+          }
+        }
+      }
+    },
+    "theaters_location": {
+      "fields": {
+        "address": {
+          "type": {
+            "nullable": {
+              "object": "theaters_location_address"
+            }
+          }
+        },
+        "geo": {
+          "type": {
+            "nullable": {
+              "object": "theaters_location_geo"
+            }
+          }
+        }
+      }
+    },
+    "theaters_location_address": {
+      "fields": {
+        "city": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "state": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "street1": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "street2": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "zipcode": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        }
+      }
+    },
+    "theaters_location_geo": {
+      "fields": {
+        "coordinates": {
+          "type": {
+            "nullable": {
+              "arrayOf": {
+                "scalar": "double"
+              }
+            }
+          }
+        },
+        "type": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}
