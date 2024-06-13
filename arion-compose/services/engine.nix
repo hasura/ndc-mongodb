@@ -65,6 +65,7 @@ let
   auth-config = pkgs.writeText "auth_config.json" (builtins.toJSON {
     version = "v1";
     definition = {
+      allowRoleEmulationBy = "admin";
       mode.webhook = {
         url = auth-webhook.url;
         method = "Post";

@@ -1,0 +1,8 @@
+kind: Connector
+version: v1
+definition:
+  name: chinook
+  subgraph: chinook
+  source: hasura/mongodb:v0.0.6
+  context: .
+  envFile: .env.local
