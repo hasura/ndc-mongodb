@@ -14,6 +14,7 @@ pub fn mongo_capabilities_response() -> CapabilitiesResponse {
                 nested_fields: NestedFieldCapabilities {
                     filter_by: Some(LeafCapability {}),
                     order_by: Some(LeafCapability {}),
+                    aggregates: None,
                 },
             },
             mutation: ndc_sdk::models::MutationCapabilities {
