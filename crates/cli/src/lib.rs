@@ -61,7 +61,7 @@ async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
         }
     };
     let all_schema_nullable = match args.all_schema_nullable {
-        Some(validator) => validator,
+        Some(b) => b,
         None => {
             configuration_options
                 .introspection_options
