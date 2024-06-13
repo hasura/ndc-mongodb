@@ -77,7 +77,7 @@ kind: DataConnectorScalarRepresentation
 version: v1
 definition:
   dataConnectorName: sample_mflix
-  dataConnectorScalarType: Float
+  dataConnectorScalarType: Double
   representation: Float
   graphql:
-    comparisonExpressionTypeName: FloatComparisonExp
+    comparisonExpressionTypeName: DoubleComparisonExp

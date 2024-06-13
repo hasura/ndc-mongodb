@@ -1,9 +1,10 @@
+---
 kind: Command
 version: v1
 definition:
   name: hello
   description: Basic test of native queries
-  outputType: String
+  outputType: String!
   arguments:
     - name: name
       type: String!
@@ -25,3 +26,4 @@ definition:
   permissions:
     - role: admin
       allowExecution: true
+
