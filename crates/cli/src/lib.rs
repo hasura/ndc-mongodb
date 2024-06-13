@@ -1,6 +1,7 @@
 //! The interpretation of the commands that the CLI can handle.
 
 mod introspection;
+mod logging;
 
 use std::path::PathBuf;
 
@@ -55,7 +56,7 @@ async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
         None => configuration_options.introspection_options.no_validator_schema
     };
     let all_schema_nullable = match args.all_schema_nullable {
-        Some(validator) => validator,
+        Some(b) => b,
         None => configuration_options.introspection_options.all_schema_nullable
     };
     let config_file_changed = configuration::get_config_file_changed(&context.path).await?;

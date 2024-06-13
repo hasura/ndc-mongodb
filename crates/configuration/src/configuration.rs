@@ -205,7 +205,7 @@ pub struct ConfigurationIntrospectionOptions {
     // Whether to try validator schema first if one exists.
     pub no_validator_schema: bool,
 
-    // Default to setting all schema fields as nullable.
+    // Default to setting all schema fields, except the _id field on collection types, as nullable.
     pub all_schema_nullable: bool,
 }
 
