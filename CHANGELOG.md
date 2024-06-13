@@ -8,6 +8,7 @@ This changelog documents the changes between release versions.
 - Implement column-to-column comparisons within the same collection ([#74](https://github.com/hasura/ndc-mongodb/pull/74))
 - Fix error tracking collection with no documents by skipping such collections during CLI introspection ([#76](https://github.com/hasura/ndc-mongodb/pull/76))
 - If a field contains both `int` and `double` values then the field type is inferred as `double` instead of `ExtendedJSON` ([#77](https://github.com/hasura/ndc-mongodb/pull/77))
+- Fix: schema generated with `_id` column nullable when introspecting schema via sampling ([#78](https://github.com/hasura/ndc-mongodb/pull/78))
 
 ## [0.0.6] - 2024-05-01
 - Enables logging events from the MongoDB driver by setting the `RUST_LOG` variable ([#67](https://github.com/hasura/ndc-mongodb/pull/67))
