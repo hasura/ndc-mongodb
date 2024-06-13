@@ -1,0 +1,102 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: Artist
+  fields:
+    - name: id
+      type: Chinook_ObjectId!
+    - name: artistId
+      type: Int!
+    - name: name
+      type: String!
+  graphql:
+    typeName: Artist
+    inputTypeName: ArtistInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: chinook
+      dataConnectorObjectType: Artist
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        artistId:
+          column:
+            name: ArtistId
+        name:
+          column:
+            name: Name
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Artist
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - artistId
+          - name
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: ArtistBoolExp
+  objectType: Artist
+  dataConnectorName: chinook
+  dataConnectorObjectType: Artist
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: artistId
+      operators:
+        enableAll: true
+    - fieldName: name
+      operators:
+        enableAll: true
+  graphql:
+    typeName: ArtistBoolExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: Artist
+  objectType: Artist
+  source:
+    dataConnectorName: chinook
+    collection: Artist
+  filterExpressionType: ArtistBoolExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: artistId
+      orderByDirections:
+        enableAll: true
+    - fieldName: name
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: artist
+    selectUniques:
+      - queryRootField: artistById
+        uniqueIdentifier:
+          - id
+    orderByExpressionType: ArtistOrderBy
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Artist
+  permissions:
+    - role: admin
+      select:
+        filter: null
+

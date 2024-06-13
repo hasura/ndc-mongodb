@@ -26,9 +26,7 @@ definition:
               argument_type:
                 type: named
                 name: BinData
-        Bool:
-          representation:
-            type: boolean
+        Boolean:
           aggregate_functions:
             count:
               result_type:
@@ -41,10 +39,8 @@ definition:
               type: custom
               argument_type:
                 type: named
-                name: Bool
+                name: Boolean
         Date:
-          representation:
-            type: timestamp
           aggregate_functions:
             count:
               result_type:
@@ -101,8 +97,6 @@ definition:
                 type: named
                 name: DbPointer
         Decimal:
-          representation:
-            type: bigdecimal
           aggregate_functions:
             avg:
               result_type:
@@ -152,66 +146,60 @@ definition:
               argument_type:
                 type: named
                 name: Decimal
-        Double:
-          representation:
-            type: float64
-          aggregate_functions:
-            avg:
-              result_type:
-                type: named
-                name: Double
-            count:
-              result_type:
-                type: named
-                name: Int
-            max:
-              result_type:
-                type: named
-                name: Double
-            min:
-              result_type:
-                type: named
-                name: Double
-            sum:
-              result_type:
-                type: named
-                name: Double
-          comparison_operators:
-            _eq:
-              type: equal
-            _gt:
-              type: custom
-              argument_type:
-                type: named
-                name: Double
-            _gte:
-              type: custom
-              argument_type:
-                type: named
-                name: Double
-            _lt:
-              type: custom
-              argument_type:
-                type: named
-                name: Double
-            _lte:
-              type: custom
-              argument_type:
-                type: named
-                name: Double
-            _neq:
-              type: custom
-              argument_type:
-                type: named
-                name: Double
         ExtendedJSON:
-          representation:
-            type: json
           aggregate_functions: {}
           comparison_operators: {}
+        Float:
+          aggregate_functions:
+            avg:
+              result_type:
+                type: named
+                name: Float
+            count:
+              result_type:
+                type: named
+                name: Int
+            max:
+              result_type:
+                type: named
+                name: Float
+            min:
+              result_type:
+                type: named
+                name: Float
+            sum:
+              result_type:
+                type: named
+                name: Float
+          comparison_operators:
+            _eq:
+              type: equal
+            _gt:
+              type: custom
+              argument_type:
+                type: named
+                name: Float
+            _gte:
+              type: custom
+              argument_type:
+                type: named
+                name: Float
+            _lt:
+              type: custom
+              argument_type:
+                type: named
+                name: Float
+            _lte:
+              type: custom
+              argument_type:
+                type: named
+                name: Float
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: Float
         Int:
-          representation:
-            type: int32
           aggregate_functions:
             avg:
               result_type:
@@ -276,8 +264,6 @@ definition:
                 name: Int
           comparison_operators: {}
         Long:
-          representation:
-            type: int64
           aggregate_functions:
             avg:
               result_type:
@@ -370,8 +356,6 @@ definition:
                 type: named
                 name: "Null"
         ObjectId:
-          representation:
-            type: string
           aggregate_functions:
             count:
               result_type:
@@ -393,8 +377,6 @@ definition:
                 name: Int
           comparison_operators: {}
         String:
-          representation:
-            type: string
           aggregate_functions:
             count:
               result_type:
@@ -517,22 +499,6 @@ definition:
                 type: named
                 name: Undefined
       object_types:
-        Hello:
-          fields:
-            __value:
-              type:
-                type: named
-                name: String
-        TitleWordFrequency:
-          fields:
-            _id:
-              type:
-                type: named
-                name: String
-            count:
-              type:
-                type: named
-                name: Int
         comments:
           fields:
             _id:
@@ -571,12 +537,10 @@ definition:
                 name: movies_awards
             cast:
               type:
-                type: nullable
-                underlying_type:
-                  type: array
-                  element_type:
-                    type: named
-                    name: String
+                type: array
+                element_type:
+                  type: named
+                  name: String
             countries:
               type:
                 type: array
@@ -591,8 +555,10 @@ definition:
                   name: String
             fullplot:
               type:
-                type: named
-                name: String
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
             genres:
               type:
                 type: array
@@ -627,12 +593,16 @@ definition:
                   name: Int
             plot:
               type:
-                type: named
-                name: String
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
             poster:
               type:
-                type: named
-                name: String
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
             rated:
               type:
                 type: nullable
@@ -653,8 +623,10 @@ definition:
                 name: String
             tomatoes:
               type:
-                type: named
-                name: movies_tomatoes
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: movies_tomatoes
             type:
               type:
                 type: named
@@ -691,8 +663,10 @@ definition:
                 name: Int
             rating:
               type:
-                type: named
-                name: Double
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Double
             votes:
               type:
                 type: named
@@ -759,10 +733,8 @@ definition:
           fields:
             meter:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
             numReviews:
               type:
                 type: named
@@ -858,7 +830,7 @@ definition:
                 type: array
                 element_type:
                   type: named
-                  name: Double
+                  name: Float
             type:
               type:
                 type: named
@@ -881,6 +853,10 @@ definition:
               type:
                 type: named
                 name: String
+        TitleWordFrequency:
+          fields:
+            _id: { type: { type: named, name: String } }
+            count: { type: { type: named, name: Int } }
       collections:
         - name: comments
           arguments: {}
@@ -914,15 +890,6 @@ definition:
               unique_columns:
                 - _id
           foreign_keys: {}
-        - name: title_word_frequency
-          description: words appearing in movie titles with counts
-          arguments: {}
-          type: TitleWordFrequency
-          uniqueness_constraints:
-            title_word_frequency_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
         - name: users
           arguments: {}
           type: users
@@ -931,25 +898,27 @@ definition:
               unique_columns:
                 - _id
           foreign_keys: {}
+        - name: title_word_frequency
+          arguments: {}
+          type: TitleWordFrequency
+          uniqueness_constraints:
+            title_word_frequency_id:
+              unique_columns:
+                - _id
+          foreign_keys: {}
       functions:
         - name: hello
           description: Basic test of native queries
+          result_type: { type: named, name: String }
           arguments:
-            name:
-              type:
-                type: named
-                name: String
-          result_type:
-            type: named
-            name: String
+            name: { type: { type: named, name: String } }
       procedures: []
     capabilities:
-      version: 0.1.4
+      version: 0.1.1
       capabilities:
         query:
           aggregates: {}
           variables: {}
           explain: {}
         mutation: {}
-        relationships:
-          relation_comparisons: {}
+        relationships: {}

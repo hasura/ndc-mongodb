@@ -1,0 +1,34 @@
+kind: Relationship
+version: v1
+definition:
+  name: comments
+  source: Users
+  target:
+    model:
+      name: Comments
+      relationshipType: Array
+  mapping:
+    - source:
+        fieldPath:
+          - fieldName: email
+      target:
+        modelField:
+          - fieldName: email
+
+---
+kind: Relationship
+version: v1
+definition:
+  name: user
+  source: Comments
+  target:
+    model:
+      name: Users
+      relationshipType: Object
+  mapping:
+    - source:
+        fieldPath:
+          - fieldName: email
+      target:
+        modelField:
+          - fieldName: email

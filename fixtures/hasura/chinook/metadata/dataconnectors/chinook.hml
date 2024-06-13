@@ -26,9 +26,7 @@ definition:
               argument_type:
                 type: named
                 name: BinData
-        Bool:
-          representation:
-            type: boolean
+        Boolean:
           aggregate_functions:
             count:
               result_type:
@@ -41,10 +39,8 @@ definition:
               type: custom
               argument_type:
                 type: named
-                name: Bool
+                name: Boolean
         Date:
-          representation:
-            type: timestamp
           aggregate_functions:
             count:
               result_type:
@@ -101,8 +97,6 @@ definition:
                 type: named
                 name: DbPointer
         Decimal:
-          representation:
-            type: bigdecimal
           aggregate_functions:
             avg:
               result_type:
@@ -152,66 +146,60 @@ definition:
               argument_type:
                 type: named
                 name: Decimal
-        Double:
-          representation:
-            type: float64
-          aggregate_functions:
-            avg:
-              result_type:
-                type: named
-                name: Double
-            count:
-              result_type:
-                type: named
-                name: Int
-            max:
-              result_type:
-                type: named
-                name: Double
-            min:
-              result_type:
-                type: named
-                name: Double
-            sum:
-              result_type:
-                type: named
-                name: Double
-          comparison_operators:
-            _eq:
-              type: equal
-            _gt:
-              type: custom
-              argument_type:
-                type: named
-                name: Double
-            _gte:
-              type: custom
-              argument_type:
-                type: named
-                name: Double
-            _lt:
-              type: custom
-              argument_type:
-                type: named
-                name: Double
-            _lte:
-              type: custom
-              argument_type:
-                type: named
-                name: Double
-            _neq:
-              type: custom
-              argument_type:
-                type: named
-                name: Double
         ExtendedJSON:
-          representation:
-            type: json
           aggregate_functions: {}
           comparison_operators: {}
+        Float:
+          aggregate_functions:
+            avg:
+              result_type:
+                type: named
+                name: Float
+            count:
+              result_type:
+                type: named
+                name: Int
+            max:
+              result_type:
+                type: named
+                name: Float
+            min:
+              result_type:
+                type: named
+                name: Float
+            sum:
+              result_type:
+                type: named
+                name: Float
+          comparison_operators:
+            _eq:
+              type: equal
+            _gt:
+              type: custom
+              argument_type:
+                type: named
+                name: Float
+            _gte:
+              type: custom
+              argument_type:
+                type: named
+                name: Float
+            _lt:
+              type: custom
+              argument_type:
+                type: named
+                name: Float
+            _lte:
+              type: custom
+              argument_type:
+                type: named
+                name: Float
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: Float
         Int:
-          representation:
-            type: int32
           aggregate_functions:
             avg:
               result_type:
@@ -276,8 +264,6 @@ definition:
                 name: Int
           comparison_operators: {}
         Long:
-          representation:
-            type: int64
           aggregate_functions:
             avg:
               result_type:
@@ -370,8 +356,6 @@ definition:
                 type: named
                 name: "Null"
         ObjectId:
-          representation:
-            type: string
           aggregate_functions:
             count:
               result_type:
@@ -393,8 +377,6 @@ definition:
                 name: Int
           comparison_operators: {}
         String:
-          representation:
-            type: string
           aggregate_functions:
             count:
               result_type:
@@ -518,7 +500,6 @@ definition:
                 name: Undefined
       object_types:
         Album:
-          description: Object type for collection Album
           fields:
             _id:
               type:
@@ -537,7 +518,6 @@ definition:
                 type: named
                 name: String
         Artist:
-          description: Object type for collection Artist
           fields:
             _id:
               type:
@@ -549,12 +529,9 @@ definition:
                 name: Int
             Name:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
         Customer:
-          description: Object type for collection Customer
           fields:
             _id:
               type:
@@ -562,28 +539,20 @@ definition:
                 name: ObjectId
             Address:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             City:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             Company:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             Country:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             CustomerId:
               type:
                 type: named
@@ -594,10 +563,8 @@ definition:
                 name: String
             Fax:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             FirstName:
               type:
                 type: named
@@ -608,30 +575,23 @@ definition:
                 name: String
             Phone:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             PostalCode:
               type:
                 type: nullable
                 underlying_type:
                   type: named
-                  name: String
+                  name: ExtendedJSON
             State:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             SupportRepId:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
         Employee:
-          description: Object type for collection Employee
           fields:
             _id:
               type:
@@ -639,70 +599,52 @@ definition:
                 name: ObjectId
             Address:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             BirthDate:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             City:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             Country:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             Email:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             EmployeeId:
               type:
                 type: named
                 name: Int
             Fax:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             FirstName:
               type:
                 type: named
                 name: String
             HireDate:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             LastName:
               type:
                 type: named
                 name: String
             Phone:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             PostalCode:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             ReportsTo:
               type:
                 type: nullable
@@ -711,18 +653,13 @@ definition:
                   name: Int
             State:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             Title:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
         Genre:
-          description: Object type for collection Genre
           fields:
             _id:
               type:
@@ -734,22 +671,9 @@ definition:
                 name: Int
             Name:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
-        InsertArtist:
-          fields:
-            "n":
-              type:
                 type: named
-                name: Int
-            ok:
-              type:
-                type: named
-                name: Double
+                name: String
         Invoice:
-          description: Object type for collection Invoice
           fields:
             _id:
               type:
@@ -757,34 +681,26 @@ definition:
                 name: ObjectId
             BillingAddress:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             BillingCity:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             BillingCountry:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             BillingPostalCode:
               type:
                 type: nullable
                 underlying_type:
                   type: named
-                  name: String
+                  name: ExtendedJSON
             BillingState:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             CustomerId:
               type:
                 type: named
@@ -800,9 +716,8 @@ definition:
             Total:
               type:
                 type: named
-                name: Decimal
+                name: Float
         InvoiceLine:
-          description: Object type for collection InvoiceLine
           fields:
             _id:
               type:
@@ -827,9 +742,8 @@ definition:
             UnitPrice:
               type:
                 type: named
-                name: Decimal
+                name: Float
         MediaType:
-          description: Object type for collection MediaType
           fields:
             _id:
               type:
@@ -841,12 +755,9 @@ definition:
                 name: Int
             Name:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
         Playlist:
-          description: Object type for collection Playlist
           fields:
             _id:
               type:
@@ -854,16 +765,13 @@ definition:
                 name: ObjectId
             Name:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             PlaylistId:
               type:
                 type: named
                 name: Int
         PlaylistTrack:
-          description: Object type for collection PlaylistTrack
           fields:
             _id:
               type:
@@ -878,7 +786,6 @@ definition:
                 type: named
                 name: Int
         Track:
-          description: Object type for collection Track
           fields:
             _id:
               type:
@@ -886,28 +793,20 @@ definition:
                 name: ObjectId
             AlbumId:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
             Bytes:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
             Composer:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+                type: named
+                name: String
             GenreId:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
             MediaTypeId:
               type:
                 type: named
@@ -927,7 +826,13 @@ definition:
             UnitPrice:
               type:
                 type: named
-                name: Decimal
+                name: Float
+        InsertArtist:
+          fields:
+            ok:
+              type: { type: named, name: Double }
+            n:
+              type: { type: named, name: Int }
       collections:
         - name: Album
           arguments: {}
@@ -1020,26 +925,18 @@ definition:
       functions: []
       procedures:
         - name: insertArtist
-          description: Example of a database update using a native mutation
+          description: Example of a database update using a native procedure
+          result_type: { type: named, name: InsertArtist }
           arguments:
-            id:
-              type:
-                type: named
-                name: Int
-            name:
-              type:
-                type: named
-                name: String
-          result_type:
-            type: named
-            name: InsertArtist
+            id: { type: { type: named, name: Int } }
+            name: { type: { type: named, name: String } }
     capabilities:
-      version: 0.1.4
+      version: 0.1.1
       capabilities:
         query:
           aggregates: {}
           variables: {}
           explain: {}
         mutation: {}
-        relationships:
-          relation_comparisons: {}
+        relationships: {}
+
