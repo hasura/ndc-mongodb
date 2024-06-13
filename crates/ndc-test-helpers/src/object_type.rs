@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use ndc_models::{ObjectField, ObjectType, Type};
 
 pub fn object_type(
@@ -12,6 +14,7 @@ pub fn object_type(
                     name.to_string(),
                     ObjectField {
                         description: Default::default(),
+                        arguments: BTreeMap::new(),
                         r#type: field_type.into(),
                     },
                 )

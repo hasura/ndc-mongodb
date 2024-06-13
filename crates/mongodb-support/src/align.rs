@@ -1,7 +1,13 @@
 use indexmap::IndexMap;
 use std::hash::Hash;
 
-pub fn align<K, T, U, V, FT, FU, FTU>(ts: IndexMap<K, T>, mut us: IndexMap<K, U>, ft: FT, fu: FU, ftu: FTU) -> IndexMap<K, V>
+pub fn align<K, T, U, V, FT, FU, FTU>(
+    ts: IndexMap<K, T>,
+    mut us: IndexMap<K, U>,
+    ft: FT,
+    fu: FU,
+    ftu: FTU,
+) -> IndexMap<K, V>
 where
     K: Hash + Eq,
     FT: Fn(T) -> V,

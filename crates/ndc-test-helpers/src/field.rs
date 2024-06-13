@@ -5,6 +5,7 @@ macro_rules! field {
             $name,
             $crate::ndc_models::Field::Column {
                 column: $name.to_owned(),
+                arguments: Default::default(),
                 fields: None,
             },
         )
@@ -14,6 +15,7 @@ macro_rules! field {
             $name,
             $crate::ndc_models::Field::Column {
                 column: $column_name.to_owned(),
+                arguments: Default::default(),
                 fields: None,
             },
         )
@@ -23,6 +25,7 @@ macro_rules! field {
             $name,
             $crate::ndc_models::Field::Column {
                 column: $column_name.to_owned(),
+                arguments: Default::default(),
                 fields: Some($fields.into()),
             },
         )

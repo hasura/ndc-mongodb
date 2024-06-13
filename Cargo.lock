@@ -1690,14 +1690,14 @@ dependencies = [
 
 [[package]]
 name = "ndc-models"
-version = "0.1.2"
-source = "git+http://github.com/hasura/ndc-spec.git?tag=v0.1.2#6e7d12a31787d5f618099a42ddc0bea786438c00"
+version = "0.1.4"
+source = "git+http://github.com/hasura/ndc-spec.git?tag=v0.1.4#20172e3b2552b78d16dbafcd047f559ced420309"
 dependencies = [
  "indexmap 2.2.5",
  "schemars",
  "serde",
  "serde_json",
- "serde_with 2.3.3",
+ "serde_with 3.7.0",
 ]
 
 [[package]]
@@ -1720,8 +1720,8 @@ dependencies = [
 
 [[package]]
 name = "ndc-sdk"
-version = "0.1.0"
-source = "git+https://github.com/hasura/ndc-sdk-rs.git#a273a01efccfc71ef3341cf5f357b2c9ae2d109f"
+version = "0.1.4"
+source = "git+https://github.com/hasura/ndc-sdk-rs.git?tag=v0.1.4#29adcb5983c1237e8a5f4732d5230c2ba8ab75d3"
 dependencies = [
  "async-trait",
  "axum",
@@ -1753,8 +1753,8 @@ dependencies = [
 
 [[package]]
 name = "ndc-test"
-version = "0.1.2"
-source = "git+http://github.com/hasura/ndc-spec.git?tag=v0.1.2#6e7d12a31787d5f618099a42ddc0bea786438c00"
+version = "0.1.4"
+source = "git+http://github.com/hasura/ndc-spec.git?tag=v0.1.4#20172e3b2552b78d16dbafcd047f559ced420309"
 dependencies = [
  "async-trait",
  "clap",
@@ -2787,22 +2787,6 @@ dependencies = [
 
 [[package]]
 name = "serde_with"
-version = "2.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07ff71d2c147a7b57362cead5e22f772cd52f6ab31cfcd9edcd7f6aeb2a0afbe"
-dependencies = [
- "base64 0.13.1",
- "chrono",
- "hex",
- "indexmap 1.9.3",
- "serde",
- "serde_json",
- "serde_with_macros 2.3.3",
- "time",
-]
-
-[[package]]
-name = "serde_with"
 version = "3.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee80b0e361bbf88fd2f6e242ccd19cfda072cb0faa6ae694ecee08199938569a"
@@ -2829,18 +2813,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "serde_with_macros"
-version = "2.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "881b6f881b17d13214e5d494c939ebab463d01264ce1811e9d4ac3a882e7695f"
-dependencies = [
- "darling 0.20.3",
- "proc-macro2",
- "quote",
- "syn 2.0.52",
 ]
 
 [[package]]

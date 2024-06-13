@@ -149,6 +149,7 @@ impl From<ObjectField> for ndc_models::ObjectField {
         ndc_models::ObjectField {
             description: field.description,
             r#type: field.r#type.into(),
+            arguments: BTreeMap::new(),
         }
     }
 }

@@ -145,7 +145,11 @@ fn rewrite_doc(
         .iter()
         .map(|(name, field)| {
             let field_value = match field {
-                ndc::Field::Column { column, fields } => {
+                ndc::Field::Column {
+                    column,
+                    fields,
+                    arguments: _,
+                } => {
                     let orig_value = doc.remove(column).ok_or_else(|| {
                         MutationError::UnprocessableContent(format!(
                             "missing expected field from response: {name}"
