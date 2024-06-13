@@ -1,5 +1,7 @@
 use std::collections::{BTreeMap, HashSet};
 
+use crate::log_warning;
+
 use super::type_unification::{make_nullable_field, unify_object_types, unify_type};
 use configuration::{
     schema::{self, Type},
@@ -38,7 +40,11 @@ pub async fn sample_schema_from_db(
                 state,
             )
             .await?;
-            schemas.insert(collection_name, collection_schema);
+            if let Some(collection_schema) = collection_schema {
+                schemas.insert(collection_name, collection_schema);
+            } else {
+                log_warning!("could not find any documents to sample from collection, {collection_name} - skipping");
+            }
         }
     }
     Ok(schemas)
@@ -49,7 +55,7 @@ async fn sample_schema_from_collection(
     sample_size: u32,
     all_schema_nullalble: bool,
     state: &ConnectorState,
-) -> anyhow::Result<Schema> {
+) -> anyhow::Result<Option<Schema>> {
     let db = state.database();
     let options = None;
     let mut cursor = db
@@ -65,18 +71,21 @@ async fn sample_schema_from_collection(
             unify_object_types(collected_object_types, object_types)
         };
     }
-    let collection_info = WithName::named(
-        collection_name.to_string(),
-        schema::Collection {
-            description: None,
-            r#type: collection_name.to_string(),
-        },
-    );
-
-    Ok(Schema {
-        collections: WithName::into_map([collection_info]),
-        object_types: WithName::into_map(collected_object_types),
-    })
+    if collected_object_types.is_empty() {
+        Ok(None)
+    } else {
+        let collection_info = WithName::named(
+            collection_name.to_string(),
+            schema::Collection {
+                description: None,
+                r#type: collection_name.to_string(),
+            },
+        );
+        Ok(Some(Schema {
+            collections: WithName::into_map([collection_info]),
+            object_types: WithName::into_map(collected_object_types),
+        }))
+    }
 }
 
 fn make_object_type(
