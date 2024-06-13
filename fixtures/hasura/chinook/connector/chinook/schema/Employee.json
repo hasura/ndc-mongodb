@@ -1,0 +1,121 @@
+{
+  "name": "Employee",
+  "collections": {
+    "Employee": {
+      "type": "Employee"
+    }
+  },
+  "objectTypes": {
+    "Employee": {
+      "fields": {
+        "Address": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "BirthDate": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "City": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "Country": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "Email": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "EmployeeId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "Fax": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "FirstName": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "HireDate": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "LastName": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "Phone": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "PostalCode": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "ReportsTo": {
+          "type": {
+            "nullable": {
+              "scalar": "int"
+            }
+          }
+        },
+        "State": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "Title": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "_id": {
+          "type": {
+            "nullable": {
+              "scalar": "objectId"
+            }
+          }
+        }
+      },
+      "description": "Object type for collection Employee"
+    }
+  }
+}
