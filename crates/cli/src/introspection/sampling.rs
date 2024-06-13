@@ -19,7 +19,7 @@ type ObjectType = WithName<schema::ObjectType>;
 /// are not unifiable.
 pub async fn sample_schema_from_db(
     sample_size: u32,
-    all_schema_nullalble: bool,
+    all_schema_nullable: bool,
     config_file_changed: bool,
     state: &ConnectorState,
     existing_schemas: &HashSet<std::string::String>,
@@ -32,7 +32,7 @@ pub async fn sample_schema_from_db(
         let collection_name = collection_spec.name;
         if !existing_schemas.contains(&collection_name) || config_file_changed {
             let collection_schema =
-                sample_schema_from_collection(&collection_name, sample_size, all_schema_nullalble, state).await?;
+                sample_schema_from_collection(&collection_name, sample_size, all_schema_nullable, state).await?;
             schemas.insert(collection_name, collection_schema);
         }
     }
@@ -42,7 +42,7 @@ pub async fn sample_schema_from_db(
 async fn sample_schema_from_collection(
     collection_name: &str,
     sample_size: u32,
-    all_schema_nullalble: bool,
+    all_schema_nullable: bool,
     state: &ConnectorState,
 ) -> anyhow::Result<Schema> {
     let db = state.database();
@@ -52,8 +52,9 @@ async fn sample_schema_from_collection(
         .aggregate(vec![doc! {"$sample": { "size": sample_size }}], options)
         .await?;
     let mut collected_object_types = vec![];
+    let is_collection_type = true;
     while let Some(document) = cursor.try_next().await? {
-        let object_types = make_object_type(collection_name, &document, all_schema_nullalble);
+        let object_types = make_object_type(collection_name, &document, is_collection_type, all_schema_nullable);
         collected_object_types = if collected_object_types.is_empty() {
             object_types
         } else {
@@ -74,13 +75,13 @@ async fn sample_schema_from_collection(
     })
 }
 
-fn make_object_type(object_type_name: &str, document: &Document, all_schema_nullalble: bool) -> Vec<ObjectType> {
+fn make_object_type(object_type_name: &str, document: &Document, is_collection_type: bool, all_schema_nullable: bool) -> Vec<ObjectType> {
     let (mut object_type_defs, object_fields) = {
         let type_prefix = format!("{object_type_name}_");
         let (object_type_defs, object_fields): (Vec<Vec<ObjectType>>, Vec<ObjectField>) = document
             .iter()
             .map(|(field_name, field_value)| {
-                make_object_field(&type_prefix, field_name, field_value, all_schema_nullalble)
+                make_object_field(&type_prefix, field_name, field_value, is_collection_type, all_schema_nullable)
             })
             .unzip();
         (object_type_defs.concat(), object_fields)
@@ -102,10 +103,11 @@ fn make_object_field(
     type_prefix: &str,
     field_name: &str,
     field_value: &Bson,
-    all_schema_nullalble: bool,
+    is_collection_type: bool,
+    all_schema_nullable: bool,
 ) -> (Vec<ObjectType>, ObjectField) {
     let object_type_name = format!("{type_prefix}{field_name}");
-    let (collected_otds, field_type) = make_field_type(&object_type_name, field_value, all_schema_nullalble);
+    let (collected_otds, field_type) = make_field_type(&object_type_name, field_value, all_schema_nullable);
     let object_field_value = WithName::named(
         field_name.to_owned(),
         schema::ObjectField {
@@ -113,7 +115,8 @@ fn make_object_field(
             r#type: field_type,
         },
     );
-    let object_field = if all_schema_nullalble {
+    let object_field = if all_schema_nullable && !(is_collection_type && field_name == "_id") {
+        // The _id field on a collection type should never be nullable.
         make_nullable_field(object_field_value)
     } else {
         object_field_value
@@ -126,13 +129,13 @@ fn make_object_field(
 pub fn type_from_bson(
     object_type_name: &str,
     value: &Bson,
-    all_schema_nullalble: bool,
+    all_schema_nullable: bool,
 ) -> (BTreeMap<std::string::String, schema::ObjectType>, Type) {
-    let (object_types, t) = make_field_type(object_type_name, value, all_schema_nullalble);
+    let (object_types, t) = make_field_type(object_type_name, value, all_schema_nullable);
     (WithName::into_map(object_types), t)
 }
 
-fn make_field_type(object_type_name: &str, field_value: &Bson, all_schema_nullalble: bool) -> (Vec<ObjectType>, Type) {
+fn make_field_type(object_type_name: &str, field_value: &Bson, all_schema_nullable: bool) -> (Vec<ObjectType>, Type) {
     fn scalar(t: BsonScalarType) -> (Vec<ObjectType>, Type) {
         (vec![], Type::Scalar(t))
     }
@@ -144,7 +147,7 @@ fn make_field_type(object_type_name: &str, field_value: &Bson, all_schema_nullal
             let mut collected_otds = vec![];
             let mut result_type = Type::Scalar(Undefined);
             for elem in arr {
-                let (elem_collected_otds, elem_type) = make_field_type(object_type_name, elem, all_schema_nullalble);
+                let (elem_collected_otds, elem_type) = make_field_type(object_type_name, elem, all_schema_nullable);
                 collected_otds = if collected_otds.is_empty() {
                     elem_collected_otds
                 } else {
@@ -155,7 +158,8 @@ fn make_field_type(object_type_name: &str, field_value: &Bson, all_schema_nullal
             (collected_otds, Type::ArrayOf(Box::new(result_type)))
         }
         Bson::Document(document) => {
-            let collected_otds = make_object_type(object_type_name, document, all_schema_nullalble);
+            let is_collection_type = false;
+            let collected_otds = make_object_type(object_type_name, document, is_collection_type, all_schema_nullable);
             (collected_otds, Type::Object(object_type_name.to_owned()))
         }
         Bson::Boolean(_) => scalar(Bool),
@@ -195,7 +199,7 @@ mod tests {
     fn simple_doc() -> Result<(), anyhow::Error> {
         let object_name = "foo";
         let doc = doc! {"my_int": 1, "my_string": "two"};
-        let result = WithName::into_map::<BTreeMap<_, _>>(make_object_type(object_name, &doc, false));
+        let result = WithName::into_map::<BTreeMap<_, _>>(make_object_type(object_name, &doc, false, false));
 
         let expected = BTreeMap::from([(
             object_name.to_owned(),
@@ -226,10 +230,51 @@ mod tests {
     }
 
     #[test]
+    fn simple_doc_nullable_fields() -> Result<(), anyhow::Error> {
+        let object_name = "foo";
+        let doc = doc! {"my_int": 1, "my_string": "two", "_id": 0};
+        let result = WithName::into_map::<BTreeMap<_, _>>(make_object_type(object_name, &doc, true, true));
+
+        let expected = BTreeMap::from([(
+            object_name.to_owned(),
+            ObjectType {
+                fields: BTreeMap::from([
+                    (
+                        "_id".to_owned(),
+                        ObjectField {
+                            r#type: Type::Scalar(BsonScalarType::Int),
+                            description: None,
+                        },
+                    ),
+                    (
+                        "my_int".to_owned(),
+                        ObjectField {
+                            r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::Int))),
+                            description: None,
+                        },
+                    ),
+                    (
+                        "my_string".to_owned(),
+                        ObjectField {
+                            r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::String))),
+                            description: None,
+                        },
+                    ),
+                ]),
+                description: None,
+            },
+        )]);
+
+        assert_eq!(expected, result);
+
+        Ok(())
+    }
+
+    #[test]
     fn array_of_objects() -> Result<(), anyhow::Error> {
         let object_name = "foo";
         let doc = doc! {"my_array": [{"foo": 42, "bar": ""}, {"bar": "wut", "baz": 3.77}]};
-        let result = WithName::into_map::<BTreeMap<_, _>>(make_object_type(object_name, &doc, false));
+        let result = WithName::into_map::<BTreeMap<_, _>>(make_object_type(object_name, &doc, false, false));
 
         let expected = BTreeMap::from([
             (
@@ -289,7 +334,7 @@ mod tests {
     fn non_unifiable_array_of_objects() -> Result<(), anyhow::Error> {
         let object_name = "foo";
         let doc = doc! {"my_array": [{"foo": 42, "bar": ""}, {"bar": 17, "baz": 3.77}]};
-        let result = WithName::into_map::<BTreeMap<_, _>>(make_object_type(object_name, &doc, false));
+        let result = WithName::into_map::<BTreeMap<_, _>>(make_object_type(object_name, &doc, false, false));
 
         let expected = BTreeMap::from([
             (
