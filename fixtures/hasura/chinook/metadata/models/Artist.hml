@@ -9,7 +9,7 @@ definition:
     - name: artistId
       type: Int!
     - name: name
-      type: String!
+      type: String
   graphql:
     typeName: Artist
     inputTypeName: ArtistInput
@@ -26,6 +26,7 @@ definition:
         name:
           column:
             name: Name
+  description: Object type for collection Artist
 
 ---
 kind: TypePermissions

@@ -31,6 +31,7 @@ definition:
         title:
           column:
             name: Title
+  description: Object type for collection Album
 
 ---
 kind: TypePermissions

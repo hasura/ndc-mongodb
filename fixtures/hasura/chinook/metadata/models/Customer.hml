@@ -7,31 +7,31 @@ definition:
     - name: id
       type: Chinook_ObjectId!
     - name: address
-      type: String!
+      type: String
     - name: city
-      type: String!
+      type: String
     - name: company
-      type: String!
+      type: String
     - name: country
-      type: String!
+      type: String
     - name: customerId
       type: Int!
     - name: email
       type: String!
     - name: fax
-      type: String!
+      type: String
     - name: firstName
       type: String!
     - name: lastName
       type: String!
     - name: phone
-      type: String!
+      type: String
     - name: postalCode
-      type: Chinook_ExtendedJson
+      type: String
     - name: state
-      type: String!
+      type: String
     - name: supportRepId
-      type: Int!
+      type: Int
   graphql:
     typeName: Customer
     inputTypeName: CustomerInput
@@ -81,6 +81,7 @@ definition:
         supportRepId:
           column:
             name: SupportRepId
+  description: Object type for collection Customer
 
 ---
 kind: TypePermissions

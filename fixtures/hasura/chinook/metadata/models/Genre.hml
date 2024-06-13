@@ -9,7 +9,7 @@ definition:
     - name: genreId
       type: Int!
     - name: name
-      type: String!
+      type: String
   graphql:
     typeName: Genre
     inputTypeName: GenreInput
@@ -26,6 +26,7 @@ definition:
         name:
           column:
             name: Name
+  description: Object type for collection Genre
 
 ---
 kind: TypePermissions

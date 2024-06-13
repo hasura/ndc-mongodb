@@ -7,15 +7,15 @@ definition:
     - name: id
       type: Chinook_ObjectId!
     - name: billingAddress
-      type: String!
+      type: String
     - name: billingCity
-      type: String!
+      type: String
     - name: billingCountry
-      type: String!
+      type: String
     - name: billingPostalCode
-      type: Chinook_ExtendedJson
+      type: String
     - name: billingState
-      type: String!
+      type: String
     - name: customerId
       type: Int!
     - name: invoiceDate
@@ -23,7 +23,7 @@ definition:
     - name: invoiceId
       type: Int!
     - name: total
-      type: Float!
+      type: Decimal!
   graphql:
     typeName: Invoice
     inputTypeName: InvoiceInput
@@ -61,6 +61,7 @@ definition:
         total:
           column:
             name: Total
+  description: Object type for collection Invoice
 
 ---
 kind: TypePermissions

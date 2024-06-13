@@ -7,13 +7,13 @@ definition:
     - name: id
       type: Chinook_ObjectId!
     - name: albumId
-      type: Int!
+      type: Int
     - name: bytes
-      type: Int!
+      type: Int
     - name: composer
-      type: String!
+      type: String
     - name: genreId
-      type: Int!
+      type: Int
     - name: mediaTypeId
       type: Int!
     - name: milliseconds
@@ -23,7 +23,7 @@ definition:
     - name: trackId
       type: Int!
     - name: unitPrice
-      type: Float!
+      type: Decimal!
   graphql:
     typeName: Track
     inputTypeName: TrackInput
@@ -61,6 +61,7 @@ definition:
         unitPrice:
           column:
             name: UnitPrice
+  description: Object type for collection Track
 
 ---
 kind: TypePermissions

@@ -1,12 +1,13 @@
+---
 kind: Command
 version: v1
 definition:
   name: insertArtist
   description: Example of a database update using a native mutation
-  outputType: InsertArtist
+  outputType: InsertArtist!
   arguments:
     - name: id
-      type: Int! 
+      type: Int!
     - name: name
       type: String!
   source:
@@ -28,7 +29,7 @@ definition:
   permissions:
     - role: admin
       allowExecution: true
-    
+
 ---
 kind: ObjectType
 version: v1
@@ -36,17 +37,22 @@ definition:
   name: InsertArtist
   graphql:
     typeName: InsertArtist
+    inputTypeName: InsertArtistInput
   fields:
     - name: ok
-      type: Float!
+      type: Double!
     - name: n
       type: Int!
   dataConnectorTypeMapping:
     - dataConnectorName: chinook
       dataConnectorObjectType: InsertArtist
       fieldMapping:
-        ok: { column: { name: ok } }
-        n: { column: { name: n } }
+        ok:
+          column:
+            name: ok
+        n:
+          column:
+            name: n
 
 ---
 kind: TypePermissions
@@ -59,3 +65,4 @@ definition:
         allowedFields:
           - ok
           - n
+

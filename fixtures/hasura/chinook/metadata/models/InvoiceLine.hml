@@ -15,7 +15,7 @@ definition:
     - name: trackId
       type: Int!
     - name: unitPrice
-      type: Float!
+      type: Decimal!
   graphql:
     typeName: InvoiceLine
     inputTypeName: InvoiceLineInput
@@ -41,6 +41,7 @@ definition:
         unitPrice:
           column:
             name: UnitPrice
+  description: Object type for collection InvoiceLine
 
 ---
 kind: TypePermissions
