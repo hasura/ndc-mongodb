@@ -10,16 +10,12 @@
       "fields": {
         "_id": {
           "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
+            "scalar": "objectId"
           }
         },
         "awards": {
           "type": {
-            "nullable": {
-              "object": "movies_awards"
-            }
+            "object": "movies_awards"
           }
         },
         "cast": {
@@ -33,59 +29,45 @@
         },
         "countries": {
           "type": {
-            "nullable": {
-              "arrayOf": {
-                "scalar": "string"
-              }
+            "arrayOf": {
+              "scalar": "string"
             }
           }
         },
         "directors": {
           "type": {
-            "nullable": {
-              "arrayOf": {
-                "scalar": "string"
-              }
+            "arrayOf": {
+              "scalar": "string"
             }
           }
         },
         "fullplot": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         },
         "genres": {
           "type": {
-            "nullable": {
-              "arrayOf": {
-                "scalar": "string"
-              }
+            "arrayOf": {
+              "scalar": "string"
             }
           }
         },
         "imdb": {
           "type": {
-            "nullable": {
-              "object": "movies_imdb"
-            }
+            "object": "movies_imdb"
           }
         },
         "languages": {
           "type": {
-            "nullable": {
-              "arrayOf": {
-                "scalar": "string"
-              }
+            "arrayOf": {
+              "scalar": "string"
             }
           }
         },
         "lastupdated": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         },
         "metacritic": {
@@ -104,16 +86,12 @@
         },
         "plot": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         },
         "poster": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         },
         "rated": {
@@ -125,53 +103,39 @@
         },
         "released": {
           "type": {
-            "nullable": {
-              "scalar": "date"
-            }
+            "scalar": "date"
           }
         },
         "runtime": {
           "type": {
-            "nullable": {
-              "scalar": "int"
-            }
+            "scalar": "int"
           }
         },
         "title": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         },
         "tomatoes": {
           "type": {
-            "nullable": {
-              "object": "movies_tomatoes"
-            }
+            "object": "movies_tomatoes"
           }
         },
         "type": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         },
         "writers": {
           "type": {
-            "nullable": {
-              "arrayOf": {
-                "scalar": "string"
-              }
+            "arrayOf": {
+              "scalar": "string"
             }
           }
         },
         "year": {
           "type": {
-            "nullable": {
-              "scalar": "int"
-            }
+            "scalar": "int"
           }
         }
       }
@@ -180,23 +144,17 @@
       "fields": {
         "nominations": {
           "type": {
-            "nullable": {
-              "scalar": "int"
-            }
+            "scalar": "int"
           }
         },
         "text": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         },
         "wins": {
           "type": {
-            "nullable": {
-              "scalar": "int"
-            }
+            "scalar": "int"
           }
         }
       }
@@ -205,19 +163,17 @@
       "fields": {
         "id": {
           "type": {
-            "nullable": {
-              "scalar": "int"
-            }
+            "scalar": "int"
           }
         },
         "rating": {
-          "type": "extendedJSON"
+          "type": {
+            "scalar": "double"
+          }
         },
         "votes": {
           "type": {
-            "nullable": {
-              "scalar": "int"
-            }
+            "scalar": "int"
           }
         }
       }
@@ -261,9 +217,7 @@
         },
         "lastUpdated": {
           "type": {
-            "nullable": {
-              "scalar": "date"
-            }
+            "scalar": "date"
           }
         },
         "production": {
@@ -282,9 +236,7 @@
         },
         "viewer": {
           "type": {
-            "nullable": {
-              "object": "movies_tomatoes_viewer"
-            }
+            "object": "movies_tomatoes_viewer"
           }
         },
         "website": {
@@ -307,13 +259,15 @@
         },
         "numReviews": {
           "type": {
-            "nullable": {
-              "scalar": "int"
-            }
+            "scalar": "int"
           }
         },
         "rating": {
-          "type": "extendedJSON"
+          "type": {
+            "nullable": {
+              "scalar": "double"
+            }
+          }
         }
       }
     },
@@ -321,20 +275,20 @@
       "fields": {
         "meter": {
           "type": {
-            "nullable": {
-              "scalar": "int"
-            }
+            "scalar": "int"
           }
         },
         "numReviews": {
           "type": {
-            "nullable": {
-              "scalar": "int"
-            }
+            "scalar": "int"
           }
         },
         "rating": {
-          "type": "extendedJSON"
+          "type": {
+            "nullable": {
+              "scalar": "double"
+            }
+          }
         }
       }
     }

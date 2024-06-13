@@ -10,23 +10,17 @@
       "fields": {
         "_id": {
           "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
+            "scalar": "objectId"
           }
         },
         "jwt": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         },
         "user_id": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         }
       }

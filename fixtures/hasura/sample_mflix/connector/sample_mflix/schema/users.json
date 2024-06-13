@@ -10,43 +10,25 @@
       "fields": {
         "_id": {
           "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
+            "scalar": "objectId"
           }
         },
         "email": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         },
         "name": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         },
         "password": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
-          }
-        },
-        "preferences": {
-          "type": {
-            "nullable": {
-              "object": "users_preferences"
-            }
+            "scalar": "string"
           }
         }
       }
-    },
-    "users_preferences": {
-      "fields": {}
     }
   }
 }

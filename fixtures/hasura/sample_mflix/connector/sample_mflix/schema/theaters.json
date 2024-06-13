@@ -10,23 +10,17 @@
       "fields": {
         "_id": {
           "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
+            "scalar": "objectId"
           }
         },
         "location": {
           "type": {
-            "nullable": {
-              "object": "theaters_location"
-            }
+            "object": "theaters_location"
           }
         },
         "theaterId": {
           "type": {
-            "nullable": {
-              "scalar": "int"
-            }
+            "scalar": "int"
           }
         }
       }
@@ -35,16 +29,12 @@
       "fields": {
         "address": {
           "type": {
-            "nullable": {
-              "object": "theaters_location_address"
-            }
+            "object": "theaters_location_address"
           }
         },
         "geo": {
           "type": {
-            "nullable": {
-              "object": "theaters_location_geo"
-            }
+            "object": "theaters_location_geo"
           }
         }
       }
@@ -53,23 +43,17 @@
       "fields": {
         "city": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         },
         "state": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         },
         "street1": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         },
         "street2": {
@@ -81,9 +65,7 @@
         },
         "zipcode": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         }
       }
@@ -92,18 +74,14 @@
       "fields": {
         "coordinates": {
           "type": {
-            "nullable": {
-              "arrayOf": {
-                "scalar": "double"
-              }
+            "arrayOf": {
+              "scalar": "double"
             }
           }
         },
         "type": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         }
       }

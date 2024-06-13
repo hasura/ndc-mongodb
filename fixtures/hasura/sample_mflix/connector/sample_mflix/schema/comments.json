@@ -10,44 +10,32 @@
       "fields": {
         "_id": {
           "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
+            "scalar": "objectId"
           }
         },
         "date": {
           "type": {
-            "nullable": {
-              "scalar": "date"
-            }
+            "scalar": "date"
           }
         },
         "email": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         },
         "movie_id": {
           "type": {
-            "nullable": {
-              "scalar": "objectId"
-            }
+            "scalar": "objectId"
           }
         },
         "name": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         },
         "text": {
           "type": {
-            "nullable": {
-              "scalar": "string"
-            }
+            "scalar": "string"
           }
         }
       }
