@@ -1,0 +1,23 @@
+kind: DataConnectorLink
+version: v1
+definition:
+  name: sample_mflix
+  url:
+    readWriteUrls:
+      read:
+        valueFromEnv: SAMPLE_MFLIX_CONNECTOR_URL
+      write:
+        valueFromEnv: SAMPLE_MFLIX_CONNECTOR_URL
+  schema:
+    version: v0.1
+    schema:
+      scalar_types: {}
+      object_types: {}
+      collections: []
+      functions: []
+      procedures: []
+    capabilities:
+      version: ""
+      capabilities:
+        query: {}
+        mutation: {}

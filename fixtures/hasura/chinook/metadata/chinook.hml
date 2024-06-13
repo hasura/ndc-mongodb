@@ -1,0 +1,23 @@
+kind: DataConnectorLink
+version: v1
+definition:
+  name: chinook
+  url:
+    readWriteUrls:
+      read:
+        valueFromEnv: CHINOOK_CONNECTOR_URL
+      write:
+        valueFromEnv: CHINOOK_CONNECTOR_URL
+  schema:
+    version: v0.1
+    schema:
+      scalar_types: {}
+      object_types: {}
+      collections: []
+      functions: []
+      procedures: []
+    capabilities:
+      version: ""
+      capabilities:
+        query: {}
+        mutation: {}
