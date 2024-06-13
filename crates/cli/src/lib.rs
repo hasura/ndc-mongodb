@@ -1,6 +1,7 @@
 //! The interpretation of the commands that the CLI can handle.
 
 mod introspection;
+mod logging;
 
 use std::path::PathBuf;
 
