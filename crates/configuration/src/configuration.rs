@@ -285,7 +285,11 @@ fn get_primary_key_uniqueness_constraint(
     // Check to make sure our collection's object type contains the _id field
     // If it doesn't (should never happen, all collections need an _id column), don't generate the constraint
     let object_type = object_types.get(collection_type)?;
-    let _id_field = object_type.fields.get("_id")?;
+    let id_field = object_type.fields.get("_id")?;
+    match &id_field.r#type {
+        schema::Type::Scalar(scalar_type) if scalar_type.is_comparable() => Some(()),
+        _ => None,
+    }?;
     let uniqueness_constraint = ndc::UniquenessConstraint {
         unique_columns: vec!["_id".into()],
     };
