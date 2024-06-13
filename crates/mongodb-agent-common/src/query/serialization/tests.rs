@@ -21,8 +21,10 @@ proptest! {
 
         let json = bson_to_json(&inferred_type, bson.clone()).map_err(|e| error_context("error converting bson to json", e.to_string()))?;
         let actual = json_to_bson(&inferred_type, json.clone()).map_err(|e| error_context("error converting json to bson", e.to_string()))?;
-        prop_assert_eq!(actual, bson,
-            "\ninferred type: {:?}\nobject types: {:?}\njson_representation: {}",
+        prop_assert!(custom_eq(&actual, &bson),
+            "`(left == right)`\nleft: `{:?}`\nright: `{:?}`\ninferred type: {:?}\nobject types: {:?}\njson_representation: {}",
+            actual,
+            bson,
             inferred_type,
             object_types,
             serde_json::to_string_pretty(&json).unwrap()
@@ -38,5 +40,24 @@ proptest! {
         let json = bson_to_json(&t, bson.clone())?;
         let actual = json_to_bson(&t, json.clone())?;
         prop_assert_eq!(actual, bson, "json representation: {}", json)
+    }
+}
+
+/// We are treating doubles as a superset of ints, so we need an equality check that allows
+/// comparing those types.
+fn custom_eq(a: &Bson, b: &Bson) -> bool {
+    match (a, b) {
+        (Bson::Double(a), Bson::Int32(b)) | (Bson::Int32(b), Bson::Double(a)) => *a == *b as f64,
+        (Bson::Array(xs), Bson::Array(ys)) => {
+            xs.len() == ys.len() && xs.iter().zip(ys.iter()).all(|(x, y)| custom_eq(x, y))
+        }
+        (Bson::Document(a), Bson::Document(b)) => {
+            a.len() == b.len()
+                && a.iter().all(|(key_a, value_a)| match b.get(key_a) {
+                    Some(value_b) => custom_eq(value_a, value_b),
+                    None => false,
+                })
+        }
+        _ => a == b,
     }
 }

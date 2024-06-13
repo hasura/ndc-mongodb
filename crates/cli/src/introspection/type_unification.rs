@@ -174,6 +174,16 @@ pub fn unify_object_types(
     merged_type_map.into_values().collect()
 }
 
+/// True iff we consider a to be a supertype of b.
+///
+/// Note that if you add more supertypes here then it is important to also update the custom
+/// equality check in our tests in mongodb_agent_common::query::serialization::tests. Equality
+/// needs to be transitive over supertypes, so for example if we have,
+///
+/// (Double, Int), (Decimal, Double)
+///
+/// then in addition to comparing ints to doubles, and doubles to decimals, we also need to compare
+/// decimals to ints.
 fn is_supertype(a: &BsonScalarType, b: &BsonScalarType) -> bool {
     matches!((a, b), (Double, Int))
 }
