@@ -97,6 +97,14 @@ where
         return Err(RelationshipUnificationError::Mismatch(mismatching_fields));
     }
 
+    let scope = unify_options(a.scope, b.scope, |a, b| {
+        if a == b {
+            Ok(a)
+        } else {
+            Err(RelationshipUnificationError::Mismatch(vec!["scope"]))
+        }
+    })?;
+
     let query = Query {
         aggregates: unify_aggregates(a.aggregates, b.aggregates)?,
         fields: unify_fields(a.fields, b.fields)?,
@@ -106,6 +114,7 @@ where
         order_by: a.order_by,
         predicate: predicate_a,
         relationships: unify_nested_relationships(a.relationships, b.relationships)?,
+        scope,
     };
     Ok(query)
 }

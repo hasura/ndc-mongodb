@@ -12,7 +12,7 @@ mod tests;
 
 use std::collections::VecDeque;
 
-use crate::{self as plan, type_annotated_field, ObjectType, QueryPlan};
+use crate::{self as plan, type_annotated_field, ObjectType, QueryPlan, Scope};
 use indexmap::IndexMap;
 use itertools::Itertools;
 use ndc::{ExistsInCollection, QueryRequest};
@@ -34,12 +34,13 @@ pub fn plan_for_query_request<T: QueryContext>(
     let mut plan_state = QueryPlanState::new(context, &request.collection_relationships);
     let collection_object_type = context.find_collection_object_type(&request.collection)?;
 
-    let query = plan_for_query(
+    let mut query = plan_for_query(
         &mut plan_state,
         &collection_object_type,
         &collection_object_type,
         request.query,
     )?;
+    query.scope = Some(Scope::Root);
 
     let unrelated_collections = plan_state.into_unrelated_collections();
 
@@ -52,6 +53,7 @@ pub fn plan_for_query_request<T: QueryContext>(
     })
 }
 
+/// root_collection_object_type references the collection type of the nearest enclosing [ndc::Query]
 pub fn plan_for_query<T: QueryContext>(
     plan_state: &mut QueryPlanState<'_, T>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
@@ -105,6 +107,7 @@ pub fn plan_for_query<T: QueryContext>(
         offset,
         predicate,
         relationships: plan_state.into_relationships(),
+        scope: None,
     })
 }
 
@@ -526,10 +529,11 @@ fn plan_for_comparison_target<T: QueryContext>(
         }
         ndc::ComparisonTarget::RootCollectionColumn { name, field_path } => {
             let column_type = find_object_field(root_collection_object_type, &name)?.clone();
-            Ok(plan::ComparisonTarget::RootCollectionColumn {
+            Ok(plan::ComparisonTarget::ColumnInScope {
                 name,
                 field_path,
                 column_type,
+                scope: plan_state.scope.clone(),
             })
         }
     }

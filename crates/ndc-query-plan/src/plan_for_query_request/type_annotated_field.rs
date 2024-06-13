@@ -73,12 +73,16 @@ fn type_annotated_field_helper<T: QueryContext>(
                 .context
                 .find_collection_object_type(&relationship_def.target_collection)?;
 
-            let query_plan = plan_for_query(
-                &mut plan_state.state_for_subquery(),
-                root_collection_object_type,
+            let mut subquery_state = plan_state.state_for_subquery();
+            subquery_state.new_scope();
+
+            let mut query_plan = plan_for_query(
+                &mut subquery_state,
+                &related_collection_type,
                 &related_collection_type,
                 *query,
             )?;
+            query_plan.scope = Some(subquery_state.into_scope());
 
             // It's important to get fields and aggregates from the constructed relationship query
             // before it is registered because at that point fields and aggregates will be merged

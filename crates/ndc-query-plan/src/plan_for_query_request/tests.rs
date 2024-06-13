@@ -247,10 +247,13 @@ fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
                                     column_mapping: [("_id".into(), "class_id".into())].into(),
                                     relationship_type: RelationshipType::Array,
                                     arguments: Default::default(),
-                                    query: Default::default(),
+                                    query: Query {
+                                        scope: Some(plan::Scope::Named("scope_1".into())),
+                                        ..Default::default() 
+                                    },
                                 },
-                            )]
-                                .into(),
+                            )].into(),
+                            scope: Some(plan::Scope::Named("scope_0".into())),
                             ..Default::default()
                         },
                     },
@@ -291,6 +294,7 @@ fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
                 )]
                     .into(),
             ),
+            scope: Some(plan::Scope::Root),
             ..Default::default()
         },
     };
@@ -395,12 +399,13 @@ fn translates_root_column_references() -> Result<(), anyhow::Error> {
                             },
                             operator: plan_test_helpers::ComparisonOperator::Equal,
                             value: plan::ComparisonValue::Column {
-                                column: plan::ComparisonTarget::RootCollectionColumn {
+                                column: plan::ComparisonTarget::ColumnInScope {
                                     name: "id".into(),
                                     field_path: Default::default(),
                                     column_type: plan::Type::Scalar(
                                         plan_test_helpers::ScalarType::Int,
                                     ),
+                                    scope: plan::Scope::Root,
                                 },
                             },
                         },
@@ -435,6 +440,7 @@ fn translates_root_column_references() -> Result<(), anyhow::Error> {
                 )]
                 .into(),
             ),
+            scope: Some(plan::Scope::Root),
             ..Default::default()
         },
         unrelated_collections: [(
@@ -456,8 +462,9 @@ fn translates_root_column_references() -> Result<(), anyhow::Error> {
                                 },
                                 operator: plan_test_helpers::ComparisonOperator::Equal,
                                 value: plan::ComparisonValue::Column {
-                                    column: plan::ComparisonTarget::RootCollectionColumn {
+                                    column: plan::ComparisonTarget::ColumnInScope {
                                         name: "id".into(),
+                                        scope: plan::Scope::Root,
                                         column_type: plan::Type::Scalar(
                                             plan_test_helpers::ScalarType::Int,
                                         ),
@@ -534,6 +541,7 @@ fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
                 ]
                 .into(),
             ),
+            scope: Some(plan::Scope::Root),
             ..Default::default()
         },
         arguments: Default::default(),
@@ -712,11 +720,13 @@ fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), a
                             ]
                             .into(),
                         ),
+                        scope: Some(plan::Scope::Named("scope_0".into())),
                         ..Default::default()
                     },
                 },
             )]
             .into(),
+            scope: Some(plan::Scope::Root),
             ..Default::default()
         },
         arguments: Default::default(),
@@ -825,6 +835,7 @@ fn translates_nested_fields() -> Result<(), anyhow::Error> {
                 ]
                 .into(),
             ),
+            scope: Some(plan::Scope::Root),
             ..Default::default()
         },
         arguments: Default::default(),
@@ -912,11 +923,13 @@ fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Res
                             )]
                             .into(),
                         ),
+                        scope: Some(plan::Scope::Named("scope_0".into())),
                         ..Default::default()
                     },
                 },
             )]
             .into(),
+            scope: Some(plan::Scope::Root),
             ..Default::default()
         },
         arguments: Default::default(),

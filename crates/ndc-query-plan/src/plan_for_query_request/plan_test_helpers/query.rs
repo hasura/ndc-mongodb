@@ -2,6 +2,7 @@ use indexmap::IndexMap;
 
 use crate::{
     Aggregate, ConnectorTypes, Expression, Field, OrderBy, OrderByElement, Query, Relationships,
+    Scope,
 };
 
 #[derive(Clone, Debug, Default)]
@@ -14,6 +15,7 @@ pub struct QueryBuilder<T: ConnectorTypes> {
     order_by: Option<OrderBy<T>>,
     predicate: Option<Expression<T>>,
     relationships: Relationships<T>,
+    scope: Option<Scope>,
 }
 
 #[allow(dead_code)]
@@ -32,6 +34,7 @@ impl<T: ConnectorTypes> QueryBuilder<T> {
             order_by: None,
             predicate: None,
             relationships: Default::default(),
+            scope: None,
         }
     }
 
@@ -72,6 +75,11 @@ impl<T: ConnectorTypes> QueryBuilder<T> {
         self.predicate = Some(expression);
         self
     }
+
+    pub fn scope(mut self, scope: Scope) -> Self {
+        self.scope = Some(scope);
+        self
+    }
 }
 
 impl<T: ConnectorTypes> From<QueryBuilder<T>> for Query<T> {
@@ -85,6 +93,7 @@ impl<T: ConnectorTypes> From<QueryBuilder<T>> for Query<T> {
             order_by: value.order_by,
             predicate: value.predicate,
             relationships: value.relationships,
+            scope: value.scope,
         }
     }
 }

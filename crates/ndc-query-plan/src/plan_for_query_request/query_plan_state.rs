@@ -8,8 +8,9 @@ use ndc::RelationshipArgument;
 use ndc_models as ndc;
 
 use crate::{
-    plan_for_query_request::helpers::lookup_relationship, query_plan::UnrelatedJoin, Query,
-    QueryContext, QueryPlanError, Relationship,
+    plan_for_query_request::helpers::lookup_relationship,
+    query_plan::{Scope, UnrelatedJoin},
+    Query, QueryContext, QueryPlanError, Relationship,
 };
 
 use super::unify_relationship_references::unify_relationship_references;
@@ -26,14 +27,12 @@ type Result<T> = std::result::Result<T, QueryPlanError>;
 pub struct QueryPlanState<'a, T: QueryContext> {
     pub context: &'a T,
     pub collection_relationships: &'a BTreeMap<String, ndc::Relationship>,
+    pub scope: Scope,
     relationships: BTreeMap<String, Relationship<T>>,
     unrelated_joins: Rc<RefCell<BTreeMap<String, UnrelatedJoin<T>>>>,
-    counter: Rc<Cell<i32>>,
+    relationship_name_counter: Rc<Cell<i32>>,
+    scope_name_counter: Rc<Cell<i32>>,
 }
-
-// TODO: We may be able to unify relationships that are not identical, but that are compatible.
-// For example two relationships that differ only in field selection could be merged into one
-// with the union of both field selections.
 
 impl<T: QueryContext> QueryPlanState<'_, T> {
     pub fn new<'a>(
@@ -43,9 +42,11 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
         QueryPlanState {
             context: query_context,
             collection_relationships,
+            scope: Scope::Root,
             relationships: Default::default(),
             unrelated_joins: Rc::new(RefCell::new(Default::default())),
-            counter: Rc::new(Cell::new(0)),
+            relationship_name_counter: Rc::new(Cell::new(0)),
+            scope_name_counter: Rc::new(Cell::new(0)),
         }
     }
 
@@ -56,10 +57,17 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
         QueryPlanState {
             context: self.context,
             collection_relationships: self.collection_relationships,
+            scope: self.scope.clone(),
             relationships: Default::default(),
             unrelated_joins: self.unrelated_joins.clone(),
-            counter: self.counter.clone(),
+            relationship_name_counter: self.relationship_name_counter.clone(),
+            scope_name_counter: self.scope_name_counter.clone(),
         }
+    }
+
+    pub fn new_scope(&mut self) {
+        let name = self.unique_scope_name();
+        self.scope = Scope::Named(name)
     }
 
     /// Record a relationship reference so that it is added to the list of joins for the query
@@ -94,7 +102,7 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
                         // relationship that we just removed.
                         self.relationships
                             .insert(existing_key, already_registered_relationship);
-                        let key = self.unique_name(ndc_relationship_name);
+                        let key = self.unique_relationship_name(ndc_relationship_name);
                         (key, relationship)
                     }
                 }
@@ -121,7 +129,7 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
             query,
         };
 
-        let key = self.unique_name(format!("__join_{}", join.target_collection));
+        let key = self.unique_relationship_name(format!("__join_{}", join.target_collection));
         self.unrelated_joins.borrow_mut().insert(key.clone(), join);
 
         // Unlike [Self::register_relationship] this method does not return a reference to the
@@ -138,14 +146,24 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
         self.relationships
     }
 
+    pub fn into_scope(self) -> Scope {
+        self.scope
+    }
+
     /// Use this with the top-level plan to get unrelated joins.
     pub fn into_unrelated_collections(self) -> BTreeMap<String, UnrelatedJoin<T>> {
         self.unrelated_joins.take()
     }
 
-    fn unique_name(&mut self, name: String) -> String {
-        let count = self.counter.get();
-        self.counter.set(count + 1);
+    fn unique_relationship_name(&mut self, name: impl std::fmt::Display) -> String {
+        let count = self.relationship_name_counter.get();
+        self.relationship_name_counter.set(count + 1);
         format!("{name}_{count}")
+    }
+
+    fn unique_scope_name(&mut self) -> String {
+        let count = self.scope_name_counter.get();
+        self.scope_name_counter.set(count + 1);
+        format!("scope_{count}")
     }
 }
