@@ -4,6 +4,8 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+## [0.1.0] - 2024-06-13
+
 - Support filtering and sorting by fields of related collections ([#72](https://github.com/hasura/ndc-mongodb/pull/72))
 - Support for root collection column references ([#75](https://github.com/hasura/ndc-mongodb/pull/75))
 - Fix for databases with field names that begin with a dollar sign, or that contain dots ([#74](https://github.com/hasura/ndc-mongodb/pull/74))
