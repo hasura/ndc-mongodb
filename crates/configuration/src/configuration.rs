@@ -2,7 +2,6 @@ use std::{collections::BTreeMap, path::Path};
 
 use anyhow::{anyhow, ensure};
 use itertools::Itertools;
-use mongodb_support::BsonScalarType;
 use ndc_models as ndc;
 use serde::{Deserialize, Serialize};
 
@@ -282,12 +281,12 @@ fn get_primary_key_uniqueness_constraint(
     name: &str,
     collection_type: &str,
 ) -> Option<(String, ndc::UniquenessConstraint)> {
-    // Check to make sure our collection's object type contains the _id objectid field
+    // Check to make sure our collection's object type contains the _id field
     // If it doesn't (should never happen, all collections need an _id column), don't generate the constraint
     let object_type = object_types.get(collection_type)?;
     let id_field = object_type.fields.get("_id")?;
     match &id_field.r#type {
-        schema::Type::Scalar(BsonScalarType::ObjectId) => Some(()),
+        schema::Type::Scalar(scalar_type) if scalar_type.is_comparable() => Some(()),
         _ => None,
     }?;
     let uniqueness_constraint = ndc::UniquenessConstraint {
