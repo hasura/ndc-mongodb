@@ -2,6 +2,6 @@
   "introspectionOptions": {
     "sampleSize": 100,
     "noValidatorSchema": false,
-    "allSchemaNullable": true
+    "allSchemaNullable": false
   }
 }
