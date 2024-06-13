@@ -5,7 +5,7 @@ use ndc_sdk::models::{
 
 pub fn mongo_capabilities_response() -> CapabilitiesResponse {
     ndc_sdk::models::CapabilitiesResponse {
-        version: "0.1.3".to_owned(),
+        version: "0.1.4".to_owned(),
         capabilities: Capabilities {
             query: QueryCapabilities {
                 aggregates: Some(LeafCapability {}),
