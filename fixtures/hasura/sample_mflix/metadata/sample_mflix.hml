@@ -11,13 +11,945 @@ definition:
   schema:
     version: v0.1
     schema:
-      scalar_types: {}
-      object_types: {}
-      collections: []
-      functions: []
+      scalar_types:
+        BinData:
+          aggregate_functions:
+            count:
+              result_type:
+                type: named
+                name: Int
+          comparison_operators:
+            _eq:
+              type: equal
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: BinData
+        Bool:
+          representation:
+            type: boolean
+          aggregate_functions:
+            count:
+              result_type:
+                type: named
+                name: Int
+          comparison_operators:
+            _eq:
+              type: equal
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: Bool
+        Date:
+          representation:
+            type: timestamp
+          aggregate_functions:
+            count:
+              result_type:
+                type: named
+                name: Int
+            max:
+              result_type:
+                type: named
+                name: Date
+            min:
+              result_type:
+                type: named
+                name: Date
+          comparison_operators:
+            _eq:
+              type: equal
+            _gt:
+              type: custom
+              argument_type:
+                type: named
+                name: Date
+            _gte:
+              type: custom
+              argument_type:
+                type: named
+                name: Date
+            _lt:
+              type: custom
+              argument_type:
+                type: named
+                name: Date
+            _lte:
+              type: custom
+              argument_type:
+                type: named
+                name: Date
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: Date
+        DbPointer:
+          aggregate_functions:
+            count:
+              result_type:
+                type: named
+                name: Int
+          comparison_operators:
+            _eq:
+              type: equal
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: DbPointer
+        Decimal:
+          representation:
+            type: bigdecimal
+          aggregate_functions:
+            avg:
+              result_type:
+                type: named
+                name: Decimal
+            count:
+              result_type:
+                type: named
+                name: Int
+            max:
+              result_type:
+                type: named
+                name: Decimal
+            min:
+              result_type:
+                type: named
+                name: Decimal
+            sum:
+              result_type:
+                type: named
+                name: Decimal
+          comparison_operators:
+            _eq:
+              type: equal
+            _gt:
+              type: custom
+              argument_type:
+                type: named
+                name: Decimal
+            _gte:
+              type: custom
+              argument_type:
+                type: named
+                name: Decimal
+            _lt:
+              type: custom
+              argument_type:
+                type: named
+                name: Decimal
+            _lte:
+              type: custom
+              argument_type:
+                type: named
+                name: Decimal
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: Decimal
+        Double:
+          representation:
+            type: float64
+          aggregate_functions:
+            avg:
+              result_type:
+                type: named
+                name: Double
+            count:
+              result_type:
+                type: named
+                name: Int
+            max:
+              result_type:
+                type: named
+                name: Double
+            min:
+              result_type:
+                type: named
+                name: Double
+            sum:
+              result_type:
+                type: named
+                name: Double
+          comparison_operators:
+            _eq:
+              type: equal
+            _gt:
+              type: custom
+              argument_type:
+                type: named
+                name: Double
+            _gte:
+              type: custom
+              argument_type:
+                type: named
+                name: Double
+            _lt:
+              type: custom
+              argument_type:
+                type: named
+                name: Double
+            _lte:
+              type: custom
+              argument_type:
+                type: named
+                name: Double
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: Double
+        ExtendedJSON:
+          representation:
+            type: json
+          aggregate_functions: {}
+          comparison_operators: {}
+        Int:
+          representation:
+            type: int32
+          aggregate_functions:
+            avg:
+              result_type:
+                type: named
+                name: Int
+            count:
+              result_type:
+                type: named
+                name: Int
+            max:
+              result_type:
+                type: named
+                name: Int
+            min:
+              result_type:
+                type: named
+                name: Int
+            sum:
+              result_type:
+                type: named
+                name: Int
+          comparison_operators:
+            _eq:
+              type: equal
+            _gt:
+              type: custom
+              argument_type:
+                type: named
+                name: Int
+            _gte:
+              type: custom
+              argument_type:
+                type: named
+                name: Int
+            _lt:
+              type: custom
+              argument_type:
+                type: named
+                name: Int
+            _lte:
+              type: custom
+              argument_type:
+                type: named
+                name: Int
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: Int
+        Javascript:
+          aggregate_functions:
+            count:
+              result_type:
+                type: named
+                name: Int
+          comparison_operators: {}
+        JavascriptWithScope:
+          aggregate_functions:
+            count:
+              result_type:
+                type: named
+                name: Int
+          comparison_operators: {}
+        Long:
+          representation:
+            type: int64
+          aggregate_functions:
+            avg:
+              result_type:
+                type: named
+                name: Long
+            count:
+              result_type:
+                type: named
+                name: Int
+            max:
+              result_type:
+                type: named
+                name: Long
+            min:
+              result_type:
+                type: named
+                name: Long
+            sum:
+              result_type:
+                type: named
+                name: Long
+          comparison_operators:
+            _eq:
+              type: equal
+            _gt:
+              type: custom
+              argument_type:
+                type: named
+                name: Long
+            _gte:
+              type: custom
+              argument_type:
+                type: named
+                name: Long
+            _lt:
+              type: custom
+              argument_type:
+                type: named
+                name: Long
+            _lte:
+              type: custom
+              argument_type:
+                type: named
+                name: Long
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: Long
+        MaxKey:
+          aggregate_functions:
+            count:
+              result_type:
+                type: named
+                name: Int
+          comparison_operators:
+            _eq:
+              type: equal
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: MaxKey
+        MinKey:
+          aggregate_functions:
+            count:
+              result_type:
+                type: named
+                name: Int
+          comparison_operators:
+            _eq:
+              type: equal
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: MinKey
+        "Null":
+          aggregate_functions:
+            count:
+              result_type:
+                type: named
+                name: Int
+          comparison_operators:
+            _eq:
+              type: equal
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: "Null"
+        ObjectId:
+          representation:
+            type: string
+          aggregate_functions:
+            count:
+              result_type:
+                type: named
+                name: Int
+          comparison_operators:
+            _eq:
+              type: equal
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: ObjectId
+        Regex:
+          aggregate_functions:
+            count:
+              result_type:
+                type: named
+                name: Int
+          comparison_operators: {}
+        String:
+          representation:
+            type: string
+          aggregate_functions:
+            count:
+              result_type:
+                type: named
+                name: Int
+            max:
+              result_type:
+                type: named
+                name: String
+            min:
+              result_type:
+                type: named
+                name: String
+          comparison_operators:
+            _eq:
+              type: equal
+            _gt:
+              type: custom
+              argument_type:
+                type: named
+                name: String
+            _gte:
+              type: custom
+              argument_type:
+                type: named
+                name: String
+            _iregex:
+              type: custom
+              argument_type:
+                type: named
+                name: String
+            _lt:
+              type: custom
+              argument_type:
+                type: named
+                name: String
+            _lte:
+              type: custom
+              argument_type:
+                type: named
+                name: String
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: String
+            _regex:
+              type: custom
+              argument_type:
+                type: named
+                name: String
+        Symbol:
+          aggregate_functions:
+            count:
+              result_type:
+                type: named
+                name: Int
+          comparison_operators:
+            _eq:
+              type: equal
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: Symbol
+        Timestamp:
+          aggregate_functions:
+            count:
+              result_type:
+                type: named
+                name: Int
+            max:
+              result_type:
+                type: named
+                name: Timestamp
+            min:
+              result_type:
+                type: named
+                name: Timestamp
+          comparison_operators:
+            _eq:
+              type: equal
+            _gt:
+              type: custom
+              argument_type:
+                type: named
+                name: Timestamp
+            _gte:
+              type: custom
+              argument_type:
+                type: named
+                name: Timestamp
+            _lt:
+              type: custom
+              argument_type:
+                type: named
+                name: Timestamp
+            _lte:
+              type: custom
+              argument_type:
+                type: named
+                name: Timestamp
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: Timestamp
+        Undefined:
+          aggregate_functions:
+            count:
+              result_type:
+                type: named
+                name: Int
+          comparison_operators:
+            _eq:
+              type: equal
+            _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: Undefined
+      object_types:
+        Hello:
+          fields:
+            __value:
+              type:
+                type: named
+                name: String
+        TitleWordFrequency:
+          fields:
+            _id:
+              type:
+                type: named
+                name: String
+            count:
+              type:
+                type: named
+                name: Int
+        comments:
+          fields:
+            _id:
+              type:
+                type: named
+                name: ObjectId
+            date:
+              type:
+                type: named
+                name: Date
+            email:
+              type:
+                type: named
+                name: String
+            movie_id:
+              type:
+                type: named
+                name: ObjectId
+            name:
+              type:
+                type: named
+                name: String
+            text:
+              type:
+                type: named
+                name: String
+        movies:
+          fields:
+            _id:
+              type:
+                type: named
+                name: ObjectId
+            awards:
+              type:
+                type: named
+                name: movies_awards
+            cast:
+              type:
+                type: nullable
+                underlying_type:
+                  type: array
+                  element_type:
+                    type: named
+                    name: String
+            countries:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: String
+            directors:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: String
+            fullplot:
+              type:
+                type: named
+                name: String
+            genres:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: String
+            imdb:
+              type:
+                type: named
+                name: movies_imdb
+            languages:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: String
+            lastupdated:
+              type:
+                type: named
+                name: String
+            metacritic:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
+            num_mflix_comments:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
+            plot:
+              type:
+                type: named
+                name: String
+            poster:
+              type:
+                type: named
+                name: String
+            rated:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
+            released:
+              type:
+                type: named
+                name: Date
+            runtime:
+              type:
+                type: named
+                name: Int
+            title:
+              type:
+                type: named
+                name: String
+            tomatoes:
+              type:
+                type: named
+                name: movies_tomatoes
+            type:
+              type:
+                type: named
+                name: String
+            writers:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: String
+            year:
+              type:
+                type: named
+                name: Int
+        movies_awards:
+          fields:
+            nominations:
+              type:
+                type: named
+                name: Int
+            text:
+              type:
+                type: named
+                name: String
+            wins:
+              type:
+                type: named
+                name: Int
+        movies_imdb:
+          fields:
+            id:
+              type:
+                type: named
+                name: Int
+            rating:
+              type:
+                type: named
+                name: Double
+            votes:
+              type:
+                type: named
+                name: Int
+        movies_tomatoes:
+          fields:
+            boxOffice:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
+            consensus:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
+            critic:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: movies_tomatoes_critic
+            dvd:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Date
+            fresh:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
+            lastUpdated:
+              type:
+                type: named
+                name: Date
+            production:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
+            rotten:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
+            viewer:
+              type:
+                type: named
+                name: movies_tomatoes_viewer
+            website:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
+        movies_tomatoes_critic:
+          fields:
+            meter:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
+            numReviews:
+              type:
+                type: named
+                name: Int
+            rating:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Double
+        movies_tomatoes_viewer:
+          fields:
+            meter:
+              type:
+                type: named
+                name: Int
+            numReviews:
+              type:
+                type: named
+                name: Int
+            rating:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Double
+        sessions:
+          fields:
+            _id:
+              type:
+                type: named
+                name: ObjectId
+            jwt:
+              type:
+                type: named
+                name: String
+            user_id:
+              type:
+                type: named
+                name: String
+        theaters:
+          fields:
+            _id:
+              type:
+                type: named
+                name: ObjectId
+            location:
+              type:
+                type: named
+                name: theaters_location
+            theaterId:
+              type:
+                type: named
+                name: Int
+        theaters_location:
+          fields:
+            address:
+              type:
+                type: named
+                name: theaters_location_address
+            geo:
+              type:
+                type: named
+                name: theaters_location_geo
+        theaters_location_address:
+          fields:
+            city:
+              type:
+                type: named
+                name: String
+            state:
+              type:
+                type: named
+                name: String
+            street1:
+              type:
+                type: named
+                name: String
+            street2:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
+            zipcode:
+              type:
+                type: named
+                name: String
+        theaters_location_geo:
+          fields:
+            coordinates:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: Double
+            type:
+              type:
+                type: named
+                name: String
+        users:
+          fields:
+            _id:
+              type:
+                type: named
+                name: ObjectId
+            email:
+              type:
+                type: named
+                name: String
+            name:
+              type:
+                type: named
+                name: String
+            password:
+              type:
+                type: named
+                name: String
+      collections:
+        - name: comments
+          arguments: {}
+          type: comments
+          uniqueness_constraints:
+            comments_id:
+              unique_columns:
+                - _id
+          foreign_keys: {}
+        - name: movies
+          arguments: {}
+          type: movies
+          uniqueness_constraints:
+            movies_id:
+              unique_columns:
+                - _id
+          foreign_keys: {}
+        - name: sessions
+          arguments: {}
+          type: sessions
+          uniqueness_constraints:
+            sessions_id:
+              unique_columns:
+                - _id
+          foreign_keys: {}
+        - name: theaters
+          arguments: {}
+          type: theaters
+          uniqueness_constraints:
+            theaters_id:
+              unique_columns:
+                - _id
+          foreign_keys: {}
+        - name: title_word_frequency
+          description: words appearing in movie titles with counts
+          arguments: {}
+          type: TitleWordFrequency
+          uniqueness_constraints:
+            title_word_frequency_id:
+              unique_columns:
+                - _id
+          foreign_keys: {}
+        - name: users
+          arguments: {}
+          type: users
+          uniqueness_constraints:
+            users_id:
+              unique_columns:
+                - _id
+          foreign_keys: {}
+      functions:
+        - name: hello
+          description: Basic test of native queries
+          arguments:
+            name:
+              type:
+                type: named
+                name: String
+          result_type:
+            type: named
+            name: String
       procedures: []
     capabilities:
-      version: ""
+      version: 0.1.4
       capabilities:
-        query: {}
+        query:
+          aggregates: {}
+          variables: {}
+          explain: {}
         mutation: {}
+        relationships:
+          relation_comparisons: {}
