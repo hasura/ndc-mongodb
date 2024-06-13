@@ -282,14 +282,10 @@ fn get_primary_key_uniqueness_constraint(
     name: &str,
     collection_type: &str,
 ) -> Option<(String, ndc::UniquenessConstraint)> {
-    // Check to make sure our collection's object type contains the _id objectid field
+    // Check to make sure our collection's object type contains the _id field
     // If it doesn't (should never happen, all collections need an _id column), don't generate the constraint
     let object_type = object_types.get(collection_type)?;
-    let id_field = object_type.fields.get("_id")?;
-    match &id_field.r#type {
-        schema::Type::Scalar(BsonScalarType::ObjectId) => Some(()),
-        _ => None,
-    }?;
+    let _id_field = object_type.fields.get("_id")?;
     let uniqueness_constraint = ndc::UniquenessConstraint {
         unique_columns: vec!["_id".into()],
     };
