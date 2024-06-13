@@ -570,6 +570,7 @@ fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), a
                             column: "year".into(),
                             function: "Average".into(),
                             path: vec![path_element("author_articles").into()],
+                            field_path: None,
                         },
                     },
                     ndc::OrderByElement {
