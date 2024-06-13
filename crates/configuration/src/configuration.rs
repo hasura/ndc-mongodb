@@ -2,7 +2,6 @@ use std::{collections::BTreeMap, path::Path};
 
 use anyhow::{anyhow, ensure};
 use itertools::Itertools;
-use mongodb_support::BsonScalarType;
 use ndc_models as ndc;
 use serde::{Deserialize, Serialize};
 
