@@ -6,6 +6,7 @@ This changelog documents the changes between release versions.
 - Support for root collection column references ([#75](https://github.com/hasura/ndc-mongodb/pull/75))
 - Fix for databases with field names that begin with a dollar sign, or that contain dots ([#74](https://github.com/hasura/ndc-mongodb/pull/74))
 - Implement column-to-column comparisons within the same collection ([#74](https://github.com/hasura/ndc-mongodb/pull/74))
+- Fix: schema generated with `_id` column nullable when introspecting schema via sampling ([#78](https://github.com/hasura/ndc-mongodb/pull/78))
 
 ## [0.0.6] - 2024-05-01
 - Enables logging events from the MongoDB driver by setting the `RUST_LOG` variable ([#67](https://github.com/hasura/ndc-mongodb/pull/67))
