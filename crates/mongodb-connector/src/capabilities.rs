@@ -22,7 +22,7 @@ pub fn mongo_capabilities_response() -> CapabilitiesResponse {
                 explain: None,
             },
             relationships: Some(RelationshipCapabilities {
-                relation_comparisons: None,
+                relation_comparisons: Some(LeafCapability {}),
                 order_by_aggregate: None,
             }),
         },
