@@ -1,6 +1,7 @@
 mod plan_for_query_request;
 mod query_plan;
 mod type_system;
+pub mod vec_set;
 
 pub use plan_for_query_request::{
     plan_for_query_request,

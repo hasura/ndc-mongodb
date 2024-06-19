@@ -7,21 +7,32 @@ use ndc_models::{
     Argument, OrderDirection, RelationshipArgument, RelationshipType, UnaryComparisonOperator,
 };
 
-use crate::Type;
+use crate::{vec_set::VecSet, Type};
 
 pub trait ConnectorTypes {
-    type ScalarType: Clone + Debug + PartialEq;
+    type ScalarType: Clone + Debug + PartialEq + Eq;
     type AggregateFunction: Clone + Debug + PartialEq;
     type ComparisonOperator: Clone + Debug + PartialEq;
 }
 
 #[derive(Derivative)]
-#[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
+#[derivative(
+    Clone(bound = ""),
+    Debug(bound = ""),
+    PartialEq(bound = "T::ScalarType: PartialEq")
+)]
 pub struct QueryPlan<T: ConnectorTypes> {
     pub collection: String,
     pub query: Query<T>,
     pub arguments: BTreeMap<String, Argument>,
     pub variables: Option<Vec<VariableSet>>,
+
+    /// Types for values from the `variables` map as inferred by usages in the query request. It is
+    /// possible for the same variable to be used in multiple contexts with different types. This
+    /// map provides sets of all observed types.
+    ///
+    /// The observed type may be `None` if the type of a variable use could not be inferred.
+    pub variable_types: VariableTypes<T::ScalarType>,
 
     // TODO: type for unrelated collection
     pub unrelated_collections: BTreeMap<String, UnrelatedJoin<T>>,
@@ -33,8 +44,9 @@ impl<T: ConnectorTypes> QueryPlan<T> {
     }
 }
 
-pub type VariableSet = BTreeMap<String, serde_json::Value>;
 pub type Relationships<T> = BTreeMap<String, Relationship<T>>;
+pub type VariableSet = BTreeMap<String, serde_json::Value>;
+pub type VariableTypes<T> = BTreeMap<String, VecSet<Option<Type<T>>>>;
 
 #[derive(Derivative)]
 #[derivative(

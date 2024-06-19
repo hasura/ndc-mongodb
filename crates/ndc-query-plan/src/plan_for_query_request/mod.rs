@@ -17,6 +17,7 @@ use indexmap::IndexMap;
 use itertools::Itertools;
 use ndc::{ExistsInCollection, QueryRequest};
 use ndc_models as ndc;
+use query_plan_state::QueryPlanInfo;
 
 use self::{
     helpers::{find_object_field, lookup_relationship},
@@ -42,14 +43,38 @@ pub fn plan_for_query_request<T: QueryContext>(
     )?;
     query.scope = Some(Scope::Root);
 
-    let unrelated_collections = plan_state.into_unrelated_collections();
+    let QueryPlanInfo {
+        unrelated_joins,
+        variable_types,
+    } = plan_state.into_query_plan_info();
+
+    // If there are variables that don't have corresponding entries in the variable_types map that
+    // means that those variables were not observed in the query. Filter them out because we don't
+    // need them, and we don't want users to have to deal with variables with unknown types.
+    let variables = request.variables.map(|variable_sets| {
+        variable_sets
+            .into_iter()
+            .map(|variable_set| {
+                variable_set
+                    .into_iter()
+                    .filter(|(var_name, _)| {
+                        variable_types
+                            .get(var_name)
+                            .map(|types| !types.is_empty())
+                            .unwrap_or(false)
+                    })
+                    .collect()
+            })
+            .collect()
+    });
 
     Ok(QueryPlan {
         collection: request.collection,
         arguments: request.arguments,
         query,
-        variables: request.variables,
-        unrelated_collections,
+        variables,
+        variable_types,
+        unrelated_collections: unrelated_joins,
     })
 }
 
@@ -559,10 +584,13 @@ fn plan_for_comparison_value<T: QueryContext>(
             value,
             value_type: expected_type,
         }),
-        ndc::ComparisonValue::Variable { name } => Ok(plan::ComparisonValue::Variable {
-            name,
-            variable_type: expected_type,
-        }),
+        ndc::ComparisonValue::Variable { name } => {
+            plan_state.register_variable_use(&name, expected_type.clone());
+            Ok(plan::ComparisonValue::Variable {
+                name,
+                variable_type: expected_type,
+            })
+        }
     }
 }
 
