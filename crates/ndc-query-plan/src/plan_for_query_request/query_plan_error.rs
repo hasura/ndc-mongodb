@@ -59,6 +59,13 @@ pub enum QueryPlanError {
 
     #[error("Query referenced a relationship, \"{0}\", but did not include relation metadata in `collection_relationships`")]
     UnspecifiedRelation(String),
+
+    #[error("Expected field {field_name} of object {} to be an object type. Got {got}.", parent_type.to_owned().unwrap_or("".to_owned()))]
+    ExpectedObjectTypeAtField {
+        parent_type: Option<String>,
+        field_name: String,
+        got: String,
+    },
 }
 
 fn at_path(path: &[String]) -> String {

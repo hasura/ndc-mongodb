@@ -163,7 +163,7 @@ mod tests {
         let target = ComparisonTarget::Column {
             name: "imdb".into(),
             field_path: Some(vec!["rating".into()]),
-            column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::Double)),
+            field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::Double)),
             path: Default::default(),
         };
         let actual = ColumnRef::from_comparison_target(&target);
@@ -177,7 +177,7 @@ mod tests {
         let target = ComparisonTarget::Column {
             name: "subtitles".into(),
             field_path: Some(vec!["english.us".into()]),
-            column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+            field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
             path: Default::default(),
         };
         let actual = ColumnRef::from_comparison_target(&target);
@@ -199,7 +199,7 @@ mod tests {
         let target = ComparisonTarget::Column {
             name: "meta.subtitles".into(),
             field_path: Some(vec!["english_us".into()]),
-            column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+            field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
             path: Default::default(),
         };
         let actual = ColumnRef::from_comparison_target(&target);
@@ -221,7 +221,7 @@ mod tests {
         let target = ComparisonTarget::Column {
             name: "meta".into(),
             field_path: Some(vec!["$unsafe".into(), "$also_unsafe".into()]),
-            column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+            field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
             path: Default::default(),
         };
         let actual = ColumnRef::from_comparison_target(&target);
@@ -248,7 +248,7 @@ mod tests {
         let target = ComparisonTarget::Column {
             name: "valid_key".into(),
             field_path: Some(vec!["also_valid".into(), "$not_valid".into()]),
-            column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+            field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
             path: Default::default(),
         };
         let actual = ColumnRef::from_comparison_target(&target);
@@ -270,7 +270,7 @@ mod tests {
         let target = ComparisonTarget::ColumnInScope {
             name: "field".into(),
             field_path: Some(vec!["prop1".into(), "prop2".into()]),
-            column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+            field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
             scope: Scope::Root,
         };
         let actual = ColumnRef::from_comparison_target(&target);
@@ -284,7 +284,7 @@ mod tests {
         let target = ComparisonTarget::ColumnInScope {
             name: "$field".into(),
             field_path: Default::default(),
-            column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+            field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
             scope: Scope::Named("scope_0".into()),
         };
         let actual = ColumnRef::from_comparison_target(&target);
@@ -306,7 +306,7 @@ mod tests {
         let target = ComparisonTarget::ColumnInScope {
             name: "field".into(),
             field_path: Some(vec!["$unsafe_name".into()]),
-            column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+            field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
             scope: Scope::Root,
         };
         let actual = ColumnRef::from_comparison_target(&target);
@@ -329,7 +329,7 @@ mod tests {
         let target = ComparisonTarget::ColumnInScope {
             name: "$field".into(),
             field_path: Some(vec!["$unsafe_name1".into(), "$unsafe_name2".into()]),
-            column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+            field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
             scope: Scope::Root,
         };
         let actual = ColumnRef::from_comparison_target(&target);
@@ -361,7 +361,7 @@ mod tests {
         let target = ComparisonTarget::ColumnInScope {
             name: "field".into(),
             field_path: Some(vec!["prop1".into(), "$unsafe_name".into()]),
-            column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+            field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
             scope: Scope::Root,
         };
         let actual = ColumnRef::from_comparison_target(&target);

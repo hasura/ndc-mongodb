@@ -200,7 +200,7 @@ mod tests {
                 column: ComparisonTarget::Column {
                     name: "Name".to_owned(),
                     field_path: None,
-                    column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                    field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
                     path: vec!["Albums".into(), "Tracks".into()],
                 },
                 operator: ComparisonFunction::Equal,
@@ -236,7 +236,7 @@ mod tests {
                 column: ComparisonTarget::Column {
                     name: "Name".to_owned(),
                     field_path: None,
-                    column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                    field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
                     path: vec!["Albums".into(), "Tracks".into()],
                 },
                 operator: UnaryComparisonOperator::IsNull,
@@ -267,7 +267,7 @@ mod tests {
                 column: ComparisonTarget::Column {
                     name: "Name".to_owned(),
                     field_path: None,
-                    column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                    field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
                     path: Default::default(),
                 },
                 operator: ComparisonFunction::Equal,
@@ -275,7 +275,7 @@ mod tests {
                     column: ComparisonTarget::Column {
                         name: "Title".to_owned(),
                         field_path: None,
-                        column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                        field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
                         path: Default::default(),
                     },
                 },
