@@ -19,7 +19,7 @@ use ndc::{ExistsInCollection, QueryRequest};
 use ndc_models as ndc;
 
 use self::{
-    helpers::{find_object_field, lookup_relationship},
+    helpers::{find_object_field, find_object_field_path, lookup_relationship},
     query_context::QueryContext,
     query_plan_error::QueryPlanError,
     query_plan_state::QueryPlanState,
@@ -478,11 +478,11 @@ fn plan_for_binary_comparison<T: QueryContext>(
         plan_for_comparison_target(plan_state, root_collection_object_type, object_type, column)?;
     let (operator, operator_definition) = plan_state
         .context
-        .find_comparison_operator(comparison_target.get_column_type(), &operator)?;
+        .find_comparison_operator(comparison_target.get_field_type(), &operator)?;
     let value_type = match operator_definition {
-        plan::ComparisonOperatorDefinition::Equal => comparison_target.get_column_type().clone(),
+        plan::ComparisonOperatorDefinition::Equal => comparison_target.get_field_type().clone(),
         plan::ComparisonOperatorDefinition::In => {
-            plan::Type::ArrayOf(Box::new(comparison_target.get_column_type().clone()))
+            plan::Type::ArrayOf(Box::new(comparison_target.get_field_type().clone()))
         }
         plan::ComparisonOperatorDefinition::Custom { argument_type } => argument_type.clone(),
     };
@@ -519,20 +519,20 @@ fn plan_for_comparison_target<T: QueryContext>(
                 path,
                 requested_columns,
             )?;
-            let column_type = find_object_field(&target_object_type, &name)?.clone();
+            let field_type = find_object_field_path(&target_object_type, &name, &field_path)?.clone();
             Ok(plan::ComparisonTarget::Column {
                 name,
                 field_path,
                 path,
-                column_type,
+                field_type,
             })
         }
         ndc::ComparisonTarget::RootCollectionColumn { name, field_path } => {
-            let column_type = find_object_field(root_collection_object_type, &name)?.clone();
+            let field_type = find_object_field_path(root_collection_object_type, &name, &field_path)?.clone();
             Ok(plan::ComparisonTarget::ColumnInScope {
                 name,
                 field_path,
-                column_type,
+                field_type,
                 scope: plan_state.scope.clone(),
             })
         }
@@ -603,7 +603,7 @@ fn plan_for_exists<T: QueryContext>(
                             comparison_target.column_name().to_owned(),
                             plan::Field::Column {
                                 column: comparison_target.column_name().to_string(),
-                                column_type: comparison_target.get_column_type().clone(),
+                                column_type: comparison_target.get_field_type().clone(),
                                 fields: None,
                             },
                         )
