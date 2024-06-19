@@ -41,4 +41,6 @@ importCollection "Playlist"
 importCollection "PlaylistTrack"
 importCollection "Track"
 
+$MONGO_SH "$DATABASE_NAME" "$FIXTURES/indexes.js"
+
 echo "✅ Sample Chinook data imported..."
