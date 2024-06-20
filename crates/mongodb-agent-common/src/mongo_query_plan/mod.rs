@@ -110,3 +110,4 @@ pub type QueryPlan = ndc_query_plan::QueryPlan<MongoConfiguration>;
 pub type Relationship = ndc_query_plan::Relationship<MongoConfiguration>;
 pub type Relationships = ndc_query_plan::Relationships<MongoConfiguration>;
 pub type Type = ndc_query_plan::Type<MongoScalarType>;
+pub type VariableTypes = ndc_query_plan::VariableTypes<MongoScalarType>;

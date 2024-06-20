@@ -1,16 +1,22 @@
-use mongodb::bson::{doc, Bson};
+use anyhow::anyhow;
+use configuration::MongoScalarType;
+use itertools::Itertools as _;
+use mongodb::bson::{self, doc, Bson};
 use ndc_query_plan::VariableSet;
 
 use super::pipeline::pipeline_for_non_foreach;
 use super::query_level::QueryLevel;
-use crate::mongo_query_plan::{MongoConfiguration, QueryPlan};
+use super::query_variable_name::query_variable_name;
+use super::serialization::json_to_bson;
+use super::QueryTarget;
+use crate::mongo_query_plan::{MongoConfiguration, QueryPlan, Type, VariableTypes};
 use crate::mongodb::Selection;
 use crate::{
     interface_types::MongoAgentError,
     mongodb::{Pipeline, Stage},
 };
 
-const FACET_FIELD: &str = "__FACET__";
+type Result<T> = std::result::Result<T, MongoAgentError>;
 
 /// Produces a complete MongoDB pipeline for a foreach query.
 ///
@@ -18,35 +24,80 @@ const FACET_FIELD: &str = "__FACET__";
 /// [`pipeline_for_non_foreach`] this function returns a pipeline paired with a value that
 /// indicates whether the response requires post-processing in the agent.
 pub fn pipeline_for_foreach(
-    variable_sets: &[VariableSet],
+    request_variable_sets: &[VariableSet],
     config: &MongoConfiguration,
     query_request: &QueryPlan,
-) -> Result<Pipeline, MongoAgentError> {
-    let pipelines: Vec<(String, Pipeline)> = variable_sets
+) -> Result<Pipeline> {
+    let target = QueryTarget::for_request(config, query_request);
+
+    let variable_sets =
+        variable_sets_to_bson(request_variable_sets, &query_request.variable_types)?;
+
+    let variable_names = variable_sets
         .iter()
-        .enumerate()
-        .map(|(index, variables)| {
-            let pipeline =
-                pipeline_for_non_foreach(config, Some(variables), query_request, QueryLevel::Top)?;
-            Ok((facet_name(index), pipeline))
-        })
-        .collect::<Result<_, MongoAgentError>>()?;
+        .flat_map(|variable_set| variable_set.keys());
+    let bindings: bson::Document = variable_names
+        .map(|name| (name.to_owned(), format!("${name}").into()))
+        .collect();
 
-    let selection = Selection(doc! {
-        "row_sets": pipelines.iter().map(|(key, _)|
-            Bson::String(format!("${key}")),
-        ).collect::<Vec<_>>()
-    });
+    let variable_sets_stage = Stage::Documents(variable_sets);
 
-    let queries = pipelines.into_iter().collect();
+    let query_pipeline = pipeline_for_non_foreach(config, None, query_request, QueryLevel::Top)?;
+
+    let lookup_stage = Stage::Lookup {
+        from: target.input_collection().map(ToString::to_string),
+        local_field: None,
+        foreign_field: None,
+        r#let: Some(bindings),
+        pipeline: Some(query_pipeline),
+        r#as: "rows".to_string(),
+    };
+
+    let selection = Stage::ReplaceWith(Selection(doc! {
+        "rows": "$rows"
+    }));
 
     Ok(Pipeline {
-        stages: vec![Stage::Facet(queries), Stage::ReplaceWith(selection)],
+        stages: vec![variable_sets_stage, lookup_stage, selection],
     })
 }
 
-fn facet_name(index: usize) -> String {
-    format!("{FACET_FIELD}_{index}")
+fn variable_sets_to_bson(
+    variable_sets: &[VariableSet],
+    variable_types: &VariableTypes,
+) -> Result<Vec<bson::Document>> {
+    variable_sets
+        .iter()
+        .map(|variable_set| {
+            variable_set
+                .iter()
+                .flat_map(|(variable_name, value)| {
+                    let types = variable_types.get(variable_name);
+                    variable_to_bson(variable_name, value, types.iter().copied().flatten())
+                        .collect_vec()
+                })
+                .try_collect()
+        })
+        .try_collect()
+}
+
+/// It may be necessary to include a request variable in the MongoDB pipeline multiple times if it
+/// requires different BSON serializations.
+fn variable_to_bson<'a>(
+    name: &'a str,
+    value: &'a serde_json::Value,
+    variable_types: impl IntoIterator<Item = &'a Option<Type>> + 'a,
+) -> impl Iterator<Item = Result<(String, Bson)>> + 'a {
+    variable_types.into_iter().map(|t| {
+        let resolved_type = match t {
+            None => &Type::Scalar(MongoScalarType::ExtendedJSON),
+            Some(t) => t,
+        };
+        let variable_name = query_variable_name(name, resolved_type);
+        let bson_value = json_to_bson(resolved_type, value.clone())
+            .map_err(|e| MongoAgentError::BadQuery(anyhow!(e)))?;
+        Ok((variable_name, bson_value))
+    })
 }
 
 #[cfg(test)]

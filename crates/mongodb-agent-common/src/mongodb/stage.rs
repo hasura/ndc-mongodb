@@ -11,6 +11,12 @@ use super::{accumulator::Accumulator, pipeline::Pipeline, Selection};
 /// https://www.mongodb.com/docs/manual/reference/operator/aggregation-pipeline/#std-label-aggregation-pipeline-operator-reference
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum Stage {
+    /// Returns literal documents from input expressions.
+    ///
+    /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/documents/#mongodb-pipeline-pipe.-documents
+    #[serde(rename = "$documents")]
+    Documents(Vec<bson::Document>),
+
     /// Filters the document stream to allow only matching documents to pass unmodified into the
     /// next pipeline stage. [`$match`] uses standard MongoDB queries. For each input document,
     /// outputs either one document (a match) or zero documents (no match).

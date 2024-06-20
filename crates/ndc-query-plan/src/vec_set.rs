@@ -30,6 +30,10 @@ impl<T> VecSet<T> {
     pub fn is_empty(&self) -> bool {
         self.items.is_empty()
     }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, T> {
+        self.items.iter()
+    }
 }
 
 impl<T> FromIterator<T> for VecSet<T> {
