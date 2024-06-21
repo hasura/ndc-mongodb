@@ -130,7 +130,7 @@ fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
                                 column: plan::ComparisonTarget::Column {
                                     name: "_id".into(),
                                     field_path: None,
-                                    column_type: plan::Type::Scalar(
+                                    field_type: plan::Type::Scalar(
                                         plan_test_helpers::ScalarType::Int,
                                     ),
                                     path: vec!["class_department".into()],
@@ -140,7 +140,7 @@ fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
                                     column: plan::ComparisonTarget::Column {
                                         name: "math_department_id".into(),
                                         field_path: None,
-                                        column_type: plan::Type::Scalar(
+                                        field_type: plan::Type::Scalar(
                                             plan_test_helpers::ScalarType::Int,
                                         ),
                                         path: vec!["school_directory".into()],
@@ -395,7 +395,7 @@ fn translates_root_column_references() -> Result<(), anyhow::Error> {
                             column: plan::ComparisonTarget::Column {
                                 name: "author_id".into(),
                                 field_path: Default::default(),
-                                column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::Int),
+                                field_type: plan::Type::Scalar(plan_test_helpers::ScalarType::Int),
                                 path: Default::default(),
                             },
                             operator: plan_test_helpers::ComparisonOperator::Equal,
@@ -403,7 +403,7 @@ fn translates_root_column_references() -> Result<(), anyhow::Error> {
                                 column: plan::ComparisonTarget::ColumnInScope {
                                     name: "id".into(),
                                     field_path: Default::default(),
-                                    column_type: plan::Type::Scalar(
+                                    field_type: plan::Type::Scalar(
                                         plan_test_helpers::ScalarType::Int,
                                     ),
                                     scope: plan::Scope::Root,
@@ -414,7 +414,7 @@ fn translates_root_column_references() -> Result<(), anyhow::Error> {
                             column: plan::ComparisonTarget::Column {
                                 name: "title".into(),
                                 field_path: Default::default(),
-                                column_type: plan::Type::Scalar(
+                                field_type: plan::Type::Scalar(
                                     plan_test_helpers::ScalarType::String,
                                 ),
                                 path: Default::default(),
@@ -455,7 +455,7 @@ fn translates_root_column_references() -> Result<(), anyhow::Error> {
                             plan::Expression::BinaryComparisonOperator {
                                 column: plan::ComparisonTarget::Column {
                                     name: "author_id".into(),
-                                    column_type: plan::Type::Scalar(
+                                    field_type: plan::Type::Scalar(
                                         plan_test_helpers::ScalarType::Int,
                                     ),
                                     field_path: None,
@@ -466,7 +466,7 @@ fn translates_root_column_references() -> Result<(), anyhow::Error> {
                                     column: plan::ComparisonTarget::ColumnInScope {
                                         name: "id".into(),
                                         scope: plan::Scope::Root,
-                                        column_type: plan::Type::Scalar(
+                                        field_type: plan::Type::Scalar(
                                             plan_test_helpers::ScalarType::Int,
                                         ),
                                         field_path: None,
@@ -476,7 +476,7 @@ fn translates_root_column_references() -> Result<(), anyhow::Error> {
                             plan::Expression::BinaryComparisonOperator {
                                 column: plan::ComparisonTarget::Column {
                                     name: "title".into(),
-                                    column_type: plan::Type::Scalar(
+                                    field_type: plan::Type::Scalar(
                                         plan_test_helpers::ScalarType::String,
                                     ),
                                     field_path: None,
@@ -612,7 +612,7 @@ fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), a
                     column: plan::ComparisonTarget::Column {
                         name: "title".into(),
                         field_path: Default::default(),
-                        column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
+                        field_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
                         path: Default::default(),
                     },
                     operator: plan_test_helpers::ComparisonOperator::Regex,
@@ -878,7 +878,7 @@ fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Res
                     column: plan::ComparisonTarget::Column {
                         name: "name".into(),
                         field_path: None,
-                        column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
+                        field_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
                         path: vec!["author".into()],
                     },
                     operator: ndc_models::UnaryComparisonOperator::IsNull,

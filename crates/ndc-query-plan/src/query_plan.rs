@@ -315,7 +315,7 @@ pub enum ComparisonTarget<T: ConnectorTypes> {
         /// Path to a nested field within an object column
         field_path: Option<Vec<String>>,
 
-        column_type: Type<T::ScalarType>,
+        field_type: Type<T::ScalarType>,
 
         /// Any relationships to traverse to reach this column. These are translated from
         /// [ndc_models::PathElement] values in the [ndc_models::QueryRequest] to names of relation
@@ -333,7 +333,7 @@ pub enum ComparisonTarget<T: ConnectorTypes> {
         /// Path to a nested field within an object column
         field_path: Option<Vec<String>>,
 
-        column_type: Type<T::ScalarType>,
+        field_type: Type<T::ScalarType>,
     },
 }
 
@@ -354,10 +354,10 @@ impl<T: ConnectorTypes> ComparisonTarget<T> {
 }
 
 impl<T: ConnectorTypes> ComparisonTarget<T> {
-    pub fn get_column_type(&self) -> &Type<T::ScalarType> {
+    pub fn get_field_type(&self) -> &Type<T::ScalarType> {
         match self {
-            ComparisonTarget::Column { column_type, .. } => column_type,
-            ComparisonTarget::ColumnInScope { column_type, .. } => column_type,
+            ComparisonTarget::Column { field_type, .. } => field_type,
+            ComparisonTarget::ColumnInScope { field_type, .. } => field_type,
         }
     }
 }
