@@ -159,7 +159,7 @@ mod tests {
     use mongodb::bson::{self, bson, doc};
     use mongodb_support::BsonScalarType;
     use ndc_models::UnaryComparisonOperator;
-    use ndc_query_plan::plan_for_query_request;
+    use ndc_query_plan::{plan_for_query_request, Scope};
     use ndc_test_helpers::{
         binop, column_value, path_element, query, query_request, relation_field, root, target,
         value,
@@ -260,6 +260,32 @@ mod tests {
         let expected = doc! {
             "$expr": {
                 "$eq": ["$Name", "$Title"]
+            }
+        };
+
+        assert_eq!(selector, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn compares_root_collection_column_to_scalar() -> anyhow::Result<()> {
+        let selector = make_selector(&Expression::BinaryComparisonOperator {
+            column: ComparisonTarget::ColumnInScope {
+                name: "Name".to_owned(),
+                field_path: None,
+                field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                scope: Scope::Named("scope_0".to_string()),
+            },
+            operator: ComparisonFunction::Equal,
+            value: ComparisonValue::Scalar {
+                value: "Lady Gaga".into(),
+                value_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+            },
+        })?;
+
+        let expected = doc! {
+            "$expr": {
+                "$eq": ["$$scope_0.Name", "Lady Gaga"]
             }
         };
 
