@@ -398,16 +398,16 @@ mod tests {
                 "$lookup": {
                     "from": "students",
                     "let": {
-                        "v_year": "$year",
-                        "v_title": "$title",
+                        "year": "$year",
+                        "title": "$title",
                         "scope_root": "$$ROOT",
                     },
                     "pipeline": [
                         {
                             "$match": { "$expr": {
                                 "$and": [
-                                    { "$eq": ["$$v_title", "$class_title"] },
-                                    { "$eq": ["$$v_year", "$year"] },
+                                    { "$eq": ["$$title", "$class_title"] },
+                                    { "$eq": ["$$year", "$year"] },
                                 ],
                             } },
                         },
