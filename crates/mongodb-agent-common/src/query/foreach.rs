@@ -49,19 +49,24 @@ pub fn pipeline_for_foreach(
         r#as: "query".to_string(),
     };
 
-    let selection = if query_request.query.has_aggregates() {
-        Stage::ReplaceWith(Selection(doc! {
+    let selection = if query_request.query.has_aggregates() && query_request.query.has_fields() {
+        doc! {
             "aggregates": { "$getField": { "input": { "$first": "$query" }, "field": "aggregates" } },
             "rows": { "$getField": { "input": { "$first": "$query" }, "field": "rows" } },
-        }))
+        }
+    } else if query_request.query.has_aggregates() {
+        doc! {
+            "aggregates": { "$getField": { "input": { "$first": "$query" }, "field": "aggregates" } },
+        }
     } else {
-        Stage::ReplaceWith(Selection(doc! {
+        doc! {
             "rows": "$query"
-        }))
+        }
     };
+    let selection_stage = Stage::ReplaceWith(Selection(selection));
 
     Ok(Pipeline {
-        stages: vec![variable_sets_stage, lookup_stage, selection],
+        stages: vec![variable_sets_stage, lookup_stage, selection_stage],
     })
 }
 
@@ -295,6 +300,83 @@ mod tests {
                         { "albumId": 2, "title": "Balls to the Wall" },
                         { "albumId": 3, "title": "Restless and Wild" },
                     ]
+                },
+            ]),
+        );
+
+        let result = execute_query_request(db, &music_config(), query_request).await?;
+        assert_eq!(expected_response, result);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn executes_query_with_variables_and_aggregates_and_no_rows() -> Result<(), anyhow::Error>
+    {
+        let query_request = query_request()
+            .collection("tracks")
+            .query(
+                query()
+                    .aggregates([star_count_aggregate!("count")])
+                    .predicate(binop("_eq", target!("artistId"), variable!(artistId))),
+            )
+            .variables([[("artistId", 1)], [("artistId", 2)]])
+            .into();
+
+        let expected_pipeline = bson!([
+            {
+                "$documents": [
+                    { "artistId_int": 1 },
+                    { "artistId_int": 2 },
+                ]
+            },
+            {
+                "$lookup": {
+                    "from": "tracks",
+                    "let": {
+                        "artistId_int": "$artistId_int"
+                    },
+                    "as": "query",
+                    "pipeline": [
+                        { "$match": { "$expr": { "$eq": ["$artistId", "$$artistId_int"] } }},
+                        { "$facet": {
+                            "count": [{ "$count": "result" }],
+                        } },
+                        { "$replaceWith": {
+                            "aggregates": {
+                                "count": { "$getField": {
+                                    "field": "result",
+                                    "input": { "$first": { "$getField": { "$literal": "count" } } }
+                                } },
+                            },
+                        } },
+                    ]
+                }
+            },
+            {
+                "$replaceWith": {
+                    "aggregates": { "$getField": { "input": { "$first": "$query" }, "field": "aggregates" } },
+                }
+            },
+        ]);
+
+        let expected_response = query_response()
+            .row_set(row_set().aggregates([("count", json!({ "$numberInt": "2" }))]))
+            .row_set(row_set().aggregates([("count", json!({ "$numberInt": "2" }))]))
+            .build();
+
+        let db = mock_aggregate_response_for_pipeline(
+            expected_pipeline,
+            bson!([
+                {
+                    "aggregates": {
+                        "count": 2,
+                    },
+                },
+                {
+                    "aggregates": {
+                        "count": 2,
+                    },
                 },
             ]),
         );
