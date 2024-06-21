@@ -30,9 +30,6 @@ pub fn is_response_faceted(query: &Query) -> bool {
 }
 
 /// Shared logic to produce a MongoDB aggregation pipeline for a query request.
-///
-/// Returns a pipeline paired with a value that indicates whether the response requires
-/// post-processing in the agent.
 #[instrument(name = "Build Query Pipeline" skip_all, fields(internal.visibility = "user"))]
 pub fn pipeline_for_query_request(
     config: &MongoConfiguration,
@@ -45,11 +42,9 @@ pub fn pipeline_for_query_request(
     }
 }
 
-/// Produces a pipeline for a non-foreach query request, or for one variant of a foreach query
-/// request.
-///
-/// Returns a pipeline paired with a value that indicates whether the response requires
-/// post-processing in the agent.
+/// Produces a pipeline for a query request that does not include variable sets, or produces
+/// a sub-pipeline to be used inside of a larger pipeline for a query request that does include
+/// variable sets.
 pub fn pipeline_for_non_foreach(
     config: &MongoConfiguration,
     query_plan: &QueryPlan,

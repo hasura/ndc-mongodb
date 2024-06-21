@@ -18,11 +18,7 @@ use crate::{
 
 type Result<T> = std::result::Result<T, MongoAgentError>;
 
-/// Produces a complete MongoDB pipeline for a foreach query.
-///
-/// For symmetry with [`super::execute_query_request::pipeline_for_query`] and
-/// [`pipeline_for_non_foreach`] this function returns a pipeline paired with a value that
-/// indicates whether the response requires post-processing in the agent.
+/// Produces a complete MongoDB pipeline for a query request that includes variable sets.
 pub fn pipeline_for_foreach(
     request_variable_sets: &[VariableSet],
     config: &MongoConfiguration,
