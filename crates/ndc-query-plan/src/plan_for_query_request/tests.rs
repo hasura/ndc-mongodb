@@ -90,6 +90,7 @@ fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
         collection: "schools".to_owned(),
         arguments: Default::default(),
         variables: None,
+        variable_types: Default::default(),
         unrelated_collections: Default::default(),
         query: Query {
             predicate: Some(Expression::And {
@@ -498,6 +499,7 @@ fn translates_root_column_references() -> Result<(), anyhow::Error> {
         .into(),
         arguments: Default::default(),
         variables: Default::default(),
+        variable_types: Default::default(),
     };
 
     assert_eq!(query_plan, expected);
@@ -546,6 +548,7 @@ fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
         },
         arguments: Default::default(),
         variables: Default::default(),
+        variable_types: Default::default(),
         unrelated_collections: Default::default(),
     };
 
@@ -731,6 +734,7 @@ fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), a
         },
         arguments: Default::default(),
         variables: Default::default(),
+        variable_types: Default::default(),
         unrelated_collections: Default::default(),
     };
 
@@ -840,6 +844,7 @@ fn translates_nested_fields() -> Result<(), anyhow::Error> {
         },
         arguments: Default::default(),
         variables: Default::default(),
+        variable_types: Default::default(),
         unrelated_collections: Default::default(),
     };
 
@@ -934,6 +939,7 @@ fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Res
         },
         arguments: Default::default(),
         variables: Default::default(),
+        variable_types: Default::default(),
         unrelated_collections: Default::default(),
     };
 

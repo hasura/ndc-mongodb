@@ -138,6 +138,7 @@ mod tests {
     use configuration::{native_mutation::NativeMutation, MongoScalarType};
     use mongodb::bson::doc;
     use mongodb_support::BsonScalarType as S;
+    use ndc_models::Argument;
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
@@ -175,8 +176,13 @@ mod tests {
         };
 
         let input_arguments = [
-            ("id".to_owned(), json!(1001)),
-            ("name".to_owned(), json!("Regina Spektor")),
+            ("id".to_owned(), Argument::Literal { value: json!(1001) }),
+            (
+                "name".to_owned(),
+                Argument::Literal {
+                    value: json!("Regina Spektor"),
+                },
+            ),
         ]
         .into_iter()
         .collect();
@@ -232,10 +238,12 @@ mod tests {
 
         let input_arguments = [(
             "documents".to_owned(),
-            json!([
-                { "ArtistId": 1001, "Name": "Regina Spektor" } ,
-                { "ArtistId": 1002, "Name": "Ok Go" } ,
-            ]),
+            Argument::Literal {
+                value: json!([
+                    { "ArtistId": 1001, "Name": "Regina Spektor" } ,
+                    { "ArtistId": 1002, "Name": "Ok Go" } ,
+                ]),
+            },
         )]
         .into_iter()
         .collect();
@@ -289,8 +297,18 @@ mod tests {
         };
 
         let input_arguments = [
-            ("prefix".to_owned(), json!("current")),
-            ("basename".to_owned(), json!("some-coll")),
+            (
+                "prefix".to_owned(),
+                Argument::Literal {
+                    value: json!("current"),
+                },
+            ),
+            (
+                "basename".to_owned(),
+                Argument::Literal {
+                    value: json!("some-coll"),
+                },
+            ),
         ]
         .into_iter()
         .collect();

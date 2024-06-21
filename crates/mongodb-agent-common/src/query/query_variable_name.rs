@@ -4,7 +4,7 @@ use configuration::MongoScalarType;
 
 use crate::{
     mongo_query_plan::{ObjectType, Type},
-    mongodb::sanitize::escape_invalid_variable_chars,
+    mongodb::sanitize::variable,
 };
 
 /// Maps a variable name and type from a [ndc_models::QueryRequest] `variables` map to a variable
@@ -18,8 +18,7 @@ use crate::{
 /// - distinct outputs: inputs with different types (or names) must produce different output names
 /// - It must produce a valid MongoDB variable name (see https://www.mongodb.com/docs/manual/reference/aggregation-variables/)
 pub fn query_variable_name(name: &str, variable_type: &Type) -> String {
-    let output = format!("var_{name}_{}", type_name(variable_type));
-    escape_invalid_variable_chars(&output)
+    variable(&format!("{}_{}", name, type_name(variable_type)))
 }
 
 fn type_name(input_type: &Type) -> Cow<'static, str> {

@@ -17,12 +17,17 @@ pub fn get_field(name: &str) -> Document {
 /// are guaranteed to be distinct for distinct inputs. Consistently returns the same output for the
 /// same input string.
 pub fn variable(name: &str) -> String {
-    let output = format!("v_{name}");
-    escape_invalid_variable_chars(&output)
+    let name_with_valid_initial = if name.chars().next().unwrap_or('!').is_ascii_lowercase() {
+        Cow::Borrowed(name)
+    } else {
+        Cow::Owned(format!("v_{name}"))
+    };
+    escape_invalid_variable_chars(&name_with_valid_initial)
 }
 
 /// Returns false if the name contains characters that MongoDB will interpret specially, such as an
-/// initial dollar sign, or dots.
+/// initial dollar sign, or dots. This indicates whether a name is safe for field references
+/// - variable names are more strict.
 pub fn is_name_safe(name: &str) -> bool {
     !(name.starts_with('$') || name.contains('.'))
 }
@@ -51,7 +56,7 @@ const ESCAPE_CHAR_ESCAPE_SEQUENCE: u32 = 0xff;
 
 /// MongoDB variable names allow a limited set of ASCII characters, or any non-ASCII character.
 /// See https://www.mongodb.com/docs/manual/reference/aggregation-variables/
-pub fn escape_invalid_variable_chars(input: &str) -> String {
+fn escape_invalid_variable_chars(input: &str) -> String {
     let mut encoded = String::new();
     for char in input.chars() {
         match char {
@@ -95,9 +100,7 @@ mod tests {
             prop_assert!(
                 encoded.chars().all(|char|
                     char as u32 > 127 ||
-                        ('a'..='z').contains(&char) ||
-                        ('A'..='Z').contains(&char) ||
-                        ('0'..='9').contains(&char) ||
+                        char.is_ascii_alphanumeric() ||
                         char == '_'
                 ),
                 "encoded string contains only valid characters\nencoded string: {}",

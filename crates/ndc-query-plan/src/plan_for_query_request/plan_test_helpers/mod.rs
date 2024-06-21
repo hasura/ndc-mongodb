@@ -122,7 +122,7 @@ impl NamedEnum for ComparisonOperator {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Sequence)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Sequence)]
 pub enum ScalarType {
     Bool,
     Date,
