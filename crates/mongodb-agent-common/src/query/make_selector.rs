@@ -109,9 +109,9 @@ fn make_binary_comparison_selector(
             let comparison_value = bson_from_scalar_value(value, value_type)?;
             let match_doc = match ColumnRef::from_comparison_target(target_column) {
                 ColumnRef::MatchKey(key) => operator.mongodb_match_query(key, comparison_value),
-                ColumnRef::Expression(expr) => {
-                    operator.mongodb_aggregation_expression(expr, comparison_value)
-                }
+                ColumnRef::Expression(expr) => doc! {
+                    "$expr": operator.mongodb_aggregation_expression(expr, comparison_value)
+                },
             };
             traverse_relationship_path(target_column.relationship_path(), match_doc)
         }
@@ -120,11 +120,11 @@ fn make_binary_comparison_selector(
             variable_type,
         } => {
             let comparison_value = variable_to_mongo_expression(name, variable_type);
-            let match_doc = match ColumnRef::from_comparison_target(target_column) {
-                ColumnRef::MatchKey(key) => operator.mongodb_match_query(key, comparison_value),
-                ColumnRef::Expression(expr) => {
-                    operator.mongodb_aggregation_expression(expr, comparison_value)
-                }
+            let match_doc = doc! {
+                "$expr": operator.mongodb_aggregation_expression(
+                    column_expression(target_column),
+                    comparison_value
+                )
             };
             traverse_relationship_path(target_column.relationship_path(), match_doc)
         }
