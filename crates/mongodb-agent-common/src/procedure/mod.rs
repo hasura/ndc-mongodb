@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 use configuration::native_mutation::NativeMutation;
 use mongodb::options::SelectionCriteria;
 use mongodb::{bson, Database};
+use ndc_models::Argument;
 
 use crate::mongo_query_plan::Type;
 use crate::query::arguments::resolve_arguments;
@@ -61,6 +62,10 @@ fn interpolate(
     arguments: BTreeMap<String, serde_json::Value>,
     command: &bson::Document,
 ) -> Result<bson::Document, ProcedureError> {
+    let arguments = arguments
+        .into_iter()
+        .map(|(name, value)| (name, Argument::Literal { value }))
+        .collect();
     let bson_arguments = resolve_arguments(parameters, arguments)?;
     interpolated_command(command, &bson_arguments)
 }

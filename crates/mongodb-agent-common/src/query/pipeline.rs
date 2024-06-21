@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 
 use mongodb::bson::{self, doc, Bson};
-use ndc_query_plan::VariableSet;
 use tracing::instrument;
 
 use crate::{
@@ -42,7 +41,7 @@ pub fn pipeline_for_query_request(
     if let Some(variable_sets) = &query_plan.variables {
         pipeline_for_foreach(variable_sets, config, query_plan)
     } else {
-        pipeline_for_non_foreach(config, None, query_plan, QueryLevel::Top)
+        pipeline_for_non_foreach(config, query_plan, QueryLevel::Top)
     }
 }
 
@@ -53,7 +52,6 @@ pub fn pipeline_for_query_request(
 /// post-processing in the agent.
 pub fn pipeline_for_non_foreach(
     config: &MongoConfiguration,
-    variables: Option<&VariableSet>,
     query_plan: &QueryPlan,
     query_level: QueryLevel,
 ) -> Result<Pipeline, MongoAgentError> {
@@ -67,14 +65,14 @@ pub fn pipeline_for_non_foreach(
     let mut pipeline = Pipeline::empty();
 
     // If this is a native query then we start with the native query's pipeline
-    pipeline.append(pipeline_for_native_query(config, variables, query_plan)?);
+    pipeline.append(pipeline_for_native_query(config, query_plan)?);
 
     // Stages common to aggregate and row queries.
-    pipeline.append(pipeline_for_relations(config, variables, query_plan)?);
+    pipeline.append(pipeline_for_relations(config, query_plan)?);
 
     let match_stage = predicate
         .as_ref()
-        .map(|expression| make_selector(variables, expression))
+        .map(make_selector)
         .transpose()?
         .map(Stage::Match);
     let sort_stage: Option<Stage> = order_by

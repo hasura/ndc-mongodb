@@ -42,7 +42,7 @@ pub fn pipeline_for_foreach(
 
     let variable_sets_stage = Stage::Documents(variable_sets);
 
-    let query_pipeline = pipeline_for_non_foreach(config, None, query_request, QueryLevel::Top)?;
+    let query_pipeline = pipeline_for_non_foreach(config, query_request, QueryLevel::Top)?;
 
     let lookup_stage = Stage::Lookup {
         from: target.input_collection().map(ToString::to_string),
