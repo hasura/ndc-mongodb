@@ -113,7 +113,9 @@ mod tests {
 
     use crate::{
         mongo_query_plan::MongoConfiguration,
-        mongodb::test_helpers::mock_collection_aggregate_response_for_pipeline,
+        mongodb::test_helpers::{
+            mock_aggregate_response_for_pipeline, mock_collection_aggregate_response_for_pipeline,
+        },
         query::execute_query_request::execute_query_request,
     };
 
@@ -131,31 +133,32 @@ mod tests {
 
         let expected_pipeline = bson!([
             {
-                "$facet": {
-                    "__FACET___0": [
-                        { "$match": { "artistId": { "$eq": 1 } } },
+                "$documents": [
+                    { "artistId_int": 1 },
+                    { "artistId_int": 2 },
+                ],
+            },
+            {
+                "$lookup": {
+                    "from": "tracks",
+                    "let": {
+                        "artistId_int": "$artistId_int",
+                    },
+                    "as": "rows",
+                    "pipeline": [
+                        { "$match": { "$expr": { "$eq": ["$artistId", "$$artistId_int"] } } },
                         { "$replaceWith": {
                             "albumId": { "$ifNull": ["$albumId", null] },
                             "title": { "$ifNull": ["$title", null] }
                         } },
                     ],
-                    "__FACET___1": [
-                        { "$match": { "artistId": { "$eq": 2 } } },
-                        { "$replaceWith": {
-                            "albumId": { "$ifNull": ["$albumId", null] },
-                            "title": { "$ifNull": ["$title", null] }
-                        } },
-                    ]
                 },
             },
             {
                 "$replaceWith": {
-                    "row_sets": [
-                        "$__FACET___0",
-                        "$__FACET___1",
-                    ]
-                },
-            }
+                    "rows": "$rows",
+                }
+            },
         ]);
 
         let expected_response = query_response()
@@ -172,21 +175,18 @@ mod tests {
             ])
             .build();
 
-        let db = mock_collection_aggregate_response_for_pipeline(
-            "tracks",
+        let db = mock_aggregate_response_for_pipeline(
             expected_pipeline,
-            bson!([{
-                "row_sets": [
-                    [
-                        { "albumId": 1, "title": "For Those About To Rock We Salute You" },
-                        { "albumId": 4, "title": "Let There Be Rock" }
-                    ],
-                    [
-                        { "albumId": 2, "title": "Balls to the Wall" },
-                        { "albumId": 3, "title": "Restless and Wild" }
-                    ],
-                ],
-            }]),
+            bson!([
+                { "rows": [
+                    { "albumId": 1, "title": "For Those About To Rock We Salute You" },
+                    { "albumId": 4, "title": "Let There Be Rock" }
+                ] },
+                { "rows": [
+                    { "albumId": 2, "title": "Balls to the Wall" },
+                    { "albumId": 3, "title": "Restless and Wild" }
+                ] },
+            ]),
         );
 
         let result = execute_query_request(db, &music_config(), query_request).await?;
