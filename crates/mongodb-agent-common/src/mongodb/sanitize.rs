@@ -95,7 +95,7 @@ mod tests {
     proptest! {
         // Escaped strings must be consistent and distinct. A round-trip test demonstrates this.
         #[test]
-        fn escaping_variable_chars_roundtrips(input in any::<String>()) {
+        fn escaping_variable_chars_roundtrips(input: String) {
             let encoded = escape_invalid_variable_chars(&input);
             let decoded = unescape_invalid_variable_chars(&encoded);
             prop_assert_eq!(decoded, input, "encoded string: {}", encoded)
@@ -103,9 +103,8 @@ mod tests {
     }
 
     proptest! {
-        // Escaped strings must be consistent and distinct. A round-trip test demonstrates this.
         #[test]
-        fn escaped_variable_names_are_valid(input in any::<String>()) {
+        fn escaped_variable_names_are_valid(input: String) {
             let encoded = escape_invalid_variable_chars(&input);
             prop_assert!(
                 encoded.chars().all(|char|

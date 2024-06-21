@@ -43,28 +43,53 @@ fn object_type_name(obj: &ObjectType) -> String {
 
 #[cfg(test)]
 mod tests {
+    use once_cell::sync::Lazy;
     use proptest::prelude::*;
-    use test_helpers::arb_bson;
+    use regex::Regex;
+    use test_helpers::arb_plan_type;
+
+    use super::query_variable_name;
 
     proptest! {
         #[test]
-        fn variable_names_are_reproducible(bson in arb_bson()) {
-
+        fn variable_names_are_reproducible(variable_name: String, variable_type in arb_plan_type()) {
+            let a = query_variable_name(&variable_name, &variable_type);
+            let b = query_variable_name(&variable_name, &variable_type);
+            prop_assert_eq!(a, b)
         }
     }
 
     proptest! {
         #[test]
-        fn variable_names_are_distinct(bson in arb_bson()) {
-
+        fn variable_names_are_distinct_when_input_names_are_distinct(
+            (name_a, name_b) in (any::<String>(), any::<String>()).prop_filter("names are equale", |(a, b)| a != b),
+            variable_type in arb_plan_type()
+        ) {
+            let a = query_variable_name(&name_a, &variable_type);
+            let b = query_variable_name(&name_b, &variable_type);
+            prop_assert_ne!(a, b)
         }
     }
 
     proptest! {
         #[test]
-        fn variable_names_are_valid_for_mongodb_expressions(bson in arb_bson()) {
-            // begin with lowercase letter
-            // limited ascii characters
+        fn variable_names_are_distinct_when_types_are_distinct(
+            variable_name: String,
+            (type_a, type_b) in (arb_plan_type(), arb_plan_type()).prop_filter("types are equal", |(a, b)| a != b)
+        ) {
+            let a = query_variable_name(&variable_name, &type_a);
+            let b = query_variable_name(&variable_name, &type_b);
+            prop_assert_ne!(a, b)
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn variable_names_are_valid_for_mongodb_expressions(variable_name: String, variable_type in arb_plan_type()) {
+            static VALID_NAME: Lazy<Regex> =
+                Lazy::new(|| Regex::new(r"^[a-z\P{ascii}][_a-zA-Z0-9\P{ascii}]*$").unwrap());
+            let name = query_variable_name(&variable_name, &variable_type);
+            prop_assert!(VALID_NAME.is_match(&name))
         }
     }
 }
