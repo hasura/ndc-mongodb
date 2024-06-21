@@ -2,8 +2,6 @@ use std::borrow::Cow;
 
 use anyhow::anyhow;
 use mongodb::bson::{doc, Document};
-use once_cell::sync::Lazy;
-use regex::Regex;
 
 use crate::interface_types::MongoAgentError;
 
@@ -15,24 +13,12 @@ pub fn get_field(name: &str) -> Document {
     doc! { "$getField": { "$literal": name } }
 }
 
-/// Returns its input prefixed with "v_" if it is a valid MongoDB variable name. Valid names may
-/// include the ASCII characters [_a-zA-Z0-9] or any non-ASCII characters. The exclusion of special
-/// characters like `$` and `.` avoids potential code injection.
-///
-/// We add the "v_" prefix because variable names may not begin with an underscore, but in some
-/// cases, like when using relation-mapped column names as variable names, we want to be able to
-/// use names like "_id".
-///
-/// TODO: Instead of producing an error we could use an escaping scheme to unambiguously map
-/// invalid characters to safe ones.
-pub fn variable(name: &str) -> Result<String, MongoAgentError> {
-    static VALID_EXPRESSION: Lazy<Regex> =
-        Lazy::new(|| Regex::new(r"^[_a-zA-Z0-9\P{ascii}]+$").unwrap());
-    if VALID_EXPRESSION.is_match(name) {
-        Ok(format!("v_{name}"))
-    } else {
-        Err(MongoAgentError::InvalidVariableName(name.to_owned()))
-    }
+/// Given a name returns a valid variable name for use in MongoDB aggregation expressions. Outputs
+/// are guaranteed to be distinct for distinct inputs. Consistently returns the same output for the
+/// same input string.
+pub fn variable(name: &str) -> String {
+    let output = format!("v_{name}");
+    escape_invalid_variable_chars(&output)
 }
 
 /// Returns false if the name contains characters that MongoDB will interpret specially, such as an
