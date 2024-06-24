@@ -26,7 +26,6 @@ pub enum MongoAgentError {
     Serialization(serde_json::Error),
     UnknownAggregationFunction(String),
     UnspecifiedRelation(String),
-    VariableNotDefined(String),
     AdHoc(#[from] anyhow::Error),
 }
 
@@ -87,10 +86,6 @@ impl MongoAgentError {
             UnspecifiedRelation(relation) => (
                 StatusCode::BAD_REQUEST,
                 ErrorResponse::new(&format!("Query referenced a relationship, \"{relation}\", but did not include relation metadata in `table_relationships`"))
-            ),
-            VariableNotDefined(variable_name) => (
-                StatusCode::BAD_REQUEST,
-                ErrorResponse::new(&format!("Query referenced a variable, \"{variable_name}\", but it is not defined by the query request"))
             ),
             AdHoc(err) => (StatusCode::INTERNAL_SERVER_ERROR, ErrorResponse::new(&err)),
         }

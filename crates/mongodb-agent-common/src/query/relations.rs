@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use itertools::Itertools as _;
 use mongodb::bson::{doc, Bson, Document};
-use ndc_query_plan::{Scope, VariableSet};
+use ndc_query_plan::Scope;
 
 use crate::mongo_query_plan::{MongoConfiguration, Query, QueryPlan};
 use crate::mongodb::sanitize::safe_name;
@@ -22,7 +22,6 @@ type Result<T> = std::result::Result<T, MongoAgentError>;
 /// each sub-query in the plan.
 pub fn pipeline_for_relations(
     config: &MongoConfiguration,
-    variables: Option<&VariableSet>,
     query_plan: &QueryPlan,
 ) -> Result<Pipeline> {
     let QueryPlan { query, .. } = query_plan;
@@ -40,7 +39,6 @@ pub fn pipeline_for_relations(
             // Recursively build pipeline according to relation query
             let lookup_pipeline = pipeline_for_non_foreach(
                 config,
-                variables,
                 &QueryPlan {
                     query: relationship.query.clone(),
                     collection: relationship.target_collection.clone(),
@@ -125,7 +123,7 @@ fn multiple_column_mapping_lookup(
         .keys()
         .map(|local_field| {
             Ok((
-                variable(local_field)?,
+                variable(local_field),
                 Bson::String(format!("${}", safe_name(local_field)?.into_owned())),
             ))
         })
@@ -145,7 +143,7 @@ fn multiple_column_mapping_lookup(
         .into_iter()
         .map(|(local_field, remote_field)| {
             Ok(doc! { "$eq": [
-                format!("$${}", variable(local_field)?),
+                format!("$${}", variable(local_field)),
                 format!("${}", safe_name(remote_field)?)
             ] })
         })
@@ -400,16 +398,16 @@ mod tests {
                 "$lookup": {
                     "from": "students",
                     "let": {
-                        "v_year": "$year",
-                        "v_title": "$title",
+                        "year": "$year",
+                        "title": "$title",
                         "scope_root": "$$ROOT",
                     },
                     "pipeline": [
                         {
                             "$match": { "$expr": {
                                 "$and": [
-                                    { "$eq": ["$$v_title", "$class_title"] },
-                                    { "$eq": ["$$v_year", "$year"] },
+                                    { "$eq": ["$$title", "$class_title"] },
+                                    { "$eq": ["$$year", "$year"] },
                                 ],
                             } },
                         },

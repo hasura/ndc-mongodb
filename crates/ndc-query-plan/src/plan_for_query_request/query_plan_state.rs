@@ -9,8 +9,9 @@ use ndc_models as ndc;
 
 use crate::{
     plan_for_query_request::helpers::lookup_relationship,
-    query_plan::{Scope, UnrelatedJoin},
-    Query, QueryContext, QueryPlanError, Relationship,
+    query_plan::{Scope, UnrelatedJoin, VariableTypes},
+    vec_set::VecSet,
+    ConnectorTypes, Query, QueryContext, QueryPlanError, Relationship, Type,
 };
 
 use super::unify_relationship_references::unify_relationship_references;
@@ -32,6 +33,7 @@ pub struct QueryPlanState<'a, T: QueryContext> {
     unrelated_joins: Rc<RefCell<BTreeMap<String, UnrelatedJoin<T>>>>,
     relationship_name_counter: Rc<Cell<i32>>,
     scope_name_counter: Rc<Cell<i32>>,
+    variable_types: Rc<RefCell<VariableTypes<T::ScalarType>>>,
 }
 
 impl<T: QueryContext> QueryPlanState<'_, T> {
@@ -47,6 +49,7 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
             unrelated_joins: Rc::new(RefCell::new(Default::default())),
             relationship_name_counter: Rc::new(Cell::new(0)),
             scope_name_counter: Rc::new(Cell::new(0)),
+            variable_types: Rc::new(RefCell::new(Default::default())),
         }
     }
 
@@ -62,6 +65,7 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
             unrelated_joins: self.unrelated_joins.clone(),
             relationship_name_counter: self.relationship_name_counter.clone(),
             scope_name_counter: self.scope_name_counter.clone(),
+            variable_types: self.variable_types.clone(),
         }
     }
 
@@ -80,6 +84,13 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
     ) -> Result<String> {
         let ndc_relationship =
             lookup_relationship(self.collection_relationships, &ndc_relationship_name)?;
+
+        for argument in arguments.values() {
+            if let RelationshipArgument::Variable { name } = argument {
+                // TODO: Is there a way to infer a type here?
+                self.register_variable_use_of_unknown_type(name)
+            }
+        }
 
         let relationship = Relationship {
             column_mapping: ndc_relationship.column_mapping.clone(),
@@ -141,6 +152,36 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
         key
     }
 
+    /// It's important to call this for every use of a variable encountered when building
+    /// a [crate::QueryPlan] so we can capture types for each variable.
+    pub fn register_variable_use(
+        &mut self,
+        variable_name: &str,
+        expected_type: Type<T::ScalarType>,
+    ) {
+        self.register_variable_use_helper(variable_name, Some(expected_type))
+    }
+
+    pub fn register_variable_use_of_unknown_type(&mut self, variable_name: &str) {
+        self.register_variable_use_helper(variable_name, None)
+    }
+
+    fn register_variable_use_helper(
+        &mut self,
+        variable_name: &str,
+        expected_type: Option<Type<T::ScalarType>>,
+    ) {
+        let mut type_map = self.variable_types.borrow_mut();
+        match type_map.get_mut(variable_name) {
+            None => {
+                type_map.insert(variable_name.to_string(), VecSet::singleton(expected_type));
+            }
+            Some(entry) => {
+                entry.insert(expected_type);
+            }
+        }
+    }
+
     /// Use this for subquery plans to get the relationships for each sub-query
     pub fn into_relationships(self) -> BTreeMap<String, Relationship<T>> {
         self.relationships
@@ -150,9 +191,12 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
         self.scope
     }
 
-    /// Use this with the top-level plan to get unrelated joins.
-    pub fn into_unrelated_collections(self) -> BTreeMap<String, UnrelatedJoin<T>> {
-        self.unrelated_joins.take()
+    /// Use this with the top-level plan to get unrelated joins and variable types
+    pub fn into_query_plan_info(self) -> QueryPlanInfo<T> {
+        QueryPlanInfo {
+            unrelated_joins: self.unrelated_joins.take(),
+            variable_types: self.variable_types.take(),
+        }
     }
 
     fn unique_relationship_name(&mut self, name: impl std::fmt::Display) -> String {
@@ -166,4 +210,11 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
         self.scope_name_counter.set(count + 1);
         format!("scope_{count}")
     }
+}
+
+/// Data extracted from [QueryPlanState] for use in building top-level [crate::QueryPlan]
+#[derive(Debug)]
+pub struct QueryPlanInfo<T: ConnectorTypes> {
+    pub unrelated_joins: BTreeMap<String, UnrelatedJoin<T>>,
+    pub variable_types: VariableTypes<T::ScalarType>,
 }

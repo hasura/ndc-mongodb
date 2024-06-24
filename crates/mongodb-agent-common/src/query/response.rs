@@ -39,18 +39,6 @@ pub enum QueryResponseError {
 
 type Result<T> = std::result::Result<T, QueryResponseError>;
 
-// These structs describe possible shapes of data returned by MongoDB query plans
-
-#[derive(Debug, Deserialize)]
-struct ResponseForVariableSetsRowsOnly {
-    row_sets: Vec<Vec<bson::Document>>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ResponseForVariableSetsAggregates {
-    row_sets: Vec<BsonRowSet>,
-}
-
 #[derive(Debug, Deserialize)]
 struct BsonRowSet {
     #[serde(default)]
@@ -66,25 +54,12 @@ pub fn serialize_query_response(
 ) -> Result<QueryResponse> {
     let collection_name = &query_plan.collection;
 
-    // If the query request specified variable sets then we should have gotten a single document
-    // from MongoDB with fields for multiple sets of results - one for each set of variables.
-    let row_sets = if query_plan.has_variables() && query_plan.query.has_aggregates() {
-        let responses: ResponseForVariableSetsAggregates =
-            parse_single_document(response_documents)?;
-        responses
-            .row_sets
+    let row_sets = if query_plan.has_variables() {
+        response_documents
             .into_iter()
-            .map(|row_set| {
+            .map(|document| {
+                let row_set = bson::from_document(document)?;
                 serialize_row_set_with_aggregates(&[collection_name], &query_plan.query, row_set)
-            })
-            .try_collect()
-    } else if query_plan.variables.is_some() {
-        let responses: ResponseForVariableSetsRowsOnly = parse_single_document(response_documents)?;
-        responses
-            .row_sets
-            .into_iter()
-            .map(|row_set| {
-                serialize_row_set_rows_only(&[collection_name], &query_plan.query, row_set)
             })
             .try_collect()
     } else if query_plan.query.has_aggregates() {

@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc fdd2dffdde1f114a438c67d891387aaca81b3df2676213ff17171208feb290ba # shrinks to variable_name = "", (type_a, type_b) = (Scalar(Bson(Double)), Scalar(Bson(Decimal)))

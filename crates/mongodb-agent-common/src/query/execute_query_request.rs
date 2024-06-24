@@ -57,8 +57,12 @@ async fn execute_query_pipeline(
     // The target of a query request might be a collection, or it might be a native query. In the
     // latter case there is no collection to perform the aggregation against. So instead of sending
     // the MongoDB API call `db.<collection>.aggregate` we instead call `db.aggregate`.
-    let documents = match target.input_collection() {
-        Some(collection_name) => {
+    //
+    // If the query request includes variable sets then instead of specifying the target collection
+    // up front that is deferred until the `$lookup` stage of the aggregation pipeline. That is
+    // another case where we call `db.aggregate` instead of `db.<collection>.aggregate`.
+    let documents = match (target.input_collection(), query_plan.has_variables()) {
+        (Some(collection_name), false) => {
             let collection = database.collection(collection_name);
             collect_response_documents(
                 collection
@@ -71,7 +75,7 @@ async fn execute_query_pipeline(
             )
             .await
         }
-        None => {
+        _ => {
             collect_response_documents(
                 database
                     .aggregate(pipeline, None)

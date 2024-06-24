@@ -3184,6 +3184,7 @@ dependencies = [
  "mongodb",
  "mongodb-support",
  "ndc-models",
+ "ndc-query-plan",
  "ndc-test-helpers",
  "proptest",
 ]

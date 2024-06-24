@@ -9,6 +9,7 @@ mod native_query;
 mod pipeline;
 mod query_level;
 mod query_target;
+mod query_variable_name;
 mod relations;
 pub mod response;
 pub mod serialization;
