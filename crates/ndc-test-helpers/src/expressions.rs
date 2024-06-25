@@ -1,4 +1,4 @@
-use ndc_sdk::models::{
+use ndc_models::{
     ComparisonTarget, ComparisonValue, ExistsInCollection, Expression, UnaryComparisonOperator,
 };
 
@@ -30,14 +30,6 @@ pub fn is_null(target: ComparisonTarget) -> Expression {
     Expression::UnaryComparisonOperator {
         column: target,
         operator: UnaryComparisonOperator::IsNull,
-    }
-}
-
-pub fn equal(op1: ComparisonTarget, op2: ComparisonValue) -> Expression {
-    Expression::BinaryComparisonOperator {
-        column: op1,
-        operator: "_eq".to_owned(),
-        value: op2,
     }
 }
 

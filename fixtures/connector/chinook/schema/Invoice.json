@@ -60,7 +60,7 @@
         },
         "Total": {
           "type": {
-            "scalar": "double"
+            "scalar": "decimal"
           }
         },
         "_id": {

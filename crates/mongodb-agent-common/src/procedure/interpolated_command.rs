@@ -7,7 +7,7 @@ use super::ProcedureError;
 
 type Result<T> = std::result::Result<T, ProcedureError>;
 
-/// Parse native procedure commands, and interpolate arguments.
+/// Parse native mutation commands, and interpolate arguments.
 pub fn interpolated_command(
     command: &bson::Document,
     arguments: &BTreeMap<String, Bson>,
@@ -69,19 +69,19 @@ fn interpolate_document(
 ///
 /// if the type of the variable `recordId` is `int`.
 fn interpolate_string(string: &str, arguments: &BTreeMap<String, Bson>) -> Result<Bson> {
-    let parts = parse_native_procedure(string);
+    let parts = parse_native_mutation(string);
     if parts.len() == 1 {
         let mut parts = parts;
         match parts.remove(0) {
-            NativeProcedurePart::Text(string) => Ok(Bson::String(string)),
-            NativeProcedurePart::Parameter(param) => resolve_argument(&param, arguments),
+            NativeMutationPart::Text(string) => Ok(Bson::String(string)),
+            NativeMutationPart::Parameter(param) => resolve_argument(&param, arguments),
         }
     } else {
         let interpolated_parts: Vec<String> = parts
             .into_iter()
             .map(|part| match part {
-                NativeProcedurePart::Text(string) => Ok(string),
-                NativeProcedurePart::Parameter(param) => {
+                NativeMutationPart::Text(string) => Ok(string),
+                NativeMutationPart::Parameter(param) => {
                     let argument_value = resolve_argument(&param, arguments)?;
                     match argument_value {
                         Bson::String(string) => Ok(string),
@@ -101,9 +101,9 @@ fn resolve_argument(argument_name: &str, arguments: &BTreeMap<String, Bson>) -> 
     Ok(argument.clone())
 }
 
-/// A part of a Native Procedure command text, either raw text or a parameter.
+/// A part of a Native Mutation command text, either raw text or a parameter.
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum NativeProcedurePart {
+enum NativeMutationPart {
     /// A raw text part
     Text(String),
     /// A parameter
@@ -112,19 +112,19 @@ enum NativeProcedurePart {
 
 /// Parse a string or key in a native procedure into parts where variables have the syntax
 /// `{{<variable>}}`.
-fn parse_native_procedure(string: &str) -> Vec<NativeProcedurePart> {
-    let vec: Vec<Vec<NativeProcedurePart>> = string
+fn parse_native_mutation(string: &str) -> Vec<NativeMutationPart> {
+    let vec: Vec<Vec<NativeMutationPart>> = string
         .split("{{")
         .filter(|part| !part.is_empty())
         .map(|part| match part.split_once("}}") {
-            None => vec![NativeProcedurePart::Text(part.to_string())],
+            None => vec![NativeMutationPart::Text(part.to_string())],
             Some((var, text)) => {
                 if text.is_empty() {
-                    vec![NativeProcedurePart::Parameter(var.trim().to_owned())]
+                    vec![NativeMutationPart::Parameter(var.trim().to_owned())]
                 } else {
                     vec![
-                        NativeProcedurePart::Parameter(var.trim().to_owned()),
-                        NativeProcedurePart::Text(text.to_string()),
+                        NativeMutationPart::Parameter(var.trim().to_owned()),
+                        NativeMutationPart::Text(text.to_string()),
                     ]
                 }
             }
@@ -135,33 +135,45 @@ fn parse_native_procedure(string: &str) -> Vec<NativeProcedurePart> {
 
 #[cfg(test)]
 mod tests {
-    use configuration::native_procedure::NativeProcedure;
+    use configuration::{native_mutation::NativeMutation, MongoScalarType};
+    use mongodb::bson::doc;
+    use mongodb_support::BsonScalarType as S;
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
-    use crate::query::arguments::resolve_arguments;
+    use crate::{
+        mongo_query_plan::{ObjectType, Type},
+        query::arguments::resolve_arguments,
+    };
 
     use super::*;
 
-    // TODO: key
-    // TODO: key with multiple placeholders
-
     #[test]
     fn interpolates_non_string_type() -> anyhow::Result<()> {
-        let native_procedure_input = json!({
-            "resultType": { "object": "InsertArtist" },
-            "arguments": {
-                "id": { "type": { "scalar": "int" } },
-                "name": { "type": { "scalar": "string" } },
-            },
-            "command": {
+        let native_mutation = NativeMutation {
+            result_type: Type::Object(ObjectType {
+                name: Some("InsertArtist".into()),
+                fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
+            }),
+            arguments: [
+                ("id".to_owned(), Type::Scalar(MongoScalarType::Bson(S::Int))),
+                (
+                    "name".to_owned(),
+                    Type::Scalar(MongoScalarType::Bson(S::String)),
+                ),
+            ]
+            .into(),
+            command: doc! {
                 "insert": "Artist",
                 "documents": [{
                     "ArtistId": "{{ id }}",
                     "Name": "{{name }}",
                 }],
             },
-        });
+            selection_criteria: Default::default(),
+            description: Default::default(),
+        };
+
         let input_arguments = [
             ("id".to_owned(), json!(1001)),
             ("name".to_owned(), json!("Regina Spektor")),
@@ -169,13 +181,8 @@ mod tests {
         .into_iter()
         .collect();
 
-        let native_procedure: NativeProcedure = serde_json::from_value(native_procedure_input)?;
-        let arguments = resolve_arguments(
-            &native_procedure.object_types,
-            &native_procedure.arguments,
-            input_arguments,
-        )?;
-        let command = interpolated_command(&native_procedure.command, &arguments)?;
+        let arguments = resolve_arguments(&native_mutation.arguments, input_arguments)?;
+        let command = interpolated_command(&native_mutation.command, &arguments)?;
 
         assert_eq!(
             command,
@@ -192,25 +199,37 @@ mod tests {
 
     #[test]
     fn interpolates_array_argument() -> anyhow::Result<()> {
-        let native_procedure_input = json!({
-            "name": "insertArtist",
-            "resultType": { "object": "InsertArtist" },
-            "objectTypes": {
-                "ArtistInput": {
-                    "fields": {
-                        "ArtistId": { "type": { "scalar": "int" } },
-                        "Name": { "type": { "scalar": "string" } },
-                    },
-                }
-            },
-            "arguments": {
-                "documents": { "type": { "arrayOf": { "object": "ArtistInput" } } },
-            },
-            "command": {
+        let native_mutation = NativeMutation {
+            result_type: Type::Object(ObjectType {
+                name: Some("InsertArtist".into()),
+                fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
+            }),
+            arguments: [(
+                "documents".to_owned(),
+                Type::ArrayOf(Box::new(Type::Object(ObjectType {
+                    name: Some("ArtistInput".into()),
+                    fields: [
+                        (
+                            "ArtistId".into(),
+                            Type::Scalar(MongoScalarType::Bson(S::Int)),
+                        ),
+                        (
+                            "Name".into(),
+                            Type::Scalar(MongoScalarType::Bson(S::String)),
+                        ),
+                    ]
+                    .into(),
+                }))),
+            )]
+            .into(),
+            command: doc! {
                 "insert": "Artist",
                 "documents": "{{ documents }}",
             },
-        });
+            selection_criteria: Default::default(),
+            description: Default::default(),
+        };
+
         let input_arguments = [(
             "documents".to_owned(),
             json!([
@@ -221,13 +240,8 @@ mod tests {
         .into_iter()
         .collect();
 
-        let native_procedure: NativeProcedure = serde_json::from_value(native_procedure_input)?;
-        let arguments = resolve_arguments(
-            &native_procedure.object_types,
-            &native_procedure.arguments,
-            input_arguments,
-        )?;
-        let command = interpolated_command(&native_procedure.command, &arguments)?;
+        let arguments = resolve_arguments(&native_mutation.arguments, input_arguments)?;
+        let command = interpolated_command(&native_mutation.command, &arguments)?;
 
         assert_eq!(
             command,
@@ -250,18 +264,30 @@ mod tests {
 
     #[test]
     fn interpolates_arguments_within_string() -> anyhow::Result<()> {
-        let native_procedure_input = json!({
-            "name": "insert",
-            "resultType": { "object": "Insert" },
-            "arguments": {
-                "prefix": { "type": { "scalar": "string" } },
-                "basename": { "type": { "scalar": "string" } },
-            },
-            "command": {
+        let native_mutation = NativeMutation {
+            result_type: Type::Object(ObjectType {
+                name: Some("Insert".into()),
+                fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
+            }),
+            arguments: [
+                (
+                    "prefix".to_owned(),
+                    Type::Scalar(MongoScalarType::Bson(S::String)),
+                ),
+                (
+                    "basename".to_owned(),
+                    Type::Scalar(MongoScalarType::Bson(S::String)),
+                ),
+            ]
+            .into(),
+            command: doc! {
                 "insert": "{{prefix}}-{{basename}}",
                 "empty": "",
             },
-        });
+            selection_criteria: Default::default(),
+            description: Default::default(),
+        };
+
         let input_arguments = [
             ("prefix".to_owned(), json!("current")),
             ("basename".to_owned(), json!("some-coll")),
@@ -269,13 +295,8 @@ mod tests {
         .into_iter()
         .collect();
 
-        let native_procedure: NativeProcedure = serde_json::from_value(native_procedure_input)?;
-        let arguments = resolve_arguments(
-            &native_procedure.object_types,
-            &native_procedure.arguments,
-            input_arguments,
-        )?;
-        let command = interpolated_command(&native_procedure.command, &arguments)?;
+        let arguments = resolve_arguments(&native_mutation.arguments, input_arguments)?;
+        let command = interpolated_command(&native_mutation.command, &arguments)?;
 
         assert_eq!(
             command,

@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 
 use anyhow::anyhow;
-use dc_api_types::comparison_column::ColumnSelector;
 use mongodb::bson::{doc, Document};
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -10,6 +9,8 @@ use crate::interface_types::MongoAgentError;
 
 /// Produces a MongoDB expression that references a field by name in a way that is safe from code
 /// injection.
+///
+/// TODO: equivalent to ColumnRef::Expression
 pub fn get_field(name: &str) -> Document {
     doc! { "$getField": { "$literal": name } }
 }
@@ -34,25 +35,20 @@ pub fn variable(name: &str) -> Result<String, MongoAgentError> {
     }
 }
 
+/// Returns false if the name contains characters that MongoDB will interpret specially, such as an
+/// initial dollar sign, or dots.
+pub fn is_name_safe(name: &str) -> bool {
+    !(name.starts_with('$') || name.contains('.'))
+}
+
 /// Given a collection or field name, returns Ok if the name is safe, or Err if it contains
 /// characters that MongoDB will interpret specially.
 ///
-/// TODO: Can we handle names with dots or dollar signs safely instead of throwing an error?
+/// TODO: MDB-159, MBD-160 remove this function in favor of ColumnRef which is infallible
 pub fn safe_name(name: &str) -> Result<Cow<str>, MongoAgentError> {
     if name.starts_with('$') || name.contains('.') {
         Err(MongoAgentError::BadQuery(anyhow!("cannot execute query that includes the name, \"{name}\", because it includes characters that MongoDB interperets specially")))
     } else {
         Ok(Cow::Borrowed(name))
-    }
-}
-
-pub fn safe_column_selector(column_selector: &ColumnSelector) -> Result<Cow<str>, MongoAgentError> {
-    match column_selector {
-        ColumnSelector::Path(p) => p
-            .iter()
-            .map(|s| safe_name(s))
-            .collect::<Result<Vec<Cow<str>>, MongoAgentError>>()
-            .map(|v| Cow::Owned(v.join("."))),
-        ColumnSelector::Column(c) => safe_name(c),
     }
 }

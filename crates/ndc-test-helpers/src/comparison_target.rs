@@ -1,14 +1,30 @@
 #[macro_export()]
 macro_rules! target {
     ($column:literal) => {
-        ndc_sdk::models::ComparisonTarget::Column {
+        $crate::ndc_models::ComparisonTarget::Column {
             name: $column.to_owned(),
+            field_path: None,
             path: vec![],
         }
     };
-    ($column:literal, $path:expr $(,)?) => {
-        ndc_sdk::models::ComparisonTarget::Column {
+    ($column:literal, field_path:$field_path:expr $(,)?) => {
+        $crate::ndc_models::ComparisonTarget::Column {
             name: $column.to_owned(),
+            field_path: $field_path.into_iter().map(|x| x.into()).collect(),
+            path: vec![],
+        }
+    };
+    ($column:literal, relations:$path:expr $(,)?) => {
+        $crate::ndc_models::ComparisonTarget::Column {
+            name: $column.to_owned(),
+            field_path: None,
+            path: $path.into_iter().map(|x| x.into()).collect(),
+        }
+    };
+    ($column:literal, field_path:$field_path:expr, relations:$path:expr $(,)?) => {
+        $crate::ndc_models::ComparisonTarget::Column {
+            name: $column.to_owned(),
+            // field_path: $field_path.into_iter().map(|x| x.into()).collect(),
             path: $path.into_iter().map(|x| x.into()).collect(),
         }
     };
@@ -17,11 +33,12 @@ macro_rules! target {
     };
 }
 
-pub fn root<S>(name: S) -> ndc_sdk::models::ComparisonTarget
+pub fn root<S>(name: S) -> ndc_models::ComparisonTarget
 where
     S: ToString,
 {
-    ndc_sdk::models::ComparisonTarget::RootCollectionColumn {
+    ndc_models::ComparisonTarget::RootCollectionColumn {
         name: name.to_string(),
+        field_path: None,
     }
 }

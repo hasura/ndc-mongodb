@@ -1,10 +1,11 @@
 use std::fmt::{self, Display};
 
-use axum::{response::IntoResponse, Json};
-use dc_api_types::ErrorResponse;
 use http::StatusCode;
 use mongodb::bson;
+use ndc_query_plan::QueryPlanError;
 use thiserror::Error;
+
+use crate::{procedure::ProcedureError, query::QueryResponseError};
 
 /// A superset of the DC-API `AgentError` type. This enum adds error cases specific to the MongoDB
 /// agent.
@@ -13,17 +14,20 @@ pub enum MongoAgentError {
     BadCollectionSchema(String, bson::Bson, bson::de::Error),
     BadQuery(anyhow::Error),
     InvalidVariableName(String),
+    InvalidScalarTypeName(String),
     MongoDB(#[from] mongodb::error::Error),
     MongoDBDeserialization(#[from] mongodb::bson::de::Error),
     MongoDBSerialization(#[from] mongodb::bson::ser::Error),
     MongoDBSupport(#[from] mongodb_support::error::Error),
     NotImplemented(&'static str),
+    Procedure(#[from] ProcedureError),
+    QueryPlan(#[from] QueryPlanError),
+    ResponseSerialization(#[from] QueryResponseError),
     Serialization(serde_json::Error),
     UnknownAggregationFunction(String),
     UnspecifiedRelation(String),
     VariableNotDefined(String),
     AdHoc(#[from] anyhow::Error),
-    AgentError(#[from] dc_api::AgentError),
 }
 
 use MongoAgentError::*;
@@ -61,6 +65,10 @@ impl MongoAgentError {
                 StatusCode::BAD_REQUEST,
                 ErrorResponse::new(&format!("Column identifier includes characters that are not permitted in a MongoDB variable name: {name}"))
             ),
+            InvalidScalarTypeName(name) => (
+                StatusCode::BAD_REQUEST,
+                ErrorResponse::new(&format!("Scalar value includes invalid type name: {name}"))
+            ),
             MongoDB(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(&err)),
             MongoDBDeserialization(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(&err)),
             MongoDBSerialization(err) => {
@@ -68,6 +76,9 @@ impl MongoAgentError {
             }
             MongoDBSupport(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(&err)),
             NotImplemented(missing_feature) => (StatusCode::BAD_REQUEST, ErrorResponse::new(&format!("The MongoDB agent does not yet support {missing_feature}"))),
+            Procedure(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(err)),
+            QueryPlan(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(err)),
+            ResponseSerialization(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(err)),
             Serialization(err) => (StatusCode::INTERNAL_SERVER_ERROR, ErrorResponse::new(&err)),
             UnknownAggregationFunction(function) => (
                 StatusCode::BAD_REQUEST,
@@ -82,7 +93,6 @@ impl MongoAgentError {
                 ErrorResponse::new(&format!("Query referenced a variable, \"{variable_name}\", but it is not defined by the query request"))
             ),
             AdHoc(err) => (StatusCode::INTERNAL_SERVER_ERROR, ErrorResponse::new(&err)),
-            AgentError(err) => err.status_and_error_response(),
         }
     }
 }
@@ -94,20 +104,47 @@ impl Display for MongoAgentError {
     }
 }
 
-impl IntoResponse for MongoAgentError {
-    fn into_response(self) -> axum::response::Response {
-        if cfg!(debug_assertions) {
-            // Log certain errors in development only. The `debug_assertions` feature is present in
-            // debug builds, which we use during development. It is not present in release builds.
-            #[allow(clippy::single_match)]
-            match &self {
-                BadCollectionSchema(collection_name, collection_validator, err) => {
-                    tracing::warn!(collection_name, ?collection_validator, error = %err, "error parsing collection validator")
-                }
-                _ => (),
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct ErrorResponse {
+    pub details: Option<::std::collections::HashMap<String, serde_json::Value>>,
+    pub message: String,
+    pub r#type: Option<ErrorResponseType>,
+}
+
+impl ErrorResponse {
+    pub fn new<T>(message: &T) -> ErrorResponse
+    where
+        T: Display + ?Sized,
+    {
+        ErrorResponse {
+            details: None,
+            message: format!("{message}"),
+            r#type: None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum ErrorResponseType {
+    UncaughtError,
+    MutationConstraintViolation,
+    MutationPermissionCheckFailure,
+}
+
+impl ToString for ErrorResponseType {
+    fn to_string(&self) -> String {
+        match self {
+            Self::UncaughtError => String::from("uncaught-error"),
+            Self::MutationConstraintViolation => String::from("mutation-constraint-violation"),
+            Self::MutationPermissionCheckFailure => {
+                String::from("mutation-permission-check-failure")
             }
         }
-        let (status, resp) = self.status_and_error_response();
-        (status, Json(resp)).into_response()
+    }
+}
+
+impl Default for ErrorResponseType {
+    fn default() -> ErrorResponseType {
+        Self::UncaughtError
     }
 }

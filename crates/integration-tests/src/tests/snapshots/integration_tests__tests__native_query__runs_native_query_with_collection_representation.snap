@@ -1,0 +1,57 @@
+---
+source: crates/integration-tests/src/tests/native_query.rs
+expression: "graphql_query(r#\"\n                query {\n                  title_word_frequencies(\n                    where: {count: {_eq: 2}}\n                    order_by: {word: Asc}\n                    offset: 100\n                    limit: 25\n                  ) {\n                    word\n                    count\n                  }\n                }\n            \"#).run().await?"
+---
+data:
+  title_word_frequencies:
+    - word: Amish
+      count: 2
+    - word: Amor?
+      count: 2
+    - word: Anara
+      count: 2
+    - word: Anarchy
+      count: 2
+    - word: Anastasia
+      count: 2
+    - word: Anchorman
+      count: 2
+    - word: Andre
+      count: 2
+    - word: Andrei
+      count: 2
+    - word: Andromeda
+      count: 2
+    - word: Andrè
+      count: 2
+    - word: Angela
+      count: 2
+    - word: Angelica
+      count: 2
+    - word: "Angels'"
+      count: 2
+    - word: "Angels:"
+      count: 2
+    - word: Angst
+      count: 2
+    - word: Animation
+      count: 2
+    - word: Annabelle
+      count: 2
+    - word: Anonyma
+      count: 2
+    - word: Anonymous
+      count: 2
+    - word: Answer
+      count: 2
+    - word: Ant
+      count: 2
+    - word: Antarctic
+      count: 2
+    - word: Antoinette
+      count: 2
+    - word: Anybody
+      count: 2
+    - word: Anywhere
+      count: 2
+errors: ~

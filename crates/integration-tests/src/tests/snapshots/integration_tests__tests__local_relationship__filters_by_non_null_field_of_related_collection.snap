@@ -1,0 +1,37 @@
+---
+source: crates/integration-tests/src/tests/local_relationship.rs
+expression: "graphql_query(r#\"\n            query {\n              comments(\n                limit: 10\n                where: {movie: {title: {_is_null: false}}}\n                order_by: {id: Asc}\n              ) {\n                movie {\n                  title\n                  year\n                }\n              }\n            }\n            \"#).run().await?"
+---
+data:
+  comments:
+    - movie:
+        title: The Land Beyond the Sunset
+        year: 1912
+    - movie:
+        title: A Corner in Wheat
+        year: 1909
+    - movie:
+        title: In the Land of the Head Hunters
+        year: 1914
+    - movie:
+        title: Traffic in Souls
+        year: 1913
+    - movie:
+        title: Regeneration
+        year: 1915
+    - movie:
+        title: "Hell's Hinges"
+        year: 1916
+    - movie:
+        title: Broken Blossoms or The Yellow Man and the Girl
+        year: 1919
+    - movie:
+        title: High and Dizzy
+        year: 1920
+    - movie:
+        title: The Ace of Hearts
+        year: 1921
+    - movie:
+        title: The Four Horsemen of the Apocalypse
+        year: 1921
+errors: ~

@@ -8,7 +8,10 @@ use configuration::{
 };
 use indexmap::IndexMap;
 use itertools::Itertools as _;
-use mongodb_support::{align::align, BsonScalarType::*};
+use mongodb_support::{
+    align::align,
+    BsonScalarType::{self, *},
+};
 use std::string::String;
 
 type ObjectField = WithName<schema::ObjectField>;
@@ -43,11 +46,13 @@ pub fn unify_type(type_a: Type, type_b: Type) -> Type {
         (Type::Scalar(Null), type_b) => type_b.make_nullable(),
         (type_a, Type::Scalar(Null)) => type_a.make_nullable(),
 
-        // Scalar types unify if they are the same type.
+        // Scalar types unify if they are the same type, or if one is a superset of the other.
         // If they are diffferent then the union is ExtendedJSON.
         (Type::Scalar(scalar_a), Type::Scalar(scalar_b)) => {
-            if scalar_a == scalar_b {
+            if scalar_a == scalar_b || is_supertype(&scalar_a, &scalar_b) {
                 Type::Scalar(scalar_a)
+            } else if is_supertype(&scalar_b, &scalar_a) {
+                Type::Scalar(scalar_b)
             } else {
                 Type::ExtendedJSON
             }
@@ -72,10 +77,11 @@ pub fn unify_type(type_a: Type, type_b: Type) -> Type {
         // Anything else gives ExtendedJSON
         (_, _) => Type::ExtendedJSON,
     };
+
     result_type.normalize_type()
 }
 
-fn make_nullable_field(field: ObjectField) -> ObjectField {
+pub fn make_nullable_field(field: ObjectField) -> ObjectField {
     WithName::named(
         field.name,
         schema::ObjectField {
@@ -166,6 +172,20 @@ pub fn unify_object_types(
     );
 
     merged_type_map.into_values().collect()
+}
+
+/// True iff we consider a to be a supertype of b.
+///
+/// Note that if you add more supertypes here then it is important to also update the custom
+/// equality check in our tests in mongodb_agent_common::query::serialization::tests. Equality
+/// needs to be transitive over supertypes, so for example if we have,
+///
+/// (Double, Int), (Decimal, Double)
+///
+/// then in addition to comparing ints to doubles, and doubles to decimals, we also need to compare
+/// decimals to ints.
+fn is_supertype(a: &BsonScalarType, b: &BsonScalarType) -> bool {
+    matches!((a, b), (Double, Int))
 }
 
 #[cfg(test)]
@@ -304,6 +324,36 @@ mod tests {
             let fields: HashSet<String> = result.value.fields.into_keys().collect();
             assert!(left.into_keys().chain(right.into_keys()).chain(shared.into_keys()).all(|k| fields.contains(&k)),
                 "Missing field in result type")
+        }
+    }
+
+    #[test]
+    fn test_double_and_int_unify_as_double() {
+        let double = || Type::Scalar(BsonScalarType::Double);
+        let int = || Type::Scalar(BsonScalarType::Int);
+
+        let u = unify_type(double(), int());
+        assert_eq!(u, double());
+
+        let u = unify_type(int(), double());
+        assert_eq!(u, double());
+    }
+
+    #[test]
+    fn test_nullable_double_and_int_unify_as_nullable_double() {
+        let double = || Type::Scalar(BsonScalarType::Double);
+        let int = || Type::Scalar(BsonScalarType::Int);
+
+        for (a, b) in [
+            (double().make_nullable(), int()),
+            (double(), int().make_nullable()),
+            (double().make_nullable(), int().make_nullable()),
+            (int(), double().make_nullable()),
+            (int().make_nullable(), double()),
+            (int().make_nullable(), double().make_nullable()),
+        ] {
+            let u = unify_type(a, b);
+            assert_eq!(u, double().make_nullable());
         }
     }
 }

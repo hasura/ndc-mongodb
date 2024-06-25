@@ -1,0 +1,19 @@
+[package]
+name = "integration-tests"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+integration = []
+
+[dependencies]
+ndc-models = { workspace = true }
+ndc-test-helpers = { path = "../ndc-test-helpers" }
+
+anyhow = "1"
+insta = { version = "^1.38", features = ["yaml"] }
+reqwest = { version = "^0.12.4", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "^1.37.0", features = ["full"] }
+url = "^2.5.0"

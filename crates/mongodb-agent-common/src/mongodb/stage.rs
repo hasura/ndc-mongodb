@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use mongodb::bson;
 use serde::Serialize;
 
-use super::{accumulator::Accumulator, pipeline::Pipeline, projection::Projection, Selection};
+use super::{accumulator::Accumulator, pipeline::Pipeline, Selection};
 
 /// Aggergation Pipeline Stage. This is a work-in-progress - we are adding enum variants to match
 /// MongoDB pipeline stage types as we need them in this app. For documentation on all stage types
@@ -37,7 +37,7 @@ pub enum Stage {
     ///
     /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/limit/#mongodb-pipeline-pipe.-limit
     #[serde(rename = "$limit")]
-    Limit(i64),
+    Limit(u32),
 
     /// Performs a left outer join to another collection in the same database to filter in
     /// documents from the "joined" collection for processing.
@@ -95,7 +95,7 @@ pub enum Stage {
     ///
     /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/skip/#mongodb-pipeline-pipe.-skip
     #[serde(rename = "$skip")]
-    Skip(u64),
+    Skip(u32),
 
     /// Groups input documents by a specified identifier expression and applies the accumulator
     /// expression(s), if specified, to each group. Consumes all input documents and outputs one
@@ -133,15 +133,6 @@ pub enum Stage {
     #[serde(rename = "$count")]
     Count(String),
 
-    /// Reshapes each document in the stream, such as by adding new fields or removing existing fields. For each input document, outputs one document.
-    ///
-    /// See also [`$unset`] for removing existing fields.
-    ///
-    /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/project/#mongodb-pipeline-pipe.-project
-    #[allow(dead_code)]
-    #[serde(rename = "$project")]
-    Project(Projection),
-
     /// Replaces a document with the specified embedded document. The operation replaces all
     /// existing fields in the input document, including the _id field. Specify a document embedded
     /// in the input document to promote the embedded document to the top level.
@@ -151,4 +142,9 @@ pub enum Stage {
     /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/replaceWith/#mongodb-pipeline-pipe.-replaceWith
     #[serde(rename = "$replaceWith")]
     ReplaceWith(Selection),
+
+    /// For cases where we receive pipeline stages from an external source, such as a native query,
+    /// and we don't want to attempt to parse it we store the stage BSON document unaltered.
+    #[serde(untagged)]
+    Other(bson::Document),
 }

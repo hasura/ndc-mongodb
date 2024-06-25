@@ -1,10 +1,10 @@
 use http::StatusCode;
 use mongodb::bson::{doc, Document};
 
-use crate::interface_types::{MongoAgentError, MongoConfig};
+use crate::{interface_types::MongoAgentError, state::ConnectorState};
 
-pub async fn check_health(config: &MongoConfig) -> Result<StatusCode, MongoAgentError> {
-    let db = config.client.database(&config.database);
+pub async fn check_health(state: &ConnectorState) -> Result<StatusCode, MongoAgentError> {
+    let db = state.database();
 
     let status: Result<Document, _> = db.run_command(doc! { "ping": 1 }, None).await;
 

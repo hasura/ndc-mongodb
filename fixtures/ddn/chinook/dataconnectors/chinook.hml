@@ -647,7 +647,7 @@ definition:
                 type: nullable
                 underlying_type:
                   type: named
-                  name: ExtendedJSON
+                  name: Int
             State:
               type:
                 type: named
@@ -827,7 +827,7 @@ definition:
         InsertArtist:
           fields:
             ok:
-              type: { type: named, name: Int }
+              type: { type: named, name: Double }
             n:
               type: { type: named, name: Int }
       collections:

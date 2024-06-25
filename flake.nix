@@ -45,20 +45,6 @@
       url = "github:hasura/graphql-engine";
       flake = false;
     };
-
-    # This is a copy of graphql-engine-source that is pinned to a revision where
-    # dev-auth-webhook can be built independently.
-    dev-auth-webhook-source = {
-      url = "github:hasura/graphql-engine/50f1243a46e22f0fecca03364b0b181fbb3735c6";
-      flake = false;
-    };
-
-    # See the note above on graphql-engine-source for information on running
-    # against a version of v3-e2e-testing with local changes.
-    v3-e2e-testing-source = {
-      url = "git+ssh://git@github.com/hasura/v3-e2e-testing?ref=jesse/update-mongodb";
-      flake = false;
-    };
   };
 
   outputs =
@@ -69,8 +55,6 @@
     , advisory-db
     , arion
     , graphql-engine-source
-    , dev-auth-webhook-source
-    , v3-e2e-testing-source
     , systems
     , ...
     }:
@@ -100,9 +84,8 @@
           mongodb-connector = final.mongodb-connector-workspace.override { package = "mongodb-connector"; }; # override `package` to build one specific crate
           mongodb-cli-plugin = final.mongodb-connector-workspace.override { package = "mongodb-cli-plugin"; };
           graphql-engine = final.callPackage ./nix/graphql-engine.nix { src = "${graphql-engine-source}/v3"; package = "engine"; };
-          v3-e2e-testing = final.callPackage ./nix/v3-e2e-testing.nix { src = v3-e2e-testing-source; database-to-test = "mongodb"; };
-          inherit v3-e2e-testing-source; # include this source so we can read files from it in arion-compose configs
-          dev-auth-webhook = final.callPackage ./nix/dev-auth-webhook.nix { src = "${dev-auth-webhook-source}/v3/crates/hasura-authn-webhook/dev-auth-webhook"; };
+          integration-tests = final.callPackage ./nix/integration-tests.nix { };
+          dev-auth-webhook = final.callPackage ./nix/graphql-engine.nix { src = "${graphql-engine-source}/v3"; package = "dev-auth-webhook"; };
 
           # Provide cross-compiled versions of each of our packages under
           # `pkgs.pkgsCross.${system}.${package-name}`
@@ -211,7 +194,8 @@
         default = pkgs.mkShell {
           inputsFrom = builtins.attrValues self.checks.${pkgs.buildPlatform.system};
           nativeBuildInputs = with pkgs; [
-            arion.packages.${pkgs.buildPlatform.system}.default
+            arion.packages.${pkgs.system}.default
+            cargo-insta
             just
             mongosh
             pkg-config

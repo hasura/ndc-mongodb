@@ -1,0 +1,11 @@
+---
+source: crates/integration-tests/src/tests/local_relationship.rs
+expression: "graphql_query(r#\"\n            query {\n              artist(where: {albums: {tracks: {name: {_eq: \"Princess of the Dawn\"}}}}) {\n                name\n                albums(order_by: {title: Asc}) {\n                  title\n                }\n              }\n            }\n            \"#).run().await?"
+---
+data:
+  artist:
+    - name: Accept
+      albums:
+        - title: Balls to the Wall
+        - title: Restless and Wild
+errors: ~

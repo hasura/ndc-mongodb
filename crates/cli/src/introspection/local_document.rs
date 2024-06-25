@@ -4,18 +4,19 @@ use configuration::{schema, Schema, WithName};
 use mongodb::bson::Document;
 use tokio::fs;
 
-use super::{inference::make_object_type, type_unification::unify_object_types};
+use super::{inference::{make_object_type_for_collection}, type_unification::unify_object_types};
 
 type ObjectType = WithName<schema::ObjectType>;
 
 pub async fn schema_from_directory(
     collection_name: &str,
     dir_path: impl AsRef<Path>,
+    all_schema_nullable: bool,
 ) -> anyhow::Result<Schema> {
     let mut collected_object_types = vec![];
     let mut rd = fs::read_dir(dir_path.as_ref()).await?;
     while let Some(dir_entry) = rd.next_entry().await? {
-        let object_types = object_types_from_json_file(collection_name, dir_entry.path()).await?;
+        let object_types = object_types_from_json_file(collection_name, dir_entry.path(), all_schema_nullable).await?;
         collected_object_types = if collected_object_types.is_empty() {
             object_types
         } else {
@@ -41,9 +42,10 @@ pub async fn schema_from_directory(
 async fn object_types_from_json_file(
     collection_name: &str,
     file_path: impl AsRef<Path>,
+    all_schema_nullable: bool,
 ) -> anyhow::Result<Vec<ObjectType>> {
     let bytes = fs::read(file_path.as_ref()).await?;
     let document: Document = serde_json::from_slice(&bytes)?;
 
-    Ok(make_object_type(collection_name, &document))
+    Ok(make_object_type_for_collection(collection_name, &document, all_schema_nullable))
 }

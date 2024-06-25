@@ -663,7 +663,7 @@ definition:
                 type: nullable
                 underlying_type:
                   type: named
-                  name: ExtendedJSON
+                  name: Double
             votes:
               type:
                 type: named
@@ -741,7 +741,7 @@ definition:
                 type: nullable
                 underlying_type:
                   type: named
-                  name: ExtendedJSON
+                  name: Double
         movies_tomatoes_viewer:
           fields:
             meter:
@@ -757,7 +757,7 @@ definition:
                 type: nullable
                 underlying_type:
                   type: named
-                  name: ExtendedJSON
+                  name: Double
         sessions:
           fields:
             _id:
@@ -850,6 +850,10 @@ definition:
               type:
                 type: named
                 name: String
+        TitleWordFrequency:
+          fields:
+            _id: { type: { type: named, name: String } }
+            count: { type: { type: named, name: Int } }
       collections:
         - name: comments
           arguments: {}
@@ -891,7 +895,20 @@ definition:
               unique_columns:
                 - _id
           foreign_keys: {}
-      functions: []
+        - name: title_word_frequency
+          arguments: {}
+          type: TitleWordFrequency
+          uniqueness_constraints:
+            title_word_frequency_id:
+              unique_columns:
+                - _id
+          foreign_keys: {}
+      functions:
+        - name: hello
+          description: Basic test of native queries
+          result_type: { type: named, name: String }
+          arguments:
+            name: { type: { type: named, name: String } }
       procedures: []
     capabilities:
       version: 0.1.1

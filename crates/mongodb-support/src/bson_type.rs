@@ -1,4 +1,3 @@
-use dc_api_types::GraphQlType;
 use enum_iterator::{all, Sequence};
 use mongodb::bson::Bson;
 use schemars::JsonSchema;
@@ -141,20 +140,27 @@ impl BsonScalarType {
         }
     }
 
-    pub fn graphql_name(self) -> String {
-        match self.graphql_type() {
-            Some(gql_type) => gql_type.to_string(),
-            None => capitalize(self.bson_name()),
-        }
-    }
-
-    pub fn graphql_type(self) -> Option<GraphQlType> {
+    pub fn graphql_name(self) -> &'static str {
         match self {
-            S::Double => Some(GraphQlType::Float),
-            S::String => Some(GraphQlType::String),
-            S::Int => Some(GraphQlType::Int),
-            S::Bool => Some(GraphQlType::Boolean),
-            _ => None,
+            S::Double => "Double",
+            S::Decimal => "Decimal",
+            S::Int => "Int",
+            S::Long => "Long",
+            S::String => "String",
+            S::Date => "Date",
+            S::Timestamp => "Timestamp",
+            S::BinData => "BinData",
+            S::ObjectId => "ObjectId",
+            S::Bool => "Bool",
+            S::Null => "Null",
+            S::Regex => "Regex",
+            S::Javascript => "Javascript",
+            S::JavascriptWithScope => "JavascriptWithScope",
+            S::MinKey => "MinKey",
+            S::MaxKey => "MaxKey",
+            S::Undefined => "Undefined",
+            S::DbPointer => "DbPointer",
+            S::Symbol => "Symbol",
         }
     }
 
@@ -169,6 +175,78 @@ impl BsonScalarType {
         let scalar_type =
             all::<BsonScalarType>().find(|s| s.bson_name().eq_ignore_ascii_case(name));
         scalar_type.ok_or_else(|| Error::UnknownScalarType(name.to_owned()))
+    }
+
+    pub fn is_orderable(self) -> bool {
+        match self {
+            S::Double => true,
+            S::Decimal => true,
+            S::Int => true,
+            S::Long => true,
+            S::String => true,
+            S::Date => true,
+            S::Timestamp => true,
+            S::BinData => false,
+            S::ObjectId => false,
+            S::Bool => false,
+            S::Null => false,
+            S::Regex => false,
+            S::Javascript => false,
+            S::JavascriptWithScope => false,
+            S::MinKey => false,
+            S::MaxKey => false,
+            S::Undefined => false,
+            S::DbPointer => false,
+            S::Symbol => false,
+        }
+    }
+
+    pub fn is_numeric(self) -> bool {
+        match self {
+            S::Double => true,
+            S::Decimal => true,
+            S::Int => true,
+            S::Long => true,
+            S::String => false,
+            S::Date => false,
+            S::Timestamp => false,
+            S::BinData => false,
+            S::ObjectId => false,
+            S::Bool => false,
+            S::Null => false,
+            S::Regex => false,
+            S::Javascript => false,
+            S::JavascriptWithScope => false,
+            S::MinKey => false,
+            S::MaxKey => false,
+            S::Undefined => false,
+            S::DbPointer => false,
+            S::Symbol => false,
+        }
+    }
+
+    pub fn is_comparable(self) -> bool {
+        match self {
+            S::Double => true,
+            S::Decimal => true,
+            S::Int => true,
+            S::Long => true,
+            S::String => true,
+            S::Date => true,
+            S::Timestamp => true,
+            S::BinData => true,
+            S::ObjectId => true,
+            S::Bool => true,
+            S::Null => true,
+            S::Regex => false,
+            S::Javascript => false,
+            S::JavascriptWithScope => false,
+            S::MinKey => true,
+            S::MaxKey => true,
+            S::Undefined => true,
+            S::DbPointer => true,
+            S::Symbol => true,
+        }
     }
 }
 
@@ -216,15 +294,6 @@ impl TryFrom<BsonType> for BsonScalarType {
             BsonType::Scalar(scalar_type) => Ok(scalar_type),
             _ => Err(Error::ExpectedScalarType(value)),
         }
-    }
-}
-
-/// Capitalizes the first character in s.
-fn capitalize(s: &str) -> String {
-    let mut c = s.chars();
-    match c.next() {
-        None => String::new(),
-        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
     }
 }
 

@@ -1,8 +1,0 @@
-[package]
-name = "dc-api-test-helpers"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-dc-api-types = { path = "../dc-api-types" }
-itertools = "^0.10"

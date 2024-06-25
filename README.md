@@ -2,11 +2,11 @@
 
 ## Requirements
 
-* Rust `>= 1.57`
-* MongoDB `>= 3.6`
+* Rust via Rustup
+* MongoDB `>= 5`
 * OpenSSL development files
 
-or Nix
+or get dependencies automatically with Nix
 
 Some of the build instructions require Nix. To set that up [install Nix][], and
 configure it to [enable flakes][].
@@ -106,6 +106,18 @@ or `.sh` scripts added to this directory will be run when the mongodb service is
 run from a fresh state. Note that you will have to remove any existing docker
 volume to get to a fresh state. Using arion you can remove volumes by running
 `arion down`.
+
+### Running with a different MongoDB version
+
+Override the MongoDB version that arion runs by assigning a Docker image name to
+the environment variable `MONGODB_IMAGE`. For example,
+
+    $ arion down --volumes # delete potentially-incompatible MongoDB data
+    $ MONGODB_IMAGE=mongo:4 arion up -d
+
+Or run integration tests against a specific MongoDB version,
+
+    $ MONGODB_IMAGE=mongo:4 just test-integration
 
 ## License
 

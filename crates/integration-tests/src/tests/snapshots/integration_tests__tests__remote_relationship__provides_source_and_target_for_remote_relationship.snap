@@ -1,0 +1,74 @@
+---
+source: crates/integration-tests/src/tests/remote_relationship.rs
+expression: "graphql_query(r#\"\n                query AlbumMovies($limit: Int, $movies_limit: Int) {\n                  album(limit: $limit, order_by: { title: Asc }) {\n                    title\n                    movies(limit: $movies_limit, order_by: { title: Asc }) {\n                      title\n                      runtime\n                    }\n                    albumId\n                  }\n                }\n            \"#).variables(json!({\n                        \"limit\": 11, \"movies_limit\": 2\n                    })).run().await?"
+---
+data:
+  album:
+    - title: "...And Justice For All"
+      movies:
+        - title: "20th Century Boys 3: Redemption"
+          runtime: 156
+        - title: A Majority of One
+          runtime: 156
+      albumId: 156
+    - title: "20th Century Masters - The Millennium Collection: The Best of Scorpions"
+      movies:
+        - title: Storm of the Century
+          runtime: 257
+      albumId: 257
+    - title: "A Copland Celebration, Vol. I"
+      movies: []
+      albumId: 296
+    - title: A Matter of Life and Death
+      movies:
+        - title: 100 Girls
+          runtime: 94
+        - title: 12 and Holding
+          runtime: 94
+      albumId: 94
+    - title: A Real Dead One
+      movies:
+        - title: (500) Days of Summer
+          runtime: 95
+        - title: "1"
+          runtime: 95
+      albumId: 95
+    - title: A Real Live One
+      movies:
+        - title: "'Doc'"
+          runtime: 96
+        - title: "'night, Mother"
+          runtime: 96
+      albumId: 96
+    - title: A Soprano Inspired
+      movies: []
+      albumId: 285
+    - title: A TempestadeTempestade Ou O Livro Dos Dias
+      movies:
+        - title: "20th Century Boys 2: The Last Hope"
+          runtime: 139
+        - title: 42 Up
+          runtime: 139
+      albumId: 139
+    - title: A-Sides
+      movies:
+        - title: Michael the Brave
+          runtime: 203
+        - title: Michael the Brave
+          runtime: 203
+      albumId: 203
+    - title: Ace Of Spades
+      movies:
+        - title: "2001: A Space Odyssey"
+          runtime: 160
+        - title: 7 Aum Arivu
+          runtime: 160
+      albumId: 160
+    - title: Achtung Baby
+      movies:
+        - title: Bratya Karamazovy
+          runtime: 232
+        - title: Gormenghast
+          runtime: 232
+      albumId: 232
+errors: ~

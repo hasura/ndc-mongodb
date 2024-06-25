@@ -1,57 +1,73 @@
-use std::collections::BTreeMap;
-
-use configuration::schema::ObjectType;
 use futures::future::try_join_all;
 use itertools::Itertools;
-use mongodb::Database;
-use mongodb_agent_common::{
-    interface_types::MongoConfig, procedure::Procedure, query::serialization::bson_to_json,
+use mongodb::{
+    bson::{self, Bson},
+    Database,
 };
+use mongodb_agent_common::{
+    mongo_query_plan::MongoConfiguration,
+    procedure::Procedure,
+    query::{response::type_for_nested_field, serialization::bson_to_json},
+    state::ConnectorState,
+};
+use ndc_query_plan::type_annotated_nested_field;
 use ndc_sdk::{
     connector::MutationError,
     json_response::JsonResponse,
-    models::{MutationOperation, MutationOperationResults, MutationRequest, MutationResponse},
+    models::{
+        self as ndc, MutationOperation, MutationOperationResults, MutationRequest,
+        MutationResponse, NestedField, NestedObject,
+    },
 };
 
 pub async fn handle_mutation_request(
-    config: &MongoConfig,
+    config: &MongoConfiguration,
+    state: &ConnectorState,
     mutation_request: MutationRequest,
 ) -> Result<JsonResponse<MutationResponse>, MutationError> {
     tracing::debug!(?config, mutation_request = %serde_json::to_string(&mutation_request).unwrap(), "executing mutation");
-    let database = config.client.database(&config.database);
-    let jobs = look_up_procedures(config, mutation_request)?;
-    let operation_results = try_join_all(
-        jobs.into_iter()
-            .map(|procedure| execute_procedure(&config.object_types, database.clone(), procedure)),
-    )
+    let database = state.database();
+    let jobs = look_up_procedures(config, &mutation_request)?;
+    let operation_results = try_join_all(jobs.into_iter().map(|(procedure, requested_fields)| {
+        execute_procedure(
+            config,
+            &mutation_request,
+            database.clone(),
+            procedure,
+            requested_fields,
+        )
+    }))
     .await?;
     Ok(JsonResponse::Value(MutationResponse { operation_results }))
 }
 
 /// Looks up procedures according to the names given in the mutation request, and pairs them with
 /// arguments and requested fields. Returns an error if any procedures cannot be found.
-fn look_up_procedures(
-    config: &MongoConfig,
-    mutation_request: MutationRequest,
-) -> Result<Vec<Procedure<'_>>, MutationError> {
-    let (procedures, not_found): (Vec<Procedure>, Vec<String>) = mutation_request
+fn look_up_procedures<'a, 'b>(
+    config: &'a MongoConfiguration,
+    mutation_request: &'b MutationRequest,
+) -> Result<Vec<(Procedure<'a>, Option<&'b NestedField>)>, MutationError> {
+    let (procedures, not_found): (Vec<_>, Vec<String>) = mutation_request
         .operations
-        .into_iter()
+        .iter()
         .map(|operation| match operation {
             MutationOperation::Procedure {
-                name, arguments, ..
+                name,
+                arguments,
+                fields,
             } => {
-                let native_procedure = config.native_procedures.get(&name);
-                native_procedure.ok_or(name).map(|native_procedure| {
-                    Procedure::from_native_procedure(native_procedure, arguments)
-                })
+                let native_mutation = config.native_mutations().get(name);
+                let procedure = native_mutation.ok_or(name).map(|native_mutation| {
+                    Procedure::from_native_mutation(native_mutation, arguments.clone())
+                })?;
+                Ok((procedure, fields.as_ref()))
             }
         })
         .partition_result();
 
     if !not_found.is_empty() {
         return Err(MutationError::UnprocessableContent(format!(
-            "request includes unknown procedures: {}",
+            "request includes unknown mutations: {}",
             not_found.join(", ")
         )));
     }
@@ -60,17 +76,102 @@ fn look_up_procedures(
 }
 
 async fn execute_procedure(
-    object_types: &BTreeMap<String, ObjectType>,
+    config: &MongoConfiguration,
+    mutation_request: &MutationRequest,
     database: Database,
     procedure: Procedure<'_>,
+    requested_fields: Option<&NestedField>,
 ) -> Result<MutationOperationResults, MutationError> {
     let (result, result_type) = procedure
-        .execute(object_types, database.clone())
+        .execute(database.clone())
         .await
-        .map_err(|err| MutationError::InvalidRequest(err.to_string()))?;
-    let json_result = bson_to_json(&result_type, object_types, result.into())
-        .map_err(|err| MutationError::Other(Box::new(err)))?;
+        .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?;
+
+    let rewritten_result = rewrite_response(requested_fields, result.into())?;
+
+    let requested_result_type = if let Some(fields) = requested_fields {
+        let plan_field = type_annotated_nested_field(
+            config,
+            &mutation_request.collection_relationships,
+            &result_type,
+            fields.clone(),
+        )
+        .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?;
+        type_for_nested_field(&[], &result_type, &plan_field)
+            .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?
+    } else {
+        result_type
+    };
+
+    let json_result = bson_to_json(&requested_result_type, rewritten_result)
+        .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?;
+
     Ok(MutationOperationResults::Procedure {
         result: json_result,
     })
+}
+
+/// We need to traverse requested fields to rename any fields that are aliased in the GraphQL
+/// request
+fn rewrite_response(
+    requested_fields: Option<&NestedField>,
+    value: Bson,
+) -> Result<Bson, MutationError> {
+    match (requested_fields, value) {
+        (None, value) => Ok(value),
+
+        (Some(NestedField::Object(fields)), Bson::Document(doc)) => {
+            Ok(rewrite_doc(fields, doc)?.into())
+        }
+        (Some(NestedField::Array(fields)), Bson::Array(values)) => {
+            Ok(rewrite_array(fields, values)?.into())
+        }
+
+        (Some(NestedField::Object(_)), _) => Err(MutationError::UnprocessableContent(
+            "expected an object".to_owned(),
+        )),
+        (Some(NestedField::Array(_)), _) => Err(MutationError::UnprocessableContent(
+            "expected an array".to_owned(),
+        )),
+    }
+}
+
+fn rewrite_doc(
+    fields: &NestedObject,
+    mut doc: bson::Document,
+) -> Result<bson::Document, MutationError> {
+    fields
+        .fields
+        .iter()
+        .map(|(name, field)| {
+            let field_value = match field {
+                ndc::Field::Column {
+                    column,
+                    fields,
+                    arguments: _,
+                } => {
+                    let orig_value = doc.remove(column).ok_or_else(|| {
+                        MutationError::UnprocessableContent(format!(
+                            "missing expected field from response: {name}"
+                        ))
+                    })?;
+                    rewrite_response(fields.as_ref(), orig_value)
+                }
+                ndc::Field::Relationship { .. } => Err(MutationError::UnsupportedOperation(
+                    "The MongoDB connector does not support relationship references in mutations"
+                        .to_owned(),
+                )),
+            }?;
+
+            Ok((name.clone(), field_value))
+        })
+        .try_collect()
+}
+
+fn rewrite_array(fields: &ndc::NestedArray, values: Vec<Bson>) -> Result<Vec<Bson>, MutationError> {
+    let nested = &fields.fields;
+    values
+        .into_iter()
+        .map(|value| rewrite_response(Some(nested), value))
+        .try_collect()
 }

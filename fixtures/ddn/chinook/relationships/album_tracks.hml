@@ -1,0 +1,34 @@
+kind: Relationship
+version: v1
+definition:
+  name: tracks
+  source: Album
+  target:
+    model:
+      name: Track
+      relationshipType: Array
+  mapping:
+    - source:
+        fieldPath:
+          - fieldName: albumId
+      target:
+        modelField:
+          - fieldName: albumId
+
+---
+kind: Relationship
+version: v1
+definition:
+  name: album
+  source: Track
+  target:
+    model:
+      name: Album
+      relationshipType: Object
+  mapping:
+    - source:
+        fieldPath:
+          - fieldName: albumId
+      target:
+        modelField:
+          - fieldName: albumId

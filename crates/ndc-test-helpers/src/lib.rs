@@ -2,25 +2,40 @@
 #![allow(unused_imports)]
 
 mod aggregates;
+mod collection_info;
 mod comparison_target;
 mod comparison_value;
 mod exists_in_collection;
 mod expressions;
 mod field;
+mod object_type;
+mod path_element;
+mod query_response;
+mod relationships;
+mod type_helpers;
 
 use std::collections::BTreeMap;
 
 use indexmap::IndexMap;
-use ndc_sdk::models::{
+use ndc_models::{
     Aggregate, Argument, Expression, Field, OrderBy, OrderByElement, PathElement, Query,
     QueryRequest, Relationship, RelationshipArgument, RelationshipType,
 };
 
+// Export this crate's reference to ndc_models so that we can use this reference in macros.
+pub extern crate ndc_models;
+
+pub use collection_info::*;
 pub use comparison_target::*;
 pub use comparison_value::*;
 pub use exists_in_collection::*;
 pub use expressions::*;
 pub use field::*;
+pub use object_type::*;
+pub use path_element::*;
+pub use query_response::*;
+pub use relationships::*;
+pub use type_helpers::*;
 
 #[derive(Clone, Debug, Default)]
 pub struct QueryRequestBuilder {
@@ -66,22 +81,24 @@ impl QueryRequestBuilder {
         self
     }
 
-    pub fn relationships<const S: usize>(
+    pub fn relationships(
         mut self,
-        relationships: [(&str, impl Into<Relationship>); S],
+        relationships: impl IntoIterator<Item = (impl ToString, impl Into<Relationship>)>,
     ) -> Self {
         self.collection_relationships = Some(
             relationships
                 .into_iter()
-                .map(|(name, r)| (name.to_owned(), r.into()))
+                .map(|(name, r)| (name.to_string(), r.into()))
                 .collect(),
         );
         self
     }
 
-    pub fn variables<const S: usize>(
+    pub fn variables(
         mut self,
-        variables: [Vec<(&str, serde_json::Value)>; S],
+        variables: impl IntoIterator<
+            Item = impl IntoIterator<Item = (impl ToString, impl Into<serde_json::Value>)>,
+        >,
     ) -> Self {
         self.variables = Some(
             variables
@@ -89,7 +106,7 @@ impl QueryRequestBuilder {
                 .map(|var_map| {
                     var_map
                         .into_iter()
-                        .map(|(name, value)| (name.to_owned(), value))
+                        .map(|(name, value)| (name.to_string(), value.into()))
                         .collect()
                 })
                 .collect(),
@@ -155,8 +172,13 @@ impl QueryBuilder {
             aggregates
                 .into_iter()
                 .map(|(name, aggregate)| (name.to_owned(), aggregate))
-                .collect()
+                .collect(),
         );
+        self
+    }
+
+    pub fn limit(mut self, n: u32) -> Self {
+        self.limit = Some(n);
         self
     }
 
@@ -187,96 +209,5 @@ impl From<QueryBuilder> for Query {
 pub fn empty_expression() -> Expression {
     Expression::Or {
         expressions: vec![],
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct RelationshipBuilder {
-    column_mapping: BTreeMap<String, String>,
-    relationship_type: RelationshipType,
-    target_collection: String,
-    arguments: BTreeMap<String, RelationshipArgument>,
-}
-
-pub fn relationship<const S: usize>(
-    target: &str,
-    column_mapping: [(&str, &str); S],
-) -> RelationshipBuilder {
-    RelationshipBuilder::new(target, column_mapping)
-}
-
-impl RelationshipBuilder {
-    pub fn new<const S: usize>(target: &str, column_mapping: [(&str, &str); S]) -> Self {
-        RelationshipBuilder {
-            column_mapping: column_mapping
-                .into_iter()
-                .map(|(source, target)| (source.to_owned(), target.to_owned()))
-                .collect(),
-            relationship_type: RelationshipType::Array,
-            target_collection: target.to_owned(),
-            arguments: Default::default(),
-        }
-    }
-
-    pub fn relationship_type(mut self, relationship_type: RelationshipType) -> Self {
-        self.relationship_type = relationship_type;
-        self
-    }
-
-    pub fn object_type(mut self) -> Self {
-        self.relationship_type = RelationshipType::Object;
-        self
-    }
-
-    pub fn arguments(mut self, arguments: BTreeMap<String, RelationshipArgument>) -> Self {
-        self.arguments = arguments;
-        self
-    }
-}
-
-impl From<RelationshipBuilder> for Relationship {
-    fn from(value: RelationshipBuilder) -> Self {
-        Relationship {
-            column_mapping: value.column_mapping,
-            relationship_type: value.relationship_type,
-            target_collection: value.target_collection,
-            arguments: value.arguments,
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct PathElementBuilder {
-    relationship: String,
-    arguments: Option<BTreeMap<String, RelationshipArgument>>,
-    predicate: Option<Box<Expression>>,
-}
-
-pub fn path_element(relationship: &str) -> PathElementBuilder {
-    PathElementBuilder::new(relationship)
-}
-
-impl PathElementBuilder {
-    pub fn new(relationship: &str) -> Self {
-        PathElementBuilder {
-            relationship: relationship.to_owned(),
-            arguments: None,
-            predicate: None,
-        }
-    }
-
-    pub fn predicate(mut self, expression: Expression) -> Self {
-        self.predicate = Some(Box::new(expression));
-        self
-    }
-}
-
-impl From<PathElementBuilder> for PathElement {
-    fn from(value: PathElementBuilder) -> Self {
-        PathElement {
-            relationship: value.relationship,
-            arguments: value.arguments.unwrap_or_default(),
-            predicate: value.predicate,
-        }
     }
 }

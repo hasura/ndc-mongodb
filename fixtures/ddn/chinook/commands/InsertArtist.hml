@@ -2,7 +2,7 @@ kind: Command
 version: v1
 definition:
   name: insertArtist
-  description: Example of a database update using a native procedure
+  description: Example of a database update using a native mutation
   outputType: InsertArtist
   arguments:
     - name: id
@@ -38,7 +38,7 @@ definition:
     typeName: InsertArtist
   fields:
     - name: ok
-      type: Int!
+      type: Float!
     - name: n
       type: Int!
   dataConnectorTypeMapping:

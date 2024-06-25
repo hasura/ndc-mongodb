@@ -1,0 +1,42 @@
+---
+source: crates/integration-tests/src/tests/permissions.rs
+expression: "graphql_query(r#\"\n            query {\n              users(limit: 5) {\n                id\n                name\n                email\n                comments(limit: 5) {\n                  date\n                  email\n                  text\n                }\n              }\n              comments(limit: 5) {\n                date\n                email\n                text\n              }\n            }\n            \"#).headers([(\"x-hasura-role\",\n                            \"user\"),\n                        (\"x-hasura-user-id\",\n                            \"59b99db4cfa9a34dcd7885b6\")]).run().await?"
+---
+data:
+  users:
+    - id: 59b99db4cfa9a34dcd7885b6
+      name: Ned Stark
+      email: sean_bean@gameofthron.es
+      comments:
+        - date: "2000-01-21T03:17:04.000000000Z"
+          email: sean_bean@gameofthron.es
+          text: Illo nostrum enim sequi doloremque dolore saepe beatae. Iusto alias odit quaerat id dolores. Dolore quaerat accusantium esse voluptatibus. Aspernatur fuga exercitationem explicabo.
+        - date: "2005-09-24T16:22:38.000000000Z"
+          email: sean_bean@gameofthron.es
+          text: Architecto eos eum iste facilis. Sunt aperiam fugit nihil quas.
+        - date: "1978-10-22T23:49:33.000000000Z"
+          email: sean_bean@gameofthron.es
+          text: Aspernatur ullam blanditiis qui dolorum. Magnam minima suscipit esse. Laudantium voluptates incidunt quia saepe.
+        - date: "2013-08-15T07:24:54.000000000Z"
+          email: sean_bean@gameofthron.es
+          text: Ullam error officiis incidunt praesentium debitis. Rerum repudiandae illum reprehenderit aut non. Iusto eum autem veniam eveniet temporibus sed. Accusamus sint sed veritatis eaque.
+        - date: "2004-12-22T12:53:43.000000000Z"
+          email: sean_bean@gameofthron.es
+          text: Ducimus sunt neque sint nesciunt quis vero. Debitis ex non asperiores voluptatem iusto possimus. Doloremque blanditiis consequuntur explicabo placeat commodi repudiandae.
+  comments:
+    - date: "2000-01-21T03:17:04.000000000Z"
+      email: sean_bean@gameofthron.es
+      text: Illo nostrum enim sequi doloremque dolore saepe beatae. Iusto alias odit quaerat id dolores. Dolore quaerat accusantium esse voluptatibus. Aspernatur fuga exercitationem explicabo.
+    - date: "2005-09-24T16:22:38.000000000Z"
+      email: sean_bean@gameofthron.es
+      text: Architecto eos eum iste facilis. Sunt aperiam fugit nihil quas.
+    - date: "1978-10-22T23:49:33.000000000Z"
+      email: sean_bean@gameofthron.es
+      text: Aspernatur ullam blanditiis qui dolorum. Magnam minima suscipit esse. Laudantium voluptates incidunt quia saepe.
+    - date: "2013-08-15T07:24:54.000000000Z"
+      email: sean_bean@gameofthron.es
+      text: Ullam error officiis incidunt praesentium debitis. Rerum repudiandae illum reprehenderit aut non. Iusto eum autem veniam eveniet temporibus sed. Accusamus sint sed veritatis eaque.
+    - date: "2004-12-22T12:53:43.000000000Z"
+      email: sean_bean@gameofthron.es
+      text: Ducimus sunt neque sint nesciunt quis vero. Debitis ex non asperiores voluptatem iusto possimus. Doloremque blanditiis consequuntur explicabo placeat commodi repudiandae.
+errors: ~
