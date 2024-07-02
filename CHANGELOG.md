@@ -8,6 +8,8 @@ This changelog documents the changes between release versions.
 - Rework query plans for requests with variable sets to allow use of indexes ([#83](https://github.com/hasura/ndc-mongodb/pull/83))
 - Fix: error when requesting query plan if MongoDB is target of a remote join ([#83](https://github.com/hasura/ndc-mongodb/pull/83))
 - Breaking change: remote joins no longer work in MongoDB v5 ([#83](https://github.com/hasura/ndc-mongodb/pull/83))
+- Add configuration option to opt into "relaxed" mode for Extended JSON outputs
+  ([#84](https://github.com/hasura/ndc-mongodb/pull/84))
 
 ## [0.1.0] - 2024-06-13
 
