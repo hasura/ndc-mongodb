@@ -189,11 +189,16 @@ impl Configuration {
     }
 }
 
-#[derive(Copy, Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConfigurationOptions {
-    // Options for introspection
+    /// Options for introspection
     pub introspection_options: ConfigurationIntrospectionOptions,
+
+    /// Options that affect how BSON data from MongoDB is translated to JSON in GraphQL query
+    /// responses.
+    #[serde(default)]
+    pub serialization_options: ConfigurationSerializationOptions,
 }
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize)]
@@ -217,6 +222,23 @@ impl Default for ConfigurationIntrospectionOptions {
             all_schema_nullable: true,
         }
     }
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfigurationSerializationOptions {
+    /// Extended JSON has two modes: canonical and relaxed. This option determines which mode is
+    /// used for output. This setting has no effect on inputs (query arguments, etc.).
+    #[serde(default)]
+    pub extended_json_mode: ExtendedJsonMode,
+}
+
+#[derive(Copy, Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ExtendedJsonMode {
+    #[default]
+    Canonical,
+    Relaxed,
 }
 
 fn merge_object_types<'a>(
