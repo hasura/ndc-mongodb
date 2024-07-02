@@ -2,6 +2,7 @@ use std::{collections::BTreeMap, path::Path};
 
 use anyhow::{anyhow, ensure};
 use itertools::Itertools;
+use mongodb_support::ExtendedJsonMode;
 use ndc_models as ndc;
 use serde::{Deserialize, Serialize};
 
@@ -231,14 +232,6 @@ pub struct ConfigurationSerializationOptions {
     /// used for output. This setting has no effect on inputs (query arguments, etc.).
     #[serde(default)]
     pub extended_json_mode: ExtendedJsonMode,
-}
-
-#[derive(Copy, Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum ExtendedJsonMode {
-    #[default]
-    Canonical,
-    Relaxed,
 }
 
 fn merge_object_types<'a>(
