@@ -9,6 +9,7 @@ mod exists_in_collection;
 mod expressions;
 mod field;
 mod object_type;
+mod order_by;
 mod path_element;
 mod query_response;
 mod relationships;
@@ -32,6 +33,7 @@ pub use exists_in_collection::*;
 pub use expressions::*;
 pub use field::*;
 pub use object_type::*;
+pub use order_by::*;
 pub use path_element::*;
 pub use query_response::*;
 pub use relationships::*;
@@ -182,8 +184,13 @@ impl QueryBuilder {
         self
     }
 
-    pub fn order_by(mut self, elements: Vec<OrderByElement>) -> Self {
-        self.order_by = Some(OrderBy { elements });
+    pub fn order_by(
+        mut self,
+        elements: impl IntoIterator<Item = impl Into<OrderByElement>>,
+    ) -> Self {
+        self.order_by = Some(OrderBy {
+            elements: elements.into_iter().map(Into::into).collect(),
+        });
         self
     }
 
