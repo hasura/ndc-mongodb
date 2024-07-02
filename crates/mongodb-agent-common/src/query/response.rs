@@ -4,6 +4,7 @@ use configuration::MongoScalarType;
 use indexmap::IndexMap;
 use itertools::Itertools;
 use mongodb::bson::{self, Bson};
+use mongodb_support::ExtendedJsonMode;
 use ndc_models::{QueryResponse, RowFieldValue, RowSet};
 use serde::Deserialize;
 use thiserror::Error;
@@ -49,6 +50,7 @@ struct BsonRowSet {
 
 #[instrument(name = "Serialize Query Response", skip_all, fields(internal.visibility = "user"))]
 pub fn serialize_query_response(
+    mode: ExtendedJsonMode,
     query_plan: &QueryPlan,
     response_documents: Vec<bson::Document>,
 ) -> Result<QueryResponse> {
@@ -59,18 +61,25 @@ pub fn serialize_query_response(
             .into_iter()
             .map(|document| {
                 let row_set = bson::from_document(document)?;
-                serialize_row_set_with_aggregates(&[collection_name], &query_plan.query, row_set)
+                serialize_row_set_with_aggregates(
+                    mode,
+                    &[collection_name],
+                    &query_plan.query,
+                    row_set,
+                )
             })
             .try_collect()
     } else if query_plan.query.has_aggregates() {
         let row_set = parse_single_document(response_documents)?;
         Ok(vec![serialize_row_set_with_aggregates(
+            mode,
             &[],
             &query_plan.query,
             row_set,
         )?])
     } else {
         Ok(vec![serialize_row_set_rows_only(
+            mode,
             &[],
             &query_plan.query,
             response_documents,
@@ -83,6 +92,7 @@ pub fn serialize_query_response(
 
 // When there are no aggregates we expect a list of rows
 fn serialize_row_set_rows_only(
+    mode: ExtendedJsonMode,
     path: &[&str],
     query: &Query,
     docs: Vec<bson::Document>,
@@ -90,7 +100,7 @@ fn serialize_row_set_rows_only(
     let rows = query
         .fields
         .as_ref()
-        .map(|fields| serialize_rows(path, fields, docs))
+        .map(|fields| serialize_rows(mode, path, fields, docs))
         .transpose()?;
 
     Ok(RowSet {
@@ -102,6 +112,7 @@ fn serialize_row_set_rows_only(
 // When there are aggregates we expect a single document with `rows` and `aggregates`
 // fields
 fn serialize_row_set_with_aggregates(
+    mode: ExtendedJsonMode,
     path: &[&str],
     query: &Query,
     row_set: BsonRowSet,
@@ -109,25 +120,26 @@ fn serialize_row_set_with_aggregates(
     let aggregates = query
         .aggregates
         .as_ref()
-        .map(|aggregates| serialize_aggregates(path, aggregates, row_set.aggregates))
+        .map(|aggregates| serialize_aggregates(mode, path, aggregates, row_set.aggregates))
         .transpose()?;
 
     let rows = query
         .fields
         .as_ref()
-        .map(|fields| serialize_rows(path, fields, row_set.rows))
+        .map(|fields| serialize_rows(mode, path, fields, row_set.rows))
         .transpose()?;
 
     Ok(RowSet { aggregates, rows })
 }
 
 fn serialize_aggregates(
+    mode: ExtendedJsonMode,
     path: &[&str],
     _query_aggregates: &IndexMap<String, Aggregate>,
     value: Bson,
 ) -> Result<IndexMap<String, serde_json::Value>> {
     let aggregates_type = type_for_aggregates()?;
-    let json = bson_to_json(&aggregates_type, value)?;
+    let json = bson_to_json(mode, &aggregates_type, value)?;
 
     // The NDC type uses an IndexMap for aggregate values; we need to convert the map
     // underlying the Value::Object value to an IndexMap
@@ -141,6 +153,7 @@ fn serialize_aggregates(
 }
 
 fn serialize_rows(
+    mode: ExtendedJsonMode,
     path: &[&str],
     query_fields: &IndexMap<String, Field>,
     docs: Vec<bson::Document>,
@@ -149,7 +162,7 @@ fn serialize_rows(
 
     docs.into_iter()
         .map(|doc| {
-            let json = bson_to_json(&row_type, doc.into())?;
+            let json = bson_to_json(mode, &row_type, doc.into())?;
             // The NDC types use an IndexMap for each row value; we need to convert the map
             // underlying the Value::Object value to an IndexMap
             let index_map = match json {
@@ -292,7 +305,7 @@ mod tests {
 
     use configuration::{Configuration, MongoScalarType};
     use mongodb::bson::{self, Bson};
-    use mongodb_support::BsonScalarType;
+    use mongodb_support::{BsonScalarType, ExtendedJsonMode};
     use ndc_models::{QueryRequest, QueryResponse, RowFieldValue, RowSet};
     use ndc_query_plan::plan_for_query_request;
     use ndc_test_helpers::{
@@ -331,7 +344,8 @@ mod tests {
             },
         }];
 
-        let response = serialize_query_response(&query_plan, response_documents)?;
+        let response =
+            serialize_query_response(ExtendedJsonMode::Canonical, &query_plan, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -370,7 +384,8 @@ mod tests {
             ],
         }];
 
-        let response = serialize_query_response(&query_plan, response_documents)?;
+        let response =
+            serialize_query_response(ExtendedJsonMode::Canonical, &query_plan, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -416,7 +431,8 @@ mod tests {
             },
         }];
 
-        let response = serialize_query_response(&query_plan, response_documents)?;
+        let response =
+            serialize_query_response(ExtendedJsonMode::Canonical, &query_plan, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -474,7 +490,8 @@ mod tests {
             "price_extjson": Bson::Decimal128(bson::Decimal128::from_str("-4.9999999999").unwrap()),
         }];
 
-        let response = serialize_query_response(&query_plan, response_documents)?;
+        let response =
+            serialize_query_response(ExtendedJsonMode::Canonical, &query_plan, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -531,7 +548,8 @@ mod tests {
             },
         }];
 
-        let response = serialize_query_response(&query_plan, response_documents)?;
+        let response =
+            serialize_query_response(ExtendedJsonMode::Canonical, &query_plan, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -547,6 +565,69 @@ mod tests {
                         "object": {
                             "foo": { "$numberInt": "1" },
                             "bar": { "$numberInt": "2" },
+                        },
+                    }))
+                )]
+                .into()]),
+            }])
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn serializes_response_with_nested_extjson_in_relaxed_mode() -> anyhow::Result<()> {
+        let query_context = MongoConfiguration(Configuration {
+            collections: [collection("data")].into(),
+            object_types: [(
+                "data".into(),
+                object_type([("value", named_type("ExtendedJSON"))]),
+            )]
+            .into(),
+            functions: Default::default(),
+            procedures: Default::default(),
+            native_mutations: Default::default(),
+            native_queries: Default::default(),
+            options: Default::default(),
+        });
+
+        let request = query_request()
+            .collection("data")
+            .query(query().fields([field!("value")]))
+            .into();
+
+        let query_plan = plan_for_query_request(&query_context, request)?;
+
+        let response_documents = vec![bson::doc! {
+            "value": {
+                "array": [
+                    { "number": Bson::Int32(3) },
+                    { "number": Bson::Decimal128(bson::Decimal128::from_str("127.6486654").unwrap()) },
+                ],
+                "string": "hello",
+                "object": {
+                    "foo": 1,
+                    "bar": 2,
+                },
+            },
+        }];
+
+        let response =
+            serialize_query_response(ExtendedJsonMode::Relaxed, &query_plan, response_documents)?;
+        assert_eq!(
+            response,
+            QueryResponse(vec![RowSet {
+                aggregates: Default::default(),
+                rows: Some(vec![[(
+                    "value".into(),
+                    RowFieldValue(json!({
+                        "array": [
+                            { "number": 3 },
+                            { "number": { "$numberDecimal": "127.6486654" } },
+                        ],
+                        "string": "hello",
+                        "object": {
+                            "foo": 1,
+                            "bar": 2,
                         },
                     }))
                 )]

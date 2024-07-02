@@ -9,3 +9,4 @@ cc 26e2543468ab6d4ffa34f9f8a2c920801ef38a35337557a8f4e74c92cf57e344 # shrinks to
 cc 7d760e540b56fedac7dd58e5bdb5bb9613b9b0bc6a88acfab3fc9c2de8bf026d # shrinks to bson = Document({"A": Array([Null, Undefined])})
 cc 21360610045c5a616b371fb8d5492eb0c22065d62e54d9c8a8761872e2e192f3 # shrinks to bson = Array([Document({}), Document({" ": Null})])
 cc 8842e7f78af24e19847be5d8ee3d47c547ef6c1bb54801d360a131f41a87f4fa
+cc 2a192b415e5669716701331fe4141383a12ceda9acc9f32e4284cbc2ed6f2d8a # shrinks to bson = Document({"A": Document({"¡": JavaScriptCodeWithScope { code: "", scope: Document({"\0": Int32(-1)}) }})}), mode = Relaxed

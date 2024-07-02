@@ -103,8 +103,12 @@ async fn execute_procedure(
         result_type
     };
 
-    let json_result = bson_to_json(&requested_result_type, rewritten_result)
-        .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?;
+    let json_result = bson_to_json(
+        config.extended_json_mode(),
+        &requested_result_type,
+        rewritten_result,
+    )
+    .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?;
 
     Ok(MutationOperationResults::Procedure {
         result: json_result,

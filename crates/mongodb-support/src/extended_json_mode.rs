@@ -1,7 +1,8 @@
+use enum_iterator::Sequence;
 use mongodb::bson::Bson;
 use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Sequence, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ExtendedJsonMode {
     #[default]
