@@ -204,7 +204,7 @@ definition:
     - name: languages
       type: "[String!]"
     - name: lastupdated
-      type: String!
+      type: Date!
     - name: metacritic
       type: Int
     - name: numMflixComments

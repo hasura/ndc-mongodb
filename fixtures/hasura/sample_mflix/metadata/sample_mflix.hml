@@ -616,7 +616,7 @@ definition:
             lastupdated:
               type:
                 type: named
-                name: String
+                name: Date
             metacritic:
               type:
                 type: nullable
