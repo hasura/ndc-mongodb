@@ -240,10 +240,17 @@ mod tests {
                         } },
                         { "$replaceWith": {
                             "aggregates": {
-                                "count": { "$getField": {
-                                    "field": "result",
-                                    "input": { "$first": { "$getField": { "$literal": "count" } } }
-                                } },
+                                "count": {
+                                    "$ifNull": [
+                                        {
+                                            "$getField": {
+                                                "field": "result",
+                                                "input": { "$first": { "$getField": { "$literal": "count" } } }
+                                            }
+                                        },
+                                        0,
+                                    ]
+                                },
                             },
                             "rows": "$__ROWS__",
                         } },
@@ -344,10 +351,17 @@ mod tests {
                         } },
                         { "$replaceWith": {
                             "aggregates": {
-                                "count": { "$getField": {
-                                    "field": "result",
-                                    "input": { "$first": { "$getField": { "$literal": "count" } } }
-                                } },
+                                "count": {
+                                    "$ifNull": [
+                                        {
+                                            "$getField": {
+                                                "field": "result",
+                                                "input": { "$first": { "$getField": { "$literal": "count" } } }
+                                            }
+                                        },
+                                        0,
+                                    ]
+                                },
                             },
                         } },
                     ]

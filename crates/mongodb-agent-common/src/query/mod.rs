@@ -131,10 +131,17 @@ mod tests {
                             "field": "result",
                             "input": { "$first": { "$getField": { "$literal": "avg" } } },
                         } },
-                        "count": { "$getField": {
-                            "field": "result",
-                            "input": { "$first": { "$getField": { "$literal": "count" } } },
-                        } },
+                        "count": {
+                            "$ifNull": [
+                                {
+                                    "$getField": {
+                                        "field": "result",
+                                        "input": { "$first": { "$getField": { "$literal": "count" } } },
+                                    }
+                                },
+                                0,
+                            ]
+                        },
                     },
                 },
             },
