@@ -1,7 +1,7 @@
 use configuration::MongoScalarType;
 use itertools::Itertools as _;
 use mongodb::bson::{self, Bson};
-use mongodb_support::BsonScalarType;
+use mongodb_support::{BsonScalarType, ExtendedJsonMode};
 use serde_json::{to_value, Number, Value};
 use thiserror::Error;
 use time::{format_description::well_known::Iso8601, OffsetDateTime};
@@ -41,24 +41,26 @@ type Result<T> = std::result::Result<T, BsonToJsonError>;
 /// disambiguate types on the BSON side. We don't want those tags because we communicate type
 /// information out of band. That is except for the `Type::ExtendedJSON` type where we do want to emit
 /// Extended JSON because we don't have out-of-band information in that case.
-pub fn bson_to_json(expected_type: &Type, value: Bson) -> Result<Value> {
+pub fn bson_to_json(mode: ExtendedJsonMode, expected_type: &Type, value: Bson) -> Result<Value> {
     match expected_type {
-        Type::Scalar(configuration::MongoScalarType::ExtendedJSON) => {
-            Ok(value.into_canonical_extjson())
-        }
+        Type::Scalar(configuration::MongoScalarType::ExtendedJSON) => Ok(mode.into_extjson(value)),
         Type::Scalar(MongoScalarType::Bson(scalar_type)) => {
-            bson_scalar_to_json(*scalar_type, value)
+            bson_scalar_to_json(mode, *scalar_type, value)
         }
-        Type::Object(object_type) => convert_object(object_type, value),
-        Type::ArrayOf(element_type) => convert_array(element_type, value),
-        Type::Nullable(t) => convert_nullable(t, value),
+        Type::Object(object_type) => convert_object(mode, object_type, value),
+        Type::ArrayOf(element_type) => convert_array(mode, element_type, value),
+        Type::Nullable(t) => convert_nullable(mode, t, value),
     }
 }
 
 // Converts values while checking against the expected type. But there are a couple of cases where
 // we do implicit conversion where the BSON types have indistinguishable JSON representations, and
 // values can be converted back to BSON without loss of meaning.
-fn bson_scalar_to_json(expected_type: BsonScalarType, value: Bson) -> Result<Value> {
+fn bson_scalar_to_json(
+    mode: ExtendedJsonMode,
+    expected_type: BsonScalarType,
+    value: Bson,
+) -> Result<Value> {
     match (expected_type, value) {
         (BsonScalarType::Null | BsonScalarType::Undefined, Bson::Null | Bson::Undefined) => {
             Ok(Value::Null)
@@ -74,7 +76,9 @@ fn bson_scalar_to_json(expected_type: BsonScalarType, value: Bson) -> Result<Val
         (BsonScalarType::Symbol, Bson::Symbol(s)) => Ok(Value::String(s)),
         (BsonScalarType::Date, Bson::DateTime(date)) => convert_date(date),
         (BsonScalarType::Javascript, Bson::JavaScriptCode(s)) => Ok(Value::String(s)),
-        (BsonScalarType::JavascriptWithScope, Bson::JavaScriptCodeWithScope(v)) => convert_code(v),
+        (BsonScalarType::JavascriptWithScope, Bson::JavaScriptCodeWithScope(v)) => {
+            convert_code(mode, v)
+        }
         (BsonScalarType::Regex, Bson::RegularExpression(regex)) => {
             Ok(to_value::<json_formats::Regex>(regex.into())?)
         }
@@ -85,7 +89,7 @@ fn bson_scalar_to_json(expected_type: BsonScalarType, value: Bson) -> Result<Val
             Ok(to_value::<json_formats::BinData>(b.into())?)
         }
         (BsonScalarType::ObjectId, Bson::ObjectId(oid)) => Ok(Value::String(oid.to_hex())),
-        (BsonScalarType::DbPointer, v) => Ok(v.into_canonical_extjson()),
+        (BsonScalarType::DbPointer, v) => Ok(mode.into_extjson(v)),
         (_, v) => Err(BsonToJsonError::TypeMismatch(
             Type::Scalar(MongoScalarType::Bson(expected_type)),
             v,
@@ -93,7 +97,7 @@ fn bson_scalar_to_json(expected_type: BsonScalarType, value: Bson) -> Result<Val
     }
 }
 
-fn convert_array(element_type: &Type, value: Bson) -> Result<Value> {
+fn convert_array(mode: ExtendedJsonMode, element_type: &Type, value: Bson) -> Result<Value> {
     let values = match value {
         Bson::Array(values) => Ok(values),
         _ => Err(BsonToJsonError::TypeMismatch(
@@ -103,12 +107,12 @@ fn convert_array(element_type: &Type, value: Bson) -> Result<Value> {
     }?;
     let json_array = values
         .into_iter()
-        .map(|value| bson_to_json(element_type, value))
+        .map(|value| bson_to_json(mode, element_type, value))
         .try_collect()?;
     Ok(Value::Array(json_array))
 }
 
-fn convert_object(object_type: &ObjectType, value: Bson) -> Result<Value> {
+fn convert_object(mode: ExtendedJsonMode, object_type: &ObjectType, value: Bson) -> Result<Value> {
     let input_doc = match value {
         Bson::Document(fields) => Ok(fields),
         _ => Err(BsonToJsonError::TypeMismatch(
@@ -126,7 +130,7 @@ fn convert_object(object_type: &ObjectType, value: Bson) -> Result<Value> {
         .map(|((field_name, field_type), field_value_result)| {
             Ok((
                 field_name.to_owned(),
-                bson_to_json(field_type, field_value_result?)?,
+                bson_to_json(mode, field_type, field_value_result?)?,
             ))
         })
         .try_collect::<_, _, BsonToJsonError>()?;
@@ -153,21 +157,21 @@ fn get_object_field_value(
     })?))
 }
 
-fn convert_nullable(underlying_type: &Type, value: Bson) -> Result<Value> {
+fn convert_nullable(mode: ExtendedJsonMode, underlying_type: &Type, value: Bson) -> Result<Value> {
     match value {
         Bson::Null => Ok(Value::Null),
-        non_null_value => bson_to_json(underlying_type, non_null_value),
+        non_null_value => bson_to_json(mode, underlying_type, non_null_value),
     }
 }
 
-// Use custom conversion instead of type in json_formats to get canonical extjson output
-fn convert_code(v: bson::JavaScriptCodeWithScope) -> Result<Value> {
+// Use custom conversion instead of type in json_formats to get extjson output
+fn convert_code(mode: ExtendedJsonMode, v: bson::JavaScriptCodeWithScope) -> Result<Value> {
     Ok(Value::Object(
         [
             ("$code".to_owned(), Value::String(v.code)),
             (
                 "$scope".to_owned(),
-                Into::<Bson>::into(v.scope).into_canonical_extjson(),
+                mode.into_extjson(Into::<Bson>::into(v.scope)),
             ),
         ]
         .into_iter()
@@ -216,6 +220,7 @@ mod tests {
     fn serializes_object_id_to_string() -> anyhow::Result<()> {
         let expected_string = "573a1390f29313caabcd446f";
         let json = bson_to_json(
+            ExtendedJsonMode::Canonical,
             &Type::Scalar(MongoScalarType::Bson(BsonScalarType::ObjectId)),
             Bson::ObjectId(FromStr::from_str(expected_string)?),
         )?;
@@ -236,7 +241,7 @@ mod tests {
             .into(),
         });
         let value = bson::doc! {};
-        let actual = bson_to_json(&expected_type, value.into())?;
+        let actual = bson_to_json(ExtendedJsonMode::Canonical, &expected_type, value.into())?;
         assert_eq!(actual, json!({}));
         Ok(())
     }
