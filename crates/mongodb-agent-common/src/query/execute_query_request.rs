@@ -27,7 +27,7 @@ pub async fn execute_query_request(
     let query_plan = preprocess_query_request(config, query_request)?;
     let pipeline = pipeline_for_query_request(config, &query_plan)?;
     let documents = execute_query_pipeline(database, config, &query_plan, pipeline).await?;
-    let response = serialize_query_response(&query_plan, documents)?;
+    let response = serialize_query_response(config.extended_json_mode(), &query_plan, documents)?;
     Ok(response)
 }
 
