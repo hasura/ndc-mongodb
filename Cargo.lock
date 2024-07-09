@@ -1817,14 +1817,16 @@ dependencies = [
 
 [[package]]
 name = "ndc-models"
-version = "0.1.4"
-source = "git+http://github.com/hasura/ndc-spec.git?tag=v0.1.4#20172e3b2552b78d16dbafcd047f559ced420309"
+version = "0.1.5"
+source = "git+http://github.com/hasura/ndc-spec.git?tag=v0.1.5#78f52768bd02a8289194078a5abc2432c8e3a758"
 dependencies = [
  "indexmap 2.2.6",
+ "ref-cast",
  "schemars",
  "serde",
  "serde_json",
  "serde_with 3.8.1",
+ "smol_str",
 ]
 
 [[package]]
@@ -1847,8 +1849,8 @@ dependencies = [
 
 [[package]]
 name = "ndc-sdk"
-version = "0.1.4"
-source = "git+https://github.com/hasura/ndc-sdk-rs.git?tag=v0.1.4#29adcb5983c1237e8a5f4732d5230c2ba8ab75d3"
+version = "0.2.0"
+source = "git+https://github.com/hasura/ndc-sdk-rs.git?tag=v0.2.0#a3ce5705b1e9ceaa7adfae5f9b2e8dd433f2530d"
 dependencies = [
  "async-trait",
  "axum",
@@ -1880,8 +1882,8 @@ dependencies = [
 
 [[package]]
 name = "ndc-test"
-version = "0.1.4"
-source = "git+http://github.com/hasura/ndc-spec.git?tag=v0.1.4#20172e3b2552b78d16dbafcd047f559ced420309"
+version = "0.1.5"
+source = "git+http://github.com/hasura/ndc-spec.git?tag=v0.1.5#78f52768bd02a8289194078a5abc2432c8e3a758"
 dependencies = [
  "async-trait",
  "clap",
@@ -1893,6 +1895,7 @@ dependencies = [
  "semver 1.0.23",
  "serde",
  "serde_json",
+ "smol_str",
  "thiserror",
  "tokio",
  "url",
@@ -2398,6 +2401,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "469052894dcb553421e483e4209ee581a45100d31b4018de03e5a7ad86374a7e"
 dependencies = [
  "bitflags 2.5.0",
+]
+
+[[package]]
+name = "ref-cast"
+version = "1.0.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ccf0a6f84d5f1d581da8b41b47ec8600871962f2a528115b542b362d4b744931"
+dependencies = [
+ "ref-cast-impl",
+]
+
+[[package]]
+name = "ref-cast-impl"
+version = "1.0.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bcc303e793d3734489387d205e9b186fac9c6cfacedd98cbb2e8a5943595f3e6"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.66",
 ]
 
 [[package]]
