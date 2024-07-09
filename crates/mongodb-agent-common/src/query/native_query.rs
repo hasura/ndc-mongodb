@@ -3,7 +3,6 @@ use std::collections::BTreeMap;
 use configuration::native_query::NativeQuery;
 use itertools::Itertools as _;
 use ndc_models::Argument;
-use ndc_query_plan::VariableSet;
 
 use crate::{
     interface_types::MongoAgentError,
@@ -18,7 +17,6 @@ use super::{arguments::resolve_arguments, query_target::QueryTarget};
 /// an empty pipeline if the query request target is not a native query
 pub fn pipeline_for_native_query(
     config: &MongoConfiguration,
-    variables: Option<&VariableSet>,
     query_request: &QueryPlan,
 ) -> Result<Pipeline, MongoAgentError> {
     match QueryTarget::for_request(config, query_request) {
@@ -27,26 +25,15 @@ pub fn pipeline_for_native_query(
             native_query,
             arguments,
             ..
-        } => make_pipeline(variables, native_query, arguments),
+        } => make_pipeline(native_query, arguments),
     }
 }
 
 fn make_pipeline(
-    variables: Option<&VariableSet>,
     native_query: &NativeQuery,
     arguments: &BTreeMap<String, Argument>,
 ) -> Result<Pipeline, MongoAgentError> {
-    let expressions = arguments
-        .iter()
-        .map(|(name, argument)| {
-            Ok((
-                name.to_owned(),
-                argument_to_mongodb_expression(argument, variables)?,
-            )) as Result<_, MongoAgentError>
-        })
-        .try_collect()?;
-
-    let bson_arguments = resolve_arguments(&native_query.arguments, expressions)
+    let bson_arguments = resolve_arguments(&native_query.arguments, arguments.clone())
         .map_err(ProcedureError::UnresolvableArguments)?;
 
     // Replace argument placeholders with resolved expressions, convert document list to
@@ -59,19 +46,6 @@ fn make_pipeline(
         .try_collect()?;
 
     Ok(Pipeline::new(stages))
-}
-
-fn argument_to_mongodb_expression(
-    argument: &Argument,
-    variables: Option<&VariableSet>,
-) -> Result<serde_json::Value, MongoAgentError> {
-    match argument {
-        Argument::Variable { name } => variables
-            .and_then(|vs| vs.get(name))
-            .ok_or_else(|| MongoAgentError::VariableNotDefined(name.to_owned()))
-            .cloned(),
-        Argument::Literal { value } => Ok(value.clone()),
-    }
 }
 
 #[cfg(test)]

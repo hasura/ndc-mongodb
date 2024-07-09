@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use configuration::{
     native_mutation::NativeMutation, native_query::NativeQuery, Configuration, MongoScalarType,
 };
-use mongodb_support::EXTENDED_JSON_TYPE_NAME;
+use mongodb_support::{ExtendedJsonMode, EXTENDED_JSON_TYPE_NAME};
 use ndc_models as ndc;
 use ndc_query_plan::{ConnectorTypes, QueryContext, QueryPlanError};
 
@@ -17,6 +17,10 @@ pub use ndc_query_plan::OrderByTarget;
 pub struct MongoConfiguration(pub Configuration);
 
 impl MongoConfiguration {
+    pub fn extended_json_mode(&self) -> ExtendedJsonMode {
+        self.0.options.serialization_options.extended_json_mode
+    }
+
     pub fn native_queries(&self) -> &BTreeMap<String, NativeQuery> {
         &self.0.native_queries
     }
@@ -110,3 +114,4 @@ pub type QueryPlan = ndc_query_plan::QueryPlan<MongoConfiguration>;
 pub type Relationship = ndc_query_plan::Relationship<MongoConfiguration>;
 pub type Relationships = ndc_query_plan::Relationships<MongoConfiguration>;
 pub type Type = ndc_query_plan::Type<MongoScalarType>;
+pub type VariableTypes = ndc_query_plan::VariableTypes<MongoScalarType>;

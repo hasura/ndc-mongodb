@@ -7,21 +7,32 @@ use ndc_models::{
     Argument, OrderDirection, RelationshipArgument, RelationshipType, UnaryComparisonOperator,
 };
 
-use crate::Type;
+use crate::{vec_set::VecSet, Type};
 
 pub trait ConnectorTypes {
-    type ScalarType: Clone + Debug + PartialEq;
+    type ScalarType: Clone + Debug + PartialEq + Eq;
     type AggregateFunction: Clone + Debug + PartialEq;
     type ComparisonOperator: Clone + Debug + PartialEq;
 }
 
 #[derive(Derivative)]
-#[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
+#[derivative(
+    Clone(bound = ""),
+    Debug(bound = ""),
+    PartialEq(bound = "T::ScalarType: PartialEq")
+)]
 pub struct QueryPlan<T: ConnectorTypes> {
     pub collection: String,
     pub query: Query<T>,
     pub arguments: BTreeMap<String, Argument>,
     pub variables: Option<Vec<VariableSet>>,
+
+    /// Types for values from the `variables` map as inferred by usages in the query request. It is
+    /// possible for the same variable to be used in multiple contexts with different types. This
+    /// map provides sets of all observed types.
+    ///
+    /// The observed type may be `None` if the type of a variable use could not be inferred.
+    pub variable_types: VariableTypes<T::ScalarType>,
 
     // TODO: type for unrelated collection
     pub unrelated_collections: BTreeMap<String, UnrelatedJoin<T>>,
@@ -33,8 +44,9 @@ impl<T: ConnectorTypes> QueryPlan<T> {
     }
 }
 
-pub type VariableSet = BTreeMap<String, serde_json::Value>;
 pub type Relationships<T> = BTreeMap<String, Relationship<T>>;
+pub type VariableSet = BTreeMap<String, serde_json::Value>;
+pub type VariableTypes<T> = BTreeMap<String, VecSet<Option<Type<T>>>>;
 
 #[derive(Derivative)]
 #[derivative(
@@ -303,7 +315,7 @@ pub enum ComparisonTarget<T: ConnectorTypes> {
         /// Path to a nested field within an object column
         field_path: Option<Vec<String>>,
 
-        column_type: Type<T::ScalarType>,
+        field_type: Type<T::ScalarType>,
 
         /// Any relationships to traverse to reach this column. These are translated from
         /// [ndc_models::PathElement] values in the [ndc_models::QueryRequest] to names of relation
@@ -321,7 +333,7 @@ pub enum ComparisonTarget<T: ConnectorTypes> {
         /// Path to a nested field within an object column
         field_path: Option<Vec<String>>,
 
-        column_type: Type<T::ScalarType>,
+        field_type: Type<T::ScalarType>,
     },
 }
 
@@ -342,10 +354,10 @@ impl<T: ConnectorTypes> ComparisonTarget<T> {
 }
 
 impl<T: ConnectorTypes> ComparisonTarget<T> {
-    pub fn get_column_type(&self) -> &Type<T::ScalarType> {
+    pub fn get_field_type(&self) -> &Type<T::ScalarType> {
         match self {
-            ComparisonTarget::Column { column_type, .. } => column_type,
-            ComparisonTarget::ColumnInScope { column_type, .. } => column_type,
+            ComparisonTarget::Column { field_type, .. } => field_type,
+            ComparisonTarget::ColumnInScope { field_type, .. } => field_type,
         }
     }
 }

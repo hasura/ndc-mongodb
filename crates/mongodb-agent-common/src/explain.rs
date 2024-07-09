@@ -22,9 +22,10 @@ pub async fn explain_query(
     let pipeline = query::pipeline_for_query_request(config, &query_plan)?;
     let pipeline_bson = to_bson(&pipeline)?;
 
-    let aggregate_target = match QueryTarget::for_request(config, &query_plan).input_collection() {
-        Some(collection_name) => Bson::String(collection_name.to_owned()),
-        None => Bson::Int32(1),
+    let target = QueryTarget::for_request(config, &query_plan);
+    let aggregate_target = match (target.input_collection(), query_plan.has_variables()) {
+        (Some(collection_name), false) => Bson::String(collection_name.to_owned()),
+        _ => Bson::Int32(1),
     };
 
     let query_command = doc! {

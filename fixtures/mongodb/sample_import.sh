@@ -32,6 +32,7 @@ mongoimport --db sample_mflix --collection movies --file "$FIXTURES"/sample_mfli
 mongoimport --db sample_mflix --collection sessions --file "$FIXTURES"/sample_mflix/sessions.json
 mongoimport --db sample_mflix --collection theaters --file "$FIXTURES"/sample_mflix/theaters.json
 mongoimport --db sample_mflix --collection users --file "$FIXTURES"/sample_mflix/users.json
+$MONGO_SH sample_mflix "$FIXTURES/sample_mflix/indexes.js"
 echo "✅ Mflix sample data imported..."
 
 # chinook

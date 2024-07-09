@@ -6,6 +6,7 @@ version.workspace = true
 [dependencies]
 configuration = { path = "../configuration" }
 mongodb-support = { path = "../mongodb-support" }
+ndc-query-plan = { path = "../ndc-query-plan" }
 ndc-test-helpers = { path = "../ndc-test-helpers" }
 
 enum-iterator = "^2.0.0"

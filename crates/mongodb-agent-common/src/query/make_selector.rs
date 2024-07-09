@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use anyhow::anyhow;
 use mongodb::bson::{self, doc, Document};
 use ndc_models::UnaryComparisonOperator;
@@ -11,7 +9,7 @@ use crate::{
     query::column_ref::{column_expression, ColumnRef},
 };
 
-use super::serialization::json_to_bson;
+use super::{query_variable_name::query_variable_name, serialization::json_to_bson};
 
 pub type Result<T> = std::result::Result<T, MongoAgentError>;
 
@@ -21,16 +19,13 @@ fn bson_from_scalar_value(value: &serde_json::Value, value_type: &Type) -> Resul
     json_to_bson(value_type, value.clone()).map_err(|e| MongoAgentError::BadQuery(anyhow!(e)))
 }
 
-pub fn make_selector(
-    variables: Option<&BTreeMap<String, serde_json::Value>>,
-    expr: &Expression,
-) -> Result<Document> {
+pub fn make_selector(expr: &Expression) -> Result<Document> {
     match expr {
         Expression::And { expressions } => {
             let sub_exps: Vec<Document> = expressions
                 .clone()
                 .iter()
-                .map(|e| make_selector(variables, e))
+                .map(make_selector)
                 .collect::<Result<_>>()?;
             Ok(doc! {"$and": sub_exps})
         }
@@ -38,20 +33,18 @@ pub fn make_selector(
             let sub_exps: Vec<Document> = expressions
                 .clone()
                 .iter()
-                .map(|e| make_selector(variables, e))
+                .map(make_selector)
                 .collect::<Result<_>>()?;
             Ok(doc! {"$or": sub_exps})
         }
-        Expression::Not { expression } => {
-            Ok(doc! { "$nor": [make_selector(variables, expression)?]})
-        }
+        Expression::Not { expression } => Ok(doc! { "$nor": [make_selector(expression)?]}),
         Expression::Exists {
             in_collection,
             predicate,
         } => Ok(match in_collection {
             ExistsInCollection::Related { relationship } => match predicate {
                 Some(predicate) => doc! {
-                    relationship: { "$elemMatch": make_selector(variables, predicate)? }
+                    relationship: { "$elemMatch": make_selector(predicate)? }
                 },
                 None => doc! { format!("{relationship}.0"): { "$exists": true } },
             },
@@ -67,7 +60,7 @@ pub fn make_selector(
             column,
             operator,
             value,
-        } => make_binary_comparison_selector(variables, column, operator, value),
+        } => make_binary_comparison_selector(column, operator, value),
         Expression::UnaryComparisonOperator { column, operator } => match operator {
             UnaryComparisonOperator::IsNull => {
                 let match_doc = match ColumnRef::from_comparison_target(column) {
@@ -90,7 +83,6 @@ pub fn make_selector(
 }
 
 fn make_binary_comparison_selector(
-    variables: Option<&BTreeMap<String, serde_json::Value>>,
     target_column: &ComparisonTarget,
     operator: &ComparisonFunction,
     value: &ComparisonValue,
@@ -117,9 +109,9 @@ fn make_binary_comparison_selector(
             let comparison_value = bson_from_scalar_value(value, value_type)?;
             let match_doc = match ColumnRef::from_comparison_target(target_column) {
                 ColumnRef::MatchKey(key) => operator.mongodb_match_query(key, comparison_value),
-                ColumnRef::Expression(expr) => {
-                    operator.mongodb_aggregation_expression(expr, comparison_value)
-                }
+                ColumnRef::Expression(expr) => doc! {
+                    "$expr": operator.mongodb_aggregation_expression(expr, comparison_value)
+                },
             };
             traverse_relationship_path(target_column.relationship_path(), match_doc)
         }
@@ -127,13 +119,12 @@ fn make_binary_comparison_selector(
             name,
             variable_type,
         } => {
-            let comparison_value =
-                variable_to_mongo_expression(variables, name, variable_type).map(Into::into)?;
-            let match_doc = match ColumnRef::from_comparison_target(target_column) {
-                ColumnRef::MatchKey(key) => operator.mongodb_match_query(key, comparison_value),
-                ColumnRef::Expression(expr) => {
-                    operator.mongodb_aggregation_expression(expr, comparison_value)
-                }
+            let comparison_value = variable_to_mongo_expression(name, variable_type);
+            let match_doc = doc! {
+                "$expr": operator.mongodb_aggregation_expression(
+                    column_expression(target_column),
+                    comparison_value
+                )
             };
             traverse_relationship_path(target_column.relationship_path(), match_doc)
         }
@@ -157,16 +148,9 @@ fn traverse_relationship_path(path: &[String], mut expression: Document) -> Docu
     expression
 }
 
-fn variable_to_mongo_expression(
-    variables: Option<&BTreeMap<String, serde_json::Value>>,
-    variable: &str,
-    value_type: &Type,
-) -> Result<bson::Bson> {
-    let value = variables
-        .and_then(|vars| vars.get(variable))
-        .ok_or_else(|| MongoAgentError::VariableNotDefined(variable.to_owned()))?;
-
-    bson_from_scalar_value(value, value_type)
+fn variable_to_mongo_expression(variable: &str, value_type: &Type) -> bson::Bson {
+    let mongodb_var_name = query_variable_name(variable, value_type);
+    format!("$${mongodb_var_name}").into()
 }
 
 #[cfg(test)]
@@ -175,7 +159,7 @@ mod tests {
     use mongodb::bson::{self, bson, doc};
     use mongodb_support::BsonScalarType;
     use ndc_models::UnaryComparisonOperator;
-    use ndc_query_plan::plan_for_query_request;
+    use ndc_query_plan::{plan_for_query_request, Scope};
     use ndc_test_helpers::{
         binop, column_value, path_element, query, query_request, relation_field, root, target,
         value,
@@ -194,22 +178,19 @@ mod tests {
     #[test]
     fn compares_fields_of_related_documents_using_elem_match_in_binary_comparison(
     ) -> anyhow::Result<()> {
-        let selector = make_selector(
-            None,
-            &Expression::BinaryComparisonOperator {
-                column: ComparisonTarget::Column {
-                    name: "Name".to_owned(),
-                    field_path: None,
-                    column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
-                    path: vec!["Albums".into(), "Tracks".into()],
-                },
-                operator: ComparisonFunction::Equal,
-                value: ComparisonValue::Scalar {
-                    value: "Helter Skelter".into(),
-                    value_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
-                },
+        let selector = make_selector(&Expression::BinaryComparisonOperator {
+            column: ComparisonTarget::Column {
+                name: "Name".to_owned(),
+                field_path: None,
+                field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                path: vec!["Albums".into(), "Tracks".into()],
             },
-        )?;
+            operator: ComparisonFunction::Equal,
+            value: ComparisonValue::Scalar {
+                value: "Helter Skelter".into(),
+                value_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+            },
+        })?;
 
         let expected = doc! {
             "Albums": {
@@ -230,18 +211,15 @@ mod tests {
     #[test]
     fn compares_fields_of_related_documents_using_elem_match_in_unary_comparison(
     ) -> anyhow::Result<()> {
-        let selector = make_selector(
-            None,
-            &Expression::UnaryComparisonOperator {
-                column: ComparisonTarget::Column {
-                    name: "Name".to_owned(),
-                    field_path: None,
-                    column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
-                    path: vec!["Albums".into(), "Tracks".into()],
-                },
-                operator: UnaryComparisonOperator::IsNull,
+        let selector = make_selector(&Expression::UnaryComparisonOperator {
+            column: ComparisonTarget::Column {
+                name: "Name".to_owned(),
+                field_path: None,
+                field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                path: vec!["Albums".into(), "Tracks".into()],
             },
-        )?;
+            operator: UnaryComparisonOperator::IsNull,
+        })?;
 
         let expected = doc! {
             "Albums": {
@@ -261,30 +239,53 @@ mod tests {
 
     #[test]
     fn compares_two_columns() -> anyhow::Result<()> {
-        let selector = make_selector(
-            None,
-            &Expression::BinaryComparisonOperator {
+        let selector = make_selector(&Expression::BinaryComparisonOperator {
+            column: ComparisonTarget::Column {
+                name: "Name".to_owned(),
+                field_path: None,
+                field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                path: Default::default(),
+            },
+            operator: ComparisonFunction::Equal,
+            value: ComparisonValue::Column {
                 column: ComparisonTarget::Column {
-                    name: "Name".to_owned(),
+                    name: "Title".to_owned(),
                     field_path: None,
-                    column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                    field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
                     path: Default::default(),
                 },
-                operator: ComparisonFunction::Equal,
-                value: ComparisonValue::Column {
-                    column: ComparisonTarget::Column {
-                        name: "Title".to_owned(),
-                        field_path: None,
-                        column_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
-                        path: Default::default(),
-                    },
-                },
             },
-        )?;
+        })?;
 
         let expected = doc! {
             "$expr": {
                 "$eq": ["$Name", "$Title"]
+            }
+        };
+
+        assert_eq!(selector, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn compares_root_collection_column_to_scalar() -> anyhow::Result<()> {
+        let selector = make_selector(&Expression::BinaryComparisonOperator {
+            column: ComparisonTarget::ColumnInScope {
+                name: "Name".to_owned(),
+                field_path: None,
+                field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                scope: Scope::Named("scope_0".to_string()),
+            },
+            operator: ComparisonFunction::Equal,
+            value: ComparisonValue::Scalar {
+                value: "Lady Gaga".into(),
+                value_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+            },
+        })?;
+
+        let expected = doc! {
+            "$expr": {
+                "$eq": ["$$scope_0.Name", "Lady Gaga"]
             }
         };
 

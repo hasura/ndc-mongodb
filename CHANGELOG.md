@@ -4,6 +4,15 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+- Fix bug with operator lookup when filtering on nested fields ([#82](https://github.com/hasura/ndc-mongodb/pull/82))
+- Rework query plans for requests with variable sets to allow use of indexes ([#83](https://github.com/hasura/ndc-mongodb/pull/83))
+- Fix: error when requesting query plan if MongoDB is target of a remote join ([#83](https://github.com/hasura/ndc-mongodb/pull/83))
+- Breaking change: remote joins no longer work in MongoDB v5 ([#83](https://github.com/hasura/ndc-mongodb/pull/83))
+- Add configuration option to opt into "relaxed" mode for Extended JSON outputs
+  ([#84](https://github.com/hasura/ndc-mongodb/pull/84))
+
+## [0.1.0] - 2024-06-13
+
 - Support filtering and sorting by fields of related collections ([#72](https://github.com/hasura/ndc-mongodb/pull/72))
 - Support for root collection column references ([#75](https://github.com/hasura/ndc-mongodb/pull/75))
 - Fix for databases with field names that begin with a dollar sign, or that contain dots ([#74](https://github.com/hasura/ndc-mongodb/pull/74))
