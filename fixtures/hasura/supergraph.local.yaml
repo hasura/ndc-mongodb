@@ -1,0 +1,7 @@
+kind: Supergraph
+version: v2
+definition:
+  subgraphs:
+    - globals/subgraph.local.yaml
+    - chinook/subgraph.local.yaml
+    - sample_mflix/subgraph.local.yaml

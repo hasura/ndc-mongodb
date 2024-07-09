@@ -1,6 +1,6 @@
 exporters:
   otlp:
-    endpoint: https://gateway.otlp.arusah.com:443
+    endpoint: https://gateway.otlp.hasura.io:443
     headers:
       Authorization: pat ${env:HASURA_DDN_PAT}
 processors:
