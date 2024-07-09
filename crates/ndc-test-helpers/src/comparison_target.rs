@@ -38,7 +38,7 @@ where
     S: ToString,
 {
     ndc_models::ComparisonTarget::RootCollectionColumn {
-        name: name.to_string(),
+        name: name.to_string().into(),
         field_path: None,
     }
 }

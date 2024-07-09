@@ -1843,6 +1843,7 @@ dependencies = [
  "ndc-test-helpers",
  "nonempty",
  "pretty_assertions",
+ "ref-cast",
  "serde_json",
  "thiserror",
 ]

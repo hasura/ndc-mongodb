@@ -39,11 +39,11 @@ pub use type_helpers::*;
 
 #[derive(Clone, Debug, Default)]
 pub struct QueryRequestBuilder {
-    collection: Option<String>,
+    collection: Option<ndc_models::CollectionName>,
     query: Option<Query>,
-    arguments: Option<BTreeMap<String, Argument>>,
-    collection_relationships: Option<BTreeMap<String, Relationship>>,
-    variables: Option<Vec<BTreeMap<String, serde_json::Value>>>,
+    arguments: Option<BTreeMap<ndc_models::ArgumentName, Argument>>,
+    collection_relationships: Option<BTreeMap<ndc_models::RelationshipName, Relationship>>,
+    variables: Option<Vec<BTreeMap<ndc_models::VariableName, serde_json::Value>>>,
 }
 
 pub fn query_request() -> QueryRequestBuilder {
@@ -62,7 +62,7 @@ impl QueryRequestBuilder {
     }
 
     pub fn collection(mut self, collection: &str) -> Self {
-        self.collection = Some(collection.to_owned());
+        self.collection = Some(collection.to_owned().into());
         self
     }
 
@@ -75,7 +75,7 @@ impl QueryRequestBuilder {
         self.arguments = Some(
             arguments
                 .into_iter()
-                .map(|(name, arg)| (name.to_owned(), arg))
+                .map(|(name, arg)| (name.to_owned().into(), arg))
                 .collect(),
         );
         self
@@ -88,7 +88,7 @@ impl QueryRequestBuilder {
         self.collection_relationships = Some(
             relationships
                 .into_iter()
-                .map(|(name, r)| (name.to_string(), r.into()))
+                .map(|(name, r)| (name.to_string().into(), r.into()))
                 .collect(),
         );
         self
@@ -106,7 +106,7 @@ impl QueryRequestBuilder {
                 .map(|var_map| {
                     var_map
                         .into_iter()
-                        .map(|(name, value)| (name.to_string(), value.into()))
+                        .map(|(name, value)| (name.to_string().into(), value.into()))
                         .collect()
                 })
                 .collect(),
@@ -133,8 +133,8 @@ impl From<QueryRequestBuilder> for QueryRequest {
 
 #[derive(Clone, Debug, Default)]
 pub struct QueryBuilder {
-    aggregates: Option<IndexMap<String, Aggregate>>,
-    fields: Option<IndexMap<String, Field>>,
+    aggregates: Option<IndexMap<ndc_models::FieldName, Aggregate>>,
+    fields: Option<IndexMap<ndc_models::FieldName, Field>>,
     limit: Option<u32>,
     offset: Option<u32>,
     order_by: Option<OrderBy>,
@@ -161,7 +161,7 @@ impl QueryBuilder {
         self.fields = Some(
             fields
                 .into_iter()
-                .map(|(name, field)| (name.to_owned(), field))
+                .map(|(name, field)| (name.to_owned().into(), field))
                 .collect(),
         );
         self
@@ -171,7 +171,7 @@ impl QueryBuilder {
         self.aggregates = Some(
             aggregates
                 .into_iter()
-                .map(|(name, aggregate)| (name.to_owned(), aggregate))
+                .map(|(name, aggregate)| (name.to_owned().into(), aggregate))
                 .collect(),
         );
         self

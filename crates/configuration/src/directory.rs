@@ -84,7 +84,7 @@ where
     }
 
     let dir_stream = ReadDirStream::new(fs::read_dir(subdir).await?);
-    let configs: Vec<WithName<T>> = dir_stream
+    let configs: Vec<WithName<String, T>> = dir_stream
         .map_err(|err| err.into())
         .try_filter_map(|dir_entry| async move {
             // Permits regular files and symlinks, does not filter out symlinks to directories.
@@ -107,7 +107,7 @@ where
             Ok(format_option.map(|format| (path, format)))
         })
         .and_then(
-            |(path, format)| async move { parse_config_file::<WithName<T>>(path, format).await },
+            |(path, format)| async move { parse_config_file::<WithName<String, T>>(path, format).await },
         )
         .try_collect()
         .await?;
@@ -174,7 +174,7 @@ where
     }
 
     for (name, config) in configs {
-        let with_name: WithName<T> = (name.clone(), config).into();
+        let with_name: WithName<String, T> = (name.clone(), config).into();
         write_file(subdir, &name, &with_name).await?;
     }
 

@@ -17,31 +17,31 @@ pub trait QueryContext: ConnectorTypes {
     /// Get the specific scalar type for this connector by name if the given name is a scalar type
     /// name. (This method will also be called for object type names in which case it should return
     /// `None`.)
-    fn lookup_scalar_type(type_name: &str) -> Option<Self::ScalarType>;
+    fn lookup_scalar_type(type_name: &ndc::ScalarTypeName) -> Option<Self::ScalarType>;
 
     fn lookup_aggregation_function(
         &self,
         input_type: &Type<Self::ScalarType>,
-        function_name: &str,
+        function_name: &ndc::AggregateFunctionName,
     ) -> Result<(Self::AggregateFunction, &ndc::AggregateFunctionDefinition)>;
 
     fn lookup_comparison_operator(
         &self,
         left_operand_type: &Type<Self::ScalarType>,
-        operator_name: &str,
+        operator_name: &ndc::ComparisonOperatorName,
     ) -> Result<(Self::ComparisonOperator, &ndc::ComparisonOperatorDefinition)>;
 
-    fn collections(&self) -> &BTreeMap<String, ndc::CollectionInfo>;
-    fn functions(&self) -> &BTreeMap<String, (ndc::FunctionInfo, ndc::CollectionInfo)>;
-    fn object_types(&self) -> &BTreeMap<String, ndc::ObjectType>;
-    fn procedures(&self) -> &BTreeMap<String, ndc::ProcedureInfo>;
+    fn collections(&self) -> &BTreeMap<ndc::CollectionName, ndc::CollectionInfo>;
+    fn functions(&self) -> &BTreeMap<ndc::FunctionName, (ndc::FunctionInfo, ndc::CollectionInfo)>;
+    fn object_types(&self) -> &BTreeMap<ndc::ObjectTypeName, ndc::ObjectType>;
+    fn procedures(&self) -> &BTreeMap<ndc::ProcedureName, ndc::ProcedureInfo>;
 
     /* Provided methods */
 
     fn find_aggregation_function_definition(
         &self,
         input_type: &Type<Self::ScalarType>,
-        function_name: &str,
+        function_name: &ndc::AggregateFunctionName,
     ) -> Result<(
         Self::AggregateFunction,
         plan::AggregateFunctionDefinition<Self>,
@@ -62,7 +62,7 @@ pub trait QueryContext: ConnectorTypes {
     fn find_comparison_operator(
         &self,
         left_operand_type: &Type<Self::ScalarType>,
-        op_name: &str,
+        op_name: &ndc::ComparisonOperatorName,
     ) -> Result<(
         Self::ComparisonOperator,
         plan::ComparisonOperatorDefinition<Self>,
@@ -84,7 +84,7 @@ pub trait QueryContext: ConnectorTypes {
         Ok((operator, plan_def))
     }
 
-    fn find_collection(&self, collection_name: &str) -> Result<&ndc::CollectionInfo> {
+    fn find_collection(&self, collection_name: &ndc::CollectionName) -> Result<&ndc::CollectionInfo> {
         if let Some(collection) = self.collections().get(collection_name) {
             return Ok(collection);
         }
@@ -99,7 +99,7 @@ pub trait QueryContext: ConnectorTypes {
 
     fn find_collection_object_type(
         &self,
-        collection_name: &str,
+        collection_name: &ndc::CollectionName,
     ) -> Result<plan::ObjectType<Self::ScalarType>> {
         let collection = self.find_collection(collection_name)?;
         self.find_object_type(&collection.collection_type)
@@ -107,7 +107,7 @@ pub trait QueryContext: ConnectorTypes {
 
     fn find_object_type<'a>(
         &'a self,
-        object_type_name: &'a str,
+        object_type_name: &'a ndc::ObjectTypeName,
     ) -> Result<plan::ObjectType<Self::ScalarType>> {
         lookup_object_type(
             self.object_types(),
@@ -116,9 +116,9 @@ pub trait QueryContext: ConnectorTypes {
         )
     }
 
-    fn find_scalar_type(scalar_type_name: &str) -> Result<Self::ScalarType> {
+    fn find_scalar_type(scalar_type_name: &ndc::ScalarTypeName) -> Result<Self::ScalarType> {
         Self::lookup_scalar_type(scalar_type_name)
-            .ok_or_else(|| QueryPlanError::UnknownScalarType(scalar_type_name.to_owned()))
+            .ok_or_else(|| QueryPlanError::UnknownScalarType(scalar_type_name.clone().into()))
     }
 
     fn ndc_to_plan_type(&self, ndc_type: &ndc::Type) -> Result<plan::Type<Self::ScalarType>> {

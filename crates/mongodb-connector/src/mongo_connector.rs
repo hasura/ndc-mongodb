@@ -21,7 +21,7 @@ use ndc_sdk::{
 use tracing::instrument;
 
 use crate::error_mapping::{mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error};
-use crate::{capabilities::mongo_capabilities_response, mutation::handle_mutation_request};
+use crate::{capabilities::mongo_capabilities, mutation::handle_mutation_request};
 
 #[derive(Clone, Default)]
 pub struct MongoConnector;
@@ -85,8 +85,8 @@ impl Connector for MongoConnector {
         }
     }
 
-    async fn get_capabilities() -> JsonResponse<CapabilitiesResponse> {
-        mongo_capabilities_response().into()
+    async fn get_capabilities() -> CapabilitiesResponse {
+        mongo_capabilities()
     }
 
     #[instrument(err, skip_all)]

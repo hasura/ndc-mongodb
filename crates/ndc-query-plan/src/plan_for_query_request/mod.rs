@@ -139,8 +139,8 @@ pub fn plan_for_query<T: QueryContext>(
 fn plan_for_aggregates<T: QueryContext>(
     context: &T,
     collection_object_type: &plan::ObjectType<T::ScalarType>,
-    ndc_aggregates: Option<IndexMap<String, ndc::Aggregate>>,
-) -> Result<Option<IndexMap<String, plan::Aggregate<T>>>> {
+    ndc_aggregates: Option<IndexMap<ndc::FieldName, ndc::Aggregate>>,
+) -> Result<Option<IndexMap<ndc::FieldName, plan::Aggregate<T>>>> {
     ndc_aggregates
         .map(|aggregates| -> Result<_> {
             aggregates
@@ -173,7 +173,7 @@ fn plan_for_aggregate<T: QueryContext>(
             field_path: _,
         } => {
             let object_type_field_type =
-                find_object_field(collection_object_type, column.as_ref())?;
+                find_object_field(collection_object_type, &column)?;
             // let column_scalar_type_name = get_scalar_type_name(&object_type_field.r#type)?;
             let (function, definition) =
                 context.find_aggregation_function_definition(object_type_field_type, &function)?;
@@ -191,9 +191,9 @@ fn plan_for_fields<T: QueryContext>(
     plan_state: &mut QueryPlanState<'_, T>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
     collection_object_type: &plan::ObjectType<T::ScalarType>,
-    ndc_fields: Option<IndexMap<String, ndc::Field>>,
-) -> Result<Option<IndexMap<String, plan::Field<T>>>> {
-    let plan_fields: Option<IndexMap<String, plan::Field<T>>> = ndc_fields
+    ndc_fields: Option<IndexMap<ndc::FieldName, ndc::Field>>,
+) -> Result<Option<IndexMap<ndc::FieldName, plan::Field<T>>>> {
+    let plan_fields: Option<IndexMap<ndc::FieldName, plan::Field<T>>> = ndc_fields
         .map(|fields| {
             fields
                 .into_iter()
@@ -308,8 +308,8 @@ fn plan_for_relationship_path<T: QueryContext>(
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
     object_type: &plan::ObjectType<T::ScalarType>,
     relationship_path: Vec<ndc::PathElement>,
-    requested_columns: Vec<String>, // columns to select from last path element
-) -> Result<(Vec<String>, ObjectType<T::ScalarType>)> {
+    requested_columns: Vec<ndc::FieldName>, // columns to select from last path element
+) -> Result<(Vec<ndc::RelationshipName>, ObjectType<T::ScalarType>)> {
     let end_of_relationship_path_object_type = relationship_path
         .last()
         .map(|last_path_element| {
@@ -345,8 +345,8 @@ fn plan_for_relationship_path_helper<T: QueryContext>(
     plan_state: &mut QueryPlanState<'_, T>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
     mut reversed_relationship_path: Vec<ndc::PathElement>,
-    requested_columns: Vec<String>, // columns to select from last path element
-) -> Result<VecDeque<String>> {
+    requested_columns: Vec<ndc::FieldName>, // columns to select from last path element
+) -> Result<VecDeque<ndc::RelationshipName>> {
     if reversed_relationship_path.is_empty() {
         return Ok(VecDeque::new());
     }
@@ -496,7 +496,7 @@ fn plan_for_binary_comparison<T: QueryContext>(
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
     object_type: &plan::ObjectType<T::ScalarType>,
     column: ndc::ComparisonTarget,
-    operator: String,
+    operator: ndc::ComparisonOperatorName,
     value: ndc::ComparisonValue,
 ) -> Result<plan::Expression<T>> {
     let comparison_target =
@@ -630,7 +630,7 @@ fn plan_for_exists<T: QueryContext>(
                         (
                             comparison_target.column_name().to_owned(),
                             plan::Field::Column {
-                                column: comparison_target.column_name().to_string(),
+                                column: comparison_target.column_name().clone(),
                                 column_type: comparison_target.get_field_type().clone(),
                                 fields: None,
                             },
@@ -679,7 +679,7 @@ fn plan_for_exists<T: QueryContext>(
                 ..Default::default()
             };
 
-            let join_key = plan_state.register_unrelated_join(collection, arguments, join_query);
+            let join_key = plan_state.register_unrelated_join(collection, arguments, join_query).into();
 
             let in_collection = plan::ExistsInCollection::Unrelated {
                 unrelated_collection: join_key,

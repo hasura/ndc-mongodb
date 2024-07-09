@@ -35,7 +35,7 @@ pub struct NativeQuery {
 
     /// Use `input_collection` when you want to start an aggregation pipeline off of the specified
     /// `input_collection` db.<input_collection>.aggregate.
-    pub input_collection: Option<String>,
+    pub input_collection: Option<ndc_models::CollectionName>,
 
     /// Arguments to be supplied for each query invocation. These will be available to the given
     /// pipeline as variables. For information about variables in MongoDB aggregation expressions
@@ -44,7 +44,7 @@ pub struct NativeQuery {
     /// Argument values are standard JSON mapped from GraphQL input types, not Extended JSON.
     /// Values will be converted to BSON according to the types specified here.
     #[serde(default)]
-    pub arguments: BTreeMap<String, ObjectField>,
+    pub arguments: BTreeMap<ndc_models::ArgumentName, ObjectField>,
 
     /// The name of an object type that describes documents produced by the given pipeline. MongoDB
     /// aggregation pipelines always produce a list of documents. This type describes the type of
@@ -52,13 +52,13 @@ pub struct NativeQuery {
     ///
     /// You may reference object types defined in the `object_types` list in this definition, or
     /// you may reference object types from `schema.json`.
-    pub result_document_type: String,
+    pub result_document_type: ndc_models::ObjectTypeName,
 
     /// You may define object types here to reference in `result_type`. Any types defined here will
     /// be merged with the definitions in `schema.json`. This allows you to maintain hand-written
     /// types for native queries without having to edit a generated `schema.json` file.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub object_types: BTreeMap<String, ObjectType>,
+    pub object_types: BTreeMap<ndc_models::ObjectTypeName, ObjectType>,
 
     /// Pipeline to include in MongoDB queries. For details on how to write an aggregation pipeline
     /// see https://www.mongodb.com/docs/manual/core/aggregation-pipeline/

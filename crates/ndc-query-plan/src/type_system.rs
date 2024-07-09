@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use ref_cast::RefCast;
 
 use itertools::Itertools as _;
 use ndc_models as ndc;
@@ -29,15 +30,15 @@ impl<S> Type<S> {
 pub struct ObjectType<ScalarType> {
     /// A type name may be tracked for error reporting. The name does not affect how query plans
     /// are generated.
-    pub name: Option<String>,
-    pub fields: BTreeMap<String, Type<ScalarType>>,
+    pub name: Option<ndc::ObjectTypeName>,
+    pub fields: BTreeMap<ndc::FieldName, Type<ScalarType>>,
 }
 
 impl<S> ObjectType<S> {
-    pub fn named_fields(&self) -> impl Iterator<Item = (&str, &Type<S>)> {
+    pub fn named_fields(&self) -> impl Iterator<Item = (&ndc::FieldName, &Type<S>)> {
         self.fields
             .iter()
-            .map(|(name, field)| (name.as_ref(), field))
+            .map(|(name, field)| (name, field))
     }
 }
 
@@ -46,9 +47,9 @@ impl<S> ObjectType<S> {
 /// - query plan types are parameterized over the specific scalar type for a connector instead of
 ///   referencing scalar types by name
 pub fn inline_object_types<ScalarType>(
-    object_types: &BTreeMap<String, ndc::ObjectType>,
+    object_types: &BTreeMap<ndc::ObjectTypeName, ndc::ObjectType>,
     t: &ndc::Type,
-    lookup_scalar_type: fn(&str) -> Option<ScalarType>,
+    lookup_scalar_type: fn(&ndc::ScalarTypeName) -> Option<ScalarType>,
 ) -> Result<Type<ScalarType>, QueryPlanError> {
     let plan_type =
         match t {
@@ -67,28 +68,28 @@ pub fn inline_object_types<ScalarType>(
 }
 
 fn lookup_type<ScalarType>(
-    object_types: &BTreeMap<String, ndc::ObjectType>,
-    name: &str,
-    lookup_scalar_type: fn(&str) -> Option<ScalarType>,
+    object_types: &BTreeMap<ndc::ObjectTypeName, ndc::ObjectType>,
+    name: &ndc::TypeName,
+    lookup_scalar_type: fn(&ndc::ScalarTypeName) -> Option<ScalarType>,
 ) -> Result<plan::Type<ScalarType>, QueryPlanError> {
-    if let Some(scalar_type) = lookup_scalar_type(name) {
+    if let Some(scalar_type) = lookup_scalar_type(ndc::ScalarTypeName::ref_cast(name)) {
         return Ok(Type::Scalar(scalar_type));
     }
-    let object_type = lookup_object_type_helper(object_types, name, lookup_scalar_type)?;
+    let object_type = lookup_object_type_helper(object_types, ndc::ObjectTypeName::ref_cast(name), lookup_scalar_type)?;
     Ok(Type::Object(object_type))
 }
 
 fn lookup_object_type_helper<ScalarType>(
-    object_types: &BTreeMap<String, ndc::ObjectType>,
-    name: &str,
-    lookup_scalar_type: fn(&str) -> Option<ScalarType>,
+    object_types: &BTreeMap<ndc::ObjectTypeName, ndc::ObjectType>,
+    name: &ndc::ObjectTypeName,
+    lookup_scalar_type: fn(&ndc::ScalarTypeName) -> Option<ScalarType>,
 ) -> Result<plan::ObjectType<ScalarType>, QueryPlanError> {
     let object_type = object_types
         .get(name)
         .ok_or_else(|| QueryPlanError::UnknownObjectType(name.to_string()))?;
 
     let plan_object_type = plan::ObjectType {
-        name: Some(name.to_owned()),
+        name: Some(name.clone().into()),
         fields: object_type
             .fields
             .iter()
@@ -104,9 +105,9 @@ fn lookup_object_type_helper<ScalarType>(
 }
 
 pub fn lookup_object_type<ScalarType>(
-    object_types: &BTreeMap<String, ndc::ObjectType>,
-    name: &str,
-    lookup_scalar_type: fn(&str) -> Option<ScalarType>,
+    object_types: &BTreeMap<ndc::ObjectTypeName, ndc::ObjectType>,
+    name: &ndc::ObjectTypeName,
+    lookup_scalar_type: fn(&ndc::ScalarTypeName) -> Option<ScalarType>,
 ) -> Result<plan::ObjectType<ScalarType>, QueryPlanError> {
     lookup_object_type_helper(object_types, name, lookup_scalar_type)
 }
