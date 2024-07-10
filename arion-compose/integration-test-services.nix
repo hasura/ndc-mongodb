@@ -21,7 +21,7 @@ in
 {
   connector = import ./services/connector.nix {
     inherit pkgs otlp-endpoint;
-    configuration-dir = ../fixtures/connector/sample_mflix;
+    configuration-dir = ../fixtures/hasura/sample_mflix/connector/sample_mflix;
     database-uri = "mongodb://mongodb/sample_mflix";
     port = connector-port;
     hostPort = hostPort connector-port;
@@ -32,7 +32,7 @@ in
 
   connector-chinook = import ./services/connector.nix {
     inherit pkgs otlp-endpoint;
-    configuration-dir = ../fixtures/connector/chinook;
+    configuration-dir = ../fixtures/hasura/chinook/connector/chinook;
     database-uri = "mongodb://mongodb/chinook";
     port = connector-chinook-port;
     hostPort = hostPort connector-chinook-port;
@@ -62,9 +62,9 @@ in
       sample_mflix = "http://connector:${connector-port}";
     };
     ddn-dirs = [
-      ../fixtures/ddn/chinook
-      ../fixtures/ddn/sample_mflix
-      ../fixtures/ddn/remote-relationships_chinook-sample_mflix
+      ../fixtures/hasura/chinook/metadata
+      ../fixtures/hasura/sample_mflix/metadata
+      # ../fixtures/ddn/remote-relationships_chinook-sample_mflix
     ];
     service.depends_on = {
       auth-hook.condition = "service_started";
