@@ -20,6 +20,8 @@ use ndc_sdk::{
     },
 };
 
+use crate::error_mapping::error_response;
+
 pub async fn handle_mutation_request(
     config: &MongoConfiguration,
     state: &ConnectorState,
@@ -57,7 +59,7 @@ fn look_up_procedures<'a, 'b>(
                 fields,
             } => {
                 let native_mutation = config.native_mutations().get(name);
-                let procedure = native_mutation.ok_or(name).map(|native_mutation| {
+                let procedure = native_mutation.ok_or(name.to_string()).map(|native_mutation| {
                     Procedure::from_native_mutation(native_mutation, arguments.clone())
                 })?;
                 Ok((procedure, fields.as_ref()))
@@ -66,9 +68,11 @@ fn look_up_procedures<'a, 'b>(
         .partition_result();
 
     if !not_found.is_empty() {
-        return Err(MutationError::UnprocessableContent(format!(
-            "request includes unknown mutations: {}",
-            not_found.join(", ")
+        return Err(MutationError::UnprocessableContent(error_response(
+            format!(
+                "request includes unknown mutations: {}",
+                not_found.join(", ")
+            ),
         )));
     }
 
@@ -85,7 +89,7 @@ async fn execute_procedure(
     let (result, result_type) = procedure
         .execute(database.clone())
         .await
-        .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?;
+        .map_err(|err| MutationError::UnprocessableContent(error_response(err.to_string())))?;
 
     let rewritten_result = rewrite_response(requested_fields, result.into())?;
 
@@ -96,9 +100,9 @@ async fn execute_procedure(
             &result_type,
             fields.clone(),
         )
-        .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?;
+        .map_err(|err| MutationError::UnprocessableContent(error_response(err.to_string())))?;
         type_for_nested_field(&[], &result_type, &plan_field)
-            .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?
+            .map_err(|err| MutationError::UnprocessableContent(error_response(err.to_string())))?
     } else {
         result_type
     };
@@ -108,7 +112,7 @@ async fn execute_procedure(
         &requested_result_type,
         rewritten_result,
     )
-    .map_err(|err| MutationError::UnprocessableContent(err.to_string()))?;
+    .map_err(|err| MutationError::UnprocessableContent(error_response(err.to_string())))?;
 
     Ok(MutationOperationResults::Procedure {
         result: json_result,
@@ -132,10 +136,10 @@ fn rewrite_response(
         }
 
         (Some(NestedField::Object(_)), _) => Err(MutationError::UnprocessableContent(
-            "expected an object".to_owned(),
+            error_response("expected an object".to_owned()),
         )),
         (Some(NestedField::Array(_)), _) => Err(MutationError::UnprocessableContent(
-            "expected an array".to_owned(),
+            error_response("expected an array".to_owned()),
         )),
     }
 }
@@ -155,15 +159,15 @@ fn rewrite_doc(
                     arguments: _,
                 } => {
                     let orig_value = doc.remove(column.as_str()).ok_or_else(|| {
-                        MutationError::UnprocessableContent(format!(
+                        MutationError::UnprocessableContent(error_response(format!(
                             "missing expected field from response: {name}"
-                        ))
+                        )))
                     })?;
                     rewrite_response(fields.as_ref(), orig_value)
                 }
                 ndc::Field::Relationship { .. } => Err(MutationError::UnsupportedOperation(
-                    "The MongoDB connector does not support relationship references in mutations"
-                        .to_owned(),
+                    error_response("The MongoDB connector does not support relationship references in mutations"
+                        .to_owned()),
                 )),
             }?;
 

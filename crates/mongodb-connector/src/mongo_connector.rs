@@ -17,9 +17,10 @@ use ndc_sdk::{
         Capabilities, ExplainResponse, MutationRequest, MutationResponse, QueryRequest, QueryResponse, SchemaResponse
     },
 };
+use serde_json::Value;
 use tracing::instrument;
 
-use crate::error_mapping::{mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error};
+use crate::error_mapping::{error_response, mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error};
 use crate::{capabilities::mongo_capabilities, mutation::handle_mutation_request};
 
 #[derive(Clone, Default)]
@@ -77,10 +78,10 @@ impl Connector for MongoConnector {
     ) -> Result<(), HealthError> {
         let status = check_health(state)
             .await
-            .map_err(|e| HealthError::Other(e.into()))?;
+            .map_err(|e| HealthError::Other(e.into(), Value::Object(Default::default())))?;
         match status.as_u16() {
             200..=299 => Ok(()),
-            s => Err(HealthError::Other(anyhow!("unhealthy status: {s}").into())),
+            s => Err(HealthError::Other(anyhow!("unhealthy status: {s}").into(), Value::Object(Default::default()))),
         }
     }
 
@@ -115,7 +116,7 @@ impl Connector for MongoConnector {
         _request: MutationRequest,
     ) -> Result<JsonResponse<ExplainResponse>, ExplainError> {
         Err(ExplainError::UnsupportedOperation(
-            "Explain for mutations is not implemented yet".to_owned(),
+            error_response("Explain for mutations is not implemented yet".to_owned()),
         ))
     }
 
