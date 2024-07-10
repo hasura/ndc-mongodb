@@ -43,7 +43,9 @@
         },
         "fullplot": {
           "type": {
-            "scalar": "string"
+            "nullable": {
+              "scalar": "string"
+            }
           }
         },
         "genres": {
@@ -60,8 +62,10 @@
         },
         "languages": {
           "type": {
-            "arrayOf": {
-              "scalar": "string"
+            "nullable": {
+              "arrayOf": {
+                "scalar": "string"
+              }
             }
           }
         },
@@ -86,12 +90,16 @@
         },
         "plot": {
           "type": {
-            "scalar": "string"
+            "nullable": {
+              "scalar": "string"
+            }
           }
         },
         "poster": {
           "type": {
-            "scalar": "string"
+            "nullable": {
+              "scalar": "string"
+            }
           }
         },
         "rated": {
@@ -103,12 +111,16 @@
         },
         "released": {
           "type": {
-            "scalar": "date"
+            "nullable": {
+              "scalar": "date"
+            }
           }
         },
         "runtime": {
           "type": {
-            "scalar": "int"
+            "nullable": {
+              "scalar": "int"
+            }
           }
         },
         "title": {
@@ -118,7 +130,9 @@
         },
         "tomatoes": {
           "type": {
-            "object": "movies_tomatoes"
+            "nullable": {
+              "object": "movies_tomatoes"
+            }
           }
         },
         "type": {
@@ -128,8 +142,10 @@
         },
         "writers": {
           "type": {
-            "arrayOf": {
-              "scalar": "string"
+            "nullable": {
+              "arrayOf": {
+                "scalar": "string"
+              }
             }
           }
         },
@@ -252,6 +268,25 @@
       "fields": {
         "meter": {
           "type": {
+            "scalar": "int"
+          }
+        },
+        "numReviews": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "rating": {
+          "type": {
+            "scalar": "double"
+          }
+        }
+      }
+    },
+    "movies_tomatoes_viewer": {
+      "fields": {
+        "meter": {
+          "type": {
             "nullable": {
               "scalar": "int"
             }
@@ -264,30 +299,7 @@
         },
         "rating": {
           "type": {
-            "nullable": {
-              "scalar": "double"
-            }
-          }
-        }
-      }
-    },
-    "movies_tomatoes_viewer": {
-      "fields": {
-        "meter": {
-          "type": {
-            "scalar": "int"
-          }
-        },
-        "numReviews": {
-          "type": {
-            "scalar": "int"
-          }
-        },
-        "rating": {
-          "type": {
-            "nullable": {
-              "scalar": "double"
-            }
+            "scalar": "double"
           }
         }
       }
