@@ -25,6 +25,29 @@ async fn runs_a_query() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn filters_by_date() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+                query ($dateInput: Date) {
+                  movies(
+                    order_by: {id: Asc},
+                    where: {released: {_gt: $dateInput}}
+                  ) {
+                    title
+                    released
+                  }
+                }
+            "#
+        )
+        .variables(json!({ "dateInput": "2016-03-01T00:00Z" }))
+        .run()
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn sorts_string_column_value_by_date() -> anyhow::Result<()> {
     assert_yaml_snapshot!(
         graphql_query(
@@ -41,7 +64,7 @@ async fn sorts_string_column_value_by_date() -> anyhow::Result<()> {
                 }
             "#
         )
-        .variables(json!({ "dateInput": "2016-01-01" }))
+        .variables(json!({ "dateInput": "2016-01-01T00:00Z" }))
         .run()
         .await?
     );
