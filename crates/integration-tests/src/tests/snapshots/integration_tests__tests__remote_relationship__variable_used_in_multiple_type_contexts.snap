@@ -1,0 +1,33 @@
+---
+source: crates/integration-tests/src/tests/remote_relationship.rs
+expression: "run_connector_query(query_request().variables([[(\"dateInput\",\n                                            \"2015-09-15T00:00Z\")]]).collection(\"movies\").query(query().predicate(and([binop(\"_gt\",\n                                                target!(\"released\"), variable!(dateInput)),\n                                            binop(\"_gt\", target!(\"lastupdated\"),\n                                                variable!(dateInput))])).order_by([asc!(\"_id\")]).limit(20).fields([field!(\"_id\"),\n                            field!(\"title\"), field!(\"released\"),\n                            field!(\"lastupdated\")]))).await?"
+---
+- rows:
+    - _id: 573a13d3f29313caabd967ef
+      lastupdated: "2015-09-17 03:51:47.073000000"
+      released: "2015-11-01T00:00:00.000000000Z"
+      title: Another World
+    - _id: 573a13eaf29313caabdcfa99
+      lastupdated: "2015-09-16 07:39:43.980000000"
+      released: "2015-10-02T00:00:00.000000000Z"
+      title: Sicario
+    - _id: 573a13ebf29313caabdd0792
+      lastupdated: "2015-09-16 13:01:10.653000000"
+      released: "2015-11-04T00:00:00.000000000Z"
+      title: April and the Extraordinary World
+    - _id: 573a13f0f29313caabdd9b5d
+      lastupdated: "2015-09-17 04:41:09.897000000"
+      released: "2015-09-17T00:00:00.000000000Z"
+      title: The Wait
+    - _id: 573a13f1f29313caabddc788
+      lastupdated: "2015-09-17 03:17:32.967000000"
+      released: "2015-12-18T00:00:00.000000000Z"
+      title: Son of Saul
+    - _id: 573a13f2f29313caabddd3b6
+      lastupdated: "2015-09-17 02:59:54.573000000"
+      released: "2016-01-13T00:00:00.000000000Z"
+      title: Bang Gang (A Modern Love Story)
+    - _id: 573a13f4f29313caabde0bfd
+      lastupdated: "2015-09-17 02:00:44.673000000"
+      released: "2016-02-19T00:00:00.000000000Z"
+      title: Shut In
