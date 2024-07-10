@@ -5,4 +5,4 @@ definition:
   subgraph: chinook
   source: hasura/mongodb:v0.1.0
   context: .
-  envFile: .env.local
+  envFile: .env

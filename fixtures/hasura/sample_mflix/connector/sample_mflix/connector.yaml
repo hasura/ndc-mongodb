@@ -1,8 +1,8 @@
 kind: Connector
 version: v1
 definition:
-  name: chinook
-  subgraph: chinook
+  name: sample_mflix
+  subgraph: sample_mflix
   source: hasura/mongodb:v0.1.0
   context: .
-  envFile: .env.local
+  envFile: .env
