@@ -7,14 +7,6 @@ definition:
     typeName: ObjectId
 
 ---
-kind: ScalarType
-version: v1
-definition:
-  name: Date
-  graphql:
-    typeName: Date
-
----
 kind: DataConnectorScalarRepresentation
 version: v1
 definition:
@@ -23,6 +15,14 @@ definition:
   representation: ObjectId
   graphql:
     comparisonExpressionTypeName: ObjectIdComparisonExp
+
+---
+kind: ScalarType
+version: v1
+definition:
+  name: Date
+  graphql:
+    typeName: Date
 
 ---
 kind: DataConnectorScalarRepresentation
@@ -73,11 +73,21 @@ definition:
     comparisonExpressionTypeName: ExtendedJsonComparisonExp
 
 ---
+kind: ScalarType
+version: v1
+definition:
+  name: Double
+  graphql:
+    typeName: Double
+
+---
 kind: DataConnectorScalarRepresentation
 version: v1
 definition:
   dataConnectorName: sample_mflix
   dataConnectorScalarType: Double
-  representation: Float
+  representation: Double
   graphql:
     comparisonExpressionTypeName: DoubleComparisonExp
+
+

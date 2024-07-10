@@ -517,22 +517,6 @@ definition:
                 type: named
                 name: Undefined
       object_types:
-        Hello:
-          fields:
-            __value:
-              type:
-                type: named
-                name: String
-        TitleWordFrequency:
-          fields:
-            _id:
-              type:
-                type: named
-                name: String
-            count:
-              type:
-                type: named
-                name: Int
         comments:
           fields:
             _id:
@@ -914,15 +898,6 @@ definition:
               unique_columns:
                 - _id
           foreign_keys: {}
-        - name: title_word_frequency
-          description: words appearing in movie titles with counts
-          arguments: {}
-          type: TitleWordFrequency
-          uniqueness_constraints:
-            title_word_frequency_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
         - name: users
           arguments: {}
           type: users
@@ -931,17 +906,7 @@ definition:
               unique_columns:
                 - _id
           foreign_keys: {}
-      functions:
-        - name: hello
-          description: Basic test of native queries
-          arguments:
-            name:
-              type:
-                type: named
-                name: String
-          result_type:
-            type: named
-            name: String
+      functions: []
       procedures: []
     capabilities:
       version: 0.1.4
@@ -950,6 +915,9 @@ definition:
           aggregates: {}
           variables: {}
           explain: {}
+          nested_fields:
+            filter_by: {}
+            order_by: {}
         mutation: {}
         relationships:
           relation_comparisons: {}
