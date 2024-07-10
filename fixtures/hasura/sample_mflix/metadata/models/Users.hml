@@ -12,6 +12,8 @@ definition:
       type: String!
     - name: password
       type: String!
+    - name: preferences
+      type: UsersPreferences
   graphql:
     typeName: Users
     inputTypeName: UsersInput
@@ -31,6 +33,9 @@ definition:
         password:
           column:
             name: password
+        preferences:
+          column:
+            name: preferences
 
 ---
 kind: TypePermissions
@@ -45,6 +50,7 @@ definition:
           - email
           - name
           - password
+          - preferences
     - role: user
       output:
         allowedFields:
@@ -73,6 +79,9 @@ definition:
     - fieldName: password
       operators:
         enableAll: true
+    - fieldName: preferences
+      operators:
+        enableAll: true
   graphql:
     typeName: UsersBoolExp
 
@@ -99,6 +108,9 @@ definition:
     - fieldName: password
       orderByDirections:
         enableAll: true
+    - fieldName: preferences
+      orderByDirections:
+        enableAll: true
   graphql:
     selectMany:
       queryRootField: users
@@ -119,9 +131,33 @@ definition:
         filter: null
     - role: user
       select:
-        filter: 
+        filter:
           fieldComparison:
             field: id
             operator: _eq
-            value: 
+            value:
               sessionVariable: x-hasura-user-id
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: UsersPreferences
+  fields: []
+  graphql:
+    typeName: SampleMflix_UsersPreferences
+    inputTypeName: SampleMflix_UsersPreferencesInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: users_preferences
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: UsersPreferences
+  permissions:
+    - role: admin
+      output:
+        allowedFields: []
+

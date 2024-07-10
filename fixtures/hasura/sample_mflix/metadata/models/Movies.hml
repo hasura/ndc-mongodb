@@ -69,11 +69,11 @@ definition:
   name: MoviesTomatoesCritic
   fields:
     - name: meter
-      type: Int
+      type: Int!
     - name: numReviews
       type: Int!
     - name: rating
-      type: Double
+      type: Double!
   graphql:
     typeName: MoviesTomatoesCritic
     inputTypeName: MoviesTomatoesCriticInput
@@ -101,11 +101,11 @@ definition:
   name: MoviesTomatoesViewer
   fields:
     - name: meter
-      type: Int!
+      type: Int
     - name: numReviews
       type: Int!
     - name: rating
-      type: Double
+      type: Double!
   graphql:
     typeName: MoviesTomatoesViewer
     inputTypeName: MoviesTomatoesViewerInput
@@ -196,13 +196,13 @@ definition:
     - name: directors
       type: "[String!]!"
     - name: fullplot
-      type: String!
+      type: String
     - name: genres
       type: "[String!]!"
     - name: imdb
       type: MoviesImdb!
     - name: languages
-      type: "[String!]!"
+      type: "[String!]"
     - name: lastupdated
       type: String!
     - name: metacritic
@@ -210,23 +210,23 @@ definition:
     - name: numMflixComments
       type: Int
     - name: plot
-      type: String!
+      type: String
     - name: poster
-      type: String!
+      type: String
     - name: rated
       type: String
     - name: released
-      type: Date!
+      type: Date
     - name: runtime
-      type: Int!
+      type: Int
     - name: title
       type: String!
     - name: tomatoes
-      type: MoviesTomatoes!
+      type: MoviesTomatoes
     - name: type
       type: String!
     - name: writers
-      type: "[String!]!"
+      type: "[String!]"
     - name: year
       type: Int!
   graphql:

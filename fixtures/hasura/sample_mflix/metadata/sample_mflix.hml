@@ -591,8 +591,10 @@ definition:
                   name: String
             fullplot:
               type:
-                type: named
-                name: String
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
             genres:
               type:
                 type: array
@@ -605,10 +607,12 @@ definition:
                 name: movies_imdb
             languages:
               type:
-                type: array
-                element_type:
-                  type: named
-                  name: String
+                type: nullable
+                underlying_type:
+                  type: array
+                  element_type:
+                    type: named
+                    name: String
             lastupdated:
               type:
                 type: named
@@ -627,12 +631,16 @@ definition:
                   name: Int
             plot:
               type:
-                type: named
-                name: String
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
             poster:
               type:
-                type: named
-                name: String
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
             rated:
               type:
                 type: nullable
@@ -641,30 +649,38 @@ definition:
                   name: String
             released:
               type:
-                type: named
-                name: Date
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Date
             runtime:
               type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
             title:
               type:
                 type: named
                 name: String
             tomatoes:
               type:
-                type: named
-                name: movies_tomatoes
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: movies_tomatoes
             type:
               type:
                 type: named
                 name: String
             writers:
               type:
-                type: array
-                element_type:
-                  type: named
-                  name: String
+                type: nullable
+                underlying_type:
+                  type: array
+                  element_type:
+                    type: named
+                    name: String
             year:
               type:
                 type: named
@@ -759,6 +775,20 @@ definition:
           fields:
             meter:
               type:
+                type: named
+                name: Int
+            numReviews:
+              type:
+                type: named
+                name: Int
+            rating:
+              type:
+                type: named
+                name: Double
+        movies_tomatoes_viewer:
+          fields:
+            meter:
+              type:
                 type: nullable
                 underlying_type:
                   type: named
@@ -769,26 +799,8 @@ definition:
                 name: Int
             rating:
               type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Double
-        movies_tomatoes_viewer:
-          fields:
-            meter:
-              type:
                 type: named
-                name: Int
-            numReviews:
-              type:
-                type: named
-                name: Int
-            rating:
-              type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Double
+                name: Double
         sessions:
           fields:
             _id:
@@ -881,6 +893,14 @@ definition:
               type:
                 type: named
                 name: String
+            preferences:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: users_preferences
+        users_preferences:
+          fields: {}
       collections:
         - name: comments
           arguments: {}

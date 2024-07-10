@@ -24,7 +24,9 @@ $ ddn connector introspect --connector sample_mflix/connector/sample_mflix/conne
 $ ddn connector introspect --connector chinook/connector/chinook/connector.yaml
 ```
 
-Update ddn based on connector configuration:
+Update Hasura metadata based on connector configuration
+(after restarting connectors with `arion up -d` if there were changes from
+introspection):
 
 ```sh
 $ ddn connector-link update sample_mflix --subgraph sample_mflix/subgraph.yaml --env-file sample_mflix/.env.sample_mflix --add-all-resources
