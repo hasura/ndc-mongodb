@@ -64,7 +64,7 @@ in
     ddn-dirs = [
       ../fixtures/hasura/chinook/metadata
       ../fixtures/hasura/sample_mflix/metadata
-      # ../fixtures/ddn/remote-relationships_chinook-sample_mflix
+      ../fixtures/hasura/common/metadata
     ];
     service.depends_on = {
       auth-hook.condition = "service_started";
