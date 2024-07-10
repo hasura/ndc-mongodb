@@ -154,7 +154,7 @@ fn rewrite_doc(
                     fields,
                     arguments: _,
                 } => {
-                    let orig_value = doc.remove(column).ok_or_else(|| {
+                    let orig_value = doc.remove(column.as_str()).ok_or_else(|| {
                         MutationError::UnprocessableContent(format!(
                             "missing expected field from response: {name}"
                         ))
@@ -167,7 +167,7 @@ fn rewrite_doc(
                 )),
             }?;
 
-            Ok((name.clone(), field_value))
+            Ok((name.to_string(), field_value))
         })
         .try_collect()
 }

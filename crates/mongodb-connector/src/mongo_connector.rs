@@ -14,8 +14,7 @@ use ndc_sdk::{
     },
     json_response::JsonResponse,
     models::{
-        CapabilitiesResponse, ExplainResponse, MutationRequest, MutationResponse, QueryRequest,
-        QueryResponse, SchemaResponse,
+        Capabilities, ExplainResponse, MutationRequest, MutationResponse, QueryRequest, QueryResponse, SchemaResponse
     },
 };
 use tracing::instrument;
@@ -85,7 +84,7 @@ impl Connector for MongoConnector {
         }
     }
 
-    async fn get_capabilities() -> CapabilitiesResponse {
+    async fn get_capabilities() -> Capabilities {
         mongo_capabilities()
     }
 
