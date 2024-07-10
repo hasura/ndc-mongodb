@@ -27,12 +27,20 @@ definition:
     comparisonExpressionTypeName: Chinook_IntComparisonExp
 
 ---
+kind: ScalarType
+version: v1
+definition:
+  name: Double
+  graphql:
+    typeName: Chinook_Double
+
+---
 kind: DataConnectorScalarRepresentation
 version: v1
 definition:
   dataConnectorName: chinook
   dataConnectorScalarType: Double
-  representation: Float
+  representation: Double
   graphql:
     comparisonExpressionTypeName: Chinook_DoubleComparisonExp
 
@@ -81,3 +89,4 @@ definition:
   representation: Chinook_ExtendedJson
   graphql:
     comparisonExpressionTypeName: Chinook_ExtendedJsonComparisonExp
+
