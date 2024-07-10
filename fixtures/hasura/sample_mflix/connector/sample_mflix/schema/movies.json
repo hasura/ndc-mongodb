@@ -71,7 +71,7 @@
         },
         "lastupdated": {
           "type": {
-            "scalar": "date"
+            "scalar": "string"
           }
         },
         "metacritic": {

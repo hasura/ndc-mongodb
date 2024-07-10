@@ -143,7 +143,7 @@ definition:
     - name: fresh
       type: Int
     - name: lastUpdated
-      type: Date!
+      type: String!
     - name: production
       type: String
     - name: rotten
