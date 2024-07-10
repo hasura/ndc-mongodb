@@ -44,7 +44,7 @@ pub async fn read_directory(
 ) -> anyhow::Result<Configuration> {
     let dir = configuration_dir.as_ref();
 
-    let schemas = read_subdir_configs(&dir.join(SCHEMA_DIRNAME))
+    let schemas = read_subdir_configs::<String, Schema>(&dir.join(SCHEMA_DIRNAME))
         .await?
         .unwrap_or_default();
     let schema = schemas.into_values().fold(Schema::default(), Schema::merge);
@@ -75,16 +75,17 @@ pub async fn read_directory(
 /// json and yaml files in the given directory should be parsed as native mutation configurations.
 ///
 /// Assumes that every configuration file has a `name` field.
-async fn read_subdir_configs<T>(subdir: &Path) -> anyhow::Result<Option<BTreeMap<String, T>>>
+async fn read_subdir_configs<N, T>(subdir: &Path) -> anyhow::Result<Option<BTreeMap<N, T>>>
 where
     for<'a> T: Deserialize<'a>,
+    for<'a> N: Ord + ToString + Deserialize<'a>,
 {
     if !(fs::try_exists(subdir).await?) {
         return Ok(None);
     }
 
     let dir_stream = ReadDirStream::new(fs::read_dir(subdir).await?);
-    let configs: Vec<WithName<String, T>> = dir_stream
+    let configs: Vec<WithName<N, T>> = dir_stream
         .map_err(|err| err.into())
         .try_filter_map(|dir_entry| async move {
             // Permits regular files and symlinks, does not filter out symlinks to directories.
@@ -106,15 +107,15 @@ where
 
             Ok(format_option.map(|format| (path, format)))
         })
-        .and_then(
-            |(path, format)| async move { parse_config_file::<WithName<String, T>>(path, format).await },
-        )
+        .and_then(|(path, format)| async move {
+            parse_config_file::<WithName<N, T>>(path, format).await
+        })
         .try_collect()
         .await?;
 
     let duplicate_names = configs
         .iter()
-        .map(|c| c.name.as_ref())
+        .map(|c| c.name.to_string())
         .duplicates()
         .collect::<Vec<_>>();
 
@@ -222,7 +223,7 @@ pub async fn list_existing_schemas(
     let dir = configuration_dir.as_ref();
 
     // TODO: we don't really need to read and parse all the schema files here, just get their names.
-    let schemas = read_subdir_configs::<Schema>(&dir.join(SCHEMA_DIRNAME))
+    let schemas = read_subdir_configs::<_, Schema>(&dir.join(SCHEMA_DIRNAME))
         .await?
         .unwrap_or_default();
 

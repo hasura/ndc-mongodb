@@ -15,19 +15,20 @@ pub enum MongoScalarType {
 }
 
 impl MongoScalarType {
-    pub fn lookup_scalar_type(name: &str) -> Option<Self> {
+    pub fn lookup_scalar_type(name: &ndc_models::ScalarTypeName) -> Option<Self> {
         Self::try_from(name).ok()
     }
 }
 
-impl TryFrom<&str> for MongoScalarType {
+impl TryFrom<&ndc_models::ScalarTypeName> for MongoScalarType {
     type Error = QueryPlanError;
 
-    fn try_from(name: &str) -> Result<Self, Self::Error> {
-        if name == EXTENDED_JSON_TYPE_NAME {
+    fn try_from(name: &ndc_models::ScalarTypeName) -> Result<Self, Self::Error> {
+        let name_str = name.to_string();
+        if name_str == EXTENDED_JSON_TYPE_NAME {
             Ok(MongoScalarType::ExtendedJSON)
         } else {
-            let t = BsonScalarType::from_bson_name(name)
+            let t = BsonScalarType::from_bson_name(&name_str)
                 .map_err(|_| QueryPlanError::UnknownScalarType(name.to_owned()))?;
             Ok(MongoScalarType::Bson(t))
         }
