@@ -1749,6 +1749,7 @@ dependencies = [
  "mongodb",
  "mongodb-agent-common",
  "mongodb-support",
+ "ndc-models",
  "proptest",
  "serde",
  "serde_json",

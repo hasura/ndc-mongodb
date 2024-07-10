@@ -12,8 +12,8 @@ use mongodb::bson::{doc, Bson, Document};
 use mongodb_agent_common::state::ConnectorState;
 use mongodb_support::BsonScalarType::{self, *};
 
-type ObjectField = WithName<schema::ObjectField>;
-type ObjectType = WithName<schema::ObjectType>;
+type ObjectField = WithName<ndc_models::FieldName, schema::ObjectField>;
+type ObjectType = WithName<ndc_models::ObjectTypeName, schema::ObjectType>;
 
 /// Sample from all collections in the database and return a Schema.
 /// Return an error if there are any errors accessing the database
@@ -66,7 +66,7 @@ async fn sample_schema_from_collection(
     let is_collection_type = true;
     while let Some(document) = cursor.try_next().await? {
         let object_types = make_object_type(
-            collection_name,
+            &collection_name.into(),
             &document,
             is_collection_type,
             all_schema_nullable,
@@ -81,10 +81,10 @@ async fn sample_schema_from_collection(
         Ok(None)
     } else {
         let collection_info = WithName::named(
-            collection_name.to_string(),
+            collection_name.into(),
             schema::Collection {
                 description: None,
-                r#type: collection_name.to_string(),
+                r#type: collection_name.into(),
             },
         );
         Ok(Some(Schema {
@@ -95,7 +95,7 @@ async fn sample_schema_from_collection(
 }
 
 fn make_object_type(
-    object_type_name: &str,
+    object_type_name: &ndc_models::ObjectTypeName,
     document: &Document,
     is_collection_type: bool,
     all_schema_nullable: bool,
@@ -118,7 +118,7 @@ fn make_object_type(
     };
 
     let object_type = WithName::named(
-        object_type_name.to_string(),
+        object_type_name.to_owned(),
         schema::ObjectType {
             description: None,
             fields: WithName::into_map(object_fields),
@@ -140,7 +140,7 @@ fn make_object_field(
     let (collected_otds, field_type) =
         make_field_type(&object_type_name, field_value, all_schema_nullable);
     let object_field_value = WithName::named(
-        field_name.to_owned(),
+        field_name.into(),
         schema::ObjectField {
             description: None,
             r#type: field_type,
@@ -161,7 +161,7 @@ pub fn type_from_bson(
     object_type_name: &str,
     value: &Bson,
     all_schema_nullable: bool,
-) -> (BTreeMap<std::string::String, schema::ObjectType>, Type) {
+) -> (BTreeMap<ndc_models::ObjectTypeName, schema::ObjectType>, Type) {
     let (object_types, t) = make_field_type(object_type_name, value, all_schema_nullable);
     (WithName::into_map(object_types), t)
 }
@@ -196,7 +196,7 @@ fn make_field_type(
         Bson::Document(document) => {
             let is_collection_type = false;
             let collected_otds = make_object_type(
-                object_type_name,
+                &object_type_name.into(),
                 document,
                 is_collection_type,
                 all_schema_nullable,
@@ -238,24 +238,24 @@ mod tests {
 
     #[test]
     fn simple_doc() -> Result<(), anyhow::Error> {
-        let object_name = "foo";
+        let object_name = "foo".into();
         let doc = doc! {"my_int": 1, "my_string": "two"};
         let result =
-            WithName::into_map::<BTreeMap<_, _>>(make_object_type(object_name, &doc, false, false));
+            WithName::into_map::<BTreeMap<_, _>>(make_object_type(&object_name, &doc, false, false));
 
         let expected = BTreeMap::from([(
             object_name.to_owned(),
             ObjectType {
                 fields: BTreeMap::from([
                     (
-                        "my_int".to_owned(),
+                        "my_int".into(),
                         ObjectField {
                             r#type: Type::Scalar(BsonScalarType::Int),
                             description: None,
                         },
                     ),
                     (
-                        "my_string".to_owned(),
+                        "my_string".into(),
                         ObjectField {
                             r#type: Type::Scalar(BsonScalarType::String),
                             description: None,
@@ -273,31 +273,31 @@ mod tests {
 
     #[test]
     fn simple_doc_nullable_fields() -> Result<(), anyhow::Error> {
-        let object_name = "foo";
+        let object_name = "foo".into();
         let doc = doc! {"my_int": 1, "my_string": "two", "_id": 0};
         let result =
-            WithName::into_map::<BTreeMap<_, _>>(make_object_type(object_name, &doc, true, true));
+            WithName::into_map::<BTreeMap<_, _>>(make_object_type(&object_name, &doc, true, true));
 
         let expected = BTreeMap::from([(
             object_name.to_owned(),
             ObjectType {
                 fields: BTreeMap::from([
                     (
-                        "_id".to_owned(),
+                        "_id".into(),
                         ObjectField {
                             r#type: Type::Scalar(BsonScalarType::Int),
                             description: None,
                         },
                     ),
                     (
-                        "my_int".to_owned(),
+                        "my_int".into(),
                         ObjectField {
                             r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::Int))),
                             description: None,
                         },
                     ),
                     (
-                        "my_string".to_owned(),
+                        "my_string".into(),
                         ObjectField {
                             r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::String))),
                             description: None,
@@ -315,32 +315,32 @@ mod tests {
 
     #[test]
     fn array_of_objects() -> Result<(), anyhow::Error> {
-        let object_name = "foo";
+        let object_name = "foo".into();
         let doc = doc! {"my_array": [{"foo": 42, "bar": ""}, {"bar": "wut", "baz": 3.77}]};
         let result =
-            WithName::into_map::<BTreeMap<_, _>>(make_object_type(object_name, &doc, false, false));
+            WithName::into_map::<BTreeMap<_, _>>(make_object_type(&object_name, &doc, false, false));
 
         let expected = BTreeMap::from([
             (
-                "foo_my_array".to_owned(),
+                "foo_my_array".into(),
                 ObjectType {
                     fields: BTreeMap::from([
                         (
-                            "foo".to_owned(),
+                            "foo".into(),
                             ObjectField {
                                 r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::Int))),
                                 description: None,
                             },
                         ),
                         (
-                            "bar".to_owned(),
+                            "bar".into(),
                             ObjectField {
                                 r#type: Type::Scalar(BsonScalarType::String),
                                 description: None,
                             },
                         ),
                         (
-                            "baz".to_owned(),
+                            "baz".into(),
                             ObjectField {
                                 r#type: Type::Nullable(Box::new(Type::Scalar(
                                     BsonScalarType::Double,
@@ -356,7 +356,7 @@ mod tests {
                 object_name.to_owned(),
                 ObjectType {
                     fields: BTreeMap::from([(
-                        "my_array".to_owned(),
+                        "my_array".into(),
                         ObjectField {
                             r#type: Type::ArrayOf(Box::new(Type::Object(
                                 "foo_my_array".to_owned(),
@@ -376,32 +376,32 @@ mod tests {
 
     #[test]
     fn non_unifiable_array_of_objects() -> Result<(), anyhow::Error> {
-        let object_name = "foo";
+        let object_name = "foo".into();
         let doc = doc! {"my_array": [{"foo": 42, "bar": ""}, {"bar": 17, "baz": 3.77}]};
         let result =
-            WithName::into_map::<BTreeMap<_, _>>(make_object_type(object_name, &doc, false, false));
+            WithName::into_map::<BTreeMap<_, _>>(make_object_type(&object_name, &doc, false, false));
 
         let expected = BTreeMap::from([
             (
-                "foo_my_array".to_owned(),
+                "foo_my_array".into(),
                 ObjectType {
                     fields: BTreeMap::from([
                         (
-                            "foo".to_owned(),
+                            "foo".into(),
                             ObjectField {
                                 r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::Int))),
                                 description: None,
                             },
                         ),
                         (
-                            "bar".to_owned(),
+                            "bar".into(),
                             ObjectField {
                                 r#type: Type::ExtendedJSON,
                                 description: None,
                             },
                         ),
                         (
-                            "baz".to_owned(),
+                            "baz".into(),
                             ObjectField {
                                 r#type: Type::Nullable(Box::new(Type::Scalar(
                                     BsonScalarType::Double,
@@ -417,7 +417,7 @@ mod tests {
                 object_name.to_owned(),
                 ObjectType {
                     fields: BTreeMap::from([(
-                        "my_array".to_owned(),
+                        "my_array".into(),
                         ObjectField {
                             r#type: Type::ArrayOf(Box::new(Type::Object(
                                 "foo_my_array".to_owned(),

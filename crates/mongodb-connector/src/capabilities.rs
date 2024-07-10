@@ -1,5 +1,5 @@
 use ndc_sdk::models::{
-    Capabilities, CapabilitiesResponse, LeafCapability, NestedFieldCapabilities, QueryCapabilities,
+    Capabilities, LeafCapability, NestedFieldCapabilities, QueryCapabilities,
     RelationshipCapabilities,
 };
 
