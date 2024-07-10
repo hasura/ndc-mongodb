@@ -30,7 +30,7 @@ definition:
 kind: ScalarType
 version: v1
 definition:
-  name: Double
+  name: Chinook_Double
   graphql:
     typeName: Chinook_Double
 
