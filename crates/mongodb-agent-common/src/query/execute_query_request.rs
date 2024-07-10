@@ -63,7 +63,7 @@ async fn execute_query_pipeline(
     // another case where we call `db.aggregate` instead of `db.<collection>.aggregate`.
     let documents = match (target.input_collection(), query_plan.has_variables()) {
         (Some(collection_name), false) => {
-            let collection = database.collection(collection_name);
+            let collection = database.collection(collection_name.as_str());
             collect_response_documents(
                 collection
                     .aggregate(pipeline, None)

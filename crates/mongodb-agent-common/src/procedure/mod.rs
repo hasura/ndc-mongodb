@@ -18,9 +18,9 @@ pub use self::interpolated_command::interpolated_command;
 /// Encapsulates running arbitrary mongodb commands with interpolated arguments
 #[derive(Clone, Debug)]
 pub struct Procedure<'a> {
-    arguments: BTreeMap<String, serde_json::Value>,
+    arguments: BTreeMap<ndc_models::ArgumentName, serde_json::Value>,
     command: Cow<'a, bson::Document>,
-    parameters: Cow<'a, BTreeMap<String, Type>>,
+    parameters: Cow<'a, BTreeMap<ndc_models::ArgumentName, Type>>,
     result_type: Type,
     selection_criteria: Option<Cow<'a, SelectionCriteria>>,
 }
@@ -28,7 +28,7 @@ pub struct Procedure<'a> {
 impl<'a> Procedure<'a> {
     pub fn from_native_mutation(
         native_mutation: &'a NativeMutation,
-        arguments: BTreeMap<String, serde_json::Value>,
+        arguments: BTreeMap<ndc_models::ArgumentName, serde_json::Value>,
     ) -> Self {
         Procedure {
             arguments,
@@ -58,8 +58,8 @@ impl<'a> Procedure<'a> {
 }
 
 fn interpolate(
-    parameters: &BTreeMap<String, Type>,
-    arguments: BTreeMap<String, serde_json::Value>,
+    parameters: &BTreeMap<ndc_models::ArgumentName, Type>,
+    arguments: BTreeMap<ndc_models::ArgumentName, serde_json::Value>,
     command: &bson::Document,
 ) -> Result<bson::Document, ProcedureError> {
     let arguments = arguments

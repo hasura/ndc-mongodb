@@ -61,9 +61,9 @@ pub fn pipeline_for_relations(
 }
 
 fn make_lookup_stage(
-    from: String,
-    column_mapping: &BTreeMap<String, String>,
-    r#as: String,
+    from: ndc_models::CollectionName,
+    column_mapping: &BTreeMap<ndc_models::FieldName, ndc_models::FieldName>,
+    r#as: ndc_models::RelationshipName,
     lookup_pipeline: Pipeline,
     scope: Option<&Scope>,
 ) -> Result<Stage> {
@@ -87,17 +87,17 @@ fn make_lookup_stage(
 
 // TODO: MDB-160 Replace uses of [safe_name] with [ColumnRef].
 fn single_column_mapping_lookup(
-    from: String,
-    source_selector: &str,
-    target_selector: &str,
-    r#as: String,
+    from: ndc_models::CollectionName,
+    source_selector: &ndc_models::FieldName,
+    target_selector: &ndc_models::FieldName,
+    r#as: ndc_models::RelationshipName,
     lookup_pipeline: Pipeline,
     scope: Option<&Scope>,
 ) -> Result<Stage> {
     Ok(Stage::Lookup {
-        from: Some(from),
-        local_field: Some(safe_name(source_selector)?.into_owned()),
-        foreign_field: Some(safe_name(target_selector)?.into_owned()),
+        from: Some(from.to_string()),
+        local_field: Some(safe_name(source_selector.as_str())?.into_owned()),
+        foreign_field: Some(safe_name(target_selector.as_str())?.into_owned()),
         r#let: scope.map(|scope| {
             doc! {
                 name_from_scope(scope): "$$ROOT"
@@ -108,14 +108,14 @@ fn single_column_mapping_lookup(
         } else {
             Some(lookup_pipeline)
         },
-        r#as,
+        r#as: r#as.to_string(),
     })
 }
 
 fn multiple_column_mapping_lookup(
-    from: String,
-    column_mapping: &BTreeMap<String, String>,
-    r#as: String,
+    from: ndc_models::CollectionName,
+    column_mapping: &BTreeMap<ndc_models::FieldName, ndc_models::FieldName>,
+    r#as: ndc_models::RelationshipName,
     lookup_pipeline: Pipeline,
     scope: Option<&Scope>,
 ) -> Result<Stage> {
@@ -123,8 +123,8 @@ fn multiple_column_mapping_lookup(
         .keys()
         .map(|local_field| {
             Ok((
-                variable(local_field),
-                Bson::String(format!("${}", safe_name(local_field)?.into_owned())),
+                variable(local_field.as_str()),
+                Bson::String(format!("${}", safe_name(local_field.as_str())?.into_owned())),
             ))
         })
         .collect::<Result<_>>()?;
@@ -136,15 +136,15 @@ fn multiple_column_mapping_lookup(
     // Creating an intermediate Vec and sorting it is done just to help with testing.
     // A stable order for matchers makes it easier to assert equality between actual
     // and expected pipelines.
-    let mut column_pairs: Vec<(&String, &String)> = column_mapping.iter().collect();
+    let mut column_pairs: Vec<(&ndc_models::FieldName, &ndc_models::FieldName)> = column_mapping.iter().collect();
     column_pairs.sort();
 
     let matchers: Vec<Document> = column_pairs
         .into_iter()
         .map(|(local_field, remote_field)| {
             Ok(doc! { "$eq": [
-                format!("$${}", variable(local_field)),
-                format!("${}", safe_name(remote_field)?)
+                format!("$${}", variable(local_field.as_str())),
+                format!("${}", safe_name(remote_field.as_str())?)
             ] })
         })
         .collect::<Result<_>>()?;
@@ -162,12 +162,12 @@ fn multiple_column_mapping_lookup(
     let pipeline: Option<Pipeline> = pipeline.into();
 
     Ok(Stage::Lookup {
-        from: Some(from),
+        from: Some(from.to_string()),
         local_field: None,
         foreign_field: None,
         r#let: let_bindings.into(),
         pipeline,
-        r#as,
+        r#as: r#as.to_string(),
     })
 }
 

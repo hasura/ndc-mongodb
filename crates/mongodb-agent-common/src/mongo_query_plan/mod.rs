@@ -21,11 +21,11 @@ impl MongoConfiguration {
         self.0.options.serialization_options.extended_json_mode
     }
 
-    pub fn native_queries(&self) -> &BTreeMap<String, NativeQuery> {
+    pub fn native_queries(&self) -> &BTreeMap<ndc::FunctionName, NativeQuery> {
         &self.0.native_queries
     }
 
-    pub fn native_mutations(&self) -> &BTreeMap<String, NativeMutation> {
+    pub fn native_mutations(&self) -> &BTreeMap<ndc::ProcedureName, NativeMutation> {
         &self.0.native_mutations
     }
 }
@@ -37,16 +37,16 @@ impl ConnectorTypes for MongoConfiguration {
 }
 
 impl QueryContext for MongoConfiguration {
-    fn lookup_scalar_type(type_name: &str) -> Option<Self::ScalarType> {
+    fn lookup_scalar_type(type_name: &ndc::ScalarTypeName) -> Option<Self::ScalarType> {
         type_name.try_into().ok()
     }
 
     fn lookup_aggregation_function(
         &self,
         input_type: &Type,
-        function_name: &str,
+        function_name: &ndc::AggregateFunctionName,
     ) -> Result<(Self::AggregateFunction, &ndc::AggregateFunctionDefinition), QueryPlanError> {
-        let function = AggregationFunction::from_graphql_name(function_name)?;
+        let function = AggregationFunction::from_graphql_name(function_name.as_str())?;
         let definition = scalar_type_name(input_type)
             .and_then(|name| SCALAR_TYPES.get(name))
             .and_then(|scalar_type_def| scalar_type_def.aggregate_functions.get(function_name))
@@ -59,12 +59,12 @@ impl QueryContext for MongoConfiguration {
     fn lookup_comparison_operator(
         &self,
         left_operand_type: &Type,
-        operator_name: &str,
+        operator_name: &ndc::ComparisonOperatorName,
     ) -> Result<(Self::ComparisonOperator, &ndc::ComparisonOperatorDefinition), QueryPlanError>
     where
         Self: Sized,
     {
-        let operator = ComparisonFunction::from_graphql_name(operator_name)?;
+        let operator = ComparisonFunction::from_graphql_name(operator_name.as_str())?;
         let definition = scalar_type_name(left_operand_type)
             .and_then(|name| SCALAR_TYPES.get(name))
             .and_then(|scalar_type_def| scalar_type_def.comparison_operators.get(operator_name))
@@ -72,19 +72,19 @@ impl QueryContext for MongoConfiguration {
         Ok((operator, definition))
     }
 
-    fn collections(&self) -> &BTreeMap<String, ndc::CollectionInfo> {
+    fn collections(&self) -> &BTreeMap<ndc::CollectionName, ndc::CollectionInfo> {
         &self.0.collections
     }
 
-    fn functions(&self) -> &BTreeMap<String, (ndc::FunctionInfo, ndc::CollectionInfo)> {
+    fn functions(&self) -> &BTreeMap<ndc::FunctionName, (ndc::FunctionInfo, ndc::CollectionInfo)> {
         &self.0.functions
     }
 
-    fn object_types(&self) -> &BTreeMap<String, ndc::ObjectType> {
+    fn object_types(&self) -> &BTreeMap<ndc::ObjectTypeName, ndc::ObjectType> {
         &self.0.object_types
     }
 
-    fn procedures(&self) -> &BTreeMap<String, ndc::ProcedureInfo> {
+    fn procedures(&self) -> &BTreeMap<ndc::ProcedureName, ndc::ProcedureInfo> {
         &self.0.procedures
     }
 }

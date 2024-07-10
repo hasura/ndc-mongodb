@@ -136,7 +136,7 @@ fn convert_object(object_type: &ObjectType, value: Value) -> Result<Bson> {
         })
         .map(|(name, field_type, field_value_result)| {
             Ok((
-                name.to_owned(),
+                name.to_string(),
                 json_to_bson(field_type, field_value_result?)?,
             ))
         })
@@ -149,18 +149,18 @@ fn convert_object(object_type: &ObjectType, value: Value) -> Result<Bson> {
 // nullable.
 fn get_object_field_value(
     object_type: &ObjectType,
-    field_name: &str,
+    field_name: &ndc_models::FieldName,
     field_type: &Type,
     object: &BTreeMap<String, Value>,
 ) -> Result<Option<Value>> {
-    let value = object.get(field_name);
+    let value = object.get(field_name.as_str());
     if value.is_none() && is_nullable(field_type) {
         return Ok(None);
     }
     Ok(Some(value.cloned().ok_or_else(|| {
         JsonToBsonError::MissingObjectField(
             Type::Object(object_type.clone()),
-            field_name.to_owned(),
+            field_name.to_string(),
         )
     })?))
 }

@@ -17,7 +17,7 @@ use crate::{
 /// - reproducibility: the same input name and type must always produce the same output name
 /// - distinct outputs: inputs with different types (or names) must produce different output names
 /// - It must produce a valid MongoDB variable name (see https://www.mongodb.com/docs/manual/reference/aggregation-variables/)
-pub fn query_variable_name(name: &str, variable_type: &Type) -> String {
+pub fn query_variable_name(name: &ndc_models::VariableName, variable_type: &Type) -> String {
     variable(&format!("{}_{}", name, type_name(variable_type)))
 }
 

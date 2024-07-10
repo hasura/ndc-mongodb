@@ -24,7 +24,7 @@ pub async fn explain_query(
 
     let target = QueryTarget::for_request(config, &query_plan);
     let aggregate_target = match (target.input_collection(), query_plan.has_variables()) {
-        (Some(collection_name), false) => Bson::String(collection_name.to_owned()),
+        (Some(collection_name), false) => Bson::String(collection_name.to_string()),
         _ => Bson::Int32(1),
     };
 

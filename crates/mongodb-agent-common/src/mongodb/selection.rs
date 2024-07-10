@@ -39,11 +39,11 @@ impl Selection {
 
 fn from_query_request_helper(
     parent_columns: &[&str],
-    field_selection: &IndexMap<String, Field>,
+    field_selection: &IndexMap<ndc_models::FieldName, Field>,
 ) -> Result<Document, MongoAgentError> {
     field_selection
         .iter()
-        .map(|(key, value)| Ok((key.into(), selection_for_field(parent_columns, value)?)))
+        .map(|(key, value)| Ok((key.to_string(), selection_for_field(parent_columns, value)?)))
         .collect()
 }
 
@@ -73,7 +73,7 @@ fn selection_for_field(parent_columns: &[&str], field: &Field) -> Result<Bson, M
             fields: Some(NestedField::Object(NestedObject { fields })),
             ..
         } => {
-            let nested_parent_columns = append_to_path(parent_columns, column);
+            let nested_parent_columns = append_to_path(parent_columns, column.as_str());
             let nested_parent_col_path = format!("${}", nested_parent_columns.join("."));
             let nested_selection = from_query_request_helper(&nested_parent_columns, fields)?;
             Ok(doc! {"$cond": {"if": nested_parent_col_path, "then": nested_selection, "else": Bson::Null}}.into())
@@ -85,7 +85,7 @@ fn selection_for_field(parent_columns: &[&str], field: &Field) -> Result<Bson, M
                     fields: nested_field,
                 })),
             ..
-        } => selection_for_array(&append_to_path(parent_columns, column), nested_field, 0),
+        } => selection_for_array(&append_to_path(parent_columns, column.as_str()), nested_field, 0),
         Field::Relationship {
             relationship,
             aggregates,
@@ -100,7 +100,7 @@ fn selection_for_field(parent_columns: &[&str], field: &Field) -> Result<Bson, M
                 fields
                     .iter()
                     .map(|(field_name, _)| {
-                        (field_name.to_owned(), format!("$$this.{field_name}").into())
+                        (field_name.to_string(), format!("$$this.{field_name}").into())
                     })
                     .collect()
             });
@@ -110,7 +110,7 @@ fn selection_for_field(parent_columns: &[&str], field: &Field) -> Result<Bson, M
                     .iter()
                     .map(|(aggregate_name, _)| {
                         (
-                            aggregate_name.to_owned(),
+                            aggregate_name.to_string(),
                             format!("$$row_set.aggregates.{aggregate_name}").into(),
                         )
                     })
@@ -131,7 +131,7 @@ fn selection_for_field(parent_columns: &[&str], field: &Field) -> Result<Bson, M
 
                 Ok(doc! {
                     "$let": {
-                        "vars": { "row_set": { "$first": get_field(relationship) } },
+                        "vars": { "row_set": { "$first": get_field(relationship.as_str()) } },
                         "in": new_row_set,
                     }
                 }
@@ -140,7 +140,7 @@ fn selection_for_field(parent_columns: &[&str], field: &Field) -> Result<Bson, M
                 Ok(doc! {
                     "rows": {
                         "$map": {
-                            "input": get_field(relationship),
+                            "input": get_field(relationship.as_str()),
                             "in": field_selection,
                         }
                     }

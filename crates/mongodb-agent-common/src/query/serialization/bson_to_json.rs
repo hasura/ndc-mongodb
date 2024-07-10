@@ -129,7 +129,7 @@ fn convert_object(mode: ExtendedJsonMode, object_type: &ObjectType, value: Bson)
         })
         .map(|((field_name, field_type), field_value_result)| {
             Ok((
-                field_name.to_owned(),
+                field_name.to_string(),
                 bson_to_json(mode, field_type, field_value_result?)?,
             ))
         })
@@ -142,17 +142,17 @@ fn convert_object(mode: ExtendedJsonMode, object_type: &ObjectType, value: Bson)
 // nullable.
 fn get_object_field_value(
     object_type: &ObjectType,
-    (field_name, field_type): (&str, &Type),
+    (field_name, field_type): (&ndc_models::FieldName, &Type),
     doc: &bson::Document,
 ) -> Result<Option<Bson>> {
-    let value = doc.get(field_name);
+    let value = doc.get(field_name.as_str());
     if value.is_none() && is_nullable(field_type) {
         return Ok(None);
     }
     Ok(Some(value.cloned().ok_or_else(|| {
         BsonToJsonError::MissingObjectField(
             Type::Object(object_type.clone()),
-            field_name.to_owned(),
+            field_name.to_string(),
         )
     })?))
 }

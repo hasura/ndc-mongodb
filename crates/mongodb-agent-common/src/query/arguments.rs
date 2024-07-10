@@ -16,13 +16,13 @@ use super::{
 #[derive(Debug, Error)]
 pub enum ArgumentError {
     #[error("unknown variables or arguments: {}", .0.join(", "))]
-    Excess(Vec<String>),
+    Excess(Vec<ndc_models::ArgumentName>),
 
     #[error("some variables or arguments are invalid:\n{}", format_errors(.0))]
-    Invalid(BTreeMap<String, JsonToBsonError>),
+    Invalid(BTreeMap<ndc_models::ArgumentName, JsonToBsonError>),
 
     #[error("missing variables or arguments: {}", .0.join(", "))]
-    Missing(Vec<String>),
+    Missing(Vec<ndc_models::ArgumentName>),
 }
 
 /// Translate arguments to queries or native queries to BSON according to declared parameter types.
@@ -30,12 +30,12 @@ pub enum ArgumentError {
 /// Checks that all arguments have been provided, and that no arguments have been given that do not
 /// map to declared parameters (no excess arguments).
 pub fn resolve_arguments(
-    parameters: &BTreeMap<String, Type>,
-    mut arguments: BTreeMap<String, Argument>,
-) -> Result<BTreeMap<String, Bson>, ArgumentError> {
+    parameters: &BTreeMap<ndc_models::ArgumentName, Type>,
+    mut arguments: BTreeMap<ndc_models::ArgumentName, Argument>,
+) -> Result<BTreeMap<ndc_models::ArgumentName, Bson>, ArgumentError> {
     validate_no_excess_arguments(parameters, &arguments)?;
 
-    let (arguments, missing): (Vec<(String, Argument, &Type)>, Vec<String>) = parameters
+    let (arguments, missing): (Vec<(ndc_models::ArgumentName, Argument, &Type)>, Vec<ndc_models::ArgumentName>) = parameters
         .iter()
         .map(|(name, parameter_type)| {
             if let Some((name, argument)) = arguments.remove_entry(name) {
@@ -49,7 +49,7 @@ pub fn resolve_arguments(
         return Err(ArgumentError::Missing(missing));
     }
 
-    let (resolved, errors): (BTreeMap<String, Bson>, BTreeMap<String, JsonToBsonError>) = arguments
+    let (resolved, errors): (BTreeMap<ndc_models::ArgumentName, Bson>, BTreeMap<ndc_models::ArgumentName, JsonToBsonError>) = arguments
         .into_iter()
         .map(|(name, argument, parameter_type)| {
             match argument_to_mongodb_expression(&argument, parameter_type) {
@@ -79,10 +79,10 @@ fn argument_to_mongodb_expression(
 }
 
 pub fn validate_no_excess_arguments<T>(
-    parameters: &BTreeMap<String, Type>,
-    arguments: &BTreeMap<String, T>,
+    parameters: &BTreeMap<ndc_models::ArgumentName, Type>,
+    arguments: &BTreeMap<ndc_models::ArgumentName, T>,
 ) -> Result<(), ArgumentError> {
-    let excess: Vec<String> = arguments
+    let excess: Vec<ndc_models::ArgumentName> = arguments
         .iter()
         .filter_map(|(name, _)| {
             let parameter = parameters.get(name);
@@ -99,7 +99,7 @@ pub fn validate_no_excess_arguments<T>(
     }
 }
 
-fn format_errors(errors: &BTreeMap<String, JsonToBsonError>) -> String {
+fn format_errors(errors: &BTreeMap<ndc_models::ArgumentName, JsonToBsonError>) -> String {
     errors
         .iter()
         .map(|(name, error)| format!("  {name}:\n{}", indent_all_by(4, error.to_string())))

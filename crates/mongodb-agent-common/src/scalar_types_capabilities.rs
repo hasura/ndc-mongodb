@@ -4,7 +4,7 @@ use itertools::Either;
 use lazy_static::lazy_static;
 use mongodb_support::BsonScalarType;
 use ndc_models::{
-    AggregateFunctionDefinition, ComparisonOperatorDefinition, ScalarType, Type, TypeRepresentation,
+    AggregateFunctionDefinition, AggregateFunctionName, ComparisonOperatorDefinition, ComparisonOperatorName, ScalarType, Type, TypeRepresentation
 };
 
 use crate::aggregation_function::{AggregationFunction, AggregationFunction as A};
@@ -70,10 +70,10 @@ fn bson_scalar_type_representation(bson_scalar_type: BsonScalarType) -> Option<T
 
 fn bson_comparison_operators(
     bson_scalar_type: BsonScalarType,
-) -> BTreeMap<String, ComparisonOperatorDefinition> {
+) -> BTreeMap<ComparisonOperatorName, ComparisonOperatorDefinition> {
     comparison_operators(bson_scalar_type)
         .map(|(comparison_fn, arg_type)| {
-            let fn_name = comparison_fn.graphql_name().to_owned();
+            let fn_name = comparison_fn.graphql_name().into();
             match comparison_fn {
                 ComparisonFunction::Equal => (fn_name, ComparisonOperatorDefinition::Equal),
                 _ => (
@@ -89,20 +89,20 @@ fn bson_comparison_operators(
 
 fn bson_aggregation_functions(
     bson_scalar_type: BsonScalarType,
-) -> BTreeMap<String, AggregateFunctionDefinition> {
+) -> BTreeMap<AggregateFunctionName, AggregateFunctionDefinition> {
     aggregate_functions(bson_scalar_type)
         .map(|(fn_name, result_type)| {
             let aggregation_definition = AggregateFunctionDefinition {
                 result_type: bson_to_named_type(result_type),
             };
-            (fn_name.graphql_name().to_owned(), aggregation_definition)
+            (fn_name.graphql_name().into(), aggregation_definition)
         })
         .collect()
 }
 
 fn bson_to_named_type(bson_scalar_type: BsonScalarType) -> Type {
     Type::Named {
-        name: bson_scalar_type.graphql_name().to_owned(),
+        name: bson_scalar_type.graphql_name().into(),
     }
 }
 

@@ -31,7 +31,7 @@ pub fn pipeline_for_native_query(
 
 fn make_pipeline(
     native_query: &NativeQuery,
-    arguments: &BTreeMap<String, Argument>,
+    arguments: &BTreeMap<ndc_models::ArgumentName, Argument>,
 ) -> Result<Pipeline, MongoAgentError> {
     let bson_arguments = resolve_arguments(&native_query.arguments, arguments.clone())
         .map_err(ProcedureError::UnresolvableArguments)?;

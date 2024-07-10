@@ -10,7 +10,7 @@ type Result<T> = std::result::Result<T, ProcedureError>;
 /// Parse native mutation commands, and interpolate arguments.
 pub fn interpolated_command(
     command: &bson::Document,
-    arguments: &BTreeMap<String, Bson>,
+    arguments: &BTreeMap<ndc_models::ArgumentName, Bson>,
 ) -> Result<bson::Document> {
     let bson = interpolate_helper(&command.into(), arguments)?;
     match bson {
@@ -19,7 +19,7 @@ pub fn interpolated_command(
     }
 }
 
-fn interpolate_helper(command_node: &Bson, arguments: &BTreeMap<String, Bson>) -> Result<Bson> {
+fn interpolate_helper(command_node: &Bson, arguments: &BTreeMap<ndc_models::ArgumentName, Bson>) -> Result<Bson> {
     let result = match command_node {
         Bson::Array(values) => interpolate_array(values.to_vec(), arguments)?.into(),
         Bson::Document(doc) => interpolate_document(doc.clone(), arguments)?.into(),
@@ -30,7 +30,7 @@ fn interpolate_helper(command_node: &Bson, arguments: &BTreeMap<String, Bson>) -
     Ok(result)
 }
 
-fn interpolate_array(values: Vec<Bson>, arguments: &BTreeMap<String, Bson>) -> Result<Vec<Bson>> {
+fn interpolate_array(values: Vec<Bson>, arguments: &BTreeMap<ndc_models::ArgumentName, Bson>) -> Result<Vec<Bson>> {
     values
         .iter()
         .map(|value| interpolate_helper(value, arguments))
@@ -39,7 +39,7 @@ fn interpolate_array(values: Vec<Bson>, arguments: &BTreeMap<String, Bson>) -> R
 
 fn interpolate_document(
     document: bson::Document,
-    arguments: &BTreeMap<String, Bson>,
+    arguments: &BTreeMap<ndc_models::ArgumentName, Bson>,
 ) -> Result<bson::Document> {
     document
         .into_iter()
@@ -68,7 +68,7 @@ fn interpolate_document(
 /// ```
 ///
 /// if the type of the variable `recordId` is `int`.
-fn interpolate_string(string: &str, arguments: &BTreeMap<String, Bson>) -> Result<Bson> {
+fn interpolate_string(string: &str, arguments: &BTreeMap<ndc_models::ArgumentName, Bson>) -> Result<Bson> {
     let parts = parse_native_mutation(string);
     if parts.len() == 1 {
         let mut parts = parts;
@@ -94,7 +94,7 @@ fn interpolate_string(string: &str, arguments: &BTreeMap<String, Bson>) -> Resul
     }
 }
 
-fn resolve_argument(argument_name: &str, arguments: &BTreeMap<String, Bson>) -> Result<Bson> {
+fn resolve_argument(argument_name: &ndc_models::ArgumentName, arguments: &BTreeMap<ndc_models::ArgumentName, Bson>) -> Result<Bson> {
     let argument = arguments
         .get(argument_name)
         .ok_or_else(|| ProcedureError::MissingArgument(argument_name.to_owned()))?;
@@ -107,7 +107,7 @@ enum NativeMutationPart {
     /// A raw text part
     Text(String),
     /// A parameter
-    Parameter(String),
+    Parameter(ndc_models::ArgumentName),
 }
 
 /// Parse a string or key in a native procedure into parts where variables have the syntax
@@ -120,10 +120,10 @@ fn parse_native_mutation(string: &str) -> Vec<NativeMutationPart> {
             None => vec![NativeMutationPart::Text(part.to_string())],
             Some((var, text)) => {
                 if text.is_empty() {
-                    vec![NativeMutationPart::Parameter(var.trim().to_owned())]
+                    vec![NativeMutationPart::Parameter(var.trim().into())]
                 } else {
                     vec![
-                        NativeMutationPart::Parameter(var.trim().to_owned()),
+                        NativeMutationPart::Parameter(var.trim().into()),
                         NativeMutationPart::Text(text.to_string()),
                     ]
                 }

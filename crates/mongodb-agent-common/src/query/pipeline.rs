@@ -120,7 +120,7 @@ pub fn pipeline_for_fields_facet(
         for relationship_key in relationships.keys() {
             selection
                 .0
-                .insert(relationship_key.to_owned(), get_field(relationship_key));
+                .insert(relationship_key.to_owned(), get_field(relationship_key.as_str()));
         }
     }
 
@@ -153,7 +153,7 @@ fn facet_pipelines_for_query(
         .flatten()
         .map(|(key, aggregate)| {
             Ok((
-                key.clone(),
+                key.to_string(),
                 pipeline_for_aggregate(aggregate.clone(), *aggregates_limit)?,
             ))
         })
@@ -176,11 +176,11 @@ fn facet_pipelines_for_query(
             (
                 // TODO: Is there a way we can prevent potential code injection in the use of `key`
                 // here?
-                key.clone(),
+                key.to_string(),
                 doc! {
                     "$getField": {
                         "field": RESULT_FIELD, // evaluates to the value of this field
-                        "input": { "$first": get_field(key) }, // field is accessed from this document
+                        "input": { "$first": get_field(key.as_str()) }, // field is accessed from this document
                     },
                 }
                 .into(),
@@ -221,11 +221,11 @@ fn pipeline_for_aggregate(
         Aggregate::ColumnCount { column, distinct } if distinct => Pipeline::from_iter(
             [
                 Some(Stage::Match(
-                    bson::doc! { &column: { "$exists": true, "$ne": null } },
+                    bson::doc! { column.as_str(): { "$exists": true, "$ne": null } },
                 )),
                 limit.map(Stage::Limit),
                 Some(Stage::Group {
-                    key_expression: field_ref(&column),
+                    key_expression: field_ref(column.as_str()),
                     accumulators: [].into(),
                 }),
                 Some(Stage::Count(RESULT_FIELD.to_string())),
@@ -237,11 +237,11 @@ fn pipeline_for_aggregate(
         Aggregate::ColumnCount { column, .. } => Pipeline::from_iter(
             [
                 Some(Stage::Match(
-                    bson::doc! { &column: { "$exists": true, "$ne": null } },
+                    bson::doc! { column.as_str(): { "$exists": true, "$ne": null } },
                 )),
                 limit.map(Stage::Limit),
                 Some(Stage::Group {
-                    key_expression: field_ref(&column),
+                    key_expression: field_ref(column.as_str()),
                     accumulators: [(RESULT_FIELD.to_string(), Accumulator::Count)].into(),
                 }),
                 Some(Stage::Group {
@@ -265,11 +265,11 @@ fn pipeline_for_aggregate(
             use AggregationFunction::*;
 
             let accumulator = match function {
-                Avg => Accumulator::Avg(field_ref(&column)),
+                Avg => Accumulator::Avg(field_ref(column.as_str())),
                 Count => Accumulator::Count,
-                Min => Accumulator::Min(field_ref(&column)),
-                Max => Accumulator::Max(field_ref(&column)),
-                Sum => Accumulator::Sum(field_ref(&column)),
+                Min => Accumulator::Min(field_ref(column.as_str())),
+                Max => Accumulator::Max(field_ref(column.as_str())),
+                Sum => Accumulator::Sum(field_ref(column.as_str())),
             };
             Pipeline::from_iter(
                 [
