@@ -180,7 +180,7 @@ mod tests {
     ) -> anyhow::Result<()> {
         let selector = make_selector(&Expression::BinaryComparisonOperator {
             column: ComparisonTarget::Column {
-                name: "Name".to_owned(),
+                name: "Name".into(),
                 field_path: None,
                 field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
                 path: vec!["Albums".into(), "Tracks".into()],
@@ -213,7 +213,7 @@ mod tests {
     ) -> anyhow::Result<()> {
         let selector = make_selector(&Expression::UnaryComparisonOperator {
             column: ComparisonTarget::Column {
-                name: "Name".to_owned(),
+                name: "Name".into(),
                 field_path: None,
                 field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
                 path: vec!["Albums".into(), "Tracks".into()],
@@ -241,7 +241,7 @@ mod tests {
     fn compares_two_columns() -> anyhow::Result<()> {
         let selector = make_selector(&Expression::BinaryComparisonOperator {
             column: ComparisonTarget::Column {
-                name: "Name".to_owned(),
+                name: "Name".into(),
                 field_path: None,
                 field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
                 path: Default::default(),
@@ -249,7 +249,7 @@ mod tests {
             operator: ComparisonFunction::Equal,
             value: ComparisonValue::Column {
                 column: ComparisonTarget::Column {
-                    name: "Title".to_owned(),
+                    name: "Title".into(),
                     field_path: None,
                     field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
                     path: Default::default(),
@@ -271,7 +271,7 @@ mod tests {
     fn compares_root_collection_column_to_scalar() -> anyhow::Result<()> {
         let selector = make_selector(&Expression::BinaryComparisonOperator {
             column: ComparisonTarget::ColumnInScope {
-                name: "Name".to_owned(),
+                name: "Name".into(),
                 field_path: None,
                 field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
                 scope: Scope::Named("scope_0".to_string()),
@@ -302,7 +302,7 @@ mod tests {
                 binop(
                     "_gt",
                     target!("Milliseconds", relations: [
-                        path_element("Tracks").predicate(
+                        path_element("Tracks".into()).predicate(
                             binop("_eq", target!("Name"), column_value!(root("Title")))
                         ),
                     ]),

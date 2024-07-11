@@ -20,7 +20,7 @@ macro_rules! value {
 macro_rules! variable {
     ($variable:ident) => {
         $crate::ndc_models::ComparisonValue::Variable {
-            name: stringify!($variable).to_owned(),
+            name: stringify!($variable).into(),
         }
     };
     ($variable:expr) => {

@@ -397,7 +397,7 @@ mod tests {
             .collect(),
         };
         let native_mutations = [(
-            "hello".to_owned(),
+            "hello".into(),
             serialized::NativeMutation {
                 object_types: [(
                     "Album".to_owned().into(),

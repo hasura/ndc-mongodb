@@ -233,7 +233,7 @@ mod tests {
         let expected_type = Type::Object(ObjectType {
             name: Some("test_object".into()),
             fields: [(
-                "field".to_owned(),
+                "field".into(),
                 Type::Nullable(Box::new(Type::Scalar(MongoScalarType::Bson(
                     BsonScalarType::String,
                 )))),

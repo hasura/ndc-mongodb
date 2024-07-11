@@ -8,10 +8,10 @@ use super::QueryBuilder;
 
 #[derive(Clone, Debug)]
 pub struct RelationshipBuilder<T: ConnectorTypes> {
-    column_mapping: BTreeMap<String, String>,
+    column_mapping: BTreeMap<ndc_models::FieldName, ndc_models::FieldName>,
     relationship_type: RelationshipType,
-    target_collection: String,
-    arguments: BTreeMap<String, RelationshipArgument>,
+    target_collection: ndc_models::CollectionName,
+    arguments: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>,
     query: QueryBuilder<T>,
 }
 
@@ -24,7 +24,7 @@ impl<T: ConnectorTypes> RelationshipBuilder<T> {
         RelationshipBuilder {
             column_mapping: Default::default(),
             relationship_type: RelationshipType::Array,
-            target_collection: target.to_owned(),
+            target_collection: target.into(),
             arguments: Default::default(),
             query: QueryBuilder::new(),
         }
@@ -46,7 +46,7 @@ impl<T: ConnectorTypes> RelationshipBuilder<T> {
     ) -> Self {
         self.column_mapping = column_mapping
             .into_iter()
-            .map(|(source, target)| (source.to_string(), target.to_string()))
+            .map(|(source, target)| (source.to_string().into(), target.to_string().into()))
             .collect();
         self
     }
@@ -61,7 +61,7 @@ impl<T: ConnectorTypes> RelationshipBuilder<T> {
         self
     }
 
-    pub fn arguments(mut self, arguments: BTreeMap<String, RelationshipArgument>) -> Self {
+    pub fn arguments(mut self, arguments: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>) -> Self {
         self.arguments = arguments;
         self
     }

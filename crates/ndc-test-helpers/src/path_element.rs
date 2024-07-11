@@ -9,14 +9,14 @@ pub struct PathElementBuilder {
     predicate: Option<Box<Expression>>,
 }
 
-pub fn path_element(relationship: &ndc_models::RelationshipName) -> PathElementBuilder {
+pub fn path_element(relationship: ndc_models::RelationshipName) -> PathElementBuilder {
     PathElementBuilder::new(relationship)
 }
 
 impl PathElementBuilder {
-    pub fn new(relationship: &ndc_models::RelationshipName) -> Self {
+    pub fn new(relationship: ndc_models::RelationshipName) -> Self {
         PathElementBuilder {
-            relationship: relationship.clone(),
+            relationship: relationship,
             arguments: None,
             predicate: None,
         }

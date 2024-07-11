@@ -157,9 +157,9 @@ mod tests {
                 fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
             }),
             arguments: [
-                ("id".to_owned(), Type::Scalar(MongoScalarType::Bson(S::Int))),
+                ("id".into(), Type::Scalar(MongoScalarType::Bson(S::Int))),
                 (
-                    "name".to_owned(),
+                    "name".into(),
                     Type::Scalar(MongoScalarType::Bson(S::String)),
                 ),
             ]
@@ -176,9 +176,9 @@ mod tests {
         };
 
         let input_arguments = [
-            ("id".to_owned(), Argument::Literal { value: json!(1001) }),
+            ("id".into(), Argument::Literal { value: json!(1001) }),
             (
-                "name".to_owned(),
+                "name".into(),
                 Argument::Literal {
                     value: json!("Regina Spektor"),
                 },
@@ -211,7 +211,7 @@ mod tests {
                 fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
             }),
             arguments: [(
-                "documents".to_owned(),
+                "documents".into(),
                 Type::ArrayOf(Box::new(Type::Object(ObjectType {
                     name: Some("ArtistInput".into()),
                     fields: [
@@ -237,7 +237,7 @@ mod tests {
         };
 
         let input_arguments = [(
-            "documents".to_owned(),
+            "documents".into(),
             Argument::Literal {
                 value: json!([
                     { "ArtistId": 1001, "Name": "Regina Spektor" } ,
@@ -279,11 +279,11 @@ mod tests {
             }),
             arguments: [
                 (
-                    "prefix".to_owned(),
+                    "prefix".into(),
                     Type::Scalar(MongoScalarType::Bson(S::String)),
                 ),
                 (
-                    "basename".to_owned(),
+                    "basename".into(),
                     Type::Scalar(MongoScalarType::Bson(S::String)),
                 ),
             ]
@@ -298,13 +298,13 @@ mod tests {
 
         let input_arguments = [
             (
-                "prefix".to_owned(),
+                "prefix".into(),
                 Argument::Literal {
                     value: json!("current"),
                 },
             ),
             (
-                "basename".to_owned(),
+                "basename".into(),
                 Argument::Literal {
                     value: json!("some-coll"),
                 },

@@ -54,27 +54,27 @@ fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
                 .order_by(vec![ndc::OrderByElement {
                     order_direction: OrderDirection::Asc,
                     target: OrderByTarget::Column {
-                        name: "advisor_name".to_owned(),
+                        name: "advisor_name".into(),
                         field_path: None,
                         path: vec![
-                            path_element("school_classes")
+                            path_element("school_classes".into())
                                 .predicate(binop(
                                     "Equal",
                                     target!(
                                         "_id",
                                         relations: [
                                         // path_element("school_classes"),
-                                        path_element("class_department"),
+                                        path_element("class_department".into()),
                                     ],
                                     ),
                                     column_value!(
                                         "math_department_id",
-                                        relations: [path_element("school_directory")],
+                                        relations: [path_element("school_directory".into())],
                                     ),
                                 ))
                                 .into(),
-                            path_element("class_students").into(),
-                            path_element("student_advisor").into(),
+                            path_element("class_students".into()).into(),
+                            path_element("student_advisor".into()).into(),
                         ],
                     },
                 }])
@@ -87,7 +87,7 @@ fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
         .into();
 
     let expected = QueryPlan {
-        collection: "schools".to_owned(),
+        collection: "schools".into(),
         arguments: Default::default(),
         variables: None,
         variable_types: Default::default(),
@@ -119,11 +119,11 @@ fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
             }),
             relationships: [
                 (
-                    "school_classes_0".to_owned(),
+                    "school_classes_0".into(),
                     Relationship {
-                        column_mapping: [("_id".to_owned(), "school_id".to_owned())].into(),
+                        column_mapping: [("_id".into(), "school_id".into())].into(),
                         relationship_type: RelationshipType::Array,
-                        target_collection: "classes".to_owned(),
+                        target_collection: "classes".into(),
                         arguments: Default::default(),
                         query: Query {
                             predicate: Some(plan::Expression::BinaryComparisonOperator {
@@ -202,10 +202,10 @@ fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
                                     },
                                 ),
                                 (
-                                    "school_directory".to_owned(),
+                                    "school_directory".into(),
                                     Relationship {
-                                        target_collection: "directory".to_owned(),
-                                        column_mapping: [("_id".to_owned(), "school_id".to_owned())].into(),
+                                        target_collection: "directory".into(),
+                                        column_mapping: [("_id".into(), "school_id".into())].into(),
                                         relationship_type: RelationshipType::Object,
                                         arguments: Default::default(),
                                         query: Query {
@@ -223,11 +223,11 @@ fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
                     },
                 ),
                 (
-                    "school_classes".to_owned(),
+                    "school_classes".into(),
                     Relationship {
-                        column_mapping: [("_id".to_owned(), "school_id".to_owned())].into(),
+                        column_mapping: [("_id".into(), "school_id".into())].into(),
                         relationship_type: RelationshipType::Array,
-                        target_collection: "classes".to_owned(),
+                        target_collection: "classes".into(),
                         arguments: Default::default(),
                         query: Query {
                             fields: Some(
@@ -260,11 +260,11 @@ fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
                     },
                 ),
                 (
-                    "existence_check".to_owned(),
+                    "existence_check".into(),
                     Relationship {
-                        column_mapping: [("some_id".to_owned(), "_id".to_owned())].into(),
+                        column_mapping: [("some_id".into(), "_id".into())].into(),
                         relationship_type: RelationshipType::Array,
-                        target_collection: "some_collection".to_owned(),
+                        target_collection: "some_collection".into(),
                         arguments: Default::default(),
                         query: Query {
                             predicate: None,
@@ -313,11 +313,11 @@ fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
         .into(),
         object_types: [
             (
-                "schools".to_owned(),
+                "schools".into(),
                 object_type([("_id", named_type("Int"))]),
             ),
             (
-                "classes".to_owned(),
+                "classes".into(),
                 object_type([
                     ("_id", named_type("Int")),
                     ("school_id", named_type("Int")),
@@ -325,7 +325,7 @@ fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
                 ]),
             ),
             (
-                "students".to_owned(),
+                "students".into(),
                 object_type([
                     ("_id", named_type("Int")),
                     ("class_id", named_type("Int")),
@@ -334,11 +334,11 @@ fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
                 ]),
             ),
             (
-                "departments".to_owned(),
+                "departments".into(),
                 object_type([("_id", named_type("Int"))]),
             ),
             (
-                "directory".to_owned(),
+                "directory".into(),
                 object_type([
                     ("_id", named_type("Int")),
                     ("school_id", named_type("Int")),
@@ -346,14 +346,14 @@ fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
                 ]),
             ),
             (
-                "advisors".to_owned(),
+                "advisors".into(),
                 object_type([
                     ("_id", named_type("Int")),
                     ("advisor_name", named_type("String")),
                 ]),
             ),
             (
-                "some_collection".to_owned(),
+                "some_collection".into(),
                 object_type([("_id", named_type("Int")), ("some_id", named_type("Int"))]),
             ),
         ]
@@ -580,7 +580,7 @@ fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), a
                         target: OrderByTarget::SingleColumnAggregate {
                             column: "year".into(),
                             function: "Average".into(),
-                            path: vec![path_element("author_articles").into()],
+                            path: vec![path_element("author_articles".into()).into()],
                             field_path: None,
                         },
                     },
@@ -765,7 +765,7 @@ fn translates_nested_fields() -> Result<(), anyhow::Error> {
                         plan::Field::Column {
                             column: "address".into(),
                             column_type: plan::Type::Object(
-                                query_context.find_object_type("Address")?,
+                                query_context.find_object_type(&"Address".into())?,
                             ),
                             fields: Some(plan::NestedField::Object(plan::NestedObject {
                                 fields: [(
@@ -787,7 +787,7 @@ fn translates_nested_fields() -> Result<(), anyhow::Error> {
                         plan::Field::Column {
                             column: "articles".into(),
                             column_type: plan::Type::ArrayOf(Box::new(plan::Type::Object(
-                                query_context.find_object_type("Article")?,
+                                query_context.find_object_type(&"Article".into())?,
                             ))),
                             fields: Some(plan::NestedField::Array(plan::NestedArray {
                                 fields: Box::new(plan::NestedField::Object(plan::NestedObject {
@@ -831,7 +831,7 @@ fn translates_nested_fields() -> Result<(), anyhow::Error> {
                             })),
                             column_type: plan::Type::ArrayOf(Box::new(plan::Type::ArrayOf(
                                 Box::new(plan::Type::Object(
-                                    query_context.find_object_type("Article")?,
+                                    query_context.find_object_type(&"Article".into())?,
                                 )),
                             ))),
                         },
@@ -864,7 +864,7 @@ fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Res
                     field!("name"),
                 ]))])
                 .predicate(not(is_null(
-                    target!("name", relations: [path_element("author")]),
+                    target!("name", relations: [path_element("author".into())]),
                 ))),
         )
         .into();

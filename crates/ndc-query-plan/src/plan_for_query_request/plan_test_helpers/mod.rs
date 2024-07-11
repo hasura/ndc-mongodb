@@ -24,10 +24,10 @@ pub use self::{
 
 #[derive(Clone, Debug, Default)]
 pub struct TestContext {
-    pub collections: BTreeMap<String, ndc::CollectionInfo>,
-    pub functions: BTreeMap<String, (ndc::FunctionInfo, ndc::CollectionInfo)>,
-    pub procedures: BTreeMap<String, ndc::ProcedureInfo>,
-    pub object_types: BTreeMap<String, ndc::ObjectType>,
+    pub collections: BTreeMap<ndc::CollectionName, ndc::CollectionInfo>,
+    pub functions: BTreeMap<ndc::FunctionName, (ndc::FunctionInfo, ndc::CollectionInfo)>,
+    pub procedures: BTreeMap<ndc::ProcedureName, ndc::ProcedureInfo>,
+    pub object_types: BTreeMap<ndc::ObjectTypeName, ndc::ObjectType>,
 }
 
 impl ConnectorTypes for TestContext {
@@ -37,16 +37,16 @@ impl ConnectorTypes for TestContext {
 }
 
 impl QueryContext for TestContext {
-    fn lookup_scalar_type(type_name: &str) -> Option<Self::ScalarType> {
-        ScalarType::find_by_name(type_name)
+    fn lookup_scalar_type(type_name: &ndc::ScalarTypeName) -> Option<Self::ScalarType> {
+        ScalarType::find_by_name(type_name.as_str())
     }
 
     fn lookup_aggregation_function(
         &self,
         input_type: &Type<Self::ScalarType>,
-        function_name: &str,
+        function_name: &ndc::AggregateFunctionName,
     ) -> Result<(Self::AggregateFunction, &ndc::AggregateFunctionDefinition), QueryPlanError> {
-        let function = AggregateFunction::find_by_name(function_name).ok_or_else(|| {
+        let function = AggregateFunction::find_by_name(function_name.as_str()).ok_or_else(|| {
             QueryPlanError::UnknownAggregateFunction {
                 aggregate_function: function_name.to_owned(),
             }
@@ -63,12 +63,12 @@ impl QueryContext for TestContext {
     fn lookup_comparison_operator(
         &self,
         left_operand_type: &Type<Self::ScalarType>,
-        operator_name: &str,
+        operator_name: &ndc::ComparisonOperatorName,
     ) -> Result<(Self::ComparisonOperator, &ndc::ComparisonOperatorDefinition), QueryPlanError>
     where
         Self: Sized,
     {
-        let operator = ComparisonOperator::find_by_name(operator_name)
+        let operator = ComparisonOperator::find_by_name(operator_name.as_str())
             .ok_or_else(|| QueryPlanError::UnknownComparisonOperator(operator_name.to_owned()))?;
         let definition = scalar_type_name(left_operand_type)
             .and_then(|name| SCALAR_TYPES.get(name))
@@ -77,19 +77,19 @@ impl QueryContext for TestContext {
         Ok((operator, definition))
     }
 
-    fn collections(&self) -> &BTreeMap<String, ndc::CollectionInfo> {
+    fn collections(&self) -> &BTreeMap<ndc::CollectionName, ndc::CollectionInfo> {
         &self.collections
     }
 
-    fn functions(&self) -> &BTreeMap<String, (ndc::FunctionInfo, ndc::CollectionInfo)> {
+    fn functions(&self) -> &BTreeMap<ndc::FunctionName, (ndc::FunctionInfo, ndc::CollectionInfo)> {
         &self.functions
     }
 
-    fn object_types(&self) -> &BTreeMap<String, ndc::ObjectType> {
+    fn object_types(&self) -> &BTreeMap<ndc::ObjectTypeName, ndc::ObjectType> {
         &self.object_types
     }
 
-    fn procedures(&self) -> &BTreeMap<String, ndc::ProcedureInfo> {
+    fn procedures(&self) -> &BTreeMap<ndc::ProcedureName, ndc::ProcedureInfo> {
         &self.procedures
     }
 }
@@ -174,16 +174,16 @@ fn scalar_types() -> BTreeMap<String, ndc::ScalarType> {
             ndc::ScalarType {
                 representation: Some(TypeRepresentation::Float64),
                 aggregate_functions: [(
-                    AggregateFunction::Average.name().to_owned(),
+                    AggregateFunction::Average.name().into(),
                     ndc::AggregateFunctionDefinition {
                         result_type: ndc::Type::Named {
-                            name: ScalarType::Double.name().to_owned(),
+                            name: ScalarType::Double.name().into(),
                         },
                     },
                 )]
                 .into(),
                 comparison_operators: [(
-                    ComparisonOperator::Equal.name().to_owned(),
+                    ComparisonOperator::Equal.name().into(),
                     ndc::ComparisonOperatorDefinition::Equal,
                 )]
                 .into(),
@@ -194,16 +194,16 @@ fn scalar_types() -> BTreeMap<String, ndc::ScalarType> {
             ndc::ScalarType {
                 representation: Some(TypeRepresentation::Int32),
                 aggregate_functions: [(
-                    AggregateFunction::Average.name().to_owned(),
+                    AggregateFunction::Average.name().into(),
                     ndc::AggregateFunctionDefinition {
                         result_type: ndc::Type::Named {
-                            name: ScalarType::Double.name().to_owned(),
+                            name: ScalarType::Double.name().into(),
                         },
                     },
                 )]
                 .into(),
                 comparison_operators: [(
-                    ComparisonOperator::Equal.name().to_owned(),
+                    ComparisonOperator::Equal.name().into(),
                     ndc::ComparisonOperatorDefinition::Equal,
                 )]
                 .into(),
@@ -216,11 +216,11 @@ fn scalar_types() -> BTreeMap<String, ndc::ScalarType> {
                 aggregate_functions: Default::default(),
                 comparison_operators: [
                     (
-                        ComparisonOperator::Equal.name().to_owned(),
+                        ComparisonOperator::Equal.name().into(),
                         ndc::ComparisonOperatorDefinition::Equal,
                     ),
                     (
-                        ComparisonOperator::Regex.name().to_owned(),
+                        ComparisonOperator::Regex.name().into(),
                         ndc::ComparisonOperatorDefinition::Custom {
                             argument_type: named_type(ScalarType::String),
                         },
@@ -243,7 +243,7 @@ pub fn make_flat_schema() -> TestContext {
             (
                 "authors".into(),
                 ndc::CollectionInfo {
-                    name: "authors".to_owned(),
+                    name: "authors".into(),
                     description: None,
                     collection_type: "Author".into(),
                     arguments: Default::default(),
@@ -254,7 +254,7 @@ pub fn make_flat_schema() -> TestContext {
             (
                 "articles".into(),
                 ndc::CollectionInfo {
-                    name: "articles".to_owned(),
+                    name: "articles".into(),
                     description: None,
                     collection_type: "Article".into(),
                     arguments: Default::default(),
@@ -304,7 +304,7 @@ pub fn make_nested_schema() -> TestContext {
         functions: Default::default(),
         object_types: BTreeMap::from([
             (
-                "Author".to_owned(),
+                "Author".into(),
                 ndc_test_helpers::object_type([
                     ("name", named_type(ScalarType::String)),
                     ("address", named_type("Address")),
@@ -333,7 +333,7 @@ pub fn make_nested_schema() -> TestContext {
                 ]),
             ),
             (
-                "appearances".to_owned(),
+                "appearances".into(),
                 ndc_test_helpers::object_type([("authorId", named_type(ScalarType::Int))]),
             ),
         ]),

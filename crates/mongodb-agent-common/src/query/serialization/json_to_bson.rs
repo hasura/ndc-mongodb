@@ -241,7 +241,7 @@ mod tests {
     #[allow(clippy::approx_constant)]
     fn deserializes_specialized_scalar_types() -> anyhow::Result<()> {
         let object_type = ObjectType {
-            name: Some("scalar_test".to_owned()),
+            name: Some("scalar_test".into()),
             fields: [
                 ("double", BsonScalarType::Double),
                 ("int", BsonScalarType::Int),
@@ -263,7 +263,7 @@ mod tests {
                 ("symbol", BsonScalarType::Symbol),
             ]
             .into_iter()
-            .map(|(name, t)| (name.to_owned(), Type::Scalar(MongoScalarType::Bson(t))))
+            .map(|(name, t)| (name.into(), Type::Scalar(MongoScalarType::Bson(t))))
             .collect(),
         };
 
@@ -369,9 +369,9 @@ mod tests {
     #[test]
     fn deserializes_object_with_missing_nullable_field() -> anyhow::Result<()> {
         let expected_type = Type::Object(ObjectType {
-            name: Some("test_object".to_owned()),
+            name: Some("test_object".into()),
             fields: [(
-                "field".to_owned(),
+                "field".into(),
                 Type::Nullable(Box::new(Type::Scalar(MongoScalarType::Bson(
                     BsonScalarType::String,
                 )))),
