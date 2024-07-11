@@ -1,0 +1,103 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: MediaType
+  fields:
+    - name: id
+      type: Chinook_ObjectId!
+    - name: mediaTypeId
+      type: Int!
+    - name: name
+      type: String
+  graphql:
+    typeName: MediaType
+    inputTypeName: MediaTypeInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: chinook
+      dataConnectorObjectType: MediaType
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        mediaTypeId:
+          column:
+            name: MediaTypeId
+        name:
+          column:
+            name: Name
+  description: Object type for collection MediaType
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: MediaType
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - mediaTypeId
+          - name
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: MediaTypeBoolExp
+  objectType: MediaType
+  dataConnectorName: chinook
+  dataConnectorObjectType: MediaType
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: mediaTypeId
+      operators:
+        enableAll: true
+    - fieldName: name
+      operators:
+        enableAll: true
+  graphql:
+    typeName: MediaTypeBoolExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: MediaType
+  objectType: MediaType
+  source:
+    dataConnectorName: chinook
+    collection: MediaType
+  filterExpressionType: MediaTypeBoolExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: mediaTypeId
+      orderByDirections:
+        enableAll: true
+    - fieldName: name
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: mediaType
+    selectUniques:
+      - queryRootField: mediaTypeById
+        uniqueIdentifier:
+          - id
+    orderByExpressionType: MediaTypeOrderBy
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: MediaType
+  permissions:
+    - role: admin
+      select:
+        filter: null
+

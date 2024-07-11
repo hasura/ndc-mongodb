@@ -1,0 +1,187 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: Track
+  fields:
+    - name: id
+      type: Chinook_ObjectId!
+    - name: albumId
+      type: Int
+    - name: bytes
+      type: Int
+    - name: composer
+      type: String
+    - name: genreId
+      type: Int
+    - name: mediaTypeId
+      type: Int!
+    - name: milliseconds
+      type: Int!
+    - name: name
+      type: String!
+    - name: trackId
+      type: Int!
+    - name: unitPrice
+      type: Decimal!
+  graphql:
+    typeName: Track
+    inputTypeName: TrackInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: chinook
+      dataConnectorObjectType: Track
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        albumId:
+          column:
+            name: AlbumId
+        bytes:
+          column:
+            name: Bytes
+        composer:
+          column:
+            name: Composer
+        genreId:
+          column:
+            name: GenreId
+        mediaTypeId:
+          column:
+            name: MediaTypeId
+        milliseconds:
+          column:
+            name: Milliseconds
+        name:
+          column:
+            name: Name
+        trackId:
+          column:
+            name: TrackId
+        unitPrice:
+          column:
+            name: UnitPrice
+  description: Object type for collection Track
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Track
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - albumId
+          - bytes
+          - composer
+          - genreId
+          - mediaTypeId
+          - milliseconds
+          - name
+          - trackId
+          - unitPrice
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: TrackBoolExp
+  objectType: Track
+  dataConnectorName: chinook
+  dataConnectorObjectType: Track
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: albumId
+      operators:
+        enableAll: true
+    - fieldName: bytes
+      operators:
+        enableAll: true
+    - fieldName: composer
+      operators:
+        enableAll: true
+    - fieldName: genreId
+      operators:
+        enableAll: true
+    - fieldName: mediaTypeId
+      operators:
+        enableAll: true
+    - fieldName: milliseconds
+      operators:
+        enableAll: true
+    - fieldName: name
+      operators:
+        enableAll: true
+    - fieldName: trackId
+      operators:
+        enableAll: true
+    - fieldName: unitPrice
+      operators:
+        enableAll: true
+  graphql:
+    typeName: TrackBoolExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: Track
+  objectType: Track
+  source:
+    dataConnectorName: chinook
+    collection: Track
+  filterExpressionType: TrackBoolExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: albumId
+      orderByDirections:
+        enableAll: true
+    - fieldName: bytes
+      orderByDirections:
+        enableAll: true
+    - fieldName: composer
+      orderByDirections:
+        enableAll: true
+    - fieldName: genreId
+      orderByDirections:
+        enableAll: true
+    - fieldName: mediaTypeId
+      orderByDirections:
+        enableAll: true
+    - fieldName: milliseconds
+      orderByDirections:
+        enableAll: true
+    - fieldName: name
+      orderByDirections:
+        enableAll: true
+    - fieldName: trackId
+      orderByDirections:
+        enableAll: true
+    - fieldName: unitPrice
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: track
+    selectUniques:
+      - queryRootField: trackById
+        uniqueIdentifier:
+          - id
+    orderByExpressionType: TrackOrderBy
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Track
+  permissions:
+    - role: admin
+      select:
+        filter: null
+

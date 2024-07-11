@@ -1,0 +1,92 @@
+---
+kind: ScalarType
+version: v1
+definition:
+  name: Chinook_ObjectId
+  graphql:
+    typeName: Chinook_ObjectId
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: chinook
+  dataConnectorScalarType: ObjectId
+  representation: Chinook_ObjectId
+  graphql:
+    comparisonExpressionTypeName: Chinook_ObjectIdComparisonExp
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: chinook
+  dataConnectorScalarType: Int
+  representation: Int
+  graphql:
+    comparisonExpressionTypeName: Chinook_IntComparisonExp
+
+---
+kind: ScalarType
+version: v1
+definition:
+  name: Chinook_Double
+  graphql:
+    typeName: Chinook_Double
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: chinook
+  dataConnectorScalarType: Double
+  representation: Double
+  graphql:
+    comparisonExpressionTypeName: Chinook_DoubleComparisonExp
+
+---
+kind: ScalarType
+version: v1
+definition:
+  name: Decimal
+  graphql:
+    typeName: Chinook_Decimal
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: chinook
+  dataConnectorScalarType: Decimal
+  representation: Decimal
+  graphql:
+    comparisonExpressionTypeName: Chinook_DecimalComparisonExp
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: chinook
+  dataConnectorScalarType: String
+  representation: String
+  graphql:
+    comparisonExpressionTypeName: Chinook_StringComparisonExp
+
+---
+kind: ScalarType
+version: v1
+definition:
+  name: Chinook_ExtendedJson
+  graphql:
+    typeName: Chinook_ExtendedJson
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: chinook
+  dataConnectorScalarType: ExtendedJSON
+  representation: Chinook_ExtendedJson
+  graphql:
+    comparisonExpressionTypeName: Chinook_ExtendedJsonComparisonExp
+
