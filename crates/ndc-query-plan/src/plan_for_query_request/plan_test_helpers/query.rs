@@ -7,8 +7,8 @@ use crate::{
 
 #[derive(Clone, Debug, Default)]
 pub struct QueryBuilder<T: ConnectorTypes> {
-    aggregates: Option<IndexMap<String, Aggregate<T>>>,
-    fields: Option<IndexMap<String, Field<T>>>,
+    aggregates: Option<IndexMap<ndc_models::FieldName, Aggregate<T>>>,
+    fields: Option<IndexMap<ndc_models::FieldName, Field<T>>>,
     limit: Option<u32>,
     aggregates_limit: Option<u32>,
     offset: Option<u32>,
@@ -45,7 +45,7 @@ impl<T: ConnectorTypes> QueryBuilder<T> {
         self.fields = Some(
             fields
                 .into_iter()
-                .map(|(name, field)| (name.to_string(), field.into()))
+                .map(|(name, field)| (name.to_string().into(), field.into()))
                 .collect(),
         );
         self
@@ -55,7 +55,7 @@ impl<T: ConnectorTypes> QueryBuilder<T> {
         self.aggregates = Some(
             aggregates
                 .into_iter()
-                .map(|(name, aggregate)| (name.to_owned(), aggregate))
+                .map(|(name, aggregate)| (name.into(), aggregate))
                 .collect(),
         );
         self

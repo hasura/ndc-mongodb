@@ -82,10 +82,10 @@ pub fn name_from_scope(scope: &Scope) -> Cow<'_, str> {
 
 fn from_path<'a>(
     init: Option<ColumnRef<'a>>,
-    path: impl IntoIterator<Item = &'a String>,
+    path: impl IntoIterator<Item = &'a ndc_models::FieldName>,
 ) -> Option<ColumnRef<'a>> {
     path.into_iter().fold(init, |accum, element| {
-        Some(fold_path_element(accum, element))
+        Some(fold_path_element(accum, element.as_ref()))
     })
 }
 

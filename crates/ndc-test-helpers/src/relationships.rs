@@ -4,10 +4,10 @@ use ndc_models::{Relationship, RelationshipArgument, RelationshipType};
 
 #[derive(Clone, Debug)]
 pub struct RelationshipBuilder {
-    column_mapping: BTreeMap<String, String>,
+    column_mapping: BTreeMap<ndc_models::FieldName, ndc_models::FieldName>,
     relationship_type: RelationshipType,
-    target_collection: String,
-    arguments: BTreeMap<String, RelationshipArgument>,
+    target_collection: ndc_models::CollectionName,
+    arguments: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>,
 }
 
 pub fn relationship<const S: usize>(
@@ -22,10 +22,10 @@ impl RelationshipBuilder {
         RelationshipBuilder {
             column_mapping: column_mapping
                 .into_iter()
-                .map(|(source, target)| (source.to_owned(), target.to_owned()))
+                .map(|(source, target)| (source.to_owned().into(), target.to_owned().into()))
                 .collect(),
             relationship_type: RelationshipType::Array,
-            target_collection: target.to_owned(),
+            target_collection: target.to_owned().into(),
             arguments: Default::default(),
         }
     }
@@ -40,7 +40,10 @@ impl RelationshipBuilder {
         self
     }
 
-    pub fn arguments(mut self, arguments: BTreeMap<String, RelationshipArgument>) -> Self {
+    pub fn arguments(
+        mut self,
+        arguments: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>,
+    ) -> Self {
         self.arguments = arguments;
         self
     }

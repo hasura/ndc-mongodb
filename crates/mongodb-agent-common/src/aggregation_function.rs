@@ -28,7 +28,7 @@ impl AggregationFunction {
         all::<AggregationFunction>()
             .find(|variant| variant.graphql_name() == s)
             .ok_or(QueryPlanError::UnknownAggregateFunction {
-                aggregate_function: s.to_owned(),
+                aggregate_function: s.to_owned().into(),
             })
     }
 

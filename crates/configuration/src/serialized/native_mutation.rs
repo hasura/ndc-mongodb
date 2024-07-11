@@ -17,7 +17,7 @@ pub struct NativeMutation {
     /// be merged with the definitions in `schema.json`. This allows you to maintain hand-written
     /// types for native mutations without having to edit a generated `schema.json` file.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub object_types: BTreeMap<String, ObjectType>,
+    pub object_types: BTreeMap<ndc_models::ObjectTypeName, ObjectType>,
 
     /// Type of data returned by the mutation. You may reference object types defined in the
     /// `object_types` list in this definition, or you may reference object types from
@@ -30,7 +30,7 @@ pub struct NativeMutation {
     /// Argument values are standard JSON mapped from GraphQL input types, not Extended JSON.
     /// Values will be converted to BSON according to the types specified here.
     #[serde(default)]
-    pub arguments: BTreeMap<String, ObjectField>,
+    pub arguments: BTreeMap<ndc_models::ArgumentName, ObjectField>,
 
     /// Command to run via MongoDB's `runCommand` API. For details on how to write commands see
     /// https://www.mongodb.com/docs/manual/reference/method/db.runCommand/

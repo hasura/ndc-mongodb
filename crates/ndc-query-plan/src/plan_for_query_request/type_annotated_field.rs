@@ -105,7 +105,7 @@ fn type_annotated_field_helper<T: QueryContext>(
 /// Translates [ndc::NestedField] to [Field]. The latter includes type annotations.
 pub fn type_annotated_nested_field<T: QueryContext>(
     query_context: &T,
-    collection_relationships: &BTreeMap<String, ndc::Relationship>,
+    collection_relationships: &BTreeMap<ndc::RelationshipName, ndc::Relationship>,
     result_type: &Type<T::ScalarType>,
     requested_fields: ndc::NestedField,
 ) -> Result<NestedField<T>> {
@@ -144,7 +144,7 @@ fn type_annotated_nested_field_helper<T: QueryContext>(
                                 root_collection_object_type,
                                 object_type,
                                 field.clone(),
-                                &append_to_path(path, [name.as_ref()]),
+                                &append_to_path(path, [name.to_string().as_ref()]),
                             )?,
                         )) as Result<_>
                     })

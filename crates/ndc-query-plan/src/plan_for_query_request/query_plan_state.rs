@@ -27,9 +27,9 @@ type Result<T> = std::result::Result<T, QueryPlanError>;
 #[derive(Debug)]
 pub struct QueryPlanState<'a, T: QueryContext> {
     pub context: &'a T,
-    pub collection_relationships: &'a BTreeMap<String, ndc::Relationship>,
+    pub collection_relationships: &'a BTreeMap<ndc::RelationshipName, ndc::Relationship>,
     pub scope: Scope,
-    relationships: BTreeMap<String, Relationship<T>>,
+    relationships: BTreeMap<ndc_models::RelationshipName, Relationship<T>>,
     unrelated_joins: Rc<RefCell<BTreeMap<String, UnrelatedJoin<T>>>>,
     relationship_name_counter: Rc<Cell<i32>>,
     scope_name_counter: Rc<Cell<i32>>,
@@ -39,7 +39,7 @@ pub struct QueryPlanState<'a, T: QueryContext> {
 impl<T: QueryContext> QueryPlanState<'_, T> {
     pub fn new<'a>(
         query_context: &'a T,
-        collection_relationships: &'a BTreeMap<String, ndc::Relationship>,
+        collection_relationships: &'a BTreeMap<ndc::RelationshipName, ndc::Relationship>,
     ) -> QueryPlanState<'a, T> {
         QueryPlanState {
             context: query_context,
@@ -78,10 +78,10 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
     /// plan, and get back an identifier than can be used to access the joined collection.
     pub fn register_relationship(
         &mut self,
-        ndc_relationship_name: String,
-        arguments: BTreeMap<String, RelationshipArgument>,
+        ndc_relationship_name: ndc::RelationshipName,
+        arguments: BTreeMap<ndc::ArgumentName, RelationshipArgument>,
         query: Query<T>,
-    ) -> Result<String> {
+    ) -> Result<ndc::RelationshipName> {
         let ndc_relationship =
             lookup_relationship(self.collection_relationships, &ndc_relationship_name)?;
 
@@ -113,7 +113,7 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
                         // relationship that we just removed.
                         self.relationships
                             .insert(existing_key, already_registered_relationship);
-                        let key = self.unique_relationship_name(ndc_relationship_name);
+                        let key = self.unique_relationship_name(ndc_relationship_name).into();
                         (key, relationship)
                     }
                 }
@@ -130,8 +130,8 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
     /// plan, and get back an identifier than can be used to access the joined collection.
     pub fn register_unrelated_join(
         &mut self,
-        target_collection: String,
-        arguments: BTreeMap<String, RelationshipArgument>,
+        target_collection: ndc::CollectionName,
+        arguments: BTreeMap<ndc::ArgumentName, RelationshipArgument>,
         query: Query<T>,
     ) -> String {
         let join = UnrelatedJoin {
@@ -156,25 +156,25 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
     /// a [crate::QueryPlan] so we can capture types for each variable.
     pub fn register_variable_use(
         &mut self,
-        variable_name: &str,
+        variable_name: &ndc::VariableName,
         expected_type: Type<T::ScalarType>,
     ) {
         self.register_variable_use_helper(variable_name, Some(expected_type))
     }
 
-    pub fn register_variable_use_of_unknown_type(&mut self, variable_name: &str) {
+    pub fn register_variable_use_of_unknown_type(&mut self, variable_name: &ndc::VariableName) {
         self.register_variable_use_helper(variable_name, None)
     }
 
     fn register_variable_use_helper(
         &mut self,
-        variable_name: &str,
+        variable_name: &ndc::VariableName,
         expected_type: Option<Type<T::ScalarType>>,
     ) {
         let mut type_map = self.variable_types.borrow_mut();
         match type_map.get_mut(variable_name) {
             None => {
-                type_map.insert(variable_name.to_string(), VecSet::singleton(expected_type));
+                type_map.insert(variable_name.clone(), VecSet::singleton(expected_type));
             }
             Some(entry) => {
                 entry.insert(expected_type);
@@ -183,7 +183,7 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
     }
 
     /// Use this for subquery plans to get the relationships for each sub-query
-    pub fn into_relationships(self) -> BTreeMap<String, Relationship<T>> {
+    pub fn into_relationships(self) -> BTreeMap<ndc::RelationshipName, Relationship<T>> {
         self.relationships
     }
 

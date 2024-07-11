@@ -17,7 +17,7 @@ pub struct Configuration {
     /// Tracked collections from the configured MongoDB database. This includes real collections as
     /// well as virtual collections defined by native queries using
     /// [NativeQueryRepresentation::Collection] representation.
-    pub collections: BTreeMap<String, ndc::CollectionInfo>,
+    pub collections: BTreeMap<ndc::CollectionName, ndc::CollectionInfo>,
 
     /// Functions are based on native queries using [NativeQueryRepresentation::Function]
     /// representation.
@@ -26,17 +26,17 @@ pub struct Configuration {
     /// responses they are separate concepts. So we want a set of [CollectionInfo] values for
     /// functions for query processing, and we want it separate from `collections` for the schema
     /// response.
-    pub functions: BTreeMap<String, (ndc::FunctionInfo, ndc::CollectionInfo)>,
+    pub functions: BTreeMap<ndc::FunctionName, (ndc::FunctionInfo, ndc::CollectionInfo)>,
 
     /// Procedures are based on native mutations.
-    pub procedures: BTreeMap<String, ndc::ProcedureInfo>,
+    pub procedures: BTreeMap<ndc::ProcedureName, ndc::ProcedureInfo>,
 
     /// Native mutations allow arbitrary MongoDB commands where types of results are specified via
     /// user configuration.
-    pub native_mutations: BTreeMap<String, NativeMutation>,
+    pub native_mutations: BTreeMap<ndc::ProcedureName, NativeMutation>,
 
     /// Native queries allow arbitrary aggregation pipelines that can be included in a query plan.
-    pub native_queries: BTreeMap<String, NativeQuery>,
+    pub native_queries: BTreeMap<ndc::FunctionName, NativeQuery>,
 
     /// Object types defined for this connector include types of documents in each collection,
     /// types for objects inside collection documents, types for native query and native mutation
@@ -45,7 +45,7 @@ pub struct Configuration {
     /// The object types here combine object type defined in files in the `schema/`,
     /// `native_queries/`, and `native_mutations/` subdirectories in the connector configuration
     /// directory.
-    pub object_types: BTreeMap<String, ndc::ObjectType>,
+    pub object_types: BTreeMap<ndc::ObjectTypeName, ndc::ObjectType>,
 
     pub options: ConfigurationOptions,
 }
@@ -53,13 +53,13 @@ pub struct Configuration {
 impl Configuration {
     pub fn validate(
         schema: serialized::Schema,
-        native_mutations: BTreeMap<String, serialized::NativeMutation>,
-        native_queries: BTreeMap<String, serialized::NativeQuery>,
+        native_mutations: BTreeMap<ndc::ProcedureName, serialized::NativeMutation>,
+        native_queries: BTreeMap<ndc::FunctionName, serialized::NativeQuery>,
         options: ConfigurationOptions,
     ) -> anyhow::Result<Self> {
         let object_types_iter = || merge_object_types(&schema, &native_mutations, &native_queries);
         let object_type_errors = {
-            let duplicate_type_names: Vec<&str> = object_types_iter()
+            let duplicate_type_names: Vec<&ndc::TypeName> = object_types_iter()
                 .map(|(name, _)| name.as_ref())
                 .duplicates()
                 .collect();
@@ -68,7 +68,11 @@ impl Configuration {
             } else {
                 Some(anyhow!(
                     "configuration contains multiple definitions for these object type names: {}",
-                    duplicate_type_names.join(", ")
+                    duplicate_type_names
+                        .into_iter()
+                        .map(|tn| tn.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
                 ))
             }
         };
@@ -84,10 +88,10 @@ impl Configuration {
                 )
             });
             let native_query_collections = native_queries.iter().filter_map(
-                |(name, native_query): (&String, &serialized::NativeQuery)| {
+                |(name, native_query): (&ndc::FunctionName, &serialized::NativeQuery)| {
                     if native_query.representation == NativeQueryRepresentation::Collection {
                         Some((
-                            name.to_owned(),
+                            name.as_ref().to_owned(),
                             native_query_to_collection_info(&object_types, name, native_query),
                         ))
                     } else {
@@ -236,9 +240,9 @@ pub struct ConfigurationSerializationOptions {
 
 fn merge_object_types<'a>(
     schema: &'a serialized::Schema,
-    native_mutations: &'a BTreeMap<String, serialized::NativeMutation>,
-    native_queries: &'a BTreeMap<String, serialized::NativeQuery>,
-) -> impl Iterator<Item = (&'a String, &'a schema::ObjectType)> {
+    native_mutations: &'a BTreeMap<ndc::ProcedureName, serialized::NativeMutation>,
+    native_queries: &'a BTreeMap<ndc::FunctionName, serialized::NativeQuery>,
+) -> impl Iterator<Item = (&'a ndc::ObjectTypeName, &'a schema::ObjectType)> {
     let object_types_from_schema = schema.object_types.iter();
     let object_types_from_native_mutations = native_mutations
         .values()
@@ -252,8 +256,8 @@ fn merge_object_types<'a>(
 }
 
 fn collection_to_collection_info(
-    object_types: &BTreeMap<String, schema::ObjectType>,
-    name: String,
+    object_types: &BTreeMap<ndc::ObjectTypeName, schema::ObjectType>,
+    name: ndc::CollectionName,
     collection: schema::Collection,
 ) -> ndc::CollectionInfo {
     let pk_constraint =
@@ -270,19 +274,19 @@ fn collection_to_collection_info(
 }
 
 fn native_query_to_collection_info(
-    object_types: &BTreeMap<String, schema::ObjectType>,
-    name: &str,
+    object_types: &BTreeMap<ndc::ObjectTypeName, schema::ObjectType>,
+    name: &ndc::FunctionName,
     native_query: &serialized::NativeQuery,
 ) -> ndc::CollectionInfo {
     let pk_constraint = get_primary_key_uniqueness_constraint(
         object_types,
-        name,
+        name.as_ref(),
         &native_query.result_document_type,
     );
 
     // TODO: recursively verify that all referenced object types exist
     ndc::CollectionInfo {
-        name: name.to_owned(),
+        name: name.to_owned().into(),
         collection_type: native_query.result_document_type.clone(),
         description: native_query.description.clone(),
         arguments: arguments_to_ndc_arguments(native_query.arguments.clone()),
@@ -292,9 +296,9 @@ fn native_query_to_collection_info(
 }
 
 fn get_primary_key_uniqueness_constraint(
-    object_types: &BTreeMap<String, schema::ObjectType>,
-    name: &str,
-    collection_type: &str,
+    object_types: &BTreeMap<ndc::ObjectTypeName, schema::ObjectType>,
+    name: &ndc::CollectionName,
+    collection_type: &ndc::ObjectTypeName,
 ) -> Option<(String, ndc::UniquenessConstraint)> {
     // Check to make sure our collection's object type contains the _id field
     // If it doesn't (should never happen, all collections need an _id column), don't generate the constraint
@@ -312,8 +316,8 @@ fn get_primary_key_uniqueness_constraint(
 }
 
 fn native_query_to_function_info(
-    object_types: &BTreeMap<String, schema::ObjectType>,
-    name: &str,
+    object_types: &BTreeMap<ndc::ObjectTypeName, schema::ObjectType>,
+    name: &ndc::FunctionName,
     native_query: &serialized::NativeQuery,
 ) -> anyhow::Result<ndc::FunctionInfo> {
     Ok(ndc::FunctionInfo {
@@ -325,9 +329,9 @@ fn native_query_to_function_info(
 }
 
 fn function_result_type(
-    object_types: &BTreeMap<String, schema::ObjectType>,
-    function_name: &str,
-    object_type_name: &str,
+    object_types: &BTreeMap<ndc::ObjectTypeName, schema::ObjectType>,
+    function_name: &ndc::FunctionName,
+    object_type_name: &ndc::ObjectTypeName,
 ) -> anyhow::Result<ndc::Type> {
     let object_type = find_object_type(object_types, object_type_name)?;
     let value_field = object_type.fields.get("__value").ok_or_else(|| {
@@ -338,7 +342,7 @@ fn function_result_type(
 }
 
 fn native_mutation_to_procedure_info(
-    mutation_name: &str,
+    mutation_name: &ndc::ProcedureName,
     mutation: &serialized::NativeMutation,
 ) -> ndc::ProcedureInfo {
     ndc::ProcedureInfo {
@@ -350,8 +354,8 @@ fn native_mutation_to_procedure_info(
 }
 
 fn arguments_to_ndc_arguments(
-    configured_arguments: BTreeMap<String, schema::ObjectField>,
-) -> BTreeMap<String, ndc::ArgumentInfo> {
+    configured_arguments: BTreeMap<ndc::ArgumentName, schema::ObjectField>,
+) -> BTreeMap<ndc::ArgumentName, ndc::ArgumentInfo> {
     configured_arguments
         .into_iter()
         .map(|(name, field)| {
@@ -367,8 +371,8 @@ fn arguments_to_ndc_arguments(
 }
 
 fn find_object_type<'a>(
-    object_types: &'a BTreeMap<String, schema::ObjectType>,
-    object_type_name: &str,
+    object_types: &'a BTreeMap<ndc::ObjectTypeName, schema::ObjectType>,
+    object_type_name: &ndc::ObjectTypeName,
 ) -> anyhow::Result<&'a schema::ObjectType> {
     object_types
         .get(object_type_name)
@@ -387,7 +391,7 @@ mod tests {
         let schema = Schema {
             collections: Default::default(),
             object_types: [(
-                "Album".to_owned(),
+                "Album".to_owned().into(),
                 schema::ObjectType {
                     fields: Default::default(),
                     description: Default::default(),
@@ -397,10 +401,10 @@ mod tests {
             .collect(),
         };
         let native_mutations = [(
-            "hello".to_owned(),
+            "hello".into(),
             serialized::NativeMutation {
                 object_types: [(
-                    "Album".to_owned(),
+                    "Album".to_owned().into(),
                     schema::ObjectType {
                         fields: Default::default(),
                         description: Default::default(),

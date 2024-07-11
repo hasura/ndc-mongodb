@@ -43,8 +43,8 @@ impl From<QueryResponseBuilder> for QueryResponse {
 
 #[derive(Clone, Debug, Default)]
 pub struct RowSetBuilder {
-    aggregates: IndexMap<String, serde_json::Value>,
-    rows: Vec<IndexMap<String, RowFieldValue>>,
+    aggregates: IndexMap<ndc_models::FieldName, serde_json::Value>,
+    rows: Vec<IndexMap<ndc_models::FieldName, RowFieldValue>>,
 }
 
 impl RowSetBuilder {
@@ -59,7 +59,7 @@ impl RowSetBuilder {
         self.aggregates.extend(
             aggregates
                 .into_iter()
-                .map(|(k, v)| (k.to_string(), v.into())),
+                .map(|(k, v)| (k.to_string().into(), v.into())),
         );
         self
     }
@@ -72,7 +72,7 @@ impl RowSetBuilder {
     ) -> Self {
         self.rows.extend(rows.into_iter().map(|r| {
             r.into_iter()
-                .map(|(k, v)| (k.to_string(), RowFieldValue(v.into())))
+                .map(|(k, v)| (k.to_string().into(), RowFieldValue(v.into())))
                 .collect()
         }));
         self
@@ -84,7 +84,7 @@ impl RowSetBuilder {
     ) -> Self {
         self.rows.push(
             row.into_iter()
-                .map(|(k, v)| (k.to_string(), RowFieldValue(v.into())))
+                .map(|(k, v)| (k.to_string().into(), RowFieldValue(v.into())))
                 .collect(),
         );
         self

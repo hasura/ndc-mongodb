@@ -22,9 +22,9 @@ pub trait ConnectorTypes {
     PartialEq(bound = "T::ScalarType: PartialEq")
 )]
 pub struct QueryPlan<T: ConnectorTypes> {
-    pub collection: String,
+    pub collection: ndc_models::CollectionName,
     pub query: Query<T>,
-    pub arguments: BTreeMap<String, Argument>,
+    pub arguments: BTreeMap<ndc_models::ArgumentName, Argument>,
     pub variables: Option<Vec<VariableSet>>,
 
     /// Types for values from the `variables` map as inferred by usages in the query request. It is
@@ -44,9 +44,9 @@ impl<T: ConnectorTypes> QueryPlan<T> {
     }
 }
 
-pub type Relationships<T> = BTreeMap<String, Relationship<T>>;
-pub type VariableSet = BTreeMap<String, serde_json::Value>;
-pub type VariableTypes<T> = BTreeMap<String, VecSet<Option<Type<T>>>>;
+pub type Relationships<T> = BTreeMap<ndc_models::RelationshipName, Relationship<T>>;
+pub type VariableSet = BTreeMap<ndc_models::VariableName, serde_json::Value>;
+pub type VariableTypes<T> = BTreeMap<ndc_models::VariableName, VecSet<Option<Type<T>>>>;
 
 #[derive(Derivative)]
 #[derivative(
@@ -56,8 +56,8 @@ pub type VariableTypes<T> = BTreeMap<String, VecSet<Option<Type<T>>>>;
     PartialEq(bound = "")
 )]
 pub struct Query<T: ConnectorTypes> {
-    pub aggregates: Option<IndexMap<String, Aggregate<T>>>,
-    pub fields: Option<IndexMap<String, Field<T>>>,
+    pub aggregates: Option<IndexMap<ndc_models::FieldName, Aggregate<T>>>,
+    pub fields: Option<IndexMap<ndc_models::FieldName, Field<T>>>,
     pub limit: Option<u32>,
     pub aggregates_limit: Option<u32>,
     pub offset: Option<u32>,
@@ -95,18 +95,18 @@ impl<T: ConnectorTypes> Query<T> {
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub struct Relationship<T: ConnectorTypes> {
-    pub column_mapping: BTreeMap<String, String>,
+    pub column_mapping: BTreeMap<ndc_models::FieldName, ndc_models::FieldName>,
     pub relationship_type: RelationshipType,
-    pub target_collection: String,
-    pub arguments: BTreeMap<String, RelationshipArgument>,
+    pub target_collection: ndc_models::CollectionName,
+    pub arguments: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>,
     pub query: Query<T>,
 }
 
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub struct UnrelatedJoin<T: ConnectorTypes> {
-    pub target_collection: String,
-    pub arguments: BTreeMap<String, RelationshipArgument>,
+    pub target_collection: ndc_models::CollectionName,
+    pub arguments: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>,
     pub query: Query<T>,
 }
 
@@ -121,13 +121,13 @@ pub enum Scope {
 pub enum Aggregate<T: ConnectorTypes> {
     ColumnCount {
         /// The column to apply the count aggregate function to
-        column: String,
+        column: ndc_models::FieldName,
         /// Whether or not only distinct items should be counted
         distinct: bool,
     },
     SingleColumn {
         /// The column to apply the aggregation function to
-        column: String,
+        column: ndc_models::FieldName,
         /// Single column aggregate function name.
         function: T::AggregateFunction,
         result_type: Type<T::ScalarType>,
@@ -138,7 +138,7 @@ pub enum Aggregate<T: ConnectorTypes> {
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub struct NestedObject<T: ConnectorTypes> {
-    pub fields: IndexMap<String, Field<T>>,
+    pub fields: IndexMap<ndc_models::FieldName, Field<T>>,
 }
 
 #[derive(Derivative)]
@@ -158,7 +158,7 @@ pub enum NestedField<T: ConnectorTypes> {
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub enum Field<T: ConnectorTypes> {
     Column {
-        column: String,
+        column: ndc_models::FieldName,
 
         /// When the type of the column is a (possibly-nullable) array or object,
         /// the caller can request a subset of the complete column data,
@@ -172,9 +172,9 @@ pub enum Field<T: ConnectorTypes> {
         /// The name of the relationship to follow for the subquery - this is the key in the
         /// [Query] relationships map in this module, it is **not** the key in the
         /// [ndc::QueryRequest] collection_relationships map.
-        relationship: String,
-        aggregates: Option<IndexMap<String, Aggregate<T>>>,
-        fields: Option<IndexMap<String, Field<T>>>,
+        relationship: ndc_models::RelationshipName,
+        aggregates: Option<IndexMap<ndc_models::FieldName, Aggregate<T>>>,
+        fields: Option<IndexMap<ndc_models::FieldName, Field<T>>>,
     },
 }
 
@@ -274,19 +274,19 @@ pub struct OrderByElement<T: ConnectorTypes> {
 pub enum OrderByTarget<T: ConnectorTypes> {
     Column {
         /// The name of the column
-        name: String,
+        name: ndc_models::FieldName,
 
         /// Path to a nested field within an object column
-        field_path: Option<Vec<String>>,
+        field_path: Option<Vec<ndc_models::FieldName>>,
 
         /// Any relationships to traverse to reach this column. These are translated from
         /// [ndc_models::OrderByElement] values in the [ndc_models::QueryRequest] to names of relation
         /// fields for the [QueryPlan].
-        path: Vec<String>,
+        path: Vec<ndc_models::RelationshipName>,
     },
     SingleColumnAggregate {
         /// The column to apply the aggregation function to
-        column: String,
+        column: ndc_models::FieldName,
         /// Single column aggregate function name.
         function: T::AggregateFunction,
 
@@ -295,13 +295,13 @@ pub enum OrderByTarget<T: ConnectorTypes> {
         /// Any relationships to traverse to reach this aggregate. These are translated from
         /// [ndc_models::OrderByElement] values in the [ndc_models::QueryRequest] to names of relation
         /// fields for the [QueryPlan].
-        path: Vec<String>,
+        path: Vec<ndc_models::RelationshipName>,
     },
     StarCountAggregate {
         /// Any relationships to traverse to reach this aggregate. These are translated from
         /// [ndc_models::OrderByElement] values in the [ndc_models::QueryRequest] to names of relation
         /// fields for the [QueryPlan].
-        path: Vec<String>,
+        path: Vec<ndc_models::RelationshipName>,
     },
 }
 
@@ -310,42 +310,42 @@ pub enum OrderByTarget<T: ConnectorTypes> {
 pub enum ComparisonTarget<T: ConnectorTypes> {
     Column {
         /// The name of the column
-        name: String,
+        name: ndc_models::FieldName,
 
         /// Path to a nested field within an object column
-        field_path: Option<Vec<String>>,
+        field_path: Option<Vec<ndc_models::FieldName>>,
 
         field_type: Type<T::ScalarType>,
 
         /// Any relationships to traverse to reach this column. These are translated from
         /// [ndc_models::PathElement] values in the [ndc_models::QueryRequest] to names of relation
         /// fields for the [QueryPlan].
-        path: Vec<String>,
+        path: Vec<ndc_models::RelationshipName>,
     },
     ColumnInScope {
         /// The name of the column
-        name: String,
+        name: ndc_models::FieldName,
 
         /// The named scope that identifies the collection to reference. This corresponds to the
         /// `scope` field of the [Query] type.
         scope: Scope,
 
         /// Path to a nested field within an object column
-        field_path: Option<Vec<String>>,
+        field_path: Option<Vec<ndc_models::FieldName>>,
 
         field_type: Type<T::ScalarType>,
     },
 }
 
 impl<T: ConnectorTypes> ComparisonTarget<T> {
-    pub fn column_name(&self) -> &str {
+    pub fn column_name(&self) -> &ndc_models::FieldName {
         match self {
             ComparisonTarget::Column { name, .. } => name,
             ComparisonTarget::ColumnInScope { name, .. } => name,
         }
     }
 
-    pub fn relationship_path(&self) -> &[String] {
+    pub fn relationship_path(&self) -> &[ndc_models::RelationshipName] {
         match self {
             ComparisonTarget::Column { path, .. } => path,
             ComparisonTarget::ColumnInScope { .. } => &[],
@@ -373,7 +373,7 @@ pub enum ComparisonValue<T: ConnectorTypes> {
         value_type: Type<T::ScalarType>,
     },
     Variable {
-        name: String,
+        name: ndc_models::VariableName,
         variable_type: Type<T::ScalarType>,
     },
 }
@@ -402,7 +402,7 @@ pub enum ExistsInCollection {
     Related {
         /// Key of the relation in the [Query] joins map. Relationships are scoped to the sub-query
         /// that defines the relation source.
-        relationship: String,
+        relationship: ndc_models::RelationshipName,
     },
     Unrelated {
         /// Key of the relation in the [QueryPlan] joins map. Unrelated collections are not scoped

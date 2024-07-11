@@ -28,7 +28,7 @@ pub fn make_nested_schema() -> MongoConfiguration {
         functions: Default::default(),
         object_types: BTreeMap::from([
             (
-                "Author".to_owned(),
+                "Author".into(),
                 object_type([
                     ("name", schema::Type::Scalar(BsonScalarType::String)),
                     ("address", schema::Type::Object("Address".into())),
@@ -75,7 +75,7 @@ pub fn make_nested_schema() -> MongoConfiguration {
                 ]),
             ),
             (
-                "appearances".to_owned(),
+                "appearances".into(),
                 object_type([("authorId", schema::Type::Scalar(BsonScalarType::ObjectId))]),
             ),
         ]),

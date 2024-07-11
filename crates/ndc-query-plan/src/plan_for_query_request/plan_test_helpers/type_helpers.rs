@@ -25,7 +25,7 @@ pub fn object_type(
         name: None,
         fields: fields
             .into_iter()
-            .map(|(name, field)| (name.to_string(), field.into()))
+            .map(|(name, field)| (name.to_string().into(), field.into()))
             .collect(),
     })
 }

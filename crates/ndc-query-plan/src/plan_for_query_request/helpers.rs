@@ -10,12 +10,12 @@ type Result<T> = std::result::Result<T, QueryPlanError>;
 
 pub fn find_object_field<'a, S>(
     object_type: &'a plan::ObjectType<S>,
-    field_name: &str,
+    field_name: &ndc::FieldName,
 ) -> Result<&'a plan::Type<S>> {
     object_type.fields.get(field_name).ok_or_else(|| {
         QueryPlanError::UnknownObjectTypeField {
             object_type: object_type.name.clone(),
-            field_name: field_name.to_string(),
+            field_name: field_name.clone(),
             path: Default::default(), // TODO: set a path for more helpful error reporting
         }
     })
@@ -23,8 +23,8 @@ pub fn find_object_field<'a, S>(
 
 pub fn find_object_field_path<'a, S>(
     object_type: &'a plan::ObjectType<S>,
-    field_name: &str,
-    field_path: &Option<Vec<String>>,
+    field_name: &ndc::FieldName,
+    field_path: &Option<Vec<ndc::FieldName>>,
 ) -> Result<&'a plan::Type<S>> {
     match field_path {
         None => find_object_field(object_type, field_name),
@@ -34,8 +34,8 @@ pub fn find_object_field_path<'a, S>(
 
 fn find_object_field_path_helper<'a, S>(
     object_type: &'a plan::ObjectType<S>,
-    field_name: &str,
-    field_path: &[String],
+    field_name: &ndc::FieldName,
+    field_path: &[ndc::FieldName],
 ) -> Result<&'a plan::Type<S>> {
     let field_type = find_object_field(object_type, field_name)?;
     match field_path {
@@ -49,8 +49,8 @@ fn find_object_field_path_helper<'a, S>(
 
 fn find_object_type<'a, S>(
     t: &'a plan::Type<S>,
-    parent_type: &Option<String>,
-    field_name: &str,
+    parent_type: &Option<ndc::ObjectTypeName>,
+    field_name: &ndc::FieldName,
 ) -> Result<&'a plan::ObjectType<S>> {
     match t {
         crate::Type::Scalar(_) => Err(QueryPlanError::ExpectedObjectTypeAtField {
@@ -69,8 +69,8 @@ fn find_object_type<'a, S>(
 }
 
 pub fn lookup_relationship<'a>(
-    relationships: &'a BTreeMap<String, ndc::Relationship>,
-    relationship: &str,
+    relationships: &'a BTreeMap<ndc::RelationshipName, ndc::Relationship>,
+    relationship: &ndc::RelationshipName,
 ) -> Result<&'a ndc::Relationship> {
     relationships
         .get(relationship)

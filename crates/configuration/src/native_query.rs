@@ -19,16 +19,16 @@ use crate::{serialized, MongoScalarType};
 #[derive(Clone, Debug)]
 pub struct NativeQuery {
     pub representation: NativeQueryRepresentation,
-    pub input_collection: Option<String>,
-    pub arguments: BTreeMap<String, plan::Type<MongoScalarType>>,
-    pub result_document_type: String,
+    pub input_collection: Option<ndc::CollectionName>,
+    pub arguments: BTreeMap<ndc::ArgumentName, plan::Type<MongoScalarType>>,
+    pub result_document_type: ndc::ObjectTypeName,
     pub pipeline: Vec<bson::Document>,
     pub description: Option<String>,
 }
 
 impl NativeQuery {
     pub fn from_serialized(
-        object_types: &BTreeMap<String, ndc::ObjectType>,
+        object_types: &BTreeMap<ndc::ObjectTypeName, ndc::ObjectType>,
         input: serialized::NativeQuery,
     ) -> Result<NativeQuery, QueryPlanError> {
         let arguments = input

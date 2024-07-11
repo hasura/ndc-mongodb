@@ -17,7 +17,7 @@ use crate::{
 /// - reproducibility: the same input name and type must always produce the same output name
 /// - distinct outputs: inputs with different types (or names) must produce different output names
 /// - It must produce a valid MongoDB variable name (see https://www.mongodb.com/docs/manual/reference/aggregation-variables/)
-pub fn query_variable_name(name: &str, variable_type: &Type) -> String {
+pub fn query_variable_name(name: &ndc_models::VariableName, variable_type: &Type) -> String {
     variable(&format!("{}_{}", name, type_name(variable_type)))
 }
 
@@ -52,8 +52,8 @@ mod tests {
     proptest! {
         #[test]
         fn variable_names_are_reproducible(variable_name: String, variable_type in arb_plan_type()) {
-            let a = query_variable_name(&variable_name, &variable_type);
-            let b = query_variable_name(&variable_name, &variable_type);
+            let a = query_variable_name(&variable_name.as_str().into(), &variable_type);
+            let b = query_variable_name(&variable_name.into(), &variable_type);
             prop_assert_eq!(a, b)
         }
     }
@@ -64,8 +64,8 @@ mod tests {
             (name_a, name_b) in (any::<String>(), any::<String>()).prop_filter("names are equale", |(a, b)| a != b),
             variable_type in arb_plan_type()
         ) {
-            let a = query_variable_name(&name_a, &variable_type);
-            let b = query_variable_name(&name_b, &variable_type);
+            let a = query_variable_name(&name_a.into(), &variable_type);
+            let b = query_variable_name(&name_b.into(), &variable_type);
             prop_assert_ne!(a, b)
         }
     }
@@ -76,8 +76,8 @@ mod tests {
             variable_name: String,
             (type_a, type_b) in (arb_plan_type(), arb_plan_type()).prop_filter("types are equal", |(a, b)| a != b)
         ) {
-            let a = query_variable_name(&variable_name, &type_a);
-            let b = query_variable_name(&variable_name, &type_b);
+            let a = query_variable_name(&variable_name.as_str().into(), &type_a);
+            let b = query_variable_name(&variable_name.into(), &type_b);
             prop_assert_ne!(a, b)
         }
     }
@@ -87,7 +87,7 @@ mod tests {
         fn variable_names_are_valid_for_mongodb_expressions(variable_name: String, variable_type in arb_plan_type()) {
             static VALID_NAME: Lazy<Regex> =
                 Lazy::new(|| Regex::new(r"^[a-z\P{ascii}][_a-zA-Z0-9\P{ascii}]*$").unwrap());
-            let name = query_variable_name(&variable_name, &variable_type);
+            let name = query_variable_name(&variable_name.into(), &variable_type);
             prop_assert!(VALID_NAME.is_match(&name))
         }
     }

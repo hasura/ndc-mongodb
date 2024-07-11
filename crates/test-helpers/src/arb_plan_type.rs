@@ -12,9 +12,12 @@ pub fn arb_plan_type() -> impl Strategy<Value = Type<MongoScalarType>> {
             inner.clone().prop_map(|t| Type::Nullable(Box::new(t))),
             (
                 any::<Option<String>>(),
-                btree_map(any::<String>(), inner, 1..=10)
+                btree_map(any::<String>().prop_map_into(), inner, 1..=10)
             )
-                .prop_map(|(name, fields)| Type::Object(ObjectType { name, fields }))
+                .prop_map(|(name, fields)| Type::Object(ObjectType {
+                    name: name.map(|n| n.into()),
+                    fields
+                }))
         ]
     })
 }

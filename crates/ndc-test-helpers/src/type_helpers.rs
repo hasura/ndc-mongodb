@@ -8,7 +8,7 @@ pub fn array_of(t: impl Into<Type>) -> Type {
 
 pub fn named_type(name: impl ToString) -> Type {
     Type::Named {
-        name: name.to_string(),
+        name: name.to_string().into(),
     }
 }
 

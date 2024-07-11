@@ -51,14 +51,15 @@ pub fn make_sort(order_by: &OrderBy) -> Result<Document, MongoAgentError> {
 
 // TODO: MDB-159 Replace use of [safe_name] with [ColumnRef].
 fn column_ref_with_path(
-    name: &String,
-    field_path: Option<&[String]>,
-    relation_path: &[String],
+    name: &ndc_models::FieldName,
+    field_path: Option<&[ndc_models::FieldName]>,
+    relation_path: &[ndc_models::RelationshipName],
 ) -> Result<String, MongoAgentError> {
     relation_path
         .iter()
-        .chain(std::iter::once(name))
-        .chain(field_path.into_iter().flatten())
-        .map(|x| safe_name(x))
+        .map(|n| n.as_str())
+        .chain(std::iter::once(name.as_str()))
+        .chain(field_path.into_iter().flatten().map(|n| n.as_str()))
+        .map(safe_name)
         .process_results(|mut iter| iter.join("."))
 }
