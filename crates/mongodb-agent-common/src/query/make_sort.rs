@@ -60,6 +60,6 @@ fn column_ref_with_path(
         .map(|n| n.as_str())
         .chain(std::iter::once(name.as_str()))
         .chain(field_path.into_iter().flatten().map(|n| n.as_str()))
-        .map(|x| safe_name(x))
+        .map(safe_name)
         .process_results(|mut iter| iter.join("."))
 }

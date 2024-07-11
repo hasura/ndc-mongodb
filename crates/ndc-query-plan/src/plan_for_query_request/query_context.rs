@@ -118,7 +118,7 @@ pub trait QueryContext: ConnectorTypes {
 
     fn find_scalar_type(scalar_type_name: &ndc::ScalarTypeName) -> Result<Self::ScalarType> {
         Self::lookup_scalar_type(scalar_type_name)
-            .ok_or_else(|| QueryPlanError::UnknownScalarType(scalar_type_name.clone().into()))
+            .ok_or_else(|| QueryPlanError::UnknownScalarType(scalar_type_name.clone()))
     }
 
     fn ndc_to_plan_type(&self, ndc_type: &ndc::Type) -> Result<plan::Type<Self::ScalarType>> {

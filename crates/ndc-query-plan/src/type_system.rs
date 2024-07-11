@@ -1,5 +1,5 @@
-use std::collections::BTreeMap;
 use ref_cast::RefCast;
+use std::collections::BTreeMap;
 
 use itertools::Itertools as _;
 use ndc_models as ndc;
@@ -36,9 +36,7 @@ pub struct ObjectType<ScalarType> {
 
 impl<S> ObjectType<S> {
     pub fn named_fields(&self) -> impl Iterator<Item = (&ndc::FieldName, &Type<S>)> {
-        self.fields
-            .iter()
-            .map(|(name, field)| (name, field))
+        self.fields.iter()
     }
 }
 
@@ -75,7 +73,11 @@ fn lookup_type<ScalarType>(
     if let Some(scalar_type) = lookup_scalar_type(ndc::ScalarTypeName::ref_cast(name)) {
         return Ok(Type::Scalar(scalar_type));
     }
-    let object_type = lookup_object_type_helper(object_types, ndc::ObjectTypeName::ref_cast(name), lookup_scalar_type)?;
+    let object_type = lookup_object_type_helper(
+        object_types,
+        ndc::ObjectTypeName::ref_cast(name),
+        lookup_scalar_type,
+    )?;
     Ok(Type::Object(object_type))
 }
 
@@ -89,7 +91,7 @@ fn lookup_object_type_helper<ScalarType>(
         .ok_or_else(|| QueryPlanError::UnknownObjectType(name.to_string()))?;
 
     let plan_object_type = plan::ObjectType {
-        name: Some(name.clone().into()),
+        name: Some(name.clone()),
         fields: object_type
             .fields
             .iter()

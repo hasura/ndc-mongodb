@@ -16,7 +16,7 @@ pub fn path_element(relationship: ndc_models::RelationshipName) -> PathElementBu
 impl PathElementBuilder {
     pub fn new(relationship: ndc_models::RelationshipName) -> Self {
         PathElementBuilder {
-            relationship: relationship,
+            relationship,
             arguments: None,
             predicate: None,
         }
