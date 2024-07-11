@@ -46,3 +46,27 @@ async fn filters_by_date() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+#[tokio::test]
+async fn selects_array_within_array() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+            query {
+              artistsWithAlbumsAndTracks(limit: 1, order_by: {id: Asc}) {
+                name
+                albums {
+                  title
+                  tracks {
+                    name
+                  }
+                }
+              }
+            }
+            "#
+        )
+        .run()
+        .await?
+    );
+    Ok(())
+}
