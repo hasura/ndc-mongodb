@@ -35,7 +35,10 @@ pub fn resolve_arguments(
 ) -> Result<BTreeMap<ndc_models::ArgumentName, Bson>, ArgumentError> {
     validate_no_excess_arguments(parameters, &arguments)?;
 
-    let (arguments, missing): (Vec<(ndc_models::ArgumentName, Argument, &Type)>, Vec<ndc_models::ArgumentName>) = parameters
+    let (arguments, missing): (
+        Vec<(ndc_models::ArgumentName, Argument, &Type)>,
+        Vec<ndc_models::ArgumentName>,
+    ) = parameters
         .iter()
         .map(|(name, parameter_type)| {
             if let Some((name, argument)) = arguments.remove_entry(name) {
@@ -49,7 +52,10 @@ pub fn resolve_arguments(
         return Err(ArgumentError::Missing(missing));
     }
 
-    let (resolved, errors): (BTreeMap<ndc_models::ArgumentName, Bson>, BTreeMap<ndc_models::ArgumentName, JsonToBsonError>) = arguments
+    let (resolved, errors): (
+        BTreeMap<ndc_models::ArgumentName, Bson>,
+        BTreeMap<ndc_models::ArgumentName, JsonToBsonError>,
+    ) = arguments
         .into_iter()
         .map(|(name, argument, parameter_type)| {
             match argument_to_mongodb_expression(&argument, parameter_type) {

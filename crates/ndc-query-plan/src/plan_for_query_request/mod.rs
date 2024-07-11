@@ -172,8 +172,7 @@ fn plan_for_aggregate<T: QueryContext>(
             function,
             field_path: _,
         } => {
-            let object_type_field_type =
-                find_object_field(collection_object_type, &column)?;
+            let object_type_field_type = find_object_field(collection_object_type, &column)?;
             // let column_scalar_type_name = get_scalar_type_name(&object_type_field.r#type)?;
             let (function, definition) =
                 context.find_aggregation_function_definition(object_type_field_type, &function)?;
@@ -544,7 +543,8 @@ fn plan_for_comparison_target<T: QueryContext>(
                 path,
                 requested_columns,
             )?;
-            let field_type = find_object_field_path(&target_object_type, &name, &field_path)?.clone();
+            let field_type =
+                find_object_field_path(&target_object_type, &name, &field_path)?.clone();
             Ok(plan::ComparisonTarget::Column {
                 name,
                 field_path,
@@ -553,7 +553,8 @@ fn plan_for_comparison_target<T: QueryContext>(
             })
         }
         ndc::ComparisonTarget::RootCollectionColumn { name, field_path } => {
-            let field_type = find_object_field_path(root_collection_object_type, &name, &field_path)?.clone();
+            let field_type =
+                find_object_field_path(root_collection_object_type, &name, &field_path)?.clone();
             Ok(plan::ComparisonTarget::ColumnInScope {
                 name,
                 field_path,

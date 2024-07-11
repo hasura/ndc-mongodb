@@ -312,10 +312,7 @@ fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
         ]
         .into(),
         object_types: [
-            (
-                "schools".into(),
-                object_type([("_id", named_type("Int"))]),
-            ),
+            ("schools".into(), object_type([("_id", named_type("Int"))])),
             (
                 "classes".into(),
                 object_type([

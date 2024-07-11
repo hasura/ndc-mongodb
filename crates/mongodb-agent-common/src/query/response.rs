@@ -204,7 +204,10 @@ fn type_for_aggregates() -> Result<Type> {
     Ok(Type::Scalar(MongoScalarType::ExtendedJSON))
 }
 
-fn type_for_row(path: &[&str], query_fields: &IndexMap<ndc_models::FieldName, Field>) -> Result<Type> {
+fn type_for_row(
+    path: &[&str],
+    query_fields: &IndexMap<ndc_models::FieldName, Field>,
+) -> Result<Type> {
     let fields = query_fields
         .iter()
         .map(|(field_name, field_definition)| {

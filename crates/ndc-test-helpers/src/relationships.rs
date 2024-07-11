@@ -40,7 +40,10 @@ impl RelationshipBuilder {
         self
     }
 
-    pub fn arguments(mut self, arguments: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>) -> Self {
+    pub fn arguments(
+        mut self,
+        arguments: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>,
+    ) -> Self {
         self.arguments = arguments;
         self
     }

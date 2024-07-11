@@ -59,9 +59,11 @@ fn look_up_procedures<'a, 'b>(
                 fields,
             } => {
                 let native_mutation = config.native_mutations().get(name);
-                let procedure = native_mutation.ok_or(name.to_string()).map(|native_mutation| {
-                    Procedure::from_native_mutation(native_mutation, arguments.clone())
-                })?;
+                let procedure = native_mutation
+                    .ok_or(name.to_string())
+                    .map(|native_mutation| {
+                        Procedure::from_native_mutation(native_mutation, arguments.clone())
+                    })?;
                 Ok((procedure, fields.as_ref()))
             }
         })

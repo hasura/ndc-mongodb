@@ -161,7 +161,10 @@ pub fn type_from_bson(
     object_type_name: &str,
     value: &Bson,
     all_schema_nullable: bool,
-) -> (BTreeMap<ndc_models::ObjectTypeName, schema::ObjectType>, Type) {
+) -> (
+    BTreeMap<ndc_models::ObjectTypeName, schema::ObjectType>,
+    Type,
+) {
     let (object_types, t) = make_field_type(object_type_name, value, all_schema_nullable);
     (WithName::into_map(object_types), t)
 }
@@ -240,8 +243,12 @@ mod tests {
     fn simple_doc() -> Result<(), anyhow::Error> {
         let object_name = "foo".into();
         let doc = doc! {"my_int": 1, "my_string": "two"};
-        let result =
-            WithName::into_map::<BTreeMap<_, _>>(make_object_type(&object_name, &doc, false, false));
+        let result = WithName::into_map::<BTreeMap<_, _>>(make_object_type(
+            &object_name,
+            &doc,
+            false,
+            false,
+        ));
 
         let expected = BTreeMap::from([(
             object_name.to_owned(),
@@ -317,8 +324,12 @@ mod tests {
     fn array_of_objects() -> Result<(), anyhow::Error> {
         let object_name = "foo".into();
         let doc = doc! {"my_array": [{"foo": 42, "bar": ""}, {"bar": "wut", "baz": 3.77}]};
-        let result =
-            WithName::into_map::<BTreeMap<_, _>>(make_object_type(&object_name, &doc, false, false));
+        let result = WithName::into_map::<BTreeMap<_, _>>(make_object_type(
+            &object_name,
+            &doc,
+            false,
+            false,
+        ));
 
         let expected = BTreeMap::from([
             (
@@ -378,8 +389,12 @@ mod tests {
     fn non_unifiable_array_of_objects() -> Result<(), anyhow::Error> {
         let object_name = "foo".into();
         let doc = doc! {"my_array": [{"foo": 42, "bar": ""}, {"bar": 17, "baz": 3.77}]};
-        let result =
-            WithName::into_map::<BTreeMap<_, _>>(make_object_type(&object_name, &doc, false, false));
+        let result = WithName::into_map::<BTreeMap<_, _>>(make_object_type(
+            &object_name,
+            &doc,
+            false,
+            false,
+        ));
 
         let expected = BTreeMap::from([
             (

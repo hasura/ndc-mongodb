@@ -124,7 +124,10 @@ fn multiple_column_mapping_lookup(
         .map(|local_field| {
             Ok((
                 variable(local_field.as_str()),
-                Bson::String(format!("${}", safe_name(local_field.as_str())?.into_owned())),
+                Bson::String(format!(
+                    "${}",
+                    safe_name(local_field.as_str())?.into_owned()
+                )),
             ))
         })
         .collect::<Result<_>>()?;
@@ -136,7 +139,8 @@ fn multiple_column_mapping_lookup(
     // Creating an intermediate Vec and sorting it is done just to help with testing.
     // A stable order for matchers makes it easier to assert equality between actual
     // and expected pipelines.
-    let mut column_pairs: Vec<(&ndc_models::FieldName, &ndc_models::FieldName)> = column_mapping.iter().collect();
+    let mut column_pairs: Vec<(&ndc_models::FieldName, &ndc_models::FieldName)> =
+        column_mapping.iter().collect();
     column_pairs.sort();
 
     let matchers: Vec<Document> = column_pairs

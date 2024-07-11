@@ -26,10 +26,7 @@ impl<N, T> WithName<N, T> {
     }
 
     pub fn named(name: N, value: T) -> Self {
-        WithName {
-            name,
-            value,
-        }
+        WithName { name, value }
     }
 
     pub fn as_ref<RN, RT>(&self) -> WithNameRef<'_, RN, RT>

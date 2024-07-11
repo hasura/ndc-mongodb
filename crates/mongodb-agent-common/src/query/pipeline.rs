@@ -118,9 +118,10 @@ pub fn pipeline_for_fields_facet(
         // Queries higher up the chain might need to reference relationships from this query. So we
         // forward relationship arrays if this is not the top-level query.
         for relationship_key in relationships.keys() {
-            selection
-                .0
-                .insert(relationship_key.to_owned(), get_field(relationship_key.as_str()));
+            selection.0.insert(
+                relationship_key.to_owned(),
+                get_field(relationship_key.as_str()),
+            );
         }
     }
 

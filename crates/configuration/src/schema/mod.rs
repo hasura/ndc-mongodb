@@ -75,7 +75,9 @@ impl From<Type> for ndc_models::Type {
                 Type::Scalar(t) => ndc_models::Type::Named {
                     name: t.graphql_name().to_owned().into(),
                 },
-                Type::Object(t) => ndc_models::Type::Named { name: t.clone().into() },
+                Type::Object(t) => ndc_models::Type::Named {
+                    name: t.clone().into(),
+                },
                 Type::ArrayOf(t) => ndc_models::Type::Array {
                     element_type: Box::new(map_normalized_type(*t)),
                 },
@@ -97,13 +99,17 @@ pub struct ObjectType {
 }
 
 impl ObjectType {
-    pub fn named_fields(&self) -> impl Iterator<Item = WithNameRef<'_, ndc_models::FieldName, ObjectField>> {
+    pub fn named_fields(
+        &self,
+    ) -> impl Iterator<Item = WithNameRef<'_, ndc_models::FieldName, ObjectField>> {
         self.fields
             .iter()
             .map(|(name, field)| WithNameRef::named(name, field))
     }
 
-    pub fn into_named_fields(self) -> impl Iterator<Item = WithName<ndc_models::FieldName, ObjectField>> {
+    pub fn into_named_fields(
+        self,
+    ) -> impl Iterator<Item = WithName<ndc_models::FieldName, ObjectField>> {
         self.fields
             .into_iter()
             .map(|(name, field)| WithName::named(name, field))

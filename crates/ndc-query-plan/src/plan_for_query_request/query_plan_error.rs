@@ -53,7 +53,9 @@ pub enum QueryPlanError {
     },
 
     #[error("Unknown aggregate function, \"{aggregate_function}\"")]
-    UnknownAggregateFunction { aggregate_function: ndc::AggregateFunctionName },
+    UnknownAggregateFunction {
+        aggregate_function: ndc::AggregateFunctionName,
+    },
 
     #[error("Query referenced a function, \"{0}\", but it has not been defined")]
     UnspecifiedFunction(ndc::FunctionName),

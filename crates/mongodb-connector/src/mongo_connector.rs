@@ -14,13 +14,16 @@ use ndc_sdk::{
     },
     json_response::JsonResponse,
     models::{
-        Capabilities, ExplainResponse, MutationRequest, MutationResponse, QueryRequest, QueryResponse, SchemaResponse
+        Capabilities, ExplainResponse, MutationRequest, MutationResponse, QueryRequest,
+        QueryResponse, SchemaResponse,
     },
 };
 use serde_json::Value;
 use tracing::instrument;
 
-use crate::error_mapping::{error_response, mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error};
+use crate::error_mapping::{
+    error_response, mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error,
+};
 use crate::{capabilities::mongo_capabilities, mutation::handle_mutation_request};
 
 #[derive(Clone, Default)]
@@ -81,7 +84,10 @@ impl Connector for MongoConnector {
             .map_err(|e| HealthError::Other(e.into(), Value::Object(Default::default())))?;
         match status.as_u16() {
             200..=299 => Ok(()),
-            s => Err(HealthError::Other(anyhow!("unhealthy status: {s}").into(), Value::Object(Default::default()))),
+            s => Err(HealthError::Other(
+                anyhow!("unhealthy status: {s}").into(),
+                Value::Object(Default::default()),
+            )),
         }
     }
 
@@ -115,9 +121,9 @@ impl Connector for MongoConnector {
         _state: &Self::State,
         _request: MutationRequest,
     ) -> Result<JsonResponse<ExplainResponse>, ExplainError> {
-        Err(ExplainError::UnsupportedOperation(
-            error_response("Explain for mutations is not implemented yet".to_owned()),
-        ))
+        Err(ExplainError::UnsupportedOperation(error_response(
+            "Explain for mutations is not implemented yet".to_owned(),
+        )))
     }
 
     #[instrument(err, skip_all)]

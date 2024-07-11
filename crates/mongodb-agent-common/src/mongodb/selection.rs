@@ -85,7 +85,11 @@ fn selection_for_field(parent_columns: &[&str], field: &Field) -> Result<Bson, M
                     fields: nested_field,
                 })),
             ..
-        } => selection_for_array(&append_to_path(parent_columns, column.as_str()), nested_field, 0),
+        } => selection_for_array(
+            &append_to_path(parent_columns, column.as_str()),
+            nested_field,
+            0,
+        ),
         Field::Relationship {
             relationship,
             aggregates,
@@ -100,7 +104,10 @@ fn selection_for_field(parent_columns: &[&str], field: &Field) -> Result<Bson, M
                 fields
                     .iter()
                     .map(|(field_name, _)| {
-                        (field_name.to_string(), format!("$$this.{field_name}").into())
+                        (
+                            field_name.to_string(),
+                            format!("$$this.{field_name}").into(),
+                        )
                     })
                     .collect()
             });

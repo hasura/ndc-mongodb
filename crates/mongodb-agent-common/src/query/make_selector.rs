@@ -137,7 +137,10 @@ fn make_binary_comparison_selector(
 /// related documents always come as an array, even for object relationships), so we have to wrap
 /// the starting expression with an `$elemMatch` for each relationship that is traversed to reach
 /// the target column.
-fn traverse_relationship_path(path: &[ndc_models::RelationshipName], mut expression: Document) -> Document {
+fn traverse_relationship_path(
+    path: &[ndc_models::RelationshipName],
+    mut expression: Document,
+) -> Document {
     for path_element in path.iter().rev() {
         expression = doc! {
             path_element.to_string(): {
@@ -148,7 +151,10 @@ fn traverse_relationship_path(path: &[ndc_models::RelationshipName], mut express
     expression
 }
 
-fn variable_to_mongo_expression(variable: &ndc_models::VariableName, value_type: &Type) -> bson::Bson {
+fn variable_to_mongo_expression(
+    variable: &ndc_models::VariableName,
+    value_type: &Type,
+) -> bson::Bson {
     let mongodb_var_name = query_variable_name(variable, value_type);
     format!("$${mongodb_var_name}").into()
 }

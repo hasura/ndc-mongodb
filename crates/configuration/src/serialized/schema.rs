@@ -18,25 +18,33 @@ pub struct Schema {
 }
 
 impl Schema {
-    pub fn into_named_collections(self) -> impl Iterator<Item = WithName<ndc_models::CollectionName, Collection>> {
+    pub fn into_named_collections(
+        self,
+    ) -> impl Iterator<Item = WithName<ndc_models::CollectionName, Collection>> {
         self.collections
             .into_iter()
             .map(|(name, field)| WithName::named(name, field))
     }
 
-    pub fn into_named_object_types(self) -> impl Iterator<Item = WithName<ndc_models::ObjectTypeName, ObjectType>> {
+    pub fn into_named_object_types(
+        self,
+    ) -> impl Iterator<Item = WithName<ndc_models::ObjectTypeName, ObjectType>> {
         self.object_types
             .into_iter()
             .map(|(name, field)| WithName::named(name, field))
     }
 
-    pub fn named_collections(&self) -> impl Iterator<Item = WithNameRef<'_, ndc_models::CollectionName, Collection>> {
+    pub fn named_collections(
+        &self,
+    ) -> impl Iterator<Item = WithNameRef<'_, ndc_models::CollectionName, Collection>> {
         self.collections
             .iter()
             .map(|(name, field)| WithNameRef::named(name, field))
     }
 
-    pub fn named_object_types(&self) -> impl Iterator<Item = WithNameRef<'_, ndc_models::ObjectTypeName, ObjectType>> {
+    pub fn named_object_types(
+        &self,
+    ) -> impl Iterator<Item = WithNameRef<'_, ndc_models::ObjectTypeName, ObjectType>> {
         self.object_types
             .iter()
             .map(|(name, field)| WithNameRef::named(name, field))

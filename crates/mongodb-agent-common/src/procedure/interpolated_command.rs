@@ -19,7 +19,10 @@ pub fn interpolated_command(
     }
 }
 
-fn interpolate_helper(command_node: &Bson, arguments: &BTreeMap<ndc_models::ArgumentName, Bson>) -> Result<Bson> {
+fn interpolate_helper(
+    command_node: &Bson,
+    arguments: &BTreeMap<ndc_models::ArgumentName, Bson>,
+) -> Result<Bson> {
     let result = match command_node {
         Bson::Array(values) => interpolate_array(values.to_vec(), arguments)?.into(),
         Bson::Document(doc) => interpolate_document(doc.clone(), arguments)?.into(),
@@ -30,7 +33,10 @@ fn interpolate_helper(command_node: &Bson, arguments: &BTreeMap<ndc_models::Argu
     Ok(result)
 }
 
-fn interpolate_array(values: Vec<Bson>, arguments: &BTreeMap<ndc_models::ArgumentName, Bson>) -> Result<Vec<Bson>> {
+fn interpolate_array(
+    values: Vec<Bson>,
+    arguments: &BTreeMap<ndc_models::ArgumentName, Bson>,
+) -> Result<Vec<Bson>> {
     values
         .iter()
         .map(|value| interpolate_helper(value, arguments))
@@ -68,7 +74,10 @@ fn interpolate_document(
 /// ```
 ///
 /// if the type of the variable `recordId` is `int`.
-fn interpolate_string(string: &str, arguments: &BTreeMap<ndc_models::ArgumentName, Bson>) -> Result<Bson> {
+fn interpolate_string(
+    string: &str,
+    arguments: &BTreeMap<ndc_models::ArgumentName, Bson>,
+) -> Result<Bson> {
     let parts = parse_native_mutation(string);
     if parts.len() == 1 {
         let mut parts = parts;
@@ -94,7 +103,10 @@ fn interpolate_string(string: &str, arguments: &BTreeMap<ndc_models::ArgumentNam
     }
 }
 
-fn resolve_argument(argument_name: &ndc_models::ArgumentName, arguments: &BTreeMap<ndc_models::ArgumentName, Bson>) -> Result<Bson> {
+fn resolve_argument(
+    argument_name: &ndc_models::ArgumentName,
+    arguments: &BTreeMap<ndc_models::ArgumentName, Bson>,
+) -> Result<Bson> {
     let argument = arguments
         .get(argument_name)
         .ok_or_else(|| ProcedureError::MissingArgument(argument_name.to_owned()))?;

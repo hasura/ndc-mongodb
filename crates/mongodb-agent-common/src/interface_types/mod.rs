@@ -1,3 +1,3 @@
 mod mongo_agent_error;
 
-pub use self::mongo_agent_error::{MongoAgentError, ErrorResponse};
+pub use self::mongo_agent_error::{ErrorResponse, MongoAgentError};

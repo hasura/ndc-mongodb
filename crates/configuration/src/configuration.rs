@@ -68,7 +68,11 @@ impl Configuration {
             } else {
                 Some(anyhow!(
                     "configuration contains multiple definitions for these object type names: {}",
-                    duplicate_type_names.into_iter().map(|tn| tn.to_string()).collect::<Vec<_>>().join(", ")
+                    duplicate_type_names
+                        .into_iter()
+                        .map(|tn| tn.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
                 ))
             }
         };

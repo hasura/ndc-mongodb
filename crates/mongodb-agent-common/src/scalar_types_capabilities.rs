@@ -4,7 +4,8 @@ use itertools::Either;
 use lazy_static::lazy_static;
 use mongodb_support::BsonScalarType;
 use ndc_models::{
-    AggregateFunctionDefinition, AggregateFunctionName, ComparisonOperatorDefinition, ComparisonOperatorName, ScalarType, Type, TypeRepresentation
+    AggregateFunctionDefinition, AggregateFunctionName, ComparisonOperatorDefinition,
+    ComparisonOperatorName, ScalarType, Type, TypeRepresentation,
 };
 
 use crate::aggregation_function::{AggregationFunction, AggregationFunction as A};

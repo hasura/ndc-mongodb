@@ -34,9 +34,7 @@ impl QueryTarget<'_> {
     pub fn input_collection(&self) -> Option<&ndc_models::CollectionName> {
         match self {
             QueryTarget::Collection(collection_name) => Some(collection_name),
-            QueryTarget::NativeQuery { native_query, .. } => {
-                native_query.input_collection.as_ref()
-            }
+            QueryTarget::NativeQuery { native_query, .. } => native_query.input_collection.as_ref(),
         }
     }
 }

@@ -46,11 +46,12 @@ impl QueryContext for TestContext {
         input_type: &Type<Self::ScalarType>,
         function_name: &ndc::AggregateFunctionName,
     ) -> Result<(Self::AggregateFunction, &ndc::AggregateFunctionDefinition), QueryPlanError> {
-        let function = AggregateFunction::find_by_name(function_name.as_str()).ok_or_else(|| {
-            QueryPlanError::UnknownAggregateFunction {
-                aggregate_function: function_name.to_owned(),
-            }
-        })?;
+        let function =
+            AggregateFunction::find_by_name(function_name.as_str()).ok_or_else(|| {
+                QueryPlanError::UnknownAggregateFunction {
+                    aggregate_function: function_name.to_owned(),
+                }
+            })?;
         let definition = scalar_type_name(input_type)
             .and_then(|name| SCALAR_TYPES.get(name))
             .and_then(|scalar_type_def| scalar_type_def.aggregate_functions.get(function_name))

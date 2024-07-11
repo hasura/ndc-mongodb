@@ -84,7 +84,10 @@ pub trait QueryContext: ConnectorTypes {
         Ok((operator, plan_def))
     }
 
-    fn find_collection(&self, collection_name: &ndc::CollectionName) -> Result<&ndc::CollectionInfo> {
+    fn find_collection(
+        &self,
+        collection_name: &ndc::CollectionName,
+    ) -> Result<&ndc::CollectionInfo> {
         if let Some(collection) = self.collections().get(collection_name) {
             return Ok(collection);
         }
