@@ -169,22 +169,28 @@ fn facet_pipelines_for_query(
     let aggregate_selections: bson::Document = aggregates
         .iter()
         .flatten()
-        .map(|(key, _aggregate)| {
+        .map(|(key, aggregate)| {
             // The facet result for each aggregate is an array containing a single document which
             // has a field called `result`. This code selects each facet result by name, and pulls
             // out the `result` value.
-            (
-                // TODO: Is there a way we can prevent potential code injection in the use of `key`
-                // here?
-                key.clone(),
+            let value_expr = doc! {
+                "$getField": {
+                    "field": RESULT_FIELD, // evaluates to the value of this field
+                    "input": { "$first": get_field(key) }, // field is accessed from this document
+                },
+            };
+
+            // Matching SQL semantics, if a **count** aggregation does not match any rows we want
+            // to return zero. Other aggregations should return null.
+            let value_expr = if is_count(aggregate) {
                 doc! {
-                    "$getField": {
-                        "field": RESULT_FIELD, // evaluates to the value of this field
-                        "input": { "$first": get_field(key) }, // field is accessed from this document
-                    },
+                    "$ifNull": [value_expr, 0],
                 }
-                .into(),
-            )
+            } else {
+                value_expr
+            };
+
+            (key.clone(), value_expr.into())
         })
         .collect();
 
@@ -207,6 +213,14 @@ fn facet_pipelines_for_query(
     );
 
     Ok((facet_pipelines, selection))
+}
+
+fn is_count(aggregate: &Aggregate) -> bool {
+    match aggregate {
+        Aggregate::ColumnCount { .. } => true,
+        Aggregate::StarCount { .. } => true,
+        Aggregate::SingleColumn { function, .. } => function.is_count(),
+    }
 }
 
 fn pipeline_for_aggregate(
@@ -240,20 +254,7 @@ fn pipeline_for_aggregate(
                     bson::doc! { &column: { "$exists": true, "$ne": null } },
                 )),
                 limit.map(Stage::Limit),
-                Some(Stage::Group {
-                    key_expression: field_ref(&column),
-                    accumulators: [(RESULT_FIELD.to_string(), Accumulator::Count)].into(),
-                }),
-                Some(Stage::Group {
-                    key_expression: Bson::Null,
-                    // Sums field values from the `result` field of the previous stage, and writes
-                    // a new field which is also called `result`.
-                    accumulators: [(
-                        RESULT_FIELD.to_string(),
-                        Accumulator::Sum(field_ref(RESULT_FIELD)),
-                    )]
-                    .into(),
-                }),
+                Some(Stage::Count(RESULT_FIELD.to_string())),
             ]
             .into_iter()
             .flatten(),
