@@ -2,20 +2,21 @@
   "name": "artists_with_albums_and_tracks",
   "representation": "collection",
   "inputCollection": "Artist",
-  "description": "combines artist, albums, and tracks into a single document per artist - demonstrates array within array",
+  "description": "combines artist, albums, and tracks into a single document per artist",
   "resultDocumentType": "ArtistWithAlbumsAndTracks",
   "objectTypes": {
     "ArtistWithAlbumsAndTracks": {
       "fields": {
         "_id": { "type": { "scalar": "objectId" } },
-        "name": { "type": { "scalar": "string" } },
-        "albums": { "type": { "arrayOf": { "arrayOf": { "object": "TrackWithAlbumTitle" } } } }
+        "Name": { "type": { "scalar": "string" } },
+        "Albums": { "type": { "arrayOf": { "object": "AlbumWithTracks" } } }
       }
     },
-    "TrackWithAlbumTitle": {
+    "AlbumWithTracks": {
       "fields": {
-        "track": { "type": { "scalar": "string" } },
-        "album": { "type": { "scalar": "string" } }
+        "_id": { "type": { "scalar": "objectId" } },
+        "Title": { "type": { "scalar": "string" } },
+        "Tracks": { "type": { "arrayOf": { "object": "Track" } } }
       }
     }
   },
@@ -25,25 +26,21 @@
         "from": "Album",
         "localField": "ArtistId",
         "foreignField": "ArtistId",
-        "as": "albums",
+        "as": "Albums",
         "pipeline": [
           {
             "$lookup": {
               "from": "Track",
               "localField": "AlbumId",
               "foreignField": "AlbumId",
-              "let": {
-                "albumTitle": "$Title"
-              },
-              "as": "tracks",
-              "pipeline": [
-                {
-                  "$replaceWith": {
-                    "track": "$Name",
-                    "album": "$$albumTitle"
-                  }
-                }
-              ]
+              "as": "Tracks"
+            }
+          },
+          {
+            "$replaceWith": {
+              "_id": "$_id",
+              "Title": "$Title",
+              "Tracks": "$Tracks"
             }
           }
         ]
@@ -52,8 +49,8 @@
     { 
       "$replaceWith": {
         "_id": "$_id",
-        "name": "$Name",
-        "albums": { "$map": { "input": "$albums", "in": "$$this.tracks" } }
+        "Name": "$Name",
+        "Albums": "$Albums"
       }
     }
   ]
