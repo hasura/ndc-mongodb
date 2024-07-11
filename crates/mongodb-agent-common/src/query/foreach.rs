@@ -92,7 +92,7 @@ fn variable_sets_to_bson(
 /// It may be necessary to include a request variable in the MongoDB pipeline multiple times if it
 /// requires different BSON serializations.
 fn variable_to_bson<'a>(
-    name: &'a str,
+    name: &'a ndc_models::VariableName,
     value: &'a serde_json::Value,
     variable_types: impl IntoIterator<Item = &'a Option<Type>> + 'a,
 ) -> impl Iterator<Item = Result<(String, Bson)>> + 'a {

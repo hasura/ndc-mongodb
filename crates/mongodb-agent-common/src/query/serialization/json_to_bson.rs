@@ -136,7 +136,7 @@ fn convert_object(object_type: &ObjectType, value: Value) -> Result<Bson> {
         })
         .map(|(name, field_type, field_value_result)| {
             Ok((
-                name.to_owned(),
+                name.to_string(),
                 json_to_bson(field_type, field_value_result?)?,
             ))
         })
@@ -149,18 +149,18 @@ fn convert_object(object_type: &ObjectType, value: Value) -> Result<Bson> {
 // nullable.
 fn get_object_field_value(
     object_type: &ObjectType,
-    field_name: &str,
+    field_name: &ndc_models::FieldName,
     field_type: &Type,
     object: &BTreeMap<String, Value>,
 ) -> Result<Option<Value>> {
-    let value = object.get(field_name);
+    let value = object.get(field_name.as_str());
     if value.is_none() && is_nullable(field_type) {
         return Ok(None);
     }
     Ok(Some(value.cloned().ok_or_else(|| {
         JsonToBsonError::MissingObjectField(
             Type::Object(object_type.clone()),
-            field_name.to_owned(),
+            field_name.to_string(),
         )
     })?))
 }
@@ -241,7 +241,7 @@ mod tests {
     #[allow(clippy::approx_constant)]
     fn deserializes_specialized_scalar_types() -> anyhow::Result<()> {
         let object_type = ObjectType {
-            name: Some("scalar_test".to_owned()),
+            name: Some("scalar_test".into()),
             fields: [
                 ("double", BsonScalarType::Double),
                 ("int", BsonScalarType::Int),
@@ -263,7 +263,7 @@ mod tests {
                 ("symbol", BsonScalarType::Symbol),
             ]
             .into_iter()
-            .map(|(name, t)| (name.to_owned(), Type::Scalar(MongoScalarType::Bson(t))))
+            .map(|(name, t)| (name.into(), Type::Scalar(MongoScalarType::Bson(t))))
             .collect(),
         };
 
@@ -369,9 +369,9 @@ mod tests {
     #[test]
     fn deserializes_object_with_missing_nullable_field() -> anyhow::Result<()> {
         let expected_type = Type::Object(ObjectType {
-            name: Some("test_object".to_owned()),
+            name: Some("test_object".into()),
             fields: [(
-                "field".to_owned(),
+                "field".into(),
                 Type::Nullable(Box::new(Type::Scalar(MongoScalarType::Bson(
                     BsonScalarType::String,
                 )))),

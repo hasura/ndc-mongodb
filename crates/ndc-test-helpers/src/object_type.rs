@@ -11,7 +11,7 @@ pub fn object_type(
             .into_iter()
             .map(|(name, field_type)| {
                 (
-                    name.to_string(),
+                    name.to_string().into(),
                     ObjectField {
                         description: Default::default(),
                         arguments: BTreeMap::new(),

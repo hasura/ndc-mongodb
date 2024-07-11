@@ -15,25 +15,25 @@ use crate::{
 pub enum RelationshipUnificationError {
     #[error("relationship arguments mismatch")]
     ArgumentsMismatch {
-        a: BTreeMap<String, RelationshipArgument>,
-        b: BTreeMap<String, RelationshipArgument>,
+        a: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>,
+        b: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>,
     },
 
     #[error("relationships select fields with the same name, {field_name}, but that have different types")]
-    FieldTypeMismatch { field_name: String },
+    FieldTypeMismatch { field_name: ndc_models::FieldName },
 
     #[error("relationships select columns {column_a} and {column_b} with the same field name, {field_name}")]
     FieldColumnMismatch {
-        field_name: String,
-        column_a: String,
-        column_b: String,
+        field_name: ndc_models::FieldName,
+        column_a: ndc_models::FieldName,
+        column_b: ndc_models::FieldName,
     },
 
     #[error("relationship references have incompatible configurations: {}", .0.join(", "))]
     Mismatch(Vec<&'static str>),
 
     #[error("relationship references referenced different nested relationships with the same field name, {field_name}")]
-    RelationshipMismatch { field_name: String },
+    RelationshipMismatch { field_name: ndc_models::FieldName },
 }
 
 type Result<T> = std::result::Result<T, RelationshipUnificationError>;
@@ -65,9 +65,9 @@ where
 // being pessimistic, and if we get an error here we record the two relationships under separate
 // keys instead of recording one, unified relationship.
 fn unify_arguments(
-    a: BTreeMap<String, RelationshipArgument>,
-    b: BTreeMap<String, RelationshipArgument>,
-) -> Result<BTreeMap<String, RelationshipArgument>> {
+    a: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>,
+    b: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>,
+) -> Result<BTreeMap<ndc_models::ArgumentName, RelationshipArgument>> {
     if a != b {
         Err(RelationshipUnificationError::ArgumentsMismatch { a, b })
     } else {
@@ -120,9 +120,9 @@ where
 }
 
 fn unify_aggregates<T>(
-    a: Option<IndexMap<String, Aggregate<T>>>,
-    b: Option<IndexMap<String, Aggregate<T>>>,
-) -> Result<Option<IndexMap<String, Aggregate<T>>>>
+    a: Option<IndexMap<ndc_models::FieldName, Aggregate<T>>>,
+    b: Option<IndexMap<ndc_models::FieldName, Aggregate<T>>>,
+) -> Result<Option<IndexMap<ndc_models::FieldName, Aggregate<T>>>>
 where
     T: ConnectorTypes,
 {
@@ -134,9 +134,9 @@ where
 }
 
 fn unify_fields<T>(
-    a: Option<IndexMap<String, Field<T>>>,
-    b: Option<IndexMap<String, Field<T>>>,
-) -> Result<Option<IndexMap<String, Field<T>>>>
+    a: Option<IndexMap<ndc_models::FieldName, Field<T>>>,
+    b: Option<IndexMap<ndc_models::FieldName, Field<T>>>,
+) -> Result<Option<IndexMap<ndc_models::FieldName, Field<T>>>>
 where
     T: ConnectorTypes,
 {
@@ -144,9 +144,9 @@ where
 }
 
 fn unify_fields_some<T>(
-    fields_a: IndexMap<String, Field<T>>,
-    fields_b: IndexMap<String, Field<T>>,
-) -> Result<IndexMap<String, Field<T>>>
+    fields_a: IndexMap<ndc_models::FieldName, Field<T>>,
+    fields_b: IndexMap<ndc_models::FieldName, Field<T>>,
+) -> Result<IndexMap<ndc_models::FieldName, Field<T>>>
 where
     T: ConnectorTypes,
 {
@@ -163,7 +163,7 @@ where
     Ok(fields)
 }
 
-fn unify_field<T>(field_name: &str, a: Field<T>, b: Field<T>) -> Result<Field<T>>
+fn unify_field<T>(field_name: &ndc_models::FieldName, a: Field<T>, b: Field<T>) -> Result<Field<T>>
 where
     T: ConnectorTypes,
 {

@@ -1,3 +1,4 @@
+use ndc_models as ndc;
 use thiserror::Error;
 
 use super::unify_relationship_references::RelationshipUnificationError;
@@ -23,10 +24,10 @@ pub enum QueryPlanError {
     TypeMismatch(String),
 
     #[error("Unknown comparison operator, \"{0}\"")]
-    UnknownComparisonOperator(String),
+    UnknownComparisonOperator(ndc::ComparisonOperatorName),
 
     #[error("Unknown scalar type, \"{0}\"")]
-    UnknownScalarType(String),
+    UnknownScalarType(ndc::ScalarTypeName),
 
     #[error("Unknown object type, \"{0}\"")]
     UnknownObjectType(String),
@@ -37,8 +38,8 @@ pub enum QueryPlanError {
         at_path(path)
     )]
     UnknownObjectTypeField {
-        object_type: Option<String>,
-        field_name: String,
+        object_type: Option<ndc::ObjectTypeName>,
+        field_name: ndc::FieldName,
         path: Vec<String>,
     },
 
@@ -52,18 +53,20 @@ pub enum QueryPlanError {
     },
 
     #[error("Unknown aggregate function, \"{aggregate_function}\"")]
-    UnknownAggregateFunction { aggregate_function: String },
+    UnknownAggregateFunction {
+        aggregate_function: ndc::AggregateFunctionName,
+    },
 
     #[error("Query referenced a function, \"{0}\", but it has not been defined")]
-    UnspecifiedFunction(String),
+    UnspecifiedFunction(ndc::FunctionName),
 
     #[error("Query referenced a relationship, \"{0}\", but did not include relation metadata in `collection_relationships`")]
-    UnspecifiedRelation(String),
+    UnspecifiedRelation(ndc::RelationshipName),
 
-    #[error("Expected field {field_name} of object {} to be an object type. Got {got}.", parent_type.to_owned().unwrap_or("".to_owned()))]
+    #[error("Expected field {field_name} of object {} to be an object type. Got {got}.", parent_type.clone().map(|n| n.to_string()).unwrap_or("".to_owned()))]
     ExpectedObjectTypeAtField {
-        parent_type: Option<String>,
-        field_name: String,
+        parent_type: Option<ndc::ObjectTypeName>,
+        field_name: ndc::FieldName,
         got: String,
     },
 }
@@ -76,7 +79,7 @@ fn at_path(path: &[String]) -> String {
     }
 }
 
-fn in_object_type(type_name: Option<&String>) -> String {
+fn in_object_type(type_name: Option<&ndc::ObjectTypeName>) -> String {
     match type_name {
         Some(name) => format!(" in object type \"{name}\""),
         None => "".to_owned(),

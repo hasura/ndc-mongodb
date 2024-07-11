@@ -63,7 +63,7 @@ pub fn serialize_query_response(
                 let row_set = bson::from_document(document)?;
                 serialize_row_set_with_aggregates(
                     mode,
-                    &[collection_name],
+                    &[collection_name.as_str()],
                     &query_plan.query,
                     row_set,
                 )
@@ -135,16 +135,16 @@ fn serialize_row_set_with_aggregates(
 fn serialize_aggregates(
     mode: ExtendedJsonMode,
     path: &[&str],
-    _query_aggregates: &IndexMap<String, Aggregate>,
+    _query_aggregates: &IndexMap<ndc_models::FieldName, Aggregate>,
     value: Bson,
-) -> Result<IndexMap<String, serde_json::Value>> {
+) -> Result<IndexMap<ndc_models::FieldName, serde_json::Value>> {
     let aggregates_type = type_for_aggregates()?;
     let json = bson_to_json(mode, &aggregates_type, value)?;
 
     // The NDC type uses an IndexMap for aggregate values; we need to convert the map
     // underlying the Value::Object value to an IndexMap
     let aggregate_values = match json {
-        serde_json::Value::Object(obj) => obj.into_iter().collect(),
+        serde_json::Value::Object(obj) => obj.into_iter().map(|(k, v)| (k.into(), v)).collect(),
         _ => Err(QueryResponseError::AggregatesNotObject {
             path: path_to_owned(path),
         })?,
@@ -155,9 +155,9 @@ fn serialize_aggregates(
 fn serialize_rows(
     mode: ExtendedJsonMode,
     path: &[&str],
-    query_fields: &IndexMap<String, Field>,
+    query_fields: &IndexMap<ndc_models::FieldName, Field>,
     docs: Vec<bson::Document>,
-) -> Result<Vec<IndexMap<String, RowFieldValue>>> {
+) -> Result<Vec<IndexMap<ndc_models::FieldName, RowFieldValue>>> {
     let row_type = type_for_row(path, query_fields)?;
 
     docs.into_iter()
@@ -168,7 +168,7 @@ fn serialize_rows(
             let index_map = match json {
                 serde_json::Value::Object(obj) => obj
                     .into_iter()
-                    .map(|(key, value)| (key, RowFieldValue(value)))
+                    .map(|(key, value)| (key.into(), RowFieldValue(value)))
                     .collect(),
                 _ => unreachable!(),
             };
@@ -179,18 +179,18 @@ fn serialize_rows(
 
 fn type_for_row_set(
     path: &[&str],
-    aggregates: &Option<IndexMap<String, Aggregate>>,
-    fields: &Option<IndexMap<String, Field>>,
+    aggregates: &Option<IndexMap<ndc_models::FieldName, Aggregate>>,
+    fields: &Option<IndexMap<ndc_models::FieldName, Field>>,
 ) -> Result<Type> {
     let mut type_fields = BTreeMap::new();
 
     if aggregates.is_some() {
-        type_fields.insert("aggregates".to_owned(), type_for_aggregates()?);
+        type_fields.insert("aggregates".into(), type_for_aggregates()?);
     }
 
     if let Some(query_fields) = fields {
         let row_type = type_for_row(path, query_fields)?;
-        type_fields.insert("rows".to_owned(), Type::ArrayOf(Box::new(row_type)));
+        type_fields.insert("rows".into(), Type::ArrayOf(Box::new(row_type)));
     }
 
     Ok(Type::Object(ObjectType {
@@ -204,12 +204,15 @@ fn type_for_aggregates() -> Result<Type> {
     Ok(Type::Scalar(MongoScalarType::ExtendedJSON))
 }
 
-fn type_for_row(path: &[&str], query_fields: &IndexMap<String, Field>) -> Result<Type> {
+fn type_for_row(
+    path: &[&str],
+    query_fields: &IndexMap<ndc_models::FieldName, Field>,
+) -> Result<Type> {
     let fields = query_fields
         .iter()
         .map(|(field_name, field_definition)| {
             let field_type = type_for_field(
-                &append_to_path(path, [field_name.as_ref()]),
+                &append_to_path(path, [field_name.as_str()]),
                 field_definition,
             )?;
             Ok((field_name.clone(), field_type))

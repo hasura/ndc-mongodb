@@ -44,7 +44,7 @@ pub fn make_selector(expr: &Expression) -> Result<Document> {
         } => Ok(match in_collection {
             ExistsInCollection::Related { relationship } => match predicate {
                 Some(predicate) => doc! {
-                    relationship: { "$elemMatch": make_selector(predicate)? }
+                    relationship.to_string(): { "$elemMatch": make_selector(predicate)? }
                 },
                 None => doc! { format!("{relationship}.0"): { "$exists": true } },
             },
@@ -137,10 +137,13 @@ fn make_binary_comparison_selector(
 /// related documents always come as an array, even for object relationships), so we have to wrap
 /// the starting expression with an `$elemMatch` for each relationship that is traversed to reach
 /// the target column.
-fn traverse_relationship_path(path: &[String], mut expression: Document) -> Document {
+fn traverse_relationship_path(
+    path: &[ndc_models::RelationshipName],
+    mut expression: Document,
+) -> Document {
     for path_element in path.iter().rev() {
         expression = doc! {
-            path_element: {
+            path_element.to_string(): {
                 "$elemMatch": expression
             }
         }
@@ -148,7 +151,10 @@ fn traverse_relationship_path(path: &[String], mut expression: Document) -> Docu
     expression
 }
 
-fn variable_to_mongo_expression(variable: &str, value_type: &Type) -> bson::Bson {
+fn variable_to_mongo_expression(
+    variable: &ndc_models::VariableName,
+    value_type: &Type,
+) -> bson::Bson {
     let mongodb_var_name = query_variable_name(variable, value_type);
     format!("$${mongodb_var_name}").into()
 }
@@ -180,7 +186,7 @@ mod tests {
     ) -> anyhow::Result<()> {
         let selector = make_selector(&Expression::BinaryComparisonOperator {
             column: ComparisonTarget::Column {
-                name: "Name".to_owned(),
+                name: "Name".into(),
                 field_path: None,
                 field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
                 path: vec!["Albums".into(), "Tracks".into()],
@@ -213,7 +219,7 @@ mod tests {
     ) -> anyhow::Result<()> {
         let selector = make_selector(&Expression::UnaryComparisonOperator {
             column: ComparisonTarget::Column {
-                name: "Name".to_owned(),
+                name: "Name".into(),
                 field_path: None,
                 field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
                 path: vec!["Albums".into(), "Tracks".into()],
@@ -241,7 +247,7 @@ mod tests {
     fn compares_two_columns() -> anyhow::Result<()> {
         let selector = make_selector(&Expression::BinaryComparisonOperator {
             column: ComparisonTarget::Column {
-                name: "Name".to_owned(),
+                name: "Name".into(),
                 field_path: None,
                 field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
                 path: Default::default(),
@@ -249,7 +255,7 @@ mod tests {
             operator: ComparisonFunction::Equal,
             value: ComparisonValue::Column {
                 column: ComparisonTarget::Column {
-                    name: "Title".to_owned(),
+                    name: "Title".into(),
                     field_path: None,
                     field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
                     path: Default::default(),
@@ -271,7 +277,7 @@ mod tests {
     fn compares_root_collection_column_to_scalar() -> anyhow::Result<()> {
         let selector = make_selector(&Expression::BinaryComparisonOperator {
             column: ComparisonTarget::ColumnInScope {
-                name: "Name".to_owned(),
+                name: "Name".into(),
                 field_path: None,
                 field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
                 scope: Scope::Named("scope_0".to_string()),
@@ -302,7 +308,7 @@ mod tests {
                 binop(
                     "_gt",
                     target!("Milliseconds", relations: [
-                        path_element("Tracks").predicate(
+                        path_element("Tracks".into()).predicate(
                             binop("_eq", target!("Name"), column_value!(root("Title")))
                         ),
                     ]),

@@ -11,6 +11,7 @@ ndc-models = { workspace = true }
 nonempty = "^0.10"
 serde_json = "1"
 thiserror = "1"
+ref-cast = { workspace = true }
 
 [dev-dependencies]
 ndc-test-helpers = { path = "../ndc-test-helpers" }

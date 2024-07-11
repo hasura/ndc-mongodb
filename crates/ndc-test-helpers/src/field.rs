@@ -4,7 +4,7 @@ macro_rules! field {
         (
             $name,
             $crate::ndc_models::Field::Column {
-                column: $name.to_owned(),
+                column: $name.into(),
                 arguments: Default::default(),
                 fields: None,
             },
@@ -14,7 +14,7 @@ macro_rules! field {
         (
             $name,
             $crate::ndc_models::Field::Column {
-                column: $column_name.to_owned(),
+                column: $column_name.into(),
                 arguments: Default::default(),
                 fields: None,
             },
@@ -24,7 +24,7 @@ macro_rules! field {
         (
             $name,
             $crate::ndc_models::Field::Column {
-                column: $column_name.to_owned(),
+                column: $column_name.into(),
                 arguments: Default::default(),
                 fields: Some($fields.into()),
             },
@@ -38,7 +38,7 @@ macro_rules! object {
         $crate::ndc_models::NestedField::Object($crate::ndc_models::NestedObject {
             fields: $fields
                 .into_iter()
-                .map(|(name, field)| (name.to_owned(), field))
+                .map(|(name, field)| (name.into(), field))
                 .collect(),
         })
     };
@@ -60,7 +60,7 @@ macro_rules! relation_field {
             $name,
             $crate::ndc_models::Field::Relationship {
                 query: Box::new($crate::query().into()),
-                relationship: $relationship.to_owned(),
+                relationship: $relationship.into(),
                 arguments: Default::default(),
             },
         )
@@ -70,7 +70,7 @@ macro_rules! relation_field {
             $name,
             $crate::ndc_models::Field::Relationship {
                 query: Box::new($query.into()),
-                relationship: $relationship.to_owned(),
+                relationship: $relationship.into(),
                 arguments: Default::default(),
             },
         )

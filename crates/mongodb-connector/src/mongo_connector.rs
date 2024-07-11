@@ -14,14 +14,17 @@ use ndc_sdk::{
     },
     json_response::JsonResponse,
     models::{
-        CapabilitiesResponse, ExplainResponse, MutationRequest, MutationResponse, QueryRequest,
+        Capabilities, ExplainResponse, MutationRequest, MutationResponse, QueryRequest,
         QueryResponse, SchemaResponse,
     },
 };
+use serde_json::Value;
 use tracing::instrument;
 
-use crate::error_mapping::{mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error};
-use crate::{capabilities::mongo_capabilities_response, mutation::handle_mutation_request};
+use crate::error_mapping::{
+    error_response, mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error,
+};
+use crate::{capabilities::mongo_capabilities, mutation::handle_mutation_request};
 
 #[derive(Clone, Default)]
 pub struct MongoConnector;
@@ -78,15 +81,18 @@ impl Connector for MongoConnector {
     ) -> Result<(), HealthError> {
         let status = check_health(state)
             .await
-            .map_err(|e| HealthError::Other(e.into()))?;
+            .map_err(|e| HealthError::Other(e.into(), Value::Object(Default::default())))?;
         match status.as_u16() {
             200..=299 => Ok(()),
-            s => Err(HealthError::Other(anyhow!("unhealthy status: {s}").into())),
+            s => Err(HealthError::Other(
+                anyhow!("unhealthy status: {s}").into(),
+                Value::Object(Default::default()),
+            )),
         }
     }
 
-    async fn get_capabilities() -> JsonResponse<CapabilitiesResponse> {
-        mongo_capabilities_response().into()
+    async fn get_capabilities() -> Capabilities {
+        mongo_capabilities()
     }
 
     #[instrument(err, skip_all)]
@@ -115,9 +121,9 @@ impl Connector for MongoConnector {
         _state: &Self::State,
         _request: MutationRequest,
     ) -> Result<JsonResponse<ExplainResponse>, ExplainError> {
-        Err(ExplainError::UnsupportedOperation(
+        Err(ExplainError::UnsupportedOperation(error_response(
             "Explain for mutations is not implemented yet".to_owned(),
-        ))
+        )))
     }
 
     #[instrument(err, skip_all)]

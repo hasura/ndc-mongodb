@@ -4,19 +4,19 @@ use ndc_models::{Expression, PathElement, RelationshipArgument};
 
 #[derive(Clone, Debug)]
 pub struct PathElementBuilder {
-    relationship: String,
-    arguments: Option<BTreeMap<String, RelationshipArgument>>,
+    relationship: ndc_models::RelationshipName,
+    arguments: Option<BTreeMap<ndc_models::ArgumentName, RelationshipArgument>>,
     predicate: Option<Box<Expression>>,
 }
 
-pub fn path_element(relationship: &str) -> PathElementBuilder {
+pub fn path_element(relationship: ndc_models::RelationshipName) -> PathElementBuilder {
     PathElementBuilder::new(relationship)
 }
 
 impl PathElementBuilder {
-    pub fn new(relationship: &str) -> Self {
+    pub fn new(relationship: ndc_models::RelationshipName) -> Self {
         PathElementBuilder {
-            relationship: relationship.to_owned(),
+            relationship,
             arguments: None,
             predicate: None,
         }

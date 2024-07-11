@@ -12,7 +12,7 @@ use crate::{WithName, WithNameRef};
 pub struct Collection {
     /// The name of a type declared in `objectTypes` that describes the fields of this collection.
     /// The type name may be the same as the collection name.
-    pub r#type: String,
+    pub r#type: ndc_models::ObjectTypeName,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 }
@@ -69,13 +69,15 @@ impl From<Type> for ndc_models::Type {
                 // ExtendedJSON can respresent any BSON value, including null, so it is always nullable
                 Type::ExtendedJSON => ndc_models::Type::Nullable {
                     underlying_type: Box::new(ndc_models::Type::Named {
-                        name: mongodb_support::EXTENDED_JSON_TYPE_NAME.to_owned(),
+                        name: mongodb_support::EXTENDED_JSON_TYPE_NAME.to_owned().into(),
                     }),
                 },
                 Type::Scalar(t) => ndc_models::Type::Named {
-                    name: t.graphql_name().to_owned(),
+                    name: t.graphql_name().to_owned().into(),
                 },
-                Type::Object(t) => ndc_models::Type::Named { name: t.clone() },
+                Type::Object(t) => ndc_models::Type::Named {
+                    name: t.clone().into(),
+                },
                 Type::ArrayOf(t) => ndc_models::Type::Array {
                     element_type: Box::new(map_normalized_type(*t)),
                 },
@@ -91,19 +93,23 @@ impl From<Type> for ndc_models::Type {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ObjectType {
-    pub fields: BTreeMap<String, ObjectField>,
+    pub fields: BTreeMap<ndc_models::FieldName, ObjectField>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 }
 
 impl ObjectType {
-    pub fn named_fields(&self) -> impl Iterator<Item = WithNameRef<'_, ObjectField>> {
+    pub fn named_fields(
+        &self,
+    ) -> impl Iterator<Item = WithNameRef<'_, ndc_models::FieldName, ObjectField>> {
         self.fields
             .iter()
             .map(|(name, field)| WithNameRef::named(name, field))
     }
 
-    pub fn into_named_fields(self) -> impl Iterator<Item = WithName<ObjectField>> {
+    pub fn into_named_fields(
+        self,
+    ) -> impl Iterator<Item = WithName<ndc_models::FieldName, ObjectField>> {
         self.fields
             .into_iter()
             .map(|(name, field)| WithName::named(name, field))

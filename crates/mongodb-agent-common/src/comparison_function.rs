@@ -54,7 +54,9 @@ impl ComparisonFunction {
     pub fn from_graphql_name(s: &str) -> Result<Self, QueryPlanError> {
         all::<ComparisonFunction>()
             .find(|variant| variant.graphql_name() == s)
-            .ok_or(QueryPlanError::UnknownComparisonOperator(s.to_owned()))
+            .ok_or(QueryPlanError::UnknownComparisonOperator(
+                s.to_owned().into(),
+            ))
     }
 
     /// Produce a MongoDB expression for use in a match query that applies this function to the given operands.

@@ -31,7 +31,7 @@ pub fn pipeline_for_native_query(
 
 fn make_pipeline(
     native_query: &NativeQuery,
-    arguments: &BTreeMap<String, Argument>,
+    arguments: &BTreeMap<ndc_models::ArgumentName, Argument>,
 ) -> Result<Pipeline, MongoAgentError> {
     let bson_arguments = resolve_arguments(&native_query.arguments, arguments.clone())
         .map_err(ProcedureError::UnresolvableArguments)?;
@@ -75,28 +75,28 @@ mod tests {
             input_collection: None,
             arguments: [
                 (
-                    "filter".to_string(),
+                    "filter".into(),
                     ObjectField {
                         r#type: Type::ExtendedJSON,
                         description: None,
                     },
                 ),
                 (
-                    "queryVector".to_string(),
+                    "queryVector".into(),
                     ObjectField {
                         r#type: Type::ArrayOf(Box::new(Type::Scalar(S::Double))),
                         description: None,
                     },
                 ),
                 (
-                    "numCandidates".to_string(),
+                    "numCandidates".into(),
                     ObjectField {
                         r#type: Type::Scalar(S::Int),
                         description: None,
                     },
                 ),
                 (
-                    "limit".to_string(),
+                    "limit".into(),
                     ObjectField {
                         r#type: Type::Scalar(S::Int),
                         description: None,
@@ -104,35 +104,35 @@ mod tests {
                 ),
             ]
             .into(),
-            result_document_type: "VectorResult".to_owned(),
+            result_document_type: "VectorResult".into(),
             object_types: [(
-                "VectorResult".to_owned(),
+                "VectorResult".into(),
                 ObjectType {
                     description: None,
                     fields: [
                         (
-                            "_id".to_owned(),
+                            "_id".into(),
                             ObjectField {
                                 r#type: Type::Scalar(S::ObjectId),
                                 description: None,
                             },
                         ),
                         (
-                            "title".to_owned(),
+                            "title".into(),
                             ObjectField {
                                 r#type: Type::Scalar(S::String),
                                 description: None,
                             },
                         ),
                         (
-                            "genres".to_owned(),
+                            "genres".into(),
                             ObjectField {
                                 r#type: Type::ArrayOf(Box::new(Type::Scalar(S::String))),
                                 description: None,
                             },
                         ),
                         (
-                            "year".to_owned(),
+                            "year".into(),
                             ObjectField {
                                 r#type: Type::Scalar(S::Int),
                                 description: None,

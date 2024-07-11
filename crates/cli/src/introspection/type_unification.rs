@@ -12,10 +12,9 @@ use mongodb_support::{
     align::align,
     BsonScalarType::{self, *},
 };
-use std::string::String;
 
-type ObjectField = WithName<schema::ObjectField>;
-type ObjectType = WithName<schema::ObjectType>;
+type ObjectField = WithName<ndc_models::FieldName, schema::ObjectField>;
+type ObjectType = WithName<ndc_models::ObjectTypeName, schema::ObjectType>;
 
 /// Unify two types.
 /// This is computing the join (or least upper bound) of the two types in a lattice
@@ -94,14 +93,14 @@ pub fn make_nullable_field(field: ObjectField) -> ObjectField {
 /// Unify two `ObjectType`s.
 /// Any field that appears in only one of the `ObjectType`s will be made nullable.
 fn unify_object_type(object_type_a: ObjectType, object_type_b: ObjectType) -> ObjectType {
-    let field_map_a: IndexMap<String, ObjectField> = object_type_a
+    let field_map_a: IndexMap<ndc_models::FieldName, ObjectField> = object_type_a
         .value
         .fields
         .into_iter()
         .map_into::<ObjectField>()
         .map(|o| (o.name.to_owned(), o))
         .collect();
-    let field_map_b: IndexMap<String, ObjectField> = object_type_b
+    let field_map_b: IndexMap<ndc_models::FieldName, ObjectField> = object_type_b
         .value
         .fields
         .into_iter()
@@ -154,11 +153,11 @@ pub fn unify_object_types(
     object_types_a: Vec<ObjectType>,
     object_types_b: Vec<ObjectType>,
 ) -> Vec<ObjectType> {
-    let type_map_a: IndexMap<String, ObjectType> = object_types_a
+    let type_map_a: IndexMap<ndc_models::ObjectTypeName, ObjectType> = object_types_a
         .into_iter()
         .map(|t| (t.name.to_owned(), t))
         .collect();
-    let type_map_b: IndexMap<String, ObjectType> = object_types_b
+    let type_map_b: IndexMap<ndc_models::ObjectTypeName, ObjectType> = object_types_b
         .into_iter()
         .map(|t| (t.name.to_owned(), t))
         .collect();
@@ -303,26 +302,26 @@ mod tests {
             }
 
             let name = "foo";
-            let left_object = WithName::named(name.to_owned(), schema::ObjectType {
-                fields: left_fields.into_iter().map(|(k, v)| (k, schema::ObjectField{r#type: v, description: None})).collect(),
+            let left_object = WithName::named(name.into(), schema::ObjectType {
+                fields: left_fields.into_iter().map(|(k, v)| (k.into(), schema::ObjectField{r#type: v, description: None})).collect(),
                 description: None
             });
-            let right_object = WithName::named(name.to_owned(), schema::ObjectType {
-                fields: right_fields.into_iter().map(|(k, v)| (k, schema::ObjectField{r#type: v, description: None})).collect(),
+            let right_object = WithName::named(name.into(), schema::ObjectType {
+                fields: right_fields.into_iter().map(|(k, v)| (k.into(), schema::ObjectField{r#type: v, description: None})).collect(),
                 description: None
             });
             let result = unify_object_type(left_object, right_object);
 
             for field in result.value.named_fields() {
                 // Any fields not shared between the two input types should be nullable.
-                if !shared.contains_key(field.name) {
+                if !shared.contains_key(field.name.as_str()) {
                     assert!(is_nullable(&field.value.r#type), "Found a non-shared field that is not nullable")
                 }
             }
 
             // All input fields must appear in the result.
-            let fields: HashSet<String> = result.value.fields.into_keys().collect();
-            assert!(left.into_keys().chain(right.into_keys()).chain(shared.into_keys()).all(|k| fields.contains(&k)),
+            let fields: HashSet<ndc_models::FieldName> = result.value.fields.into_keys().collect();
+            assert!(left.into_keys().chain(right.into_keys()).chain(shared.into_keys()).all(|k| fields.contains(&ndc_models::FieldName::from(k))),
                 "Missing field in result type")
         }
     }

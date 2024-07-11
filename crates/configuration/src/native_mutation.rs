@@ -17,7 +17,7 @@ use crate::{serialized, MongoScalarType};
 #[derive(Clone, Debug)]
 pub struct NativeMutation {
     pub result_type: plan::Type<MongoScalarType>,
-    pub arguments: BTreeMap<String, plan::Type<MongoScalarType>>,
+    pub arguments: BTreeMap<ndc::ArgumentName, plan::Type<MongoScalarType>>,
     pub command: bson::Document,
     pub selection_criteria: Option<SelectionCriteria>,
     pub description: Option<String>,
@@ -25,7 +25,7 @@ pub struct NativeMutation {
 
 impl NativeMutation {
     pub fn from_serialized(
-        object_types: &BTreeMap<String, ndc::ObjectType>,
+        object_types: &BTreeMap<ndc::ObjectTypeName, ndc::ObjectType>,
         input: serialized::NativeMutation,
     ) -> Result<NativeMutation, QueryPlanError> {
         let arguments = input

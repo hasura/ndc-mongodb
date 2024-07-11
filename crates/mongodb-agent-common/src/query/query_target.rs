@@ -7,11 +7,11 @@ use crate::mongo_query_plan::{MongoConfiguration, QueryPlan};
 
 #[derive(Clone, Debug)]
 pub enum QueryTarget<'a> {
-    Collection(String),
+    Collection(ndc_models::CollectionName),
     NativeQuery {
-        name: String,
+        name: ndc_models::CollectionName,
         native_query: &'a NativeQuery,
-        arguments: &'a BTreeMap<String, Argument>,
+        arguments: &'a BTreeMap<ndc_models::ArgumentName, Argument>,
     },
 }
 
@@ -31,12 +31,10 @@ impl QueryTarget<'_> {
         }
     }
 
-    pub fn input_collection(&self) -> Option<&str> {
+    pub fn input_collection(&self) -> Option<&ndc_models::CollectionName> {
         match self {
             QueryTarget::Collection(collection_name) => Some(collection_name),
-            QueryTarget::NativeQuery { native_query, .. } => {
-                native_query.input_collection.as_deref()
-            }
+            QueryTarget::NativeQuery { native_query, .. } => native_query.input_collection.as_ref(),
         }
     }
 }

@@ -39,7 +39,7 @@ where
 {
     Expression::BinaryComparisonOperator {
         column: op1,
-        operator: oper.to_string(),
+        operator: oper.to_string().into(),
         value: op2,
     }
 }
@@ -50,7 +50,7 @@ where
 {
     Expression::BinaryComparisonOperator {
         column: op1,
-        operator: "_in".to_owned(),
+        operator: "_in".into(),
         value: ComparisonValue::Scalar {
             value: values.into_iter().collect(),
         },
