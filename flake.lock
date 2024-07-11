@@ -119,11 +119,11 @@
     "graphql-engine-source": {
       "flake": false,
       "locked": {
-        "lastModified": 1720608535,
-        "narHash": "sha256-jbNttlwZffVMFn7EHZWsM2IuBZoQEHIIe7qznDAfd/w=",
+        "lastModified": 1717090976,
+        "narHash": "sha256-NUjY32Ec+pdYBXgfE0xtqfquTBJqoQqEKs4tV0jt+S0=",
         "owner": "hasura",
         "repo": "graphql-engine",
-        "rev": "43028b6c66fd72a05e5fd3a6252f3c8724d076dd",
+        "rev": "11e1e02d59c9eede27a6c69765232f0273f03585",
         "type": "github"
       },
       "original": {
