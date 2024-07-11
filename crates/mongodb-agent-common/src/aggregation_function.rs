@@ -31,4 +31,14 @@ impl AggregationFunction {
                 aggregate_function: s.to_owned().into(),
             })
     }
+
+    pub fn is_count(self) -> bool {
+        match self {
+            A::Avg => false,
+            A::Count => true,
+            A::Min => false,
+            A::Max => false,
+            A::Sum => false,
+        }
+    }
 }

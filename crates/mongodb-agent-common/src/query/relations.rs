@@ -636,10 +636,15 @@ mod tests {
                             "$replaceWith": {
                                 "aggregates": {
                                     "aggregate_count": {
-                                        "$getField": {
-                                            "field": "result",
-                                            "input": { "$first": { "$getField": { "$literal": "aggregate_count" } } },
-                                        },
+                                        "$ifNull": [
+                                            {
+                                                "$getField": {
+                                                    "field": "result",
+                                                    "input": { "$first": { "$getField": { "$literal": "aggregate_count" } } },
+                                                },
+                                            },
+                                            0,
+                                        ]
                                     },
                                 },
                             },
