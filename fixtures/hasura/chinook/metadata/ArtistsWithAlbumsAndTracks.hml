@@ -2,54 +2,12 @@
 kind: ObjectType
 version: v1
 definition:
-  name: AlbumWithTracks
-  fields:
-    - name: id
-      type: Chinook_ObjectId!
-    - name: title
-      type: String!
-    - name: tracks
-      type: "[Track!]!"
-  graphql:
-    typeName: Chinook_AlbumWithTracks
-    inputTypeName: Chinook_AlbumWithTracksInput
-  dataConnectorTypeMapping:
-    - dataConnectorName: chinook
-      dataConnectorObjectType: AlbumWithTracks
-      fieldMapping:
-        id:
-          column:
-            name: _id
-        title:
-          column:
-            name: Title
-        tracks:
-          column:
-            name: Tracks
-
----
-kind: TypePermissions
-version: v1
-definition:
-  typeName: AlbumWithTracks
-  permissions:
-    - role: admin
-      output:
-        allowedFields:
-          - id
-          - title
-          - tracks
-
----
-kind: ObjectType
-version: v1
-definition:
   name: ArtistWithAlbumsAndTracks
   fields:
     - name: id
       type: Chinook_ObjectId!
     - name: albums
-      type: "[AlbumWithTracks!]!"
+      type: "[[TrackWithAlbumTitle!]!]!"
     - name: name
       type: String!
   graphql:
@@ -64,10 +22,10 @@ definition:
             name: _id
         albums:
           column:
-            name: Albums
+            name: albums
         name:
           column:
-            name: Name
+            name: name
 
 ---
 kind: TypePermissions
@@ -142,4 +100,33 @@ definition:
     - role: admin
       select:
         filter: null
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: TrackWithAlbumTitle
+  fields:
+    - name: album
+      type: String!
+    - name: track
+      type: String!
+  graphql:
+    typeName: Chinook_TrackWithAlbumTitle
+    inputTypeName: Chinook_TrackWithAlbumTitleInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: chinook
+      dataConnectorObjectType: TrackWithAlbumTitle
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: TrackWithAlbumTitle
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - album
+          - track
 

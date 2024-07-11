@@ -536,22 +536,6 @@ definition:
               type:
                 type: named
                 name: String
-        AlbumWithTracks:
-          fields:
-            _id:
-              type:
-                type: named
-                name: ObjectId
-            Title:
-              type:
-                type: named
-                name: String
-            Tracks:
-              type:
-                type: array
-                element_type:
-                  type: named
-                  name: Track
         Artist:
           description: Object type for collection Artist
           fields:
@@ -575,13 +559,15 @@ definition:
               type:
                 type: named
                 name: ObjectId
-            Albums:
+            albums:
               type:
                 type: array
                 element_type:
-                  type: named
-                  name: AlbumWithTracks
-            Name:
+                  type: array
+                  element_type:
+                    type: named
+                    name: TrackWithAlbumTitle
+            name:
               type:
                 type: named
                 name: String
@@ -960,6 +946,16 @@ definition:
               type:
                 type: named
                 name: Decimal
+        TrackWithAlbumTitle:
+          fields:
+            album:
+              type:
+                type: named
+                name: String
+            track:
+              type:
+                type: named
+                name: String
       collections:
         - name: Album
           arguments: {}
@@ -1050,7 +1046,7 @@ definition:
                 - _id
           foreign_keys: {}
         - name: artists_with_albums_and_tracks
-          description: combines artist, albums, and tracks into a single document per artist
+          description: combines artist, albums, and tracks into a single document per artist - demonstrates array within array
           arguments: {}
           type: ArtistWithAlbumsAndTracks
           uniqueness_constraints:
