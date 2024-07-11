@@ -4,10 +4,10 @@ macro_rules! asc {
         $crate::ndc_models::OrderByElement {
             order_direction: $crate::ndc_models::OrderDirection::Asc,
             target: $crate::ndc_models::OrderByTarget::Column {
-                name: $name.to_string(),
+                name: $crate::ndc_models::FieldName::new($crate::smol_str::SmolStr::new($name)),
                 field_path: None,
                 path: vec![],
-            }
+            },
         }
     };
 }
@@ -18,11 +18,10 @@ macro_rules! desc {
         $crate::ndc_models::OrderByElement {
             order_direction: $crate::ndc_models::OrderDirection::Desc,
             target: $crate::ndc_models::OrderByTarget::Column {
-                name: $name.to_string(),
+                name: $crate::ndc_models::FieldName::new($crate::smol_str::SmolStr::new($name)),
                 field_path: None,
                 path: vec![],
-            }
+            },
         }
     };
 }
-

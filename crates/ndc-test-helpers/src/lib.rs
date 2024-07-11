@@ -25,6 +25,7 @@ use ndc_models::{
 
 // Export this crate's reference to ndc_models so that we can use this reference in macros.
 pub extern crate ndc_models;
+pub extern crate smol_str;
 
 pub use collection_info::*;
 pub use comparison_target::*;
