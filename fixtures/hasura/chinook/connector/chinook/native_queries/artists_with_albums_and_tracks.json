@@ -33,7 +33,14 @@
               "from": "Track",
               "localField": "AlbumId",
               "foreignField": "AlbumId",
-              "as": "Tracks"
+              "as": "Tracks",
+              "pipeline": [
+                {
+                  "$sort": {
+                    "Name": 1
+                  }
+                }
+              ]
             }
           },
           {
@@ -41,6 +48,11 @@
               "_id": "$_id",
               "Title": "$Title",
               "Tracks": "$Tracks"
+            }
+          },
+          {
+            "$sort": {
+              "Title": 1
             }
           }
         ]

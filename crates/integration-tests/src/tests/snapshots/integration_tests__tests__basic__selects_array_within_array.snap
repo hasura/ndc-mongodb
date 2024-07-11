@@ -8,24 +8,24 @@ data:
       albums:
         - title: For Those About To Rock We Salute You
           tracks:
-            - name: "Let's Get It Up"
-            - name: Inject The Venom
-            - name: Evil Walks
-            - name: Snowballed
             - name: Breaking The Rules
-            - name: Spellbound
+            - name: C.O.D.
+            - name: Evil Walks
+            - name: For Those About To Rock (We Salute You)
+            - name: Inject The Venom
+            - name: "Let's Get It Up"
             - name: Night Of The Long Knives
             - name: Put The Finger On You
-            - name: For Those About To Rock (We Salute You)
-            - name: C.O.D.
+            - name: Snowballed
+            - name: Spellbound
         - title: Let There Be Rock
           tracks:
-            - name: Go Down
             - name: Bad Boy Boogie
-            - name: Problem Child
             - name: Dog Eat Dog
+            - name: Go Down
+            - name: "Hell Ain't A Bad Place To Be"
             - name: Let There Be Rock
             - name: Overdose
-            - name: "Hell Ain't A Bad Place To Be"
+            - name: Problem Child
             - name: Whole Lotta Rosie
 errors: ~
