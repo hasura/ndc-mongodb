@@ -1,4 +1,4 @@
-use crate::{graphql_query, run_connector_query};
+use crate::{connector::Connector, graphql_query, run_connector_query};
 use insta::assert_yaml_snapshot;
 use ndc_test_helpers::{asc, binop, field, query, query_request, target, variable};
 
@@ -68,6 +68,7 @@ async fn runs_native_query_with_variable_sets() -> anyhow::Result<()> {
 
     assert_yaml_snapshot!(
         run_connector_query(
+            Connector::SampleMflix,
             query_request()
                 .variables([[("count", 1)], [("count", 2)], [("count", 3)]])
                 .collection("title_word_frequency")

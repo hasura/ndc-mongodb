@@ -1,4 +1,4 @@
-use crate::{graphql_query, run_connector_query};
+use crate::{connector::Connector, graphql_query, run_connector_query};
 use insta::assert_yaml_snapshot;
 use ndc_test_helpers::{and, asc, binop, field, query, query_request, target, variable};
 use serde_json::json;
@@ -53,6 +53,7 @@ async fn handles_request_with_single_variable_set() -> anyhow::Result<()> {
 
     assert_yaml_snapshot!(
         run_connector_query(
+            Connector::SampleMflix,
             query_request()
                 .collection("movies")
                 .variables([[("id", json!("573a1390f29313caabcd50e5"))]])
@@ -82,6 +83,7 @@ async fn variable_used_in_multiple_type_contexts() -> anyhow::Result<()> {
 
     assert_yaml_snapshot!(
         run_connector_query(
+            Connector::SampleMflix,
             query_request()
                 .variables([[("dateInput", "2015-09-15T00:00Z")]])
                 .collection("movies")
