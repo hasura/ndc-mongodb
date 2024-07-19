@@ -99,6 +99,8 @@ fn scalar_type_name(t: &Type) -> Option<&'static str> {
 }
 
 pub type Aggregate = ndc_query_plan::Aggregate<MongoConfiguration>;
+pub type Argument = ndc_query_plan::Argument<MongoConfiguration>;
+pub type Arguments = ndc_query_plan::Arguments<MongoConfiguration>;
 pub type ComparisonTarget = ndc_query_plan::ComparisonTarget<MongoConfiguration>;
 pub type ComparisonValue = ndc_query_plan::ComparisonValue<MongoConfiguration>;
 pub type ExistsInCollection = ndc_query_plan::ExistsInCollection;
