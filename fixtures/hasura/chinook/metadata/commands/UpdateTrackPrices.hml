@@ -1,0 +1,29 @@
+---
+kind: Command
+version: v1
+definition:
+  name: UpdateTrackPrices
+  outputType: InsertArtist!
+  arguments:
+    - name: newPrice
+      type: Chinook_Decimal!
+    - name: where
+      type: TrackBoolExp!
+  source:
+    dataConnectorName: chinook
+    dataConnectorCommand:
+      procedure: updateTrackPrices
+  graphql:
+    rootFieldName: chinook_updateTrackPrices
+    rootFieldKind: Mutation
+  description: Update unit price of every track that matches predicate
+
+---
+kind: CommandPermissions
+version: v1
+definition:
+  commandName: UpdateTrackPrices
+  permissions:
+    - role: admin
+      allowExecution: true
+

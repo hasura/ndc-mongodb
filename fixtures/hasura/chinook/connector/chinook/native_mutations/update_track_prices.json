@@ -2,7 +2,7 @@
   "name": "updateTrackPrices",
   "description": "Update unit price of every track that matches predicate",
   "resultType": {
-    "object": "UpdateTrackPrices"
+    "object": "InsertArtist"
   },
   "arguments": {
     "newPrice": {
@@ -13,22 +13,6 @@
     "where": {
       "type": {
         "predicate": { "objectTypeName": "Track" }
-      }
-    }
-  },
-  "objectTypes": {
-    "UpdateTrackPrices": {
-      "fields": {
-        "ok": {
-          "type": {
-            "scalar": "double"
-          }
-        },
-        "n": {
-          "type": {
-            "scalar": "int"
-          }
-        }
       }
     }
   },
