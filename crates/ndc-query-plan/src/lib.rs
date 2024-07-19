@@ -10,9 +10,9 @@ pub use plan_for_query_request::{
     type_annotated_field::{type_annotated_field, type_annotated_nested_field},
 };
 pub use query_plan::{
-    Aggregate, AggregateFunctionDefinition, ComparisonOperatorDefinition, ComparisonTarget,
-    ComparisonValue, ConnectorTypes, ExistsInCollection, Expression, Field, NestedArray,
-    NestedField, NestedObject, OrderBy, OrderByElement, OrderByTarget, Query, QueryPlan,
-    Relationship, Relationships, Scope, VariableSet, VariableTypes,
+    Aggregate, AggregateFunctionDefinition, Argument, Arguments, ComparisonOperatorDefinition,
+    ComparisonTarget, ComparisonValue, ConnectorTypes, ExistsInCollection, Expression, Field,
+    NestedArray, NestedField, NestedObject, OrderBy, OrderByElement, OrderByTarget, Query,
+    QueryPlan, Relationship, Relationships, Scope, VariableSet, VariableTypes,
 };
 pub use type_system::{inline_object_types, ObjectType, Type};

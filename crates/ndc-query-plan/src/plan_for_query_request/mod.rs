@@ -1,4 +1,5 @@
 mod helpers;
+mod plan_for_arguments;
 pub mod query_context;
 pub mod query_plan_error;
 mod query_plan_state;
@@ -21,6 +22,7 @@ use query_plan_state::QueryPlanInfo;
 
 use self::{
     helpers::{find_object_field, find_object_field_path, lookup_relationship},
+    plan_for_arguments::plan_for_arguments,
     query_context::QueryContext,
     query_plan_error::QueryPlanError,
     query_plan_state::QueryPlanState,
@@ -33,6 +35,7 @@ pub fn plan_for_query_request<T: QueryContext>(
     request: QueryRequest,
 ) -> Result<QueryPlan<T>> {
     let mut plan_state = QueryPlanState::new(context, &request.collection_relationships);
+    let collection_info = context.find_collection(&request.collection)?;
     let collection_object_type = context.find_collection_object_type(&request.collection)?;
 
     let mut query = plan_for_query(
@@ -42,6 +45,12 @@ pub fn plan_for_query_request<T: QueryContext>(
         request.query,
     )?;
     query.scope = Some(Scope::Root);
+
+    let arguments = plan_for_arguments(
+        &mut plan_state,
+        &collection_info.arguments,
+        request.arguments,
+    )?;
 
     let QueryPlanInfo {
         unrelated_joins,
@@ -70,7 +79,7 @@ pub fn plan_for_query_request<T: QueryContext>(
 
     Ok(QueryPlan {
         collection: request.collection,
-        arguments: request.arguments,
+        arguments,
         query,
         variables,
         variable_types,

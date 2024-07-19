@@ -1837,6 +1837,7 @@ dependencies = [
  "anyhow",
  "derivative",
  "enum-iterator",
+ "indent",
  "indexmap 2.2.6",
  "itertools",
  "lazy_static",
