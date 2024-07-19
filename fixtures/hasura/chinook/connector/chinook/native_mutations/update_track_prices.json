@@ -1,0 +1,45 @@
+{
+  "name": "updateTrackPrices",
+  "description": "Update unit price of every track that matches predicate",
+  "resultType": {
+    "object": "UpdateTrackPrices"
+  },
+  "arguments": {
+    "newPrice": {
+      "type": {
+        "scalar": "decimal"
+      }
+    },
+    "where": {
+      "type": {
+        "predicate": { "objectTypeName": "Track" }
+      }
+    }
+  },
+  "objectTypes": {
+    "UpdateTrackPrices": {
+      "fields": {
+        "ok": {
+          "type": {
+            "scalar": "double"
+          }
+        },
+        "n": {
+          "type": {
+            "scalar": "int"
+          }
+        }
+      }
+    }
+  },
+  "command": {
+    "update": "Track",
+    "updates": [{
+      "q": "{{ where }}",
+      "u": {
+        "UnitPrice": "{{ newPrice }}"
+      },
+      "multi": true
+    }]
+  }
+}
