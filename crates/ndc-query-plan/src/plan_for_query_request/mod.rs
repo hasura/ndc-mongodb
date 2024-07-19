@@ -689,7 +689,7 @@ fn plan_for_exists<T: QueryContext>(
                 ..Default::default()
             };
 
-            let join_key = plan_state.register_unrelated_join(collection, arguments, join_query);
+            let join_key = plan_state.register_unrelated_join(collection, arguments, join_query)?;
 
             let in_collection = plan::ExistsInCollection::Unrelated {
                 unrelated_collection: join_key,

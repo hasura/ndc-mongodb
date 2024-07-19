@@ -14,7 +14,20 @@ pub fn plan_for_arguments<T: QueryContext>(
     parameters: &BTreeMap<ndc::ArgumentName, ndc::ArgumentInfo>,
     arguments: BTreeMap<ndc::ArgumentName, ndc::Argument>,
 ) -> Result<BTreeMap<ndc::ArgumentName, plan::Argument<T>>> {
-    plan_for_arguments_generic(plan_state, parameters, arguments, plan_for_argument)
+    let arguments =
+        plan_for_arguments_generic(plan_state, parameters, arguments, plan_for_argument)?;
+
+    for argument in arguments.values() {
+        if let plan::Argument::Variable {
+            name,
+            argument_type,
+        } = argument
+        {
+            plan_state.register_variable_use(name, argument_type.clone())
+        }
+    }
+
+    Ok(arguments)
 }
 
 /// Convert maps of [ndc::Argument] values to maps of [plan::Argument]
@@ -23,12 +36,24 @@ pub fn plan_for_relationship_arguments<T: QueryContext>(
     parameters: &BTreeMap<ndc::ArgumentName, ndc::ArgumentInfo>,
     arguments: BTreeMap<ndc::ArgumentName, ndc::RelationshipArgument>,
 ) -> Result<BTreeMap<ndc::ArgumentName, plan::RelationshipArgument<T>>> {
-    plan_for_arguments_generic(
+    let arguments = plan_for_arguments_generic(
         plan_state,
         parameters,
         arguments,
         plan_for_relationship_argument,
-    )
+    )?;
+
+    for argument in arguments.values() {
+        if let plan::RelationshipArgument::Variable {
+            name,
+            argument_type,
+        } = argument
+        {
+            plan_state.register_variable_use(name, argument_type.clone())
+        }
+    }
+
+    Ok(arguments)
 }
 
 fn plan_for_argument<T: QueryContext>(

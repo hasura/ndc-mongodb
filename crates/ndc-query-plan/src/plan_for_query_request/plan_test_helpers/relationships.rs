@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
-use ndc_models::{RelationshipArgument, RelationshipType};
+use ndc_models::RelationshipType;
 
-use crate::{ConnectorTypes, Field, Relationship};
+use crate::{ConnectorTypes, Field, Relationship, RelationshipArgument};
 
 use super::QueryBuilder;
 
@@ -11,7 +11,7 @@ pub struct RelationshipBuilder<T: ConnectorTypes> {
     column_mapping: BTreeMap<ndc_models::FieldName, ndc_models::FieldName>,
     relationship_type: RelationshipType,
     target_collection: ndc_models::CollectionName,
-    arguments: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>,
+    arguments: BTreeMap<ndc_models::ArgumentName, RelationshipArgument<T>>,
     query: QueryBuilder<T>,
 }
 
@@ -63,7 +63,7 @@ impl<T: ConnectorTypes> RelationshipBuilder<T> {
 
     pub fn arguments(
         mut self,
-        arguments: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>,
+        arguments: BTreeMap<ndc_models::ArgumentName, RelationshipArgument<T>>,
     ) -> Self {
         self.arguments = arguments;
         self

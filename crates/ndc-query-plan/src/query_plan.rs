@@ -3,9 +3,7 @@ use std::{collections::BTreeMap, fmt::Debug, iter};
 use derivative::Derivative;
 use indexmap::IndexMap;
 use itertools::Either;
-use ndc_models::{
-    self as ndc, OrderDirection, RelationshipType, UnaryComparisonOperator,
-};
+use ndc_models::{self as ndc, OrderDirection, RelationshipType, UnaryComparisonOperator};
 
 use crate::{vec_set::VecSet, Type};
 
@@ -47,7 +45,7 @@ impl<T: ConnectorTypes> QueryPlan<T> {
 pub type Arguments<T> = BTreeMap<ndc::ArgumentName, Argument<T>>;
 pub type Relationships<T> = BTreeMap<ndc::RelationshipName, Relationship<T>>;
 pub type VariableSet = BTreeMap<ndc::VariableName, serde_json::Value>;
-pub type VariableTypes<T> = BTreeMap<ndc::VariableName, VecSet<Option<Type<T>>>>;
+pub type VariableTypes<T> = BTreeMap<ndc::VariableName, VecSet<Type<T>>>;
 
 #[derive(Derivative)]
 #[derivative(
@@ -101,9 +99,15 @@ impl<T: ConnectorTypes> Query<T> {
 )]
 pub enum Argument<T: ConnectorTypes> {
     /// The argument is provided by reference to a variable
-    Variable { name: ndc::VariableName, argument_type: Type<T::ScalarType> },
+    Variable {
+        name: ndc::VariableName,
+        argument_type: Type<T::ScalarType>,
+    },
     /// The argument is provided as a literal value
-    Literal { value: serde_json::Value, argument_type: Type<T::ScalarType> },
+    Literal {
+        value: serde_json::Value,
+        argument_type: Type<T::ScalarType>,
+    },
     /// The argument was a literal value that has been parsed as an [Expression]
     Predicate { expression: Expression<T> },
 }
@@ -126,11 +130,20 @@ pub struct Relationship<T: ConnectorTypes> {
 )]
 pub enum RelationshipArgument<T: ConnectorTypes> {
     /// The argument is provided by reference to a variable
-    Variable { name: ndc::VariableName, argument_type: Type<T::ScalarType> },
+    Variable {
+        name: ndc::VariableName,
+        argument_type: Type<T::ScalarType>,
+    },
     /// The argument is provided as a literal value
-    Literal { value: serde_json::Value, argument_type: Type<T::ScalarType> },
+    Literal {
+        value: serde_json::Value,
+        argument_type: Type<T::ScalarType>,
+    },
     // The argument is provided based on a column of the source collection
-    Column { name: ndc::FieldName, argument_type: Type<T::ScalarType> },
+    Column {
+        name: ndc::FieldName,
+        argument_type: Type<T::ScalarType>,
+    },
     /// The argument was a literal value that has been parsed as an [Expression]
     Predicate { expression: Expression<T> },
 }
@@ -139,7 +152,7 @@ pub enum RelationshipArgument<T: ConnectorTypes> {
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub struct UnrelatedJoin<T: ConnectorTypes> {
     pub target_collection: ndc::CollectionName,
-    pub arguments: BTreeMap<ndc::ArgumentName, RelationshipArgument>,
+    pub arguments: BTreeMap<ndc::ArgumentName, RelationshipArgument<T>>,
     pub query: Query<T>,
 }
 
