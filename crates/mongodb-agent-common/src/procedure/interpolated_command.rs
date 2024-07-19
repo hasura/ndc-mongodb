@@ -168,14 +168,6 @@ mod tests {
                 name: Some("InsertArtist".into()),
                 fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
             }),
-            arguments: [
-                ("id".into(), Type::Scalar(MongoScalarType::Bson(S::Int))),
-                (
-                    "name".into(),
-                    Type::Scalar(MongoScalarType::Bson(S::String)),
-                ),
-            ]
-            .into(),
             command: doc! {
                 "insert": "Artist",
                 "documents": [{
@@ -243,7 +235,6 @@ mod tests {
                 name: Some("InsertArtist".into()),
                 fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
             }),
-            arguments: [("documents".into(), documents_type.clone())].into(),
             command: doc! {
                 "insert": "Artist",
                 "documents": "{{ documents }}",
@@ -294,17 +285,6 @@ mod tests {
                 name: Some("Insert".into()),
                 fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
             }),
-            arguments: [
-                (
-                    "prefix".into(),
-                    Type::Scalar(MongoScalarType::Bson(S::String)),
-                ),
-                (
-                    "basename".into(),
-                    Type::Scalar(MongoScalarType::Bson(S::String)),
-                ),
-            ]
-            .into(),
             command: doc! {
                 "insert": "{{prefix}}-{{basename}}",
                 "empty": "",
