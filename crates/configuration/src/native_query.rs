@@ -4,11 +4,11 @@ use itertools::Itertools as _;
 use mongodb::bson;
 use ndc_models as ndc;
 use ndc_query_plan as plan;
-use plan::{inline_object_types, QueryPlanError};
+use plan::QueryPlanError;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::{serialized, MongoScalarType};
+use crate::{serialized, Parameter};
 
 /// Internal representation of Native Queries. For doc comments see
 /// [crate::serialized::NativeQuery]
@@ -20,7 +20,7 @@ use crate::{serialized, MongoScalarType};
 pub struct NativeQuery {
     pub representation: NativeQueryRepresentation,
     pub input_collection: Option<ndc::CollectionName>,
-    pub arguments: BTreeMap<ndc::ArgumentName, plan::Type<MongoScalarType>>,
+    pub arguments: BTreeMap<ndc::ArgumentName, Parameter>,
     pub result_document_type: ndc::ObjectTypeName,
     pub pipeline: Vec<bson::Document>,
     pub description: Option<String>,
@@ -37,11 +37,7 @@ impl NativeQuery {
             .map(|(name, object_field)| {
                 Ok((
                     name,
-                    inline_object_types(
-                        object_types,
-                        &object_field.r#type.into(),
-                        MongoScalarType::lookup_scalar_type,
-                    )?,
+                    Parameter::from_object_field(object_types, object_field)?,
                 )) as Result<_, QueryPlanError>
             })
             .try_collect()?;

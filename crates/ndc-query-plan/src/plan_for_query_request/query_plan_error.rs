@@ -26,9 +26,6 @@ pub enum QueryPlanError {
     #[error("missing arguments: {}", .0.join(", "))]
     MissingArguments(Vec<ndc::ArgumentName>),
 
-    #[error("The connector does not yet support {0}")]
-    NotImplemented(&'static str),
-
     #[error("{0}")]
     RelationshipUnification(#[from] RelationshipUnificationError),
 
@@ -37,6 +34,9 @@ pub enum QueryPlanError {
 
     #[error("{0}")]
     TypeMismatch(String),
+
+    #[error("found predicate argument in a value-only context")]
+    UnexpectedPredicate,
 
     #[error("Unknown comparison operator, \"{0}\"")]
     UnknownComparisonOperator(ndc::ComparisonOperatorName),
