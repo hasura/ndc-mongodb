@@ -1,5 +1,6 @@
 mod helpers;
 mod plan_for_arguments;
+mod plan_for_mutation_request;
 pub mod query_context;
 pub mod query_plan_error;
 mod query_plan_state;
@@ -27,6 +28,7 @@ use self::{
     query_plan_error::QueryPlanError,
     query_plan_state::QueryPlanState,
 };
+pub use self::plan_for_mutation_request::plan_for_mutation_request;
 
 type Result<T> = std::result::Result<T, QueryPlanError>;
 

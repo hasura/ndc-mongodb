@@ -61,6 +61,9 @@ pub enum QueryPlanError {
     #[error("Unknown collection, \"{0}\"")]
     UnknownCollection(String),
 
+    #[error("Unknown procedure, \"{0}\"")]
+    UnknownProcedure(String),
+
     #[error("Unknown relationship, \"{relationship_name}\"{}", at_path(path))]
     UnknownRelationship {
         relationship_name: String,

@@ -30,6 +30,20 @@ pub fn plan_for_arguments<T: QueryContext>(
     Ok(arguments)
 }
 
+/// Convert maps of [serde_json::Value] values to maps of [plan::MutationProcedureArgument]
+pub fn plan_for_mutation_procedure_arguments<T: QueryContext>(
+    plan_state: &mut QueryPlanState<'_, T>,
+    parameters: &BTreeMap<ndc::ArgumentName, ndc::ArgumentInfo>,
+    arguments: BTreeMap<ndc::ArgumentName, serde_json::Value>,
+) -> Result<BTreeMap<ndc::ArgumentName, plan::MutationProcedureArgument<T>>> {
+    plan_for_arguments_generic(
+        plan_state,
+        parameters,
+        arguments,
+        plan_for_mutation_procedure_argument,
+    )
+}
+
 /// Convert maps of [ndc::Argument] values to maps of [plan::Argument]
 pub fn plan_for_relationship_arguments<T: QueryContext>(
     plan_state: &mut QueryPlanState<'_, T>,
@@ -67,19 +81,32 @@ fn plan_for_argument<T: QueryContext>(
             argument_type: plan_state.context.ndc_to_plan_type(parameter_type)?,
         }),
         ndc::Argument::Literal { value } => match parameter_type {
-            ndc::Type::Predicate { object_type_name } => {
-                let object_type = plan_state.context.find_object_type(object_type_name)?;
-                let ndc_expression = serde_json::from_value::<ndc::Expression>(value)
-                    .map_err(QueryPlanError::ErrorParsingPredicate)?;
-                let expression =
-                    plan_for_expression(plan_state, &object_type, &object_type, ndc_expression)?;
-                Ok(plan::Argument::Predicate { expression })
-            }
+            ndc::Type::Predicate { object_type_name } => Ok(plan::Argument::Predicate {
+                expression: plan_for_predicate(plan_state, object_type_name, value)?,
+            }),
             t => Ok(plan::Argument::Literal {
                 value,
                 argument_type: plan_state.context.ndc_to_plan_type(t)?,
             }),
         },
+    }
+}
+
+fn plan_for_mutation_procedure_argument<T: QueryContext>(
+    plan_state: &mut QueryPlanState<'_, T>,
+    parameter_type: &ndc::Type,
+    value: serde_json::Value,
+) -> Result<plan::MutationProcedureArgument<T>> {
+    match parameter_type {
+        ndc::Type::Predicate { object_type_name } => {
+            Ok(plan::MutationProcedureArgument::Predicate {
+                expression: plan_for_predicate(plan_state, object_type_name, value)?,
+            })
+        }
+        t => Ok(plan::MutationProcedureArgument::Literal {
+            value,
+            argument_type: plan_state.context.ndc_to_plan_type(t)?,
+        }),
     }
 }
 
@@ -99,12 +126,9 @@ fn plan_for_relationship_argument<T: QueryContext>(
         }),
         ndc::RelationshipArgument::Literal { value } => match parameter_type {
             ndc::Type::Predicate { object_type_name } => {
-                let object_type = plan_state.context.find_object_type(object_type_name)?;
-                let ndc_expression = serde_json::from_value::<ndc::Expression>(value)
-                    .map_err(QueryPlanError::ErrorParsingPredicate)?;
-                let expression =
-                    plan_for_expression(plan_state, &object_type, &object_type, ndc_expression)?;
-                Ok(plan::RelationshipArgument::Predicate { expression })
+                Ok(plan::RelationshipArgument::Predicate {
+                    expression: plan_for_predicate(plan_state, object_type_name, value)?,
+                })
             }
             t => Ok(plan::RelationshipArgument::Literal {
                 value,
@@ -112,6 +136,17 @@ fn plan_for_relationship_argument<T: QueryContext>(
             }),
         },
     }
+}
+
+fn plan_for_predicate<T: QueryContext>(
+    plan_state: &mut QueryPlanState<'_, T>,
+    object_type_name: &ndc::ObjectTypeName,
+    value: serde_json::Value,
+) -> Result<plan::Expression<T>> {
+    let object_type = plan_state.context.find_object_type(object_type_name)?;
+    let ndc_expression = serde_json::from_value::<ndc::Expression>(value)
+        .map_err(QueryPlanError::ErrorParsingPredicate)?;
+    plan_for_expression(plan_state, &object_type, &object_type, ndc_expression)
 }
 
 /// Convert maps of [ndc::Argument] or [ndc::RelationshipArgument] values to [plan::Argument] or
