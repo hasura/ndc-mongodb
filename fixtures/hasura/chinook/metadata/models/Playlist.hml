@@ -5,7 +5,7 @@ definition:
   name: Playlist
   fields:
     - name: id
-      type: Chinook_ObjectId!
+      type: ObjectId!
     - name: name
       type: String
     - name: playlistId

@@ -5,7 +5,7 @@ definition:
   name: Track
   fields:
     - name: id
-      type: Chinook_ObjectId!
+      type: ObjectId!
     - name: albumId
       type: Int
     - name: bytes

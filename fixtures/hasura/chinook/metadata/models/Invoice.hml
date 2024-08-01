@@ -5,7 +5,7 @@ definition:
   name: Invoice
   fields:
     - name: id
-      type: Chinook_ObjectId!
+      type: ObjectId!
     - name: billingAddress
       type: String
     - name: billingCity

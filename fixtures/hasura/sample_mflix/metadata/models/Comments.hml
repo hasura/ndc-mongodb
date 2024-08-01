@@ -68,32 +68,33 @@ definition:
           - text
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
   name: CommentsBoolExp
-  objectType: Comments
-  dataConnectorName: sample_mflix
-  dataConnectorObjectType: comments
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: date
-      operators:
-        enableAll: true
-    - fieldName: email
-      operators:
-        enableAll: true
-    - fieldName: movieId
-      operators:
-        enableAll: true
-    - fieldName: name
-      operators:
-        enableAll: true
-    - fieldName: text
-      operators:
-        enableAll: true
+  operand:
+    object:
+      type: Comments
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: date
+          booleanExpressionType: DateComparisonExp
+        - fieldName: email
+          booleanExpressionType: StringComparisonExp
+        - fieldName: movieId
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: name
+          booleanExpressionType: StringComparisonExp
+        - fieldName: text
+          booleanExpressionType: StringComparisonExp
+      comparableRelationships:
+        - relationshipName: user
+          booleanExpressionType: UsersBoolExp
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
     typeName: CommentsBoolExp
 

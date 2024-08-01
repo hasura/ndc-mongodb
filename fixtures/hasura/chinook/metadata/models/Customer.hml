@@ -5,7 +5,7 @@ definition:
   name: Customer
   fields:
     - name: id
-      type: Chinook_ObjectId!
+      type: ObjectId!
     - name: address
       type: String
     - name: city

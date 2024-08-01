@@ -59,29 +59,29 @@ definition:
           - name
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
   name: UsersBoolExp
-  objectType: Users
-  dataConnectorName: sample_mflix
-  dataConnectorObjectType: users
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: email
-      operators:
-        enableAll: true
-    - fieldName: name
-      operators:
-        enableAll: true
-    - fieldName: password
-      operators:
-        enableAll: true
-    - fieldName: preferences
-      operators:
-        enableAll: true
+  operand:
+    object:
+      type: Users
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: email
+          booleanExpressionType: StringComparisonExp
+        - fieldName: name
+          booleanExpressionType: StringComparisonExp
+        - fieldName: password
+          booleanExpressionType: StringComparisonExp
+      comparableRelationships:
+        - relationshipName: comments
+          booleanExpressionType: CommentsBoolExp
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
     typeName: UsersBoolExp
 
