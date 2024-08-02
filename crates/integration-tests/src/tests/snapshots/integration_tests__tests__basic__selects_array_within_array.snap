@@ -1,0 +1,31 @@
+---
+source: crates/integration-tests/src/tests/basic.rs
+expression: "graphql_query(r#\"\n            query {\n              artistsWithAlbumsAndTracks(limit: 1, order_by: {id: Asc}) {\n                name\n                albums {\n                  title\n                  tracks {\n                    name\n                  }\n                }\n              }\n            }\n            \"#).run().await?"
+---
+data:
+  artistsWithAlbumsAndTracks:
+    - name: AC/DC
+      albums:
+        - title: For Those About To Rock We Salute You
+          tracks:
+            - name: Breaking The Rules
+            - name: C.O.D.
+            - name: Evil Walks
+            - name: For Those About To Rock (We Salute You)
+            - name: Inject The Venom
+            - name: "Let's Get It Up"
+            - name: Night Of The Long Knives
+            - name: Put The Finger On You
+            - name: Snowballed
+            - name: Spellbound
+        - title: Let There Be Rock
+          tracks:
+            - name: Bad Boy Boogie
+            - name: Dog Eat Dog
+            - name: Go Down
+            - name: "Hell Ain't A Bad Place To Be"
+            - name: Let There Be Rock
+            - name: Overdose
+            - name: Problem Child
+            - name: Whole Lotta Rosie
+errors: ~

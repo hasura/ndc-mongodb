@@ -135,3 +135,50 @@ async fn sorts_by_field_of_related_collection() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+#[tokio::test]
+async fn looks_up_the_same_relation_twice_with_different_fields() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+            query {
+              artist(limit: 2, order_by: {id: Asc}) {
+                albums1: albums(order_by: {title: Asc}) {
+                  title
+                }
+                albums2: albums(order_by: {title: Asc}) {
+                  tracks(order_by: {name: Asc}) {
+                    name
+                  }
+                }
+              }
+            }
+            "#
+        )
+        .run()
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn queries_through_relationship_with_null_value() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+            query {
+              comments(where: {id: {_eq: "5a9427648b0beebeb69579cc"}}) { # this comment does not have a matching movie
+                movie {
+                  comments {
+                    email
+                  }
+                } 
+              }
+            }
+            "#
+        )
+        .run()
+        .await?
+    );
+    Ok(())
+}

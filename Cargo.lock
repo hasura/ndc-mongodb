@@ -1934,6 +1934,7 @@ dependencies = [
  "itertools",
  "ndc-models",
  "serde_json",
+ "smol_str",
 ]
 
 [[package]]

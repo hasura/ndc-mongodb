@@ -9,13 +9,14 @@
 
 { pkgs, config, ... }:
 let
+  connector-port = "7130";
+  connector-chinook-port = "7131";
+  engine-port = "7100";
+
   services = import ./integration-test-services.nix {
-    inherit pkgs engine-port;
+    inherit pkgs connector-port connector-chinook-port engine-port;
     map-host-ports = false;
   };
-
-  connector-port = "7130";
-  engine-port = "7100";
 in
 {
   project.name = "mongodb-connector-integration-tests";
@@ -24,6 +25,7 @@ in
     test = import ./services/integration-tests.nix {
       inherit pkgs;
       connector-url = "http://connector:${connector-port}/";
+      connector-chinook-url = "http://connector-chinook:${connector-chinook-port}/";
       engine-graphql-url = "http://engine:${engine-port}/graphql";
       service.depends_on = {
         connector.condition = "service_healthy";

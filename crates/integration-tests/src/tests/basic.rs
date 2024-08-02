@@ -1,5 +1,6 @@
 use crate::graphql_query;
 use insta::assert_yaml_snapshot;
+use serde_json::json;
 
 #[tokio::test]
 async fn runs_a_query() -> anyhow::Result<()> {
@@ -15,6 +16,53 @@ async fn runs_a_query() -> anyhow::Result<()> {
                     }
                   }
                 }
+            "#
+        )
+        .run()
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn filters_by_date() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+                query ($dateInput: Date) {
+                  movies(
+                    order_by: {id: Asc},
+                    where: {released: {_gt: $dateInput}}
+                  ) {
+                    title
+                    released
+                  }
+                }
+            "#
+        )
+        .variables(json!({ "dateInput": "2016-03-01T00:00Z" }))
+        .run()
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn selects_array_within_array() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+            query {
+              artistsWithAlbumsAndTracks(limit: 1, order_by: {id: Asc}) {
+                name
+                albums {
+                  title
+                  tracks {
+                    name
+                  }
+                }
+              }
+            }
             "#
         )
         .run()

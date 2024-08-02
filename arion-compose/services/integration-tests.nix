@@ -1,5 +1,6 @@
 { pkgs
 , connector-url
+, connector-chinook-url
 , engine-graphql-url
 , service ? { } # additional options to customize this service configuration
 }:
@@ -14,6 +15,7 @@ let
     ];
     environment = {
       CONNECTOR_URL = connector-url;
+      CONNECTOR_CHINOOK_URL = connector-chinook-url;
       ENGINE_GRAPHQL_URL = engine-graphql-url;
       INSTA_WORKSPACE_ROOT = repo-source-mount-point;
       MONGODB_IMAGE = builtins.getEnv "MONGODB_IMAGE";

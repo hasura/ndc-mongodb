@@ -1,0 +1,145 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: AlbumWithTracks
+  fields:
+    - name: id
+      type: Chinook_ObjectId!
+    - name: title
+      type: String!
+    - name: tracks
+      type: "[Track!]!"
+  graphql:
+    typeName: Chinook_AlbumWithTracks
+    inputTypeName: Chinook_AlbumWithTracksInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: chinook
+      dataConnectorObjectType: AlbumWithTracks
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        title:
+          column:
+            name: Title
+        tracks:
+          column:
+            name: Tracks
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: AlbumWithTracks
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - title
+          - tracks
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: ArtistWithAlbumsAndTracks
+  fields:
+    - name: id
+      type: Chinook_ObjectId!
+    - name: albums
+      type: "[AlbumWithTracks!]!"
+    - name: name
+      type: String!
+  graphql:
+    typeName: Chinook_ArtistWithAlbumsAndTracks
+    inputTypeName: Chinook_ArtistWithAlbumsAndTracksInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: chinook
+      dataConnectorObjectType: ArtistWithAlbumsAndTracks
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        albums:
+          column:
+            name: Albums
+        name:
+          column:
+            name: Name
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: ArtistWithAlbumsAndTracks
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - albums
+          - name
+
+---
+kind: ObjectBooleanExpressionType
+version: v1
+definition:
+  name: ArtistWithAlbumsAndTracksBoolExp
+  objectType: ArtistWithAlbumsAndTracks
+  dataConnectorName: chinook
+  dataConnectorObjectType: ArtistWithAlbumsAndTracks
+  comparableFields:
+    - fieldName: id
+      operators:
+        enableAll: true
+    - fieldName: albums
+      operators:
+        enableAll: true
+    - fieldName: name
+      operators:
+        enableAll: true
+  graphql:
+    typeName: Chinook_ArtistWithAlbumsAndTracksBoolExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: ArtistsWithAlbumsAndTracks
+  objectType: ArtistWithAlbumsAndTracks
+  source:
+    dataConnectorName: chinook
+    collection: artists_with_albums_and_tracks
+  filterExpressionType: ArtistWithAlbumsAndTracksBoolExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: albums
+      orderByDirections:
+        enableAll: true
+    - fieldName: name
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: artistsWithAlbumsAndTracks
+    selectUniques:
+      - queryRootField: artistsWithAlbumsAndTracksById
+        uniqueIdentifier:
+          - id
+    orderByExpressionType: Chinook_ArtistsWithAlbumsAndTracksOrderBy
+  description: combines artist, albums, and tracks into a single document per artist
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: ArtistsWithAlbumsAndTracks
+  permissions:
+    - role: admin
+      select:
+        filter: null
+
