@@ -1,18 +1,24 @@
 {
   inputs = {
+    # nixpkgs provides packages such as mongosh and just, and provides libraries
+    # used to build the connector like openssl
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     systems.url = "github:nix-systems/default";
 
+    # Nix build system for Rust projects, delegates to cargo
     crane = {
       url = "github:ipetkov/crane";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Allows selecting arbitrary Rust toolchain configurations by editing
+    # `rust-toolchain.toml`
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Security audit data for Rust projects
     advisory-db = {
       url = "github:rustsec/advisory-db";
       flake = false;
