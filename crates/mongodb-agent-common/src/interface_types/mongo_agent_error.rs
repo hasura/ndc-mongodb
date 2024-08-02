@@ -126,13 +126,13 @@ pub enum ErrorResponseType {
     MutationPermissionCheckFailure,
 }
 
-impl ToString for ErrorResponseType {
-    fn to_string(&self) -> String {
+impl Display for ErrorResponseType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::UncaughtError => String::from("uncaught-error"),
-            Self::MutationConstraintViolation => String::from("mutation-constraint-violation"),
+            Self::UncaughtError => f.write_str("uncaught-error"),
+            Self::MutationConstraintViolation => f.write_str("mutation-constraint-violation"),
             Self::MutationPermissionCheckFailure => {
-                String::from("mutation-permission-check-failure")
+                f.write_str("mutation-permission-check-failure")
             }
         }
     }
