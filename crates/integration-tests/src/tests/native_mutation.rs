@@ -60,20 +60,27 @@ async fn updates_with_native_mutation() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn accepts_predicate_argument() -> anyhow::Result<()> {
-    assert_yaml_snapshot!(
-        graphql_query(
-            r#"
-                mutation {
-                  chinook_updateTrackPrices(newPrice: "11.99", where: {albumId: {_eq: 3}}) {
-                    n
-                    ok
-                  }
-                }
-            "#
-        )
-        .run()
-        .await?
+    let mutation_resp = graphql_query(
+        r#"
+            mutation {
+              chinook_updateTrackPrices(newPrice: "11.99", where: {albumId: {_eq: 3}}) {
+                n
+                ok
+              }
+            }
+        "#,
+    )
+    .run()
+    .await?;
+    assert_eq!(
+        mutation_resp,
+        GraphQLResponse {
+            data: json!({ "chinook_updateTrackPrices": { "n": 3, "ok": 1 } }),
+            errors: None,
+        },
+        "mutation with predicate argument succeeded, and updated a non-zero number of documents",
     );
+
     assert_yaml_snapshot!(
         graphql_query(
             r#"
