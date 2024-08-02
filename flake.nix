@@ -69,7 +69,7 @@
       # packages or replace packages in that set.
       overlays = [
         (import rust-overlay)
-        (final: prev: rec {
+        (final: prev: {
           # What's the deal with `pkgsBuildHost`? It has to do with
           # cross-compiling.
           #
@@ -81,7 +81,7 @@
           # `pkgsBuildHost` contains copies of all packages compiled to run on
           # the build system, and to produce outputs for the host system.
           rustToolchain = final.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
-          craneLib = (crane.mkLib final).overrideToolchain rustToolchain;
+          craneLib = (crane.mkLib final).overrideToolchain (pkgs: pkgs.rustToolchain);
 
           # Extend our package set with mongodb-connector, graphql-engine, and
           # other packages built by this flake to make these packages accessible
