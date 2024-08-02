@@ -170,7 +170,6 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
         variable_name: &ndc::VariableName,
         expected_type: Type<T::ScalarType>,
     ) {
-        // self.register_variable_use_helper(variable_name, Some(expected_type))
         let mut type_map = self.variable_types.borrow_mut();
         match type_map.get_mut(variable_name) {
             None => {
