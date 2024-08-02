@@ -21,7 +21,7 @@
     "updates": [{
       "q": "{{ where }}",
       "u": {
-        "UnitPrice": "{{ newPrice }}"
+        "$set": { "UnitPrice": "{{ newPrice }}" }
       },
       "multi": true
     }]
