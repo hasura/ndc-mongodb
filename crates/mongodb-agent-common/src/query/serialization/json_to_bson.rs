@@ -21,6 +21,9 @@ pub enum JsonToBsonError {
     #[error("error converting \"{1}\" to type, \"{0:?}\": {2}")]
     ConversionErrorWithContext(Type, Value, #[source] anyhow::Error),
 
+    #[error("error parsing \"{0}\" as a date. Date values should be in ISO 8601 format with a time component, like `2016-01-01T00:00Z`. Underlying error: {1}")]
+    DateConversionErrorWithContext(Value, #[source] anyhow::Error),
+
     #[error("cannot use value, \"{0:?}\", in position of type, \"{1:?}\"")]
     IncompatibleType(Type, Value),
 
@@ -173,12 +176,8 @@ fn convert_nullable(underlying_type: &Type, value: Value) -> Result<Bson> {
 }
 
 fn convert_date(value: &str) -> Result<Bson> {
-    let date = OffsetDateTime::parse(value, &Iso8601::DEFAULT).map_err(|err| {
-        JsonToBsonError::ConversionErrorWithContext(
-            Type::Scalar(MongoScalarType::Bson(BsonScalarType::Date)),
-            Value::String(value.to_owned()),
-            err.into(),
-        )
+    let date = OffsetDateTime::parse(value, &Iso8601::PARSING).map_err(|err| {
+        JsonToBsonError::DateConversionErrorWithContext(Value::String(value.to_owned()), err.into())
     })?;
     Ok(Bson::DateTime(bson::DateTime::from_system_time(
         date.into(),
@@ -381,6 +380,18 @@ mod tests {
         let value = json!({});
         let actual = json_to_bson(&expected_type, value)?;
         assert_eq!(actual, bson!({}));
+        Ok(())
+    }
+
+    #[test]
+    fn converts_string_input_to_date() -> anyhow::Result<()> {
+        let input = json!("2016-01-01T00:00Z");
+        let actual = json_to_bson(
+            &Type::Scalar(MongoScalarType::Bson(BsonScalarType::Date)),
+            input,
+        )?;
+        let expected = Bson::DateTime(bson::DateTime::from_millis(1_451_606_400_000));
+        assert_eq!(actual, expected);
         Ok(())
     }
 }

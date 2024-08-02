@@ -1,0 +1,11 @@
+---
+source: crates/integration-tests/src/tests/basic.rs
+expression: "graphql_query(r#\"\n                query ($dateInput: Date) {\n                  movies(\n                    order_by: {id: Asc},\n                    where: {released: {_gt: $dateInput}}\n                  ) {\n                    title\n                    released\n                  }\n                }\n            \"#).variables(json!({\n                        \"dateInput\": \"2016-03-01T00:00Z\"\n                    })).run().await?"
+---
+data:
+  movies:
+    - title: Knight of Cups
+      released: "2016-03-04T00:00:00.000000000Z"
+    - title: The Treasure
+      released: "2016-03-23T00:00:00.000000000Z"
+errors: ~

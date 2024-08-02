@@ -1,0 +1,46 @@
+---
+source: crates/integration-tests/src/tests/local_relationship.rs
+expression: "graphql_query(r#\"\n            {\n              artist(limit: 2, order_by: {id: Asc}) {\n                albums1: albums(order_by: {title: Asc}) {\n                  title\n                }\n                albums2: albums {\n                  tracks(order_by: {name: Asc}) {\n                    name\n                  }\n                }\n              }\n            }\n            \"#).run().await?"
+---
+data:
+  artist:
+    - albums1:
+        - title: For Those About To Rock We Salute You
+        - title: Let There Be Rock
+      albums2:
+        - tracks:
+            - name: Breaking The Rules
+            - name: C.O.D.
+            - name: Evil Walks
+            - name: For Those About To Rock (We Salute You)
+            - name: Inject The Venom
+            - name: "Let's Get It Up"
+            - name: Night Of The Long Knives
+            - name: Put The Finger On You
+            - name: Snowballed
+            - name: Spellbound
+        - tracks:
+            - name: Bad Boy Boogie
+            - name: Dog Eat Dog
+            - name: Go Down
+            - name: "Hell Ain't A Bad Place To Be"
+            - name: Let There Be Rock
+            - name: Overdose
+            - name: Problem Child
+            - name: Whole Lotta Rosie
+    - albums1:
+        - title: The Best Of Buddy Guy - The Millenium Collection
+      albums2:
+        - tracks:
+            - name: First Time I Met The Blues
+            - name: Keep It To Myself (Aka Keep It To Yourself)
+            - name: Leave My Girl Alone
+            - name: Let Me Love You Baby
+            - name: My Time After Awhile
+            - name: Pretty Baby
+            - name: She Suits Me To A Tee
+            - name: Stone Crazy
+            - name: "Talkin' 'Bout Women Obviously"
+            - name: Too Many Ways (Alternate)
+            - name: When My Left Eye Jumps
+errors: ~

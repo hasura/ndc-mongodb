@@ -1,0 +1,8 @@
+---
+source: crates/integration-tests/src/tests/local_relationship.rs
+expression: "graphql_query(r#\"\n            query {\n              comments(where: {id: {_eq: \"5a9427648b0beebeb69579cc\"}}) { # this comment does not have a matching movie\n                movie {\n                  comments {\n                    email\n                  }\n                } \n              }\n            }\n            \"#).run().await?"
+---
+data:
+  comments:
+    - movie: ~
+errors: ~

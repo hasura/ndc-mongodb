@@ -1,19 +1,36 @@
 use ndc_models::{ErrorResponse, QueryRequest, QueryResponse};
-use ndc_test_helpers::QueryRequestBuilder;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use url::Url;
 
-use crate::get_connector_url;
+use crate::{get_connector_chinook_url, get_connector_url};
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(transparent)]
 pub struct ConnectorQueryRequest {
+    #[serde(skip)]
+    connector: Connector,
     query_request: QueryRequest,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum Connector {
+    Chinook,
+    SampleMflix,
+}
+
+impl Connector {
+    fn url(self) -> anyhow::Result<Url> {
+        match self {
+            Connector::Chinook => get_connector_chinook_url(),
+            Connector::SampleMflix => get_connector_url(),
+        }
+    }
 }
 
 impl ConnectorQueryRequest {
     pub async fn run(&self) -> anyhow::Result<ConnectorQueryResponse> {
-        let connector_url = get_connector_url()?;
+        let connector_url = self.connector.url()?;
         let client = Client::new();
         let response = client
             .post(connector_url.join("query")?)
@@ -26,23 +43,14 @@ impl ConnectorQueryRequest {
     }
 }
 
-impl From<QueryRequest> for ConnectorQueryRequest {
-    fn from(query_request: QueryRequest) -> Self {
-        ConnectorQueryRequest { query_request }
-    }
-}
-
-impl From<QueryRequestBuilder> for ConnectorQueryRequest {
-    fn from(builder: QueryRequestBuilder) -> Self {
-        let request: QueryRequest = builder.into();
-        request.into()
-    }
-}
-
 pub async fn run_connector_query(
-    request: impl Into<ConnectorQueryRequest>,
+    connector: Connector,
+    request: impl Into<QueryRequest>,
 ) -> anyhow::Result<ConnectorQueryResponse> {
-    let request: ConnectorQueryRequest = request.into();
+    let request = ConnectorQueryRequest {
+        connector,
+        query_request: request.into(),
+    };
     request.run().await
 }
 
