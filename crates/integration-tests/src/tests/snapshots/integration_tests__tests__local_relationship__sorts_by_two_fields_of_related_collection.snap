@@ -1,0 +1,17 @@
+---
+source: crates/integration-tests/src/tests/local_relationship.rs
+expression: "graphql_query(r#\"\n            query {\n              comments(\n                limit: 10\n                order_by: [{movie: {title: Asc}}, {date: Asc}]\n                where: {movie: {rated: {_eq: \"G\"}, released: {_gt: \"2015-01-01T00:00Z\"}}}\n              ) {\n                movie {\n                  title\n                  year\n                  released\n                }\n                text\n              }\n            }\n            \"#).run().await?"
+---
+data:
+  comments:
+    - movie:
+        title: Maya the Bee Movie
+        year: 2014
+        released: "2015-03-08T00:00:00.000000000Z"
+      text: Pariatur eius nulla dolor voluptatum ab. A amet delectus repellat consequuntur eius illum. Optio voluptates dignissimos ipsam saepe eos provident ut. Incidunt eum nemo voluptatem velit similique.
+    - movie:
+        title: Maya the Bee Movie
+        year: 2014
+        released: "2015-03-08T00:00:00.000000000Z"
+      text: Error doloribus doloremque commodi aut porro nesciunt. Qui dicta incidunt cumque. Quidem ea officia aperiam est. Laboriosam explicabo eum ipsum quam tempore iure tenetur.
+errors: ~

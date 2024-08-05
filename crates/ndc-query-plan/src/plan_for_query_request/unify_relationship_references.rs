@@ -3,37 +3,37 @@ use std::collections::BTreeMap;
 
 use indexmap::IndexMap;
 use itertools::{merge_join_by, EitherOrBoth, Itertools};
-use ndc_models::RelationshipArgument;
+use ndc_models as ndc;
 use thiserror::Error;
 
 use crate::{
     Aggregate, ConnectorTypes, Expression, Field, NestedArray, NestedField, NestedObject, Query,
-    Relationship, Relationships,
+    Relationship, RelationshipArgument, Relationships,
 };
 
-#[derive(Clone, Debug, Error)]
+#[derive(Debug, Error)]
 pub enum RelationshipUnificationError {
-    #[error("relationship arguments mismatch")]
+    #[error("relationship arguments mismatch\n  left: {:?}\n  right: {:?}", .a, .b)]
     ArgumentsMismatch {
-        a: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>,
-        b: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>,
+        a: BTreeMap<ndc::ArgumentName, String>,
+        b: BTreeMap<ndc::ArgumentName, String>,
     },
 
     #[error("relationships select fields with the same name, {field_name}, but that have different types")]
-    FieldTypeMismatch { field_name: ndc_models::FieldName },
+    FieldTypeMismatch { field_name: ndc::FieldName },
 
     #[error("relationships select columns {column_a} and {column_b} with the same field name, {field_name}")]
     FieldColumnMismatch {
-        field_name: ndc_models::FieldName,
-        column_a: ndc_models::FieldName,
-        column_b: ndc_models::FieldName,
+        field_name: ndc::FieldName,
+        column_a: ndc::FieldName,
+        column_b: ndc::FieldName,
     },
 
     #[error("relationship references have incompatible configurations: {}", .0.join(", "))]
     Mismatch(Vec<&'static str>),
 
     #[error("relationship references referenced different nested relationships with the same field name, {field_name}")]
-    RelationshipMismatch { field_name: ndc_models::FieldName },
+    RelationshipMismatch { field_name: ndc::FieldName },
 }
 
 type Result<T> = std::result::Result<T, RelationshipUnificationError>;
@@ -64,15 +64,26 @@ where
 // TODO: The engine may be set up to avoid a situation where we encounter a mismatch. For now we're
 // being pessimistic, and if we get an error here we record the two relationships under separate
 // keys instead of recording one, unified relationship.
-fn unify_arguments(
-    a: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>,
-    b: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>,
-) -> Result<BTreeMap<ndc_models::ArgumentName, RelationshipArgument>> {
+fn unify_arguments<T: ConnectorTypes>(
+    a: BTreeMap<ndc::ArgumentName, RelationshipArgument<T>>,
+    b: BTreeMap<ndc::ArgumentName, RelationshipArgument<T>>,
+) -> Result<BTreeMap<ndc::ArgumentName, RelationshipArgument<T>>> {
     if a != b {
-        Err(RelationshipUnificationError::ArgumentsMismatch { a, b })
+        Err(RelationshipUnificationError::ArgumentsMismatch {
+            a: debuggable_map(a),
+            b: debuggable_map(b),
+        })
     } else {
         Ok(a)
     }
+}
+
+fn debuggable_map<K, V>(xs: impl IntoIterator<Item = (K, V)>) -> BTreeMap<K, String>
+where
+    K: Ord,
+    V: std::fmt::Debug,
+{
+    xs.into_iter().map(|(k, v)| (k, format!("{v:?}"))).collect()
 }
 
 fn unify_query<T>(a: Query<T>, b: Query<T>) -> Result<Query<T>>
@@ -120,9 +131,9 @@ where
 }
 
 fn unify_aggregates<T>(
-    a: Option<IndexMap<ndc_models::FieldName, Aggregate<T>>>,
-    b: Option<IndexMap<ndc_models::FieldName, Aggregate<T>>>,
-) -> Result<Option<IndexMap<ndc_models::FieldName, Aggregate<T>>>>
+    a: Option<IndexMap<ndc::FieldName, Aggregate<T>>>,
+    b: Option<IndexMap<ndc::FieldName, Aggregate<T>>>,
+) -> Result<Option<IndexMap<ndc::FieldName, Aggregate<T>>>>
 where
     T: ConnectorTypes,
 {
@@ -134,9 +145,9 @@ where
 }
 
 fn unify_fields<T>(
-    a: Option<IndexMap<ndc_models::FieldName, Field<T>>>,
-    b: Option<IndexMap<ndc_models::FieldName, Field<T>>>,
-) -> Result<Option<IndexMap<ndc_models::FieldName, Field<T>>>>
+    a: Option<IndexMap<ndc::FieldName, Field<T>>>,
+    b: Option<IndexMap<ndc::FieldName, Field<T>>>,
+) -> Result<Option<IndexMap<ndc::FieldName, Field<T>>>>
 where
     T: ConnectorTypes,
 {
@@ -144,9 +155,9 @@ where
 }
 
 fn unify_fields_some<T>(
-    fields_a: IndexMap<ndc_models::FieldName, Field<T>>,
-    fields_b: IndexMap<ndc_models::FieldName, Field<T>>,
-) -> Result<IndexMap<ndc_models::FieldName, Field<T>>>
+    fields_a: IndexMap<ndc::FieldName, Field<T>>,
+    fields_b: IndexMap<ndc::FieldName, Field<T>>,
+) -> Result<IndexMap<ndc::FieldName, Field<T>>>
 where
     T: ConnectorTypes,
 {
@@ -163,7 +174,7 @@ where
     Ok(fields)
 }
 
-fn unify_field<T>(field_name: &ndc_models::FieldName, a: Field<T>, b: Field<T>) -> Result<Field<T>>
+fn unify_field<T>(field_name: &ndc::FieldName, a: Field<T>, b: Field<T>) -> Result<Field<T>>
 where
     T: ConnectorTypes,
 {

@@ -1,0 +1,29 @@
+{
+  "name": "updateTrackPrices",
+  "description": "Update unit price of every track that matches predicate",
+  "resultType": {
+    "object": "InsertArtist"
+  },
+  "arguments": {
+    "newPrice": {
+      "type": {
+        "scalar": "decimal"
+      }
+    },
+    "where": {
+      "type": {
+        "predicate": { "objectTypeName": "Track" }
+      }
+    }
+  },
+  "command": {
+    "update": "Track",
+    "updates": [{
+      "q": "{{ where }}",
+      "u": {
+        "$set": { "UnitPrice": "{{ newPrice }}" }
+      },
+      "multi": true
+    }]
+  }
+}

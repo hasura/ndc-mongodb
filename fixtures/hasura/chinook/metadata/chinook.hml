@@ -536,6 +536,22 @@ definition:
               type:
                 type: named
                 name: String
+        AlbumWithTracks:
+          fields:
+            _id:
+              type:
+                type: named
+                name: ObjectId
+            Title:
+              type:
+                type: named
+                name: String
+            Tracks:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: Track
         Artist:
           description: Object type for collection Artist
           fields:
@@ -553,6 +569,22 @@ definition:
                 underlying_type:
                   type: named
                   name: String
+        ArtistWithAlbumsAndTracks:
+          fields:
+            _id:
+              type:
+                type: named
+                name: ObjectId
+            Albums:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: AlbumWithTracks
+            Name:
+              type:
+                type: named
+                name: String
         Customer:
           description: Object type for collection Customer
           fields:
@@ -1017,6 +1049,15 @@ definition:
               unique_columns:
                 - _id
           foreign_keys: {}
+        - name: artists_with_albums_and_tracks
+          description: combines artist, albums, and tracks into a single document per artist
+          arguments: {}
+          type: ArtistWithAlbumsAndTracks
+          uniqueness_constraints:
+            artists_with_albums_and_tracks_id:
+              unique_columns:
+                - _id
+          foreign_keys: {}
       functions: []
       procedures:
         - name: insertArtist
@@ -1033,8 +1074,22 @@ definition:
           result_type:
             type: named
             name: InsertArtist
+        - name: updateTrackPrices
+          description: Update unit price of every track that matches predicate
+          arguments:
+            newPrice:
+              type:
+                type: named
+                name: Decimal
+            where:
+              type:
+                type: predicate
+                object_type_name: Track
+          result_type:
+            type: named
+            name: InsertArtist
     capabilities:
-      version: 0.1.4
+      version: 0.1.5
       capabilities:
         query:
           aggregates: {}

@@ -1,0 +1,127 @@
+---
+source: crates/integration-tests/src/tests/native_query.rs
+expression: "run_connector_query(query_request().variables([[(\"count\", 1)], [(\"count\", 2)],\n                                [(\"count\",\n                                            3)]]).collection(\"title_word_frequency\").query(query().predicate(binop(\"_eq\",\n                                    target!(\"count\"),\n                                    variable!(count))).order_by([asc!(\"_id\")]).limit(20).fields([field!(\"_id\"),\n                            field!(\"count\")]))).await?"
+---
+- rows:
+    - _id: "!Women"
+      count: 1
+    - _id: "#$*!"
+      count: 1
+    - _id: "#9"
+      count: 1
+    - _id: "#chicagoGirl:"
+      count: 1
+    - _id: $
+      count: 1
+    - _id: $9.99
+      count: 1
+    - _id: $ellebrity
+      count: 1
+    - _id: "'...And"
+      count: 1
+    - _id: "'36"
+      count: 1
+    - _id: "'42"
+      count: 1
+    - _id: "'44"
+      count: 1
+    - _id: "'51"
+      count: 1
+    - _id: "'63"
+      count: 1
+    - _id: "'66"
+      count: 1
+    - _id: "'69"
+      count: 1
+    - _id: "'70"
+      count: 1
+    - _id: "'71"
+      count: 1
+    - _id: "'73"
+      count: 1
+    - _id: "'79"
+      count: 1
+    - _id: "'81"
+      count: 1
+- rows:
+    - _id: "'45"
+      count: 2
+    - _id: "'Round"
+      count: 2
+    - _id: "'Til"
+      count: 2
+    - _id: (A
+      count: 2
+    - _id: (And
+      count: 2
+    - _id: (Yellow)
+      count: 2
+    - _id: "...And"
+      count: 2
+    - _id: ".45"
+      count: 2
+    - _id: "1,000"
+      count: 2
+    - _id: 100%
+      count: 2
+    - _id: "102"
+      count: 2
+    - _id: "1138"
+      count: 2
+    - _id: "117:"
+      count: 2
+    - _id: 11th
+      count: 2
+    - _id: "13th:"
+      count: 2
+    - _id: "14"
+      count: 2
+    - _id: "1896"
+      count: 2
+    - _id: "1900"
+      count: 2
+    - _id: "1980"
+      count: 2
+    - _id: "1987"
+      count: 2
+- rows:
+    - _id: "#1"
+      count: 3
+    - _id: "'n"
+      count: 3
+    - _id: "'n'"
+      count: 3
+    - _id: (Not)
+      count: 3
+    - _id: "100"
+      count: 3
+    - _id: 10th
+      count: 3
+    - _id: "15"
+      count: 3
+    - _id: "174"
+      count: 3
+    - _id: "23"
+      count: 3
+    - _id: 3-D
+      count: 3
+    - _id: "42"
+      count: 3
+    - _id: "420"
+      count: 3
+    - _id: "72"
+      count: 3
+    - _id: Abandoned
+      count: 3
+    - _id: Abendland
+      count: 3
+    - _id: Absence
+      count: 3
+    - _id: Absent
+      count: 3
+    - _id: Abu
+      count: 3
+    - _id: Accident
+      count: 3
+    - _id: Accidental
+      count: 3

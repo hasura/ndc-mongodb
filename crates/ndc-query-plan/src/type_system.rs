@@ -60,7 +60,7 @@ pub fn inline_object_types<ScalarType>(
                 element_type,
                 lookup_scalar_type,
             )?)),
-            ndc::Type::Predicate { .. } => Err(QueryPlanError::NotImplemented("predicate types"))?,
+            ndc::Type::Predicate { .. } => Err(QueryPlanError::UnexpectedPredicate)?,
         };
     Ok(plan_type)
 }

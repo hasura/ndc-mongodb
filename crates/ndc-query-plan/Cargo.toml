@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 derivative = "2"
+indent = "^0.1"
 indexmap = { workspace = true }
 itertools = { workspace = true }
 ndc-models = { workspace = true }

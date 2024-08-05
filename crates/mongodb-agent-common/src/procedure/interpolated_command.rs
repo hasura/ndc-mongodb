@@ -150,13 +150,13 @@ mod tests {
     use configuration::{native_mutation::NativeMutation, MongoScalarType};
     use mongodb::bson::doc;
     use mongodb_support::BsonScalarType as S;
-    use ndc_models::Argument;
+    use ndc_query_plan::MutationProcedureArgument;
     use pretty_assertions::assert_eq;
     use serde_json::json;
 
     use crate::{
         mongo_query_plan::{ObjectType, Type},
-        query::arguments::resolve_arguments,
+        procedure::arguments_to_mongodb_expressions::arguments_to_mongodb_expressions,
     };
 
     use super::*;
@@ -168,14 +168,6 @@ mod tests {
                 name: Some("InsertArtist".into()),
                 fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
             }),
-            arguments: [
-                ("id".into(), Type::Scalar(MongoScalarType::Bson(S::Int))),
-                (
-                    "name".into(),
-                    Type::Scalar(MongoScalarType::Bson(S::String)),
-                ),
-            ]
-            .into(),
             command: doc! {
                 "insert": "Artist",
                 "documents": [{
@@ -188,18 +180,24 @@ mod tests {
         };
 
         let input_arguments = [
-            ("id".into(), Argument::Literal { value: json!(1001) }),
+            (
+                "id".into(),
+                MutationProcedureArgument::Literal {
+                    value: json!(1001),
+                    argument_type: Type::Scalar(MongoScalarType::Bson(S::Int)),
+                },
+            ),
             (
                 "name".into(),
-                Argument::Literal {
+                MutationProcedureArgument::Literal {
                     value: json!("Regina Spektor"),
+                    argument_type: Type::Scalar(MongoScalarType::Bson(S::String)),
                 },
             ),
         ]
-        .into_iter()
-        .collect();
+        .into();
 
-        let arguments = resolve_arguments(&native_mutation.arguments, input_arguments)?;
+        let arguments = arguments_to_mongodb_expressions(input_arguments)?;
         let command = interpolated_command(&native_mutation.command, &arguments)?;
 
         assert_eq!(
@@ -217,29 +215,26 @@ mod tests {
 
     #[test]
     fn interpolates_array_argument() -> anyhow::Result<()> {
+        let documents_type = Type::ArrayOf(Box::new(Type::Object(ObjectType {
+            name: Some("ArtistInput".into()),
+            fields: [
+                (
+                    "ArtistId".into(),
+                    Type::Scalar(MongoScalarType::Bson(S::Int)),
+                ),
+                (
+                    "Name".into(),
+                    Type::Scalar(MongoScalarType::Bson(S::String)),
+                ),
+            ]
+            .into(),
+        })));
+
         let native_mutation = NativeMutation {
             result_type: Type::Object(ObjectType {
                 name: Some("InsertArtist".into()),
                 fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
             }),
-            arguments: [(
-                "documents".into(),
-                Type::ArrayOf(Box::new(Type::Object(ObjectType {
-                    name: Some("ArtistInput".into()),
-                    fields: [
-                        (
-                            "ArtistId".into(),
-                            Type::Scalar(MongoScalarType::Bson(S::Int)),
-                        ),
-                        (
-                            "Name".into(),
-                            Type::Scalar(MongoScalarType::Bson(S::String)),
-                        ),
-                    ]
-                    .into(),
-                }))),
-            )]
-            .into(),
             command: doc! {
                 "insert": "Artist",
                 "documents": "{{ documents }}",
@@ -250,17 +245,18 @@ mod tests {
 
         let input_arguments = [(
             "documents".into(),
-            Argument::Literal {
+            MutationProcedureArgument::Literal {
                 value: json!([
                     { "ArtistId": 1001, "Name": "Regina Spektor" } ,
                     { "ArtistId": 1002, "Name": "Ok Go" } ,
                 ]),
+                argument_type: documents_type,
             },
         )]
         .into_iter()
         .collect();
 
-        let arguments = resolve_arguments(&native_mutation.arguments, input_arguments)?;
+        let arguments = arguments_to_mongodb_expressions(input_arguments)?;
         let command = interpolated_command(&native_mutation.command, &arguments)?;
 
         assert_eq!(
@@ -289,17 +285,6 @@ mod tests {
                 name: Some("Insert".into()),
                 fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
             }),
-            arguments: [
-                (
-                    "prefix".into(),
-                    Type::Scalar(MongoScalarType::Bson(S::String)),
-                ),
-                (
-                    "basename".into(),
-                    Type::Scalar(MongoScalarType::Bson(S::String)),
-                ),
-            ]
-            .into(),
             command: doc! {
                 "insert": "{{prefix}}-{{basename}}",
                 "empty": "",
@@ -311,21 +296,23 @@ mod tests {
         let input_arguments = [
             (
                 "prefix".into(),
-                Argument::Literal {
+                MutationProcedureArgument::Literal {
                     value: json!("current"),
+                    argument_type: Type::Scalar(MongoScalarType::Bson(S::String)),
                 },
             ),
             (
                 "basename".into(),
-                Argument::Literal {
+                MutationProcedureArgument::Literal {
                     value: json!("some-coll"),
+                    argument_type: Type::Scalar(MongoScalarType::Bson(S::String)),
                 },
             ),
         ]
         .into_iter()
         .collect();
 
-        let arguments = resolve_arguments(&native_mutation.arguments, input_arguments)?;
+        let arguments = arguments_to_mongodb_expressions(input_arguments)?;
         let command = interpolated_command(&native_mutation.command, &arguments)?;
 
         assert_eq!(

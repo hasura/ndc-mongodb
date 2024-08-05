@@ -1,5 +1,4 @@
 use anyhow::anyhow;
-use configuration::MongoScalarType;
 use itertools::Itertools as _;
 use mongodb::bson::{self, doc, Bson};
 use ndc_query_plan::VariableSet;
@@ -94,15 +93,11 @@ fn variable_sets_to_bson(
 fn variable_to_bson<'a>(
     name: &'a ndc_models::VariableName,
     value: &'a serde_json::Value,
-    variable_types: impl IntoIterator<Item = &'a Option<Type>> + 'a,
+    variable_types: impl IntoIterator<Item = &'a Type> + 'a,
 ) -> impl Iterator<Item = Result<(String, Bson)>> + 'a {
-    variable_types.into_iter().map(|t| {
-        let resolved_type = match t {
-            None => &Type::Scalar(MongoScalarType::ExtendedJSON),
-            Some(t) => t,
-        };
-        let variable_name = query_variable_name(name, resolved_type);
-        let bson_value = json_to_bson(resolved_type, value.clone())
+    variable_types.into_iter().map(|variable_type| {
+        let variable_name = query_variable_name(name, variable_type);
+        let bson_value = json_to_bson(variable_type, value.clone())
             .map_err(|e| MongoAgentError::BadQuery(anyhow!(e)))?;
         Ok((variable_name, bson_value))
     })

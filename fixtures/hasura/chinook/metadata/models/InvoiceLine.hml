@@ -15,7 +15,7 @@ definition:
     - name: trackId
       type: Int!
     - name: unitPrice
-      type: Decimal!
+      type: Chinook_Decimal!
   graphql:
     typeName: InvoiceLine
     inputTypeName: InvoiceLineInput
