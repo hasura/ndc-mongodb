@@ -6,7 +6,7 @@ definition:
   outputType: InsertArtist!
   arguments:
     - name: newPrice
-      type: Chinook_Decimal!
+      type: Decimal!
     - name: where
       type: TrackBoolExp!
   source:

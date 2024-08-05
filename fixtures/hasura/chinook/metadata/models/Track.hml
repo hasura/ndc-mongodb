@@ -23,7 +23,7 @@ definition:
     - name: trackId
       type: Int!
     - name: unitPrice
-      type: Chinook_Decimal!
+      type: Decimal!
   graphql:
     typeName: Track
     inputTypeName: TrackInput

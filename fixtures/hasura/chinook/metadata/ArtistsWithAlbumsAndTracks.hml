@@ -5,14 +5,14 @@ definition:
   name: AlbumWithTracks
   fields:
     - name: id
-      type: Chinook_ObjectId!
+      type: ObjectId!
     - name: title
       type: String!
     - name: tracks
       type: "[Track!]!"
   graphql:
-    typeName: Chinook_AlbumWithTracks
-    inputTypeName: Chinook_AlbumWithTracksInput
+    typeName: AlbumWithTracks
+    inputTypeName: AlbumWithTracksInput
   dataConnectorTypeMapping:
     - dataConnectorName: chinook
       dataConnectorObjectType: AlbumWithTracks
@@ -47,14 +47,14 @@ definition:
   name: ArtistWithAlbumsAndTracks
   fields:
     - name: id
-      type: Chinook_ObjectId!
+      type: ObjectId!
     - name: albums
       type: "[AlbumWithTracks!]!"
     - name: name
       type: String!
   graphql:
-    typeName: Chinook_ArtistWithAlbumsAndTracks
-    inputTypeName: Chinook_ArtistWithAlbumsAndTracksInput
+    typeName: ArtistWithAlbumsAndTracks
+    inputTypeName: ArtistWithAlbumsAndTracksInput
   dataConnectorTypeMapping:
     - dataConnectorName: chinook
       dataConnectorObjectType: ArtistWithAlbumsAndTracks
@@ -101,7 +101,7 @@ definition:
       operators:
         enableAll: true
   graphql:
-    typeName: Chinook_ArtistWithAlbumsAndTracksBoolExp
+    typeName: ArtistWithAlbumsAndTracksBoolExp
 
 ---
 kind: Model
@@ -130,7 +130,7 @@ definition:
       - queryRootField: artistsWithAlbumsAndTracksById
         uniqueIdentifier:
           - id
-    orderByExpressionType: Chinook_ArtistsWithAlbumsAndTracksOrderBy
+    orderByExpressionType: ArtistsWithAlbumsAndTracksOrderBy
   description: combines artist, albums, and tracks into a single document per artist
 
 ---
