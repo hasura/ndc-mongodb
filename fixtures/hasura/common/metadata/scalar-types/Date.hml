@@ -1,0 +1,55 @@
+---
+kind: ScalarType
+version: v1
+definition:
+  name: Date
+  graphql:
+    typeName: Date
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: DateComparisonExp
+  operand:
+    scalar:
+      type: Date
+      comparisonOperators:
+        - name: _eq
+          argumentType: Date
+        - name: _neq
+          argumentType: Date
+        - name: _gt
+          argumentType: Date
+        - name: _gte
+          argumentType: Date
+        - name: _lt
+          argumentType: Date
+        - name: _lte
+          argumentType: Date
+      dataConnectorOperatorMapping:
+        - dataConnectorName: chinook
+          dataConnectorScalarType: Date
+          operatorMapping:
+            _eq: _eq
+            _neq: _neq
+            _gt: _gt
+            _gte: _gte
+            _lt: _lt
+            _lte: _lte
+        - dataConnectorName: sample_mflix
+          dataConnectorScalarType: Date
+          operatorMapping:
+            _eq: _eq
+            _neq: _neq
+            _gt: _gt
+            _gte: _gte
+            _lt: _lt
+            _lte: _lte
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: DateComparisonExp
+

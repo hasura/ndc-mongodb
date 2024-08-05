@@ -1,0 +1,7 @@
+---
+kind: ScalarType
+version: v1
+definition:
+  name: ExtendedJson
+  graphql:
+    typeName: ExtendedJson

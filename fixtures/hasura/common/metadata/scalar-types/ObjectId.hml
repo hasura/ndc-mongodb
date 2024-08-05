@@ -1,0 +1,38 @@
+---
+kind: ScalarType
+version: v1
+definition:
+  name: ObjectId
+  graphql:
+    typeName: ObjectId
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: ObjectIdComparisonExp
+  operand:
+    scalar:
+      type: ObjectId
+      comparisonOperators:
+        - name: _eq
+          argumentType: ObjectId
+        - name: _neq
+          argumentType: ObjectId
+      dataConnectorOperatorMapping:
+        - dataConnectorName: chinook
+          dataConnectorScalarType: ObjectId
+          operatorMapping:
+            _eq: _eq
+            _neq: _neq
+        - dataConnectorName: sample_mflix
+          dataConnectorScalarType: ObjectId
+          operatorMapping:
+            _eq: _eq
+            _neq: _neq
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: ObjectIdComparisonExp

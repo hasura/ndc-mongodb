@@ -1,0 +1,54 @@
+---
+kind: ScalarType
+version: v1
+definition:
+  name: Double
+  graphql:
+    typeName: Double
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: DoubleComparisonExp
+  operand:
+    scalar:
+      type: Double
+      comparisonOperators:
+        - name: _eq
+          argumentType: Double
+        - name: _neq
+          argumentType: Double
+        - name: _gt
+          argumentType: Double
+        - name: _gte
+          argumentType: Double
+        - name: _lt
+          argumentType: Double
+        - name: _lte
+          argumentType: Double
+      dataConnectorOperatorMapping:
+        - dataConnectorName: chinook
+          dataConnectorScalarType: Double
+          operatorMapping:
+            _eq: _eq
+            _neq: _neq
+            _gt: _gt
+            _gte: _gte
+            _lt: _lt
+            _lte: _lte
+        - dataConnectorName: sample_mflix
+          dataConnectorScalarType: Double
+          operatorMapping:
+            _eq: _eq
+            _neq: _neq
+            _gt: _gt
+            _gte: _gte
+            _lt: _lt
+            _lte: _lte
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: DoubleComparisonExp
