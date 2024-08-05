@@ -1,18 +1,30 @@
+use std::collections::BTreeMap;
+
+use indent::indent_all_by;
 use ndc_models as ndc;
 use thiserror::Error;
 
 use super::unify_relationship_references::RelationshipUnificationError;
 
-#[derive(Clone, Debug, Error)]
+#[derive(Debug, Error)]
 pub enum QueryPlanError {
+    #[error("error parsing predicate: {}", .0)]
+    ErrorParsingPredicate(#[source] serde_json::Error),
+
     #[error("expected an array at path {}", path.join("."))]
     ExpectedArray { path: Vec<String> },
 
     #[error("expected an object at path {}", path.join("."))]
     ExpectedObject { path: Vec<String> },
 
-    #[error("The connector does not yet support {0}")]
-    NotImplemented(&'static str),
+    #[error("unknown arguments: {}", .0.join(", "))]
+    ExcessArguments(Vec<ndc::ArgumentName>),
+
+    #[error("some arguments are invalid:\n{}", format_errors(.0))]
+    InvalidArguments(BTreeMap<ndc::ArgumentName, QueryPlanError>),
+
+    #[error("missing arguments: {}", .0.join(", "))]
+    MissingArguments(Vec<ndc::ArgumentName>),
 
     #[error("{0}")]
     RelationshipUnification(#[from] RelationshipUnificationError),
@@ -22,6 +34,9 @@ pub enum QueryPlanError {
 
     #[error("{0}")]
     TypeMismatch(String),
+
+    #[error("found predicate argument in a value-only context")]
+    UnexpectedPredicate,
 
     #[error("Unknown comparison operator, \"{0}\"")]
     UnknownComparisonOperator(ndc::ComparisonOperatorName),
@@ -45,6 +60,9 @@ pub enum QueryPlanError {
 
     #[error("Unknown collection, \"{0}\"")]
     UnknownCollection(String),
+
+    #[error("Unknown procedure, \"{0}\"")]
+    UnknownProcedure(String),
 
     #[error("Unknown relationship, \"{relationship_name}\"{}", at_path(path))]
     UnknownRelationship {
@@ -84,4 +102,12 @@ fn in_object_type(type_name: Option<&ndc::ObjectTypeName>) -> String {
         Some(name) => format!(" in object type \"{name}\""),
         None => "".to_owned(),
     }
+}
+
+fn format_errors(errors: &BTreeMap<ndc_models::ArgumentName, impl ToString>) -> String {
+    errors
+        .iter()
+        .map(|(name, error)| format!("  {name}:\n{}", indent_all_by(4, error.to_string())))
+        .collect::<Vec<_>>()
+        .join("\n")
 }

@@ -99,11 +99,16 @@ fn scalar_type_name(t: &Type) -> Option<&'static str> {
 }
 
 pub type Aggregate = ndc_query_plan::Aggregate<MongoConfiguration>;
+pub type Argument = ndc_query_plan::Argument<MongoConfiguration>;
+pub type Arguments = ndc_query_plan::Arguments<MongoConfiguration>;
 pub type ComparisonTarget = ndc_query_plan::ComparisonTarget<MongoConfiguration>;
 pub type ComparisonValue = ndc_query_plan::ComparisonValue<MongoConfiguration>;
 pub type ExistsInCollection = ndc_query_plan::ExistsInCollection;
 pub type Expression = ndc_query_plan::Expression<MongoConfiguration>;
 pub type Field = ndc_query_plan::Field<MongoConfiguration>;
+pub type MutationOperation = ndc_query_plan::MutationOperation<MongoConfiguration>;
+pub type MutationPlan = ndc_query_plan::MutationPlan<MongoConfiguration>;
+pub type MutationProcedureArgument = ndc_query_plan::MutationProcedureArgument<MongoConfiguration>;
 pub type NestedField = ndc_query_plan::NestedField<MongoConfiguration>;
 pub type NestedArray = ndc_query_plan::NestedArray<MongoConfiguration>;
 pub type NestedObject = ndc_query_plan::NestedObject<MongoConfiguration>;

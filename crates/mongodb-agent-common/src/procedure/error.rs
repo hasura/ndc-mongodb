@@ -1,10 +1,24 @@
 use mongodb::bson::Bson;
 use thiserror::Error;
 
-use crate::query::arguments::ArgumentError;
+use crate::{interface_types::MongoAgentError, query::serialization::JsonToBsonError};
 
 #[derive(Debug, Error)]
 pub enum ProcedureError {
+    #[error("error parsing argument \"{}\": {}", .argument_name, .error)]
+    ErrorParsingArgument {
+        argument_name: String,
+        #[source]
+        error: JsonToBsonError,
+    },
+
+    #[error("error parsing predicate argument \"{}\": {}", .argument_name, .error)]
+    ErrorParsingPredicate {
+        argument_name: String,
+        #[source]
+        error: Box<MongoAgentError>,
+    },
+
     #[error("error executing mongodb command: {0}")]
     ExecutionError(#[from] mongodb::error::Error),
 
@@ -16,7 +30,4 @@ pub enum ProcedureError {
 
     #[error("object keys must be strings, but got: \"{0}\"")]
     NonStringKey(Bson),
-
-    #[error("could not resolve arguments: {0}")]
-    UnresolvableArguments(#[from] ArgumentError),
 }

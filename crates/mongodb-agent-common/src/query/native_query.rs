@@ -2,16 +2,20 @@ use std::collections::BTreeMap;
 
 use configuration::native_query::NativeQuery;
 use itertools::Itertools as _;
-use ndc_models::Argument;
+use mongodb::bson::Bson;
+use ndc_models::ArgumentName;
 
 use crate::{
     interface_types::MongoAgentError,
-    mongo_query_plan::{MongoConfiguration, QueryPlan},
+    mongo_query_plan::{Argument, MongoConfiguration, QueryPlan},
     mongodb::{Pipeline, Stage},
     procedure::{interpolated_command, ProcedureError},
 };
 
-use super::{arguments::resolve_arguments, query_target::QueryTarget};
+use super::{
+    make_selector, query_target::QueryTarget, query_variable_name::query_variable_name,
+    serialization::json_to_bson,
+};
 
 /// Returns either the pipeline defined by a native query with variable bindings for arguments, or
 /// an empty pipeline if the query request target is not a native query
@@ -33,8 +37,13 @@ fn make_pipeline(
     native_query: &NativeQuery,
     arguments: &BTreeMap<ndc_models::ArgumentName, Argument>,
 ) -> Result<Pipeline, MongoAgentError> {
-    let bson_arguments = resolve_arguments(&native_query.arguments, arguments.clone())
-        .map_err(ProcedureError::UnresolvableArguments)?;
+    let bson_arguments = arguments
+        .iter()
+        .map(|(name, argument)| {
+            let bson = argument_to_mongodb_expression(name, argument.clone())?;
+            Ok((name.clone(), bson)) as Result<_, MongoAgentError>
+        })
+        .try_collect()?;
 
     // Replace argument placeholders with resolved expressions, convert document list to
     // a `Pipeline` value
@@ -46,6 +55,37 @@ fn make_pipeline(
         .try_collect()?;
 
     Ok(Pipeline::new(stages))
+}
+
+fn argument_to_mongodb_expression(
+    name: &ArgumentName,
+    argument: Argument,
+) -> Result<Bson, ProcedureError> {
+    let bson = match argument {
+        Argument::Literal {
+            value,
+            argument_type,
+        } => json_to_bson(&argument_type, value).map_err(|error| {
+            ProcedureError::ErrorParsingArgument {
+                argument_name: name.to_string(),
+                error,
+            }
+        })?,
+        Argument::Variable {
+            name,
+            argument_type,
+        } => {
+            let mongodb_var_name = query_variable_name(&name, &argument_type);
+            format!("$${mongodb_var_name}").into()
+        }
+        Argument::Predicate { expression } => make_selector(&expression)
+            .map_err(|error| ProcedureError::ErrorParsingPredicate {
+                argument_name: name.to_string(),
+                error: Box::new(error),
+            })?
+            .into(),
+    };
+    Ok(bson)
 }
 
 #[cfg(test)]

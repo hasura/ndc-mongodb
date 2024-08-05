@@ -34,6 +34,12 @@ pub enum Type {
     ArrayOf(Box<Type>),
     /// A nullable form of any of the other types
     Nullable(Box<Type>),
+    /// A predicate type for a given object type
+    #[serde(rename_all = "camelCase")]
+    Predicate {
+        /// The object type name
+        object_type_name: ndc_models::ObjectTypeName,
+    },
 }
 
 impl Type {
@@ -42,6 +48,7 @@ impl Type {
             Type::ExtendedJSON => Type::ExtendedJSON,
             Type::Scalar(s) => Type::Scalar(s),
             Type::Object(o) => Type::Object(o),
+            Type::Predicate { object_type_name } => Type::Predicate { object_type_name },
             Type::ArrayOf(a) => Type::ArrayOf(Box::new((*a).normalize_type())),
             Type::Nullable(n) => match *n {
                 Type::ExtendedJSON => Type::ExtendedJSON,
@@ -84,6 +91,9 @@ impl From<Type> for ndc_models::Type {
                 Type::Nullable(t) => ndc_models::Type::Nullable {
                     underlying_type: Box::new(map_normalized_type(*t)),
                 },
+                Type::Predicate { object_type_name } => {
+                    ndc_models::Type::Predicate { object_type_name }
+                }
             }
         }
         map_normalized_type(t.normalize_type())

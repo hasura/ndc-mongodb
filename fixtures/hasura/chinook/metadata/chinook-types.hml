@@ -48,7 +48,7 @@ definition:
 kind: ScalarType
 version: v1
 definition:
-  name: Decimal
+  name: Chinook_Decimal
   graphql:
     typeName: Chinook_Decimal
 
@@ -58,7 +58,7 @@ version: v1
 definition:
   dataConnectorName: chinook
   dataConnectorScalarType: Decimal
-  representation: Decimal
+  representation: Chinook_Decimal
   graphql:
     comparisonExpressionTypeName: Chinook_DecimalComparisonExp
 
