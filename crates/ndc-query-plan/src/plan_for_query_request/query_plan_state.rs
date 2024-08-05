@@ -4,7 +4,6 @@ use std::{
     rc::Rc,
 };
 
-use ndc::RelationshipArgument;
 use ndc_models as ndc;
 
 use crate::{
@@ -14,7 +13,10 @@ use crate::{
     ConnectorTypes, Query, QueryContext, QueryPlanError, Relationship, Type,
 };
 
-use super::unify_relationship_references::unify_relationship_references;
+use super::{
+    plan_for_arguments::plan_for_relationship_arguments,
+    unify_relationship_references::unify_relationship_references,
+};
 
 type Result<T> = std::result::Result<T, QueryPlanError>;
 
@@ -79,18 +81,20 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
     pub fn register_relationship(
         &mut self,
         ndc_relationship_name: ndc::RelationshipName,
-        arguments: BTreeMap<ndc::ArgumentName, RelationshipArgument>,
+        arguments: BTreeMap<ndc::ArgumentName, ndc::RelationshipArgument>,
         query: Query<T>,
     ) -> Result<ndc::RelationshipName> {
         let ndc_relationship =
             lookup_relationship(self.collection_relationships, &ndc_relationship_name)?;
 
-        for argument in arguments.values() {
-            if let RelationshipArgument::Variable { name } = argument {
-                // TODO: Is there a way to infer a type here?
-                self.register_variable_use_of_unknown_type(name)
-            }
-        }
+        let arguments = if !arguments.is_empty() {
+            let collection = self
+                .context
+                .find_collection(&ndc_relationship.target_collection)?;
+            plan_for_relationship_arguments(self, &collection.arguments, arguments)?
+        } else {
+            Default::default()
+        };
 
         let relationship = Relationship {
             column_mapping: ndc_relationship.column_mapping.clone(),
@@ -131,9 +135,16 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
     pub fn register_unrelated_join(
         &mut self,
         target_collection: ndc::CollectionName,
-        arguments: BTreeMap<ndc::ArgumentName, RelationshipArgument>,
+        arguments: BTreeMap<ndc::ArgumentName, ndc::RelationshipArgument>,
         query: Query<T>,
-    ) -> String {
+    ) -> Result<String> {
+        let arguments = if !arguments.is_empty() {
+            let collection = self.context.find_collection(&target_collection)?;
+            plan_for_relationship_arguments(self, &collection.arguments, arguments)?
+        } else {
+            Default::default()
+        };
+
         let join = UnrelatedJoin {
             target_collection,
             arguments,
@@ -149,7 +160,7 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
         // borrow map values through a RefCell without keeping a live Ref.) But if that Ref is
         // still alive the next time [Self::register_unrelated_join] is called then the borrow_mut
         // call will fail.
-        key
+        Ok(key)
     }
 
     /// It's important to call this for every use of a variable encountered when building
@@ -158,18 +169,6 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
         &mut self,
         variable_name: &ndc::VariableName,
         expected_type: Type<T::ScalarType>,
-    ) {
-        self.register_variable_use_helper(variable_name, Some(expected_type))
-    }
-
-    pub fn register_variable_use_of_unknown_type(&mut self, variable_name: &ndc::VariableName) {
-        self.register_variable_use_helper(variable_name, None)
-    }
-
-    fn register_variable_use_helper(
-        &mut self,
-        variable_name: &ndc::VariableName,
-        expected_type: Option<Type<T::ScalarType>>,
     ) {
         let mut type_map = self.variable_types.borrow_mut();
         match type_map.get_mut(variable_name) {

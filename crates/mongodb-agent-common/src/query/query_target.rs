@@ -1,9 +1,8 @@
 use std::{collections::BTreeMap, fmt::Display};
 
 use configuration::native_query::NativeQuery;
-use ndc_models::Argument;
 
-use crate::mongo_query_plan::{MongoConfiguration, QueryPlan};
+use crate::mongo_query_plan::{Argument, MongoConfiguration, QueryPlan};
 
 #[derive(Clone, Debug)]
 pub enum QueryTarget<'a> {

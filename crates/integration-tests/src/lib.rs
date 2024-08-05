@@ -8,6 +8,7 @@ mod tests;
 
 mod connector;
 mod graphql;
+mod validators;
 
 use std::env;
 
@@ -16,6 +17,7 @@ use url::Url;
 
 pub use self::connector::{run_connector_query, ConnectorQueryRequest};
 pub use self::graphql::{graphql_query, GraphQLRequest, GraphQLResponse};
+pub use self::validators::*;
 
 const CONNECTOR_URL: &str = "CONNECTOR_URL";
 const CONNECTOR_CHINOOK_URL: &str = "CONNECTOR_CHINOOK_URL";

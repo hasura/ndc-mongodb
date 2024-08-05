@@ -119,6 +119,12 @@ pub trait QueryContext: ConnectorTypes {
         )
     }
 
+    fn find_procedure(&self, procedure_name: &ndc::ProcedureName) -> Result<&ndc::ProcedureInfo> {
+        self.procedures()
+            .get(procedure_name)
+            .ok_or_else(|| QueryPlanError::UnknownProcedure(procedure_name.to_string()))
+    }
+
     fn find_scalar_type(scalar_type_name: &ndc::ScalarTypeName) -> Result<Self::ScalarType> {
         Self::lookup_scalar_type(scalar_type_name)
             .ok_or_else(|| QueryPlanError::UnknownScalarType(scalar_type_name.clone()))

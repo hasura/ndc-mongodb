@@ -23,7 +23,7 @@ definition:
     - name: invoiceId
       type: Int!
     - name: total
-      type: Decimal!
+      type: Chinook_Decimal!
   graphql:
     typeName: Invoice
     inputTypeName: InvoiceInput

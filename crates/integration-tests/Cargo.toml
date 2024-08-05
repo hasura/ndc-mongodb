@@ -11,6 +11,7 @@ ndc-models = { workspace = true }
 ndc-test-helpers = { path = "../ndc-test-helpers" }
 
 anyhow = "1"
+assert_json = "^0.1"
 insta = { version = "^1.38", features = ["yaml"] }
 reqwest = { version = "^0.12.4", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
