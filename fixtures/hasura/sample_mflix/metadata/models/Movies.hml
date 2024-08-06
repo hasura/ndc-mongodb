@@ -477,20 +477,10 @@ definition:
           booleanExpressionType: ObjectIdComparisonExp
         - fieldName: awards
           booleanExpressionType: MoviesAwardsComparisonExp
-        - fieldName: cast
-          booleanExpressionType: StringComparisonExp
-        - fieldName: countries
-          booleanExpressionType: StringComparisonExp
-        - fieldName: directors
-          booleanExpressionType: StringComparisonExp
         - fieldName: fullplot
-          booleanExpressionType: StringComparisonExp
-        - fieldName: genres
           booleanExpressionType: StringComparisonExp
         - fieldName: imdb
           booleanExpressionType: MoviesImdbComparisonExp
-        - fieldName: languages
-          booleanExpressionType: StringComparisonExp
         - fieldName: lastupdated
           booleanExpressionType: DateComparisonExp
         - fieldName: metacritic
@@ -512,8 +502,6 @@ definition:
         - fieldName: tomatoes
           booleanExpressionType: MoviesTomatoesComparisonExp
         - fieldName: type
-          booleanExpressionType: StringComparisonExp
-        - fieldName: writers
           booleanExpressionType: StringComparisonExp
         - fieldName: year
           booleanExpressionType: IntComparisonExp

@@ -101,8 +101,6 @@ definition:
     object:
       type: TheatersLocationGeo
       comparableFields:
-        - fieldName: coordinates
-          booleanExpressionType: FloatComparisonExp
         - fieldName: type
           booleanExpressionType: StringComparisonExp
       comparableRelationships: []

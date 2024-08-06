@@ -53,8 +53,6 @@ definition:
           booleanExpressionType: ObjectIdComparisonExp
         - fieldName: title
           booleanExpressionType: StringComparisonExp
-        - fieldName: tracks
-          booleanExpressionType: TrackComparisonExp
       comparableRelationships: []
   logicalOperators:
     enable: true
@@ -116,8 +114,6 @@ definition:
       comparableFields:
         - fieldName: id
           booleanExpressionType: ObjectIdComparisonExp
-        - fieldName: albums
-          booleanExpressionType: AlbumWithTracksComparisonExp
         - fieldName: name
           booleanExpressionType: StringComparisonExp
       comparableRelationships: []

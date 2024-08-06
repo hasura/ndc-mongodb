@@ -57,7 +57,7 @@ definition:
         - fieldName: playlistId
           booleanExpressionType: IntComparisonExp
       comparableRelationships:
-        - relationshipName: tracks
+        - relationshipName: playlistTracks
           booleanExpressionType: TrackComparisonExp
   logicalOperators:
     enable: true
