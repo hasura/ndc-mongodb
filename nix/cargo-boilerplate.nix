@@ -53,7 +53,7 @@ let
   # building for in case we are cross-compiling. In practice this is only
   # necessary if we are statically linking, and therefore have a `musl` target.
   # But it doesn't hurt anything to make this override in other cases.
-  toolchain = rustToolchain.override { targets = [ buildTarget ]; };
+  toolchain = pkgs: pkgs.rustToolchain.override { targets = [ buildTarget ]; };
 
   # Converts host system string for use in environment variable names
   envCase = triple: lib.strings.toUpper (builtins.replaceStrings [ "-" ] [ "_" ] triple);
