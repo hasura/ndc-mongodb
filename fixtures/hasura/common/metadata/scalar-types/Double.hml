@@ -21,7 +21,7 @@ definition:
   name: FloatComparisonExp
   operand:
     scalar:
-      type: Double
+      type: Float
       comparisonOperators:
         - name: _eq
           argumentType: Float
