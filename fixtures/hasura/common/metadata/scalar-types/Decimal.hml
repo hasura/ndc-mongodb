@@ -7,6 +7,26 @@ definition:
     typeName: Decimal
 
 ---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: chinook
+  dataConnectorScalarType: Decimal
+  representation: Decimal
+  graphql:
+    comparisonExpressionTypeName: DecimalComparisonExp
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: sample_mflix
+  dataConnectorScalarType: Decimal
+  representation: Decimal
+  graphql:
+    comparisonExpressionTypeName: DecimalComparisonExp
+
+---
 kind: BooleanExpressionType
 version: v1
 definition:
@@ -76,10 +96,16 @@ definition:
         - dataConnectorName: chinook
           dataConnectorScalarType: Decimal
           functionMapping:
-            count:
-              name: count
+            avg: { name: avg }
+            count: { name: count }
+            max: { name: max }
+            min: { name: min }
+            sum: { name: sum }
         - dataConnectorName: sample_mflix
           dataConnectorScalarType: Decimal
           functionMapping:
-            count:
-              name: count
+            avg: { name: avg }
+            count: { name: count }
+            max: { name: max }
+            min: { name: min }
+            sum: { name: sum }

@@ -5,3 +5,19 @@ definition:
   name: ExtendedJson
   graphql:
     typeName: ExtendedJson
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: chinook
+  dataConnectorScalarType: ExtendedJson
+  representation: ExtendedJson
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: sample_mflix
+  dataConnectorScalarType: ExtendedJson
+  representation: ExtendedJson
