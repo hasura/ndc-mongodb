@@ -1,18 +1,24 @@
 {
   inputs = {
+    # nixpkgs provides packages such as mongosh and just, and provides libraries
+    # used to build the connector like openssl
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     systems.url = "github:nix-systems/default";
 
+    # Nix build system for Rust projects, delegates to cargo
     crane = {
       url = "github:ipetkov/crane";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Allows selecting arbitrary Rust toolchain configurations by editing
+    # `rust-toolchain.toml`
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Security audit data for Rust projects
     advisory-db = {
       url = "github:rustsec/advisory-db";
       flake = false;
@@ -63,7 +69,7 @@
       # packages or replace packages in that set.
       overlays = [
         (import rust-overlay)
-        (final: prev: rec {
+        (final: prev: {
           # What's the deal with `pkgsBuildHost`? It has to do with
           # cross-compiling.
           #
@@ -75,7 +81,7 @@
           # `pkgsBuildHost` contains copies of all packages compiled to run on
           # the build system, and to produce outputs for the host system.
           rustToolchain = final.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
-          craneLib = (crane.mkLib final).overrideToolchain rustToolchain;
+          craneLib = (crane.mkLib final).overrideToolchain (pkgs: pkgs.rustToolchain);
 
           # Extend our package set with mongodb-connector, graphql-engine, and
           # other packages built by this flake to make these packages accessible

@@ -17,7 +17,6 @@
   # The following arguments come from nixpkgs, and are automatically populated
   # by `callPackage`.
 , callPackage
-, craneLib
 , jq
 , makeWrapper
 , openssl
@@ -27,6 +26,8 @@
 let
   boilerplate = callPackage ./cargo-boilerplate.nix { };
   recursiveMerge = callPackage ./recursiveMerge.nix { };
+
+  inherit (boilerplate) craneLib;
 
   buildArgs = recursiveMerge [
     boilerplate.buildArgs

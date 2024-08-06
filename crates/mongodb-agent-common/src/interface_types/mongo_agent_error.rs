@@ -126,7 +126,7 @@ pub enum ErrorResponseType {
     MutationPermissionCheckFailure,
 }
 
-impl std::fmt::Display for ErrorResponseType {
+impl Display for ErrorResponseType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UncaughtError => f.write_str("uncaught-error"),
