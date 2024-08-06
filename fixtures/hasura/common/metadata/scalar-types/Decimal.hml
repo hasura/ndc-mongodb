@@ -68,3 +68,42 @@ definition:
     enable: true
   graphql:
     typeName: DecimalComparisonExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: DecimalAggregateExp
+  operand:
+    scalar:
+      aggregatedType: Decimal
+      aggregationFunctions:
+        - name: avg
+          returnType: Decimal
+        - name: count
+          returnType: Int
+        - name: max
+          returnType: Decimal
+        - name: min
+          returnType: Decimal
+        - name: sum
+          returnType: Decimal
+      dataConnectorAggregationFunctionMapping:
+        - dataConnectorName: chinook
+          dataConnectorScalarType: Decimal
+          functionMapping:
+            avg: { name: avg }
+            count: { name: count }
+            max: { name: max }
+            min: { name: min }
+            sum: { name: sum }
+        - dataConnectorName: sample_mflix
+          dataConnectorScalarType: Decimal
+          functionMapping:
+            avg: { name: avg }
+            count: { name: count }
+            max: { name: max }
+            min: { name: min }
+            sum: { name: sum }
+  graphql:
+    selectTypeName: DecimalAggregateExp

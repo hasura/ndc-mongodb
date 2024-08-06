@@ -131,6 +131,20 @@ definition:
     typeName: TrackComparisonExp
 
 ---
+kind: AggregateExpression
+version: v1
+definition:
+  name: TrackAggregateExp
+  operand:
+    object:
+      aggregatedType: Track
+      aggregatableFields:
+        - fieldName: unitPrice
+          aggregateExpression: DecimalAggregateExp
+  graphql:
+    selectTypeName: TrackAggregateExp
+
+---
 kind: Model
 version: v1
 definition:
@@ -139,6 +153,7 @@ definition:
   source:
     dataConnectorName: chinook
     collection: Track
+  aggregateExpression: TrackAggregateExp
   filterExpressionType: TrackComparisonExp
   orderableFields:
     - fieldName: id
@@ -172,6 +187,10 @@ definition:
       orderByDirections:
         enableAll: true
   graphql:
+    aggregate:
+      queryRootField:
+        trackAggregate
+    filterInputTypeName: TrackFilterInput
     selectMany:
       queryRootField: track
     selectUniques:
