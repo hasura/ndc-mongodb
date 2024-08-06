@@ -137,25 +137,27 @@ definition:
           - theaterId
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: TheatersBoolExp
-  objectType: Theaters
-  dataConnectorName: sample_mflix
-  dataConnectorObjectType: theaters
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: location
-      operators:
-        enableAll: true
-    - fieldName: theaterId
-      operators:
-        enableAll: true
+  name: TheatersComparisonExp
+  operand:
+    object:
+      type: Theaters
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: location
+          booleanExpressionType: TheatersLocationComparisonExp
+        - fieldName: theaterId
+          booleanExpressionType: IntComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: TheatersBoolExp
+    typeName: TheatersComparisonExp
 
 ---
 kind: Model
@@ -166,7 +168,7 @@ definition:
   source:
     dataConnectorName: sample_mflix
     collection: theaters
-  filterExpressionType: TheatersBoolExp
+  filterExpressionType: TheatersComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:

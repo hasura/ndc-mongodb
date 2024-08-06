@@ -84,46 +84,45 @@ definition:
           - total
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: InvoiceBoolExp
-  objectType: Invoice
-  dataConnectorName: chinook
-  dataConnectorObjectType: Invoice
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: billingAddress
-      operators:
-        enableAll: true
-    - fieldName: billingCity
-      operators:
-        enableAll: true
-    - fieldName: billingCountry
-      operators:
-        enableAll: true
-    - fieldName: billingPostalCode
-      operators:
-        enableAll: true
-    - fieldName: billingState
-      operators:
-        enableAll: true
-    - fieldName: customerId
-      operators:
-        enableAll: true
-    - fieldName: invoiceDate
-      operators:
-        enableAll: true
-    - fieldName: invoiceId
-      operators:
-        enableAll: true
-    - fieldName: total
-      operators:
-        enableAll: true
+  name: InvoiceComparisonExp
+  operand:
+    object:
+      type: Invoice
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: billingAddress
+          booleanExpressionType: StringComparisonExp
+        - fieldName: billingCity
+          booleanExpressionType: StringComparisonExp
+        - fieldName: billingCountry
+          booleanExpressionType: StringComparisonExp
+        - fieldName: billingPostalCode
+          booleanExpressionType: StringComparisonExp
+        - fieldName: billingState
+          booleanExpressionType: StringComparisonExp
+        - fieldName: customerId
+          booleanExpressionType: IntComparisonExp
+        - fieldName: invoiceDate
+          booleanExpressionType: StringComparisonExp
+        - fieldName: invoiceId
+          booleanExpressionType: IntComparisonExp
+        - fieldName: total
+          booleanExpressionType: DecimalComparisonExp
+      comparableRelationships:
+        - relationshipName: customer
+          booleanExpressionType: CustomerComparisonExp
+        - relationshipName: lines
+          booleanExpressionType: InvoiceLineComparisonExp
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: InvoiceBoolExp
+    typeName: InvoiceComparisonExp
 
 ---
 kind: Model
@@ -134,7 +133,7 @@ definition:
   source:
     dataConnectorName: chinook
     collection: Invoice
-  filterExpressionType: InvoiceBoolExp
+  filterExpressionType: InvoiceComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:

@@ -42,25 +42,29 @@ definition:
           - playlistId
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: PlaylistBoolExp
-  objectType: Playlist
-  dataConnectorName: chinook
-  dataConnectorObjectType: Playlist
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: name
-      operators:
-        enableAll: true
-    - fieldName: playlistId
-      operators:
-        enableAll: true
+  name: PlaylistComparisonExp
+  operand:
+    object:
+      type: Playlist
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: name
+          booleanExpressionType: StringComparisonExp
+        - fieldName: playlistId
+          booleanExpressionType: IntComparisonExp
+      comparableRelationships:
+        - relationshipName: tracks
+          booleanExpressionType: TrackComparisonExp
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: PlaylistBoolExp
+    typeName: PlaylistComparisonExp
 
 ---
 kind: Model
@@ -71,7 +75,7 @@ definition:
   source:
     dataConnectorName: chinook
     collection: Playlist
-  filterExpressionType: PlaylistBoolExp
+  filterExpressionType: PlaylistComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:

@@ -41,6 +41,29 @@ definition:
           - tracks
 
 ---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: AlbumWithTracksComparisonExp
+  operand:
+    object:
+      type: AlbumWithTracks
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: title
+          booleanExpressionType: StringComparisonExp
+        - fieldName: tracks
+          booleanExpressionType: TrackComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: AlbumWithTracksComparisonExp
+
+---
 kind: ObjectType
 version: v1
 definition:
@@ -83,25 +106,27 @@ definition:
           - name
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: ArtistWithAlbumsAndTracksBoolExp
-  objectType: ArtistWithAlbumsAndTracks
-  dataConnectorName: chinook
-  dataConnectorObjectType: ArtistWithAlbumsAndTracks
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: albums
-      operators:
-        enableAll: true
-    - fieldName: name
-      operators:
-        enableAll: true
+  name: ArtistWithAlbumsAndTracksComparisonExp
+  operand:
+    object:
+      type: ArtistWithAlbumsAndTracks
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: albums
+          booleanExpressionType: AlbumWithTracksComparisonExp
+        - fieldName: name
+          booleanExpressionType: StringComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: ArtistWithAlbumsAndTracksBoolExp
+    typeName: ArtistWithAlbumsAndTracksComparisonExp
 
 ---
 kind: Model
@@ -112,7 +137,7 @@ definition:
   source:
     dataConnectorName: chinook
     collection: artists_with_albums_and_tracks
-  filterExpressionType: ArtistWithAlbumsAndTracksBoolExp
+  filterExpressionType: ArtistWithAlbumsAndTracksComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:

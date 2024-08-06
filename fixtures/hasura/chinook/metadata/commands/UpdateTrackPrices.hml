@@ -8,7 +8,7 @@ definition:
     - name: newPrice
       type: Decimal!
     - name: where
-      type: TrackBoolExp!
+      type: TrackComparisonExp!
   source:
     dataConnectorName: chinook
     dataConnectorCommand:

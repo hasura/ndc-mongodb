@@ -336,82 +336,67 @@ definition:
           - year
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: MoviesBoolExp
-  objectType: Movies
-  dataConnectorName: sample_mflix
-  dataConnectorObjectType: movies
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: awards
-      operators:
-        enableAll: true
-    - fieldName: cast
-      operators:
-        enableAll: true
-    - fieldName: countries
-      operators:
-        enableAll: true
-    - fieldName: directors
-      operators:
-        enableAll: true
-    - fieldName: fullplot
-      operators:
-        enableAll: true
-    - fieldName: genres
-      operators:
-        enableAll: true
-    - fieldName: imdb
-      operators:
-        enableAll: true
-    - fieldName: languages
-      operators:
-        enableAll: true
-    - fieldName: lastupdated
-      operators:
-        enableAll: true
-    - fieldName: metacritic
-      operators:
-        enableAll: true
-    - fieldName: numMflixComments
-      operators:
-        enableAll: true
-    - fieldName: plot
-      operators:
-        enableAll: true
-    - fieldName: poster
-      operators:
-        enableAll: true
-    - fieldName: rated
-      operators:
-        enableAll: true
-    - fieldName: released
-      operators:
-        enableAll: true
-    - fieldName: runtime
-      operators:
-        enableAll: true
-    - fieldName: title
-      operators:
-        enableAll: true
-    - fieldName: tomatoes
-      operators:
-        enableAll: true
-    - fieldName: type
-      operators:
-        enableAll: true
-    - fieldName: writers
-      operators:
-        enableAll: true
-    - fieldName: year
-      operators:
-        enableAll: true
+  name: MoviesComparisonExp
+  operand:
+    object:
+      type: Movies
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: awards
+          booleanExpressionType: MoviesAwardsComparisonExp
+        - fieldName: cast
+          booleanExpressionType: StringComparisonExp
+        - fieldName: countries
+          booleanExpressionType: StringComparisonExp
+        - fieldName: directors
+          booleanExpressionType: StringComparisonExp
+        - fieldName: fullplot
+          booleanExpressionType: StringComparisonExp
+        - fieldName: genres
+          booleanExpressionType: StringComparisonExp
+        - fieldName: imdb
+          booleanExpressionType: MoviesImdbComparisonExp
+        - fieldName: languages
+          booleanExpressionType: StringComparisonExp
+        - fieldName: lastupdated
+          booleanExpressionType: StringComparisonExp
+        - fieldName: metacritic
+          booleanExpressionType: IntComparisonExp
+        - fieldName: numMflixComments
+          booleanExpressionType: IntComparisonExp
+        - fieldName: plot
+          booleanExpressionType: StringComparisonExp
+        - fieldName: poster
+          booleanExpressionType: StringComparisonExp
+        - fieldName: rated
+          booleanExpressionType: StringComparisonExp
+        - fieldName: released
+          booleanExpressionType: DateComparisonExp
+        - fieldName: runtime
+          booleanExpressionType: IntComparisonExp
+        - fieldName: title
+          booleanExpressionType: StringComparisonExp
+        - fieldName: tomatoes
+          booleanExpressionType: MoviesTomatoesComparisonExp
+        - fieldName: type
+          booleanExpressionType: TypeComparisonExp
+        - fieldName: writers
+          booleanExpressionType: StringComparisonExp
+        - fieldName: year
+          booleanExpressionType: IntComparisonExp
+      comparableRelationships:
+        - relationshipName: comments
+          booleanExpressionType: CommentComparisonExp
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: MoviesBoolExp
+    typeName: MoviesComparisonExp
 
 ---
 kind: Model
@@ -422,7 +407,7 @@ definition:
   source:
     dataConnectorName: sample_mflix
     collection: movies
-  filterExpressionType: MoviesBoolExp
+  filterExpressionType: MoviesComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:

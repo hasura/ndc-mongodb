@@ -120,64 +120,59 @@ definition:
           - title
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: EmployeeBoolExp
-  objectType: Employee
-  dataConnectorName: chinook
-  dataConnectorObjectType: Employee
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: address
-      operators:
-        enableAll: true
-    - fieldName: birthDate
-      operators:
-        enableAll: true
-    - fieldName: city
-      operators:
-        enableAll: true
-    - fieldName: country
-      operators:
-        enableAll: true
-    - fieldName: email
-      operators:
-        enableAll: true
-    - fieldName: employeeId
-      operators:
-        enableAll: true
-    - fieldName: fax
-      operators:
-        enableAll: true
-    - fieldName: firstName
-      operators:
-        enableAll: true
-    - fieldName: hireDate
-      operators:
-        enableAll: true
-    - fieldName: lastName
-      operators:
-        enableAll: true
-    - fieldName: phone
-      operators:
-        enableAll: true
-    - fieldName: postalCode
-      operators:
-        enableAll: true
-    - fieldName: reportsTo
-      operators:
-        enableAll: true
-    - fieldName: state
-      operators:
-        enableAll: true
-    - fieldName: title
-      operators:
-        enableAll: true
+  name: EmployeeComparisonExp
+  operand:
+    object:
+      type: Employee
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: address
+          booleanExpressionType: StringComparisonExp
+        - fieldName: birthDate
+          booleanExpressionType: StringComparisonExp
+        - fieldName: city
+          booleanExpressionType: StringComparisonExp
+        - fieldName: country
+          booleanExpressionType: StringComparisonExp
+        - fieldName: email
+          booleanExpressionType: StringComparisonExp
+        - fieldName: employeeId
+          booleanExpressionType: IntComparisonExp
+        - fieldName: fax
+          booleanExpressionType: StringComparisonExp
+        - fieldName: firstName
+          booleanExpressionType: StringComparisonExp
+        - fieldName: hireDate
+          booleanExpressionType: StringComparisonExp
+        - fieldName: lastName
+          booleanExpressionType: StringComparisonExp
+        - fieldName: phone
+          booleanExpressionType: StringComparisonExp
+        - fieldName: postalCode
+          booleanExpressionType: StringComparisonExp
+        - fieldName: reportsTo
+          booleanExpressionType: IntComparisonExp
+        - fieldName: state
+          booleanExpressionType: StringComparisonExp
+        - fieldName: title
+          booleanExpressionType: StringComparisonExp
+      comparableRelationships:
+        - relationshipName: directReports
+          booleanExpressionType: EmployeeComparisonExp
+        - relationshipName: manager
+          booleanExpressionType: EmployeeComparisonExp
+        - relationshipName: supportRepCustomers
+          booleanExpressionType: CustomerComparisonExp
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: EmployeeBoolExp
+    typeName: EmployeeComparisonExp
 
 ---
 kind: Model
@@ -188,7 +183,7 @@ definition:
   source:
     dataConnectorName: chinook
     collection: Employee
-  filterExpressionType: EmployeeBoolExp
+  filterExpressionType: EmployeeComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:

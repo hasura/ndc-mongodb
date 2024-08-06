@@ -42,25 +42,29 @@ definition:
           - name
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: ArtistBoolExp
-  objectType: Artist
-  dataConnectorName: chinook
-  dataConnectorObjectType: Artist
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: artistId
-      operators:
-        enableAll: true
-    - fieldName: name
-      operators:
-        enableAll: true
+  name: ArtistComparisonExp
+  operand:
+    object:
+      type: Artist
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: artistId
+          booleanExpressionType: IntComparisonExp
+        - fieldName: name
+          booleanExpressionType: StringComparisonExp
+      comparableRelationships:
+        - relationshipName: albums
+          booleanExpressionType: AlbumComparisonExp
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: ArtistBoolExp
+    typeName: ArtistComparisonExp
 
 ---
 kind: Model
@@ -71,7 +75,7 @@ definition:
   source:
     dataConnectorName: chinook
     collection: Artist
-  filterExpressionType: ArtistBoolExp
+  filterExpressionType: ArtistComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:

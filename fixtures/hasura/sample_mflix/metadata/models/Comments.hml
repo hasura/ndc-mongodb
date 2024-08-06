@@ -71,7 +71,7 @@ definition:
 kind: BooleanExpressionType
 version: v1
 definition:
-  name: CommentsBoolExp
+  name: CommentsComparisonExp
   operand:
     object:
       type: Comments
@@ -90,13 +90,13 @@ definition:
           booleanExpressionType: StringComparisonExp
       comparableRelationships:
         - relationshipName: user
-          booleanExpressionType: UsersBoolExp
+          booleanExpressionType: UsersComparisonExp
   logicalOperators:
     enable: true
   isNull:
     enable: true
   graphql:
-    typeName: CommentsBoolExp
+    typeName: CommentsComparisonExp
 
 ---
 kind: Model
@@ -107,7 +107,7 @@ definition:
   source:
     dataConnectorName: sample_mflix
     collection: comments
-  filterExpressionType: CommentsBoolExp
+  filterExpressionType: CommentsComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:
