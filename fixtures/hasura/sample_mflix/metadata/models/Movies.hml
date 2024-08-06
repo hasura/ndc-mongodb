@@ -39,7 +39,7 @@ definition:
     - name: id
       type: Int!
     - name: rating
-      type: Double!
+      type: Float!
     - name: votes
       type: Int!
   graphql:
@@ -73,7 +73,7 @@ definition:
     - name: numReviews
       type: Int!
     - name: rating
-      type: Double!
+      type: Float!
   graphql:
     typeName: MoviesTomatoesCritic
     inputTypeName: MoviesTomatoesCriticInput
@@ -105,7 +105,7 @@ definition:
     - name: numReviews
       type: Int!
     - name: rating
-      type: Double!
+      type: Float!
   graphql:
     typeName: MoviesTomatoesViewer
     inputTypeName: MoviesTomatoesViewerInput

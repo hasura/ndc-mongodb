@@ -43,7 +43,7 @@ definition:
   name: TheatersLocationGeo
   fields:
     - name: coordinates
-      type: "[Double!]!"
+      type: "[Float!]!"
     - name: type
       type: String!
   graphql:

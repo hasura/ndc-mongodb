@@ -40,7 +40,7 @@ definition:
     inputTypeName: InsertArtistInput
   fields:
     - name: ok
-      type: Double!
+      type: Float!
     - name: n
       type: Int!
   dataConnectorTypeMapping:
