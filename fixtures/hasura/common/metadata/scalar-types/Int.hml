@@ -5,8 +5,6 @@ definition:
   dataConnectorName: chinook
   dataConnectorScalarType: Int
   representation: Int
-  graphql:
-    comparisonExpressionTypeName: IntComparisonExp
 
 ---
 kind: DataConnectorScalarRepresentation
@@ -15,8 +13,6 @@ definition:
   dataConnectorName: sample_mflix
   dataConnectorScalarType: Int
   representation: Int
-  graphql:
-    comparisonExpressionTypeName: IntComparisonExp
 
 ---
 kind: BooleanExpressionType

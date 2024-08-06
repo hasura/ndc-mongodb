@@ -13,8 +13,6 @@ definition:
   dataConnectorName: chinook
   dataConnectorScalarType: Date
   representation: Date
-  graphql:
-    comparisonExpressionTypeName: DateComparisonExp
 
 ---
 kind: DataConnectorScalarRepresentation
@@ -23,8 +21,6 @@ definition:
   dataConnectorName: sample_mflix
   dataConnectorScalarType: Date
   representation: Date
-  graphql:
-    comparisonExpressionTypeName: DateComparisonExp
 
 ---
 kind: BooleanExpressionType

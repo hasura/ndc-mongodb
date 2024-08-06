@@ -13,8 +13,6 @@ definition:
   dataConnectorName: chinook
   dataConnectorScalarType: Decimal
   representation: Decimal
-  graphql:
-    comparisonExpressionTypeName: DecimalComparisonExp
 
 ---
 kind: DataConnectorScalarRepresentation
@@ -23,8 +21,6 @@ definition:
   dataConnectorName: sample_mflix
   dataConnectorScalarType: Decimal
   representation: Decimal
-  graphql:
-    comparisonExpressionTypeName: DecimalComparisonExp
 
 ---
 kind: BooleanExpressionType
