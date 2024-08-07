@@ -78,32 +78,32 @@ definition:
     scalar:
       aggregatedType: Decimal
       aggregationFunctions:
-        - name: avg
+        - name: _avg
           returnType: Decimal
-        - name: count
-          returnType: Int
-        - name: max
+        - name: _max
           returnType: Decimal
-        - name: min
+        - name: _min
           returnType: Decimal
-        - name: sum
+        - name: _sum
           returnType: Decimal
       dataConnectorAggregationFunctionMapping:
         - dataConnectorName: chinook
           dataConnectorScalarType: Decimal
           functionMapping:
-            avg: { name: avg }
-            count: { name: count }
-            max: { name: max }
-            min: { name: min }
-            sum: { name: sum }
+            _avg: { name: avg }
+            _count: { name: count }
+            _max: { name: max }
+            _min: { name: min }
+            _sum: { name: sum }
         - dataConnectorName: sample_mflix
           dataConnectorScalarType: Decimal
           functionMapping:
-            avg: { name: avg }
-            count: { name: count }
-            max: { name: max }
-            min: { name: min }
-            sum: { name: sum }
+            _avg: { name: avg }
+            _count: { name: count }
+            _max: { name: max }
+            _min: { name: min }
+            _sum: { name: sum }
+  count: { enable: true }
+  countDistinct: { enable: true }
   graphql:
     selectTypeName: DecimalAggregateExp

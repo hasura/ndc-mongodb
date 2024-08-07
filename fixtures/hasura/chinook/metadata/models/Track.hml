@@ -141,6 +141,7 @@ definition:
       aggregatableFields:
         - fieldName: unitPrice
           aggregateExpression: DecimalAggregateExp
+  count: { enable: true }
   graphql:
     selectTypeName: TrackAggregateExp
 
