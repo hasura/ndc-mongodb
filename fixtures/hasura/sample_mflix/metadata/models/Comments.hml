@@ -89,6 +89,8 @@ definition:
         - fieldName: text
           booleanExpressionType: StringComparisonExp
       comparableRelationships:
+        - relationshipName: movie
+          booleanExpressionType: MoviesComparisonExp
         - relationshipName: user
           booleanExpressionType: UsersComparisonExp
   logicalOperators:
