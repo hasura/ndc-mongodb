@@ -147,8 +147,7 @@ definition:
         enableAll: true
   graphql:
     aggregate:
-      queryRootField:
-        commentsAggregate
+      queryRootField: commentsAggregate
     filterInputTypeName: CommentsFilterInput
     selectMany:
       queryRootField: comments
@@ -169,12 +168,12 @@ definition:
         filter: null
     - role: user
       select:
-        filter: 
+        filter:
           relationship:
             name: user
-            predicate: 
+            predicate:
               fieldComparison:
                 field: id
                 operator: _eq
-                value:  
+                value:
                   sessionVariable: x-hasura-user-id
