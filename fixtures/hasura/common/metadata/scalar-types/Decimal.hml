@@ -91,7 +91,6 @@ definition:
           dataConnectorScalarType: Decimal
           functionMapping:
             _avg: { name: avg }
-            _count: { name: count }
             _max: { name: max }
             _min: { name: min }
             _sum: { name: sum }
@@ -99,7 +98,6 @@ definition:
           dataConnectorScalarType: Decimal
           functionMapping:
             _avg: { name: avg }
-            _count: { name: count }
             _max: { name: max }
             _min: { name: min }
             _sum: { name: sum }

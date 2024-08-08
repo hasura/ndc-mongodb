@@ -60,3 +60,40 @@ definition:
     enable: true
   graphql:
     typeName: DoubleComparisonExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: FloatAggregateExp
+  operand:
+    scalar:
+      aggregatedType: Float
+      aggregationFunctions:
+        - name: _avg
+          returnType: Float
+        - name: _max
+          returnType: Float
+        - name: _min
+          returnType: Float
+        - name: _sum
+          returnType: Float
+      dataConnectorAggregationFunctionMapping:
+        - dataConnectorName: chinook
+          dataConnectorScalarType: Double
+          functionMapping:
+            _avg: { name: avg }
+            _max: { name: max }
+            _min: { name: min }
+            _sum: { name: sum }
+        - dataConnectorName: sample_mflix
+          dataConnectorScalarType: Double
+          functionMapping:
+            _avg: { name: avg }
+            _max: { name: max }
+            _min: { name: min }
+            _sum: { name: sum }
+  count: { enable: true }
+  countDistinct: { enable: true }
+  graphql:
+    selectTypeName: FloatAggregateExp

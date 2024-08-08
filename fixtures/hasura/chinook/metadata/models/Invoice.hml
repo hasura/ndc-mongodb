@@ -125,6 +125,21 @@ definition:
     typeName: InvoiceComparisonExp
 
 ---
+kind: AggregateExpression
+version: v1
+definition:
+  name: InvoiceAggregateExp
+  operand:
+    object:
+      aggregatedType: Invoice
+      aggregatableFields:
+        - fieldName: total
+          aggregateExpression: DecimalAggregateExp
+  count: { enable: true }
+  graphql:
+    selectTypeName: InvoiceAggregateExp
+
+---
 kind: Model
 version: v1
 definition:

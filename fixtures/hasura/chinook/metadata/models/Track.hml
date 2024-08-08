@@ -141,6 +141,10 @@ definition:
       aggregatableFields:
         - fieldName: unitPrice
           aggregateExpression: DecimalAggregateExp
+        - fieldName: bytes
+          aggregateExpression: IntAggregateExp
+        - fieldName: milliseconds
+          aggregateExpression: IntAggregateExp
   count: { enable: true }
   graphql:
     selectTypeName: TrackAggregateExp
