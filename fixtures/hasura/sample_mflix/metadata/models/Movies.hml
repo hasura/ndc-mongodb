@@ -54,6 +54,23 @@ definition:
     typeName: MoviesAwardsComparisonExp
 
 ---
+kind: AggregateExpression
+version: v1
+definition:
+  name: MoviesAwardsAggregateExp
+  operand:
+    object:
+      aggregatedType: MoviesAwards
+      aggregatableFields:
+        - fieldName: nominations
+          aggregateExpression: IntAggregateExp
+        - fieldName: wins
+          aggregateExpression: IntAggregateExp
+  count: { enable: true }
+  graphql:
+    selectTypeName: MoviesAwardsAggregateExp
+
+---
 kind: ObjectType
 version: v1
 definition:
@@ -107,6 +124,23 @@ definition:
     enable: true
   graphql:
     typeName: MoviesImdbComparisonExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: MoviesImdbAggregateExp
+  operand:
+    object:
+      aggregatedType: MoviesImdb
+      aggregatableFields:
+        - fieldName: rating
+          aggregateExpression: FloatAggregateExp
+        - fieldName: votes
+          aggregateExpression: IntAggregateExp
+  count: { enable: true }
+  graphql:
+    selectTypeName: MoviesImdbAggregateExp
 
 ---
 kind: ObjectType
@@ -164,6 +198,25 @@ definition:
     typeName: MoviesTomatoesCriticComparisonExp
 
 ---
+kind: AggregateExpression
+version: v1
+definition:
+  name: MoviesTomatoesCriticAggregateExp
+  operand:
+    object:
+      aggregatedType: MoviesTomatoesCritic
+      aggregatableFields:
+        - fieldName: meter
+          aggregateExpression: IntAggregateExp
+        - fieldName: numReviews
+          aggregateExpression: IntAggregateExp
+        - fieldName: rating
+          aggregateExpression: FloatAggregateExp
+  count: { enable: true }
+  graphql:
+    selectTypeName: MoviesTomatoesCriticAggregateExp
+
+---
 kind: ObjectType
 version: v1
 definition:
@@ -219,6 +272,25 @@ definition:
     typeName: MoviesTomatoesViewerComparisonExp
 
 ---
+kind: AggregateExpression
+version: v1
+definition:
+  name: MoviesTomatoesViewerAggregateExp
+  operand:
+    object:
+      aggregatedType: MoviesTomatoesViewer
+      aggregatableFields:
+        - fieldName: meter
+          aggregateExpression: IntAggregateExp
+        - fieldName: numReviews
+          aggregateExpression: IntAggregateExp
+        - fieldName: rating
+          aggregateExpression: FloatAggregateExp
+  count: { enable: true }
+  graphql:
+    selectTypeName: MoviesTomatoesViewerAggregateExp
+
+---
 kind: ObjectType
 version: v1
 definition:
@@ -235,7 +307,7 @@ definition:
     - name: fresh
       type: Int
     - name: lastUpdated
-      type: String!
+      type: Date!
     - name: production
       type: String
     - name: rotten
@@ -291,7 +363,7 @@ definition:
         - fieldName: fresh
           booleanExpressionType: IntComparisonExp
         - fieldName: lastUpdated
-          booleanExpressionType: StringComparisonExp
+          booleanExpressionType: DateComparisonExp
         - fieldName: production
           booleanExpressionType: StringComparisonExp
         - fieldName: rotten
@@ -307,6 +379,31 @@ definition:
     enable: true
   graphql:
     typeName: MoviesTomatoesComparisonExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: MoviesTomatoesAggregateExp
+  operand:
+    object:
+      aggregatedType: MoviesTomatoes
+      aggregatableFields:
+        - fieldName: critic
+          aggregateExpression: MoviesTomatoesCriticAggregateExp
+        - fieldName: dvd
+          aggregateExpression: DateAggregateExp
+        - fieldName: fresh
+          aggregateExpression: IntAggregateExp
+        - fieldName: lastUpdated
+          aggregateExpression: DateAggregateExp
+        - fieldName: rotten
+          aggregateExpression: IntAggregateExp
+        - fieldName: viewer
+          aggregateExpression: MoviesTomatoesViewerAggregateExp
+  count: { enable: true }
+  graphql:
+    selectTypeName: MoviesTomatoesAggregateExp
 
 ---
 kind: ObjectType
@@ -333,7 +430,7 @@ definition:
     - name: languages
       type: "[String!]"
     - name: lastupdated
-      type: Date!
+      type: String!
     - name: metacritic
       type: Int
     - name: numMflixComments
@@ -482,7 +579,7 @@ definition:
         - fieldName: imdb
           booleanExpressionType: MoviesImdbComparisonExp
         - fieldName: lastupdated
-          booleanExpressionType: DateComparisonExp
+          booleanExpressionType: StringComparisonExp
         - fieldName: metacritic
           booleanExpressionType: IntComparisonExp
         - fieldName: numMflixComments
@@ -516,6 +613,37 @@ definition:
     typeName: MoviesComparisonExp
 
 ---
+kind: AggregateExpression
+version: v1
+definition:
+  name: MoviesAggregateExp
+  operand:
+    object:
+      aggregatedType: Movies
+      aggregatableFields:
+        # TODO: This requires updating the connector to support nested field
+        # aggregates
+        # - fieldName: awards
+        #   aggregateExpression: MoviesAwardsAggregateExp
+        # - fieldName: imdb
+        #   aggregateExpression: MoviesImdbAggregateExp
+        - fieldName: metacritic
+          aggregateExpression: IntAggregateExp
+        - fieldName: numMflixComments
+          aggregateExpression: IntAggregateExp
+        - fieldName: released
+          aggregateExpression: DateAggregateExp
+        - fieldName: runtime
+          aggregateExpression: IntAggregateExp
+        # - fieldName: tomatoes
+        #   aggregateExpression: MoviesTomatoesAggregateExp
+        - fieldName: year
+          aggregateExpression: IntAggregateExp
+  count: { enable: true }
+  graphql:
+    selectTypeName: MoviesAggregateExp
+
+---
 kind: Model
 version: v1
 definition:
@@ -524,6 +652,7 @@ definition:
   source:
     dataConnectorName: sample_mflix
     collection: movies
+  aggregateExpression: MoviesAggregateExp
   filterExpressionType: MoviesComparisonExp
   orderableFields:
     - fieldName: id
@@ -593,6 +722,9 @@ definition:
       orderByDirections:
         enableAll: true
   graphql:
+    aggregate:
+      queryRootField: moviesAggregate
+    filterInputTypeName: MoviesFilterInput
     selectMany:
       queryRootField: movies
     selectUniques:
@@ -610,4 +742,3 @@ definition:
     - role: admin
       select:
         filter: null
-

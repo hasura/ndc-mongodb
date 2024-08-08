@@ -60,3 +60,40 @@ definition:
     enable: true
   graphql:
     typeName: IntComparisonExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: IntAggregateExp
+  operand:
+    scalar:
+      aggregatedType: Int
+      aggregationFunctions:
+        - name: _avg
+          returnType: Int
+        - name: _max
+          returnType: Int
+        - name: _min
+          returnType: Int
+        - name: _sum
+          returnType: Int
+      dataConnectorAggregationFunctionMapping:
+        - dataConnectorName: chinook
+          dataConnectorScalarType: Int
+          functionMapping:
+            _avg: { name: avg }
+            _max: { name: max }
+            _min: { name: min }
+            _sum: { name: sum }
+        - dataConnectorName: sample_mflix
+          dataConnectorScalarType: Int
+          functionMapping:
+            _avg: { name: avg }
+            _max: { name: max }
+            _min: { name: min }
+            _sum: { name: sum }
+  count: { enable: true }
+  countDistinct: { enable: true }
+  graphql:
+    selectTypeName: IntAggregateExp

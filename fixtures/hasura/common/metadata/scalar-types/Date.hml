@@ -69,3 +69,32 @@ definition:
   graphql:
     typeName: DateComparisonExp
 
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: DateAggregateExp
+  operand:
+    scalar:
+      aggregatedType: Date
+      aggregationFunctions:
+        - name: _max
+          returnType: Date
+        - name: _min
+          returnType: Date
+      dataConnectorAggregationFunctionMapping:
+        - dataConnectorName: chinook
+          dataConnectorScalarType: Date
+          functionMapping:
+            _max: { name: max }
+            _min: { name: min }
+        - dataConnectorName: sample_mflix
+          dataConnectorScalarType: Date
+          functionMapping:
+            _max: { name: max }
+            _min: { name: min }
+  count: { enable: true }
+  countDistinct: { enable: true }
+  graphql:
+    selectTypeName: DateAggregateExp
+
