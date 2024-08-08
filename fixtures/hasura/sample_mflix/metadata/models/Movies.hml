@@ -619,10 +619,12 @@ definition:
     object:
       aggregatedType: Movies
       aggregatableFields:
-        - fieldName: awards
-          aggregateExpression: MoviesAwardsAggregateExp
-        - fieldName: imdb
-          aggregateExpression: MoviesImdbAggregateExp
+        # TODO: This requires updating the connector to support nested field
+        # aggregates
+        # - fieldName: awards
+        #   aggregateExpression: MoviesAwardsAggregateExp
+        # - fieldName: imdb
+        #   aggregateExpression: MoviesImdbAggregateExp
         - fieldName: metacritic
           aggregateExpression: IntAggregateExp
         - fieldName: numMflixComments
@@ -631,8 +633,8 @@ definition:
           aggregateExpression: DateAggregateExp
         - fieldName: runtime
           aggregateExpression: IntAggregateExp
-        - fieldName: tomatoes
-          aggregateExpression: MoviesTomatoesAggregateExp
+        # - fieldName: tomatoes
+        #   aggregateExpression: MoviesTomatoesAggregateExp
         - fieldName: year
           aggregateExpression: IntAggregateExp
   count: { enable: true }
