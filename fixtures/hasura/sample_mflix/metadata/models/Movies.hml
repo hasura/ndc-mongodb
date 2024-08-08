@@ -648,6 +648,7 @@ definition:
   source:
     dataConnectorName: sample_mflix
     collection: movies
+  aggregateExpression: MoviesAggregateExp
   filterExpressionType: MoviesComparisonExp
   orderableFields:
     - fieldName: id
@@ -717,6 +718,9 @@ definition:
       orderByDirections:
         enableAll: true
   graphql:
+    aggregate:
+      queryRootField:
+        moviesAggregate
     selectMany:
       queryRootField: movies
     selectUniques:

@@ -145,6 +145,9 @@ definition:
       orderByDirections:
         enableAll: true
   graphql:
+    aggregate:
+      queryRootField:
+        commentsAggregate
     selectMany:
       queryRootField: comments
     selectUniques:

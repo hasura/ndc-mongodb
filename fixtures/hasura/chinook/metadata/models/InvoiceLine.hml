@@ -118,6 +118,7 @@ definition:
   source:
     dataConnectorName: chinook
     collection: InvoiceLine
+  aggregateExpression: InvoiceLineAggregateExp
   filterExpressionType: InvoiceLineComparisonExp
   orderableFields:
     - fieldName: id
@@ -139,6 +140,9 @@ definition:
       orderByDirections:
         enableAll: true
   graphql:
+    aggregate:
+      queryRootField:
+        invoiceLineAggregate
     selectMany:
       queryRootField: invoiceLine
     selectUniques:
