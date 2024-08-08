@@ -101,6 +101,21 @@ definition:
     typeName: CommentsComparisonExp
 
 ---
+kind: AggregateExpression
+version: v1
+definition:
+  name: CommentsAggregateExp
+  operand:
+    object:
+      aggregatedType: Comments
+      aggregatableFields:
+        - fieldName: date
+          aggregateExpression: DateAggregateExp
+  count: { enable: true }
+  graphql:
+    selectTypeName: CommentsAggregateExp
+
+---
 kind: Model
 version: v1
 definition:

@@ -54,6 +54,23 @@ definition:
     typeName: MoviesAwardsComparisonExp
 
 ---
+kind: AggregateExpression
+version: v1
+definition:
+  name: MoviesAwardsAggregateExp
+  operand:
+    object:
+      aggregatedType: MoviesAwards
+      aggregatableFields:
+        - fieldName: nominations
+          aggregateExpression: IntAggregateExp
+        - fieldName: wins
+          aggregateExpression: IntAggregateExp
+  count: { enable: true }
+  graphql:
+    selectTypeName: MoviesAwardsAggregateExp
+
+---
 kind: ObjectType
 version: v1
 definition:
@@ -107,6 +124,23 @@ definition:
     enable: true
   graphql:
     typeName: MoviesImdbComparisonExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: MoviesImdbAggregateExp
+  operand:
+    object:
+      aggregatedType: MoviesImdb
+      aggregatableFields:
+        - fieldName: rating
+          aggregateExpression: FloatAggregateExp
+        - fieldName: votes
+          aggregateExpression: IntAggregateExp
+  count: { enable: true }
+  graphql:
+    selectTypeName: MoviesImdbAggregateExp
 
 ---
 kind: ObjectType
@@ -164,6 +198,25 @@ definition:
     typeName: MoviesTomatoesCriticComparisonExp
 
 ---
+kind: AggregateExpression
+version: v1
+definition:
+  name: MoviesTomatoesCriticAggregateExp
+  operand:
+    object:
+      aggregatedType: MoviesTomatoesCritic
+      aggregatableFields:
+        - fieldName: meter
+          aggregateExpression: IntAggregateExp
+        - fieldName: numReviews
+          aggregateExpression: IntAggregateExp
+        - fieldName: rating
+          aggregateExpression: FloatAggregateExp
+  count: { enable: true }
+  graphql:
+    selectTypeName: MoviesTomatoesCriticAggregateExp
+
+---
 kind: ObjectType
 version: v1
 definition:
@@ -217,6 +270,25 @@ definition:
     enable: true
   graphql:
     typeName: MoviesTomatoesViewerComparisonExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: MoviesTomatoesViewerAggregateExp
+  operand:
+    object:
+      aggregatedType: MoviesTomatoesViewer
+      aggregatableFields:
+        - fieldName: meter
+          aggregateExpression: IntAggregateExp
+        - fieldName: numReviews
+          aggregateExpression: IntAggregateExp
+        - fieldName: rating
+          aggregateExpression: FloatAggregateExp
+  count: { enable: true }
+  graphql:
+    selectTypeName: MoviesTomatoesViewerAggregateExp
 
 ---
 kind: ObjectType
@@ -307,6 +379,29 @@ definition:
     enable: true
   graphql:
     typeName: MoviesTomatoesComparisonExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: MoviesTomatoesAggregateExp
+  operand:
+    object:
+      aggregatedType: MoviesTomatoes
+      aggregatableFields:
+        - fieldName: critic
+          aggregateExpression: MoviesTomatoesCriticAggregateExp
+        - fieldName: dvd
+          aggregateExpression: DateAggregateExp
+        - fieldName: fresh
+          aggregateExpression: IntAggregateExp
+        - fieldName: rotten
+          aggregateExpression: IntAggregateExp
+        - fieldName: viewer
+          aggregateExpression: MoviesTomatoesViewerAggregateExp
+  count: { enable: true }
+  graphql:
+    selectTypeName: MoviesTomatoesAggregateExp
 
 ---
 kind: ObjectType
@@ -514,6 +609,35 @@ definition:
     enable: true
   graphql:
     typeName: MoviesComparisonExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: MoviesAggregateExp
+  operand:
+    object:
+      aggregatedType: Movies
+      aggregatableFields:
+        - fieldName: awards
+          aggregateExpression: MoviesAwardsAggregateExp
+        - fieldName: imdb
+          aggregateExpression: MoviesImdbAggregateExp
+        - fieldName: metacritic
+          aggregateExpression: IntAggregateExp
+        - fieldName: numMflixComments
+          aggregateExpression: IntAggregateExp
+        - fieldName: released
+          aggregateExpression: DateAggregateExp
+        - fieldName: runtime
+          aggregateExpression: IntAggregateExp
+        - fieldName: tomatoes
+          aggregateExpression: MoviesTomatoesAggregateExp
+        - fieldName: year
+          aggregateExpression: IntAggregateExp
+  count: { enable: true }
+  graphql:
+    selectTypeName: MoviesAggregateExp
 
 ---
 kind: Model
