@@ -124,6 +124,7 @@ definition:
   source:
     dataConnectorName: sample_mflix
     collection: comments
+  aggregateExpression: CommentsAggregateExp
   filterExpressionType: CommentsComparisonExp
   orderableFields:
     - fieldName: id
@@ -148,6 +149,7 @@ definition:
     aggregate:
       queryRootField:
         commentsAggregate
+    filterInputTypeName: CommentsFilterInput
     selectMany:
       queryRootField: comments
     selectUniques:

@@ -185,6 +185,7 @@ definition:
     aggregate:
       queryRootField:
         invoiceAggregate
+    filterInputTypeName: InvoiceFilterInput
     selectMany:
       queryRootField: invoice
     selectUniques:

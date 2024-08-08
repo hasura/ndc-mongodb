@@ -143,6 +143,7 @@ definition:
     aggregate:
       queryRootField:
         invoiceLineAggregate
+    filterInputTypeName: InvoiceLineFilterInput
     selectMany:
       queryRootField: invoiceLine
     selectUniques:

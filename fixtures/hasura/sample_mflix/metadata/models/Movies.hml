@@ -723,6 +723,7 @@ definition:
     aggregate:
       queryRootField:
         moviesAggregate
+    filterInputTypeName: MoviesFilterInput
     selectMany:
       queryRootField: movies
     selectUniques:
