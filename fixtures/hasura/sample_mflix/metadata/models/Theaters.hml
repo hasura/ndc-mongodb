@@ -22,6 +22,33 @@ definition:
       dataConnectorObjectType: theaters_location_address
 
 ---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: TheatersLocationAddressComparisonExp
+  operand:
+    object:
+      type: TheatersLocationAddress
+      comparableFields:
+        - fieldName: city
+          booleanExpressionType: StringComparisonExp
+        - fieldName: state
+          booleanExpressionType: StringComparisonExp
+        - fieldName: street1
+          booleanExpressionType: StringComparisonExp
+        - fieldName: street2
+          booleanExpressionType: StringComparisonExp
+        - fieldName: zipcode
+          booleanExpressionType: StringComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: TheatersLocationAddressComparisonExp
+
+---
 kind: TypePermissions
 version: v1
 definition:
@@ -43,7 +70,7 @@ definition:
   name: TheatersLocationGeo
   fields:
     - name: coordinates
-      type: "[Double!]!"
+      type: "[Float!]!"
     - name: type
       type: String!
   graphql:
@@ -64,6 +91,25 @@ definition:
         allowedFields:
           - coordinates
           - type
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: TheatersLocationGeoComparisonExp
+  operand:
+    object:
+      type: TheatersLocationGeo
+      comparableFields:
+        - fieldName: type
+          booleanExpressionType: StringComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: TheatersLocationGeoComparisonExp
 
 ---
 kind: ObjectType
@@ -95,6 +141,27 @@ definition:
           - geo
 
 ---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: TheatersLocationComparisonExp
+  operand:
+    object:
+      type: TheatersLocation
+      comparableFields:
+        - fieldName: address
+          booleanExpressionType: TheatersLocationAddressComparisonExp
+        - fieldName: geo
+          booleanExpressionType: TheatersLocationGeoComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: TheatersLocationComparisonExp
+
+---
 kind: ObjectType
 version: v1
 definition:
@@ -124,6 +191,29 @@ definition:
             name: theaterId
 
 ---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: TheatersComparisonExp
+  operand:
+    object:
+      type: Theaters
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: location
+          booleanExpressionType: TheatersLocationComparisonExp
+        - fieldName: theaterId
+          booleanExpressionType: IntComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: TheatersComparisonExp
+
+---
 kind: TypePermissions
 version: v1
 definition:
@@ -137,25 +227,27 @@ definition:
           - theaterId
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: TheatersBoolExp
-  objectType: Theaters
-  dataConnectorName: sample_mflix
-  dataConnectorObjectType: theaters
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: location
-      operators:
-        enableAll: true
-    - fieldName: theaterId
-      operators:
-        enableAll: true
+  name: TheatersComparisonExp
+  operand:
+    object:
+      type: Theaters
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: location
+          booleanExpressionType: TheatersLocationComparisonExp
+        - fieldName: theaterId
+          booleanExpressionType: IntComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: TheatersBoolExp
+    typeName: TheatersComparisonExp
 
 ---
 kind: Model
@@ -166,7 +258,7 @@ definition:
   source:
     dataConnectorName: sample_mflix
     collection: theaters
-  filterExpressionType: TheatersBoolExp
+  filterExpressionType: TheatersComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:

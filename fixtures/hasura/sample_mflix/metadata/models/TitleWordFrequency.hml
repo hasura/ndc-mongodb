@@ -35,22 +35,25 @@ definition:
           - count
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: TitleWordFrequencyBoolExp
-  objectType: TitleWordFrequency
-  dataConnectorName: sample_mflix
-  dataConnectorObjectType: TitleWordFrequency
-  comparableFields:
-    - fieldName: word
-      operators:
-        enableAll: true
-    - fieldName: count
-      operators:
-        enableAll: true
+  name: TitleWordFrequencyComparisonExp
+  operand:
+    object:
+      type: TitleWordFrequency
+      comparableFields:
+        - fieldName: word
+          booleanExpressionType: StringComparisonExp
+        - fieldName: count
+          booleanExpressionType: IntComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: TitleWordFrequencyBoolExp
+    typeName: TitleWordFrequencyComparisonExp
 
 ---
 kind: Model
@@ -61,7 +64,7 @@ definition:
   source:
     dataConnectorName: sample_mflix
     collection: title_word_frequency
-  filterExpressionType: TitleWordFrequencyBoolExp
+  filterExpressionType: TitleWordFrequencyComparisonExp
   orderableFields:
     - fieldName: word
       orderByDirections:

@@ -5,7 +5,7 @@ definition:
   name: InvoiceLine
   fields:
     - name: id
-      type: Chinook_ObjectId!
+      type: ObjectId!
     - name: invoiceId
       type: Int!
     - name: invoiceLineId
@@ -15,7 +15,7 @@ definition:
     - name: trackId
       type: Int!
     - name: unitPrice
-      type: Chinook_Decimal!
+      type: Decimal!
   graphql:
     typeName: InvoiceLine
     inputTypeName: InvoiceLineInput
@@ -60,34 +60,37 @@ definition:
           - unitPrice
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: InvoiceLineBoolExp
-  objectType: InvoiceLine
-  dataConnectorName: chinook
-  dataConnectorObjectType: InvoiceLine
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: invoiceId
-      operators:
-        enableAll: true
-    - fieldName: invoiceLineId
-      operators:
-        enableAll: true
-    - fieldName: quantity
-      operators:
-        enableAll: true
-    - fieldName: trackId
-      operators:
-        enableAll: true
-    - fieldName: unitPrice
-      operators:
-        enableAll: true
+  name: InvoiceLineComparisonExp
+  operand:
+    object:
+      type: InvoiceLine
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: invoiceId
+          booleanExpressionType: IntComparisonExp
+        - fieldName: invoiceLineId
+          booleanExpressionType: IntComparisonExp
+        - fieldName: quantity
+          booleanExpressionType: IntComparisonExp
+        - fieldName: trackId
+          booleanExpressionType: IntComparisonExp
+        - fieldName: unitPrice
+          booleanExpressionType: DecimalComparisonExp
+      comparableRelationships:
+        - relationshipName: invoice
+          booleanExpressionType: InvoiceComparisonExp
+        - relationshipName: track
+          booleanExpressionType: TrackComparisonExp
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: InvoiceLineBoolExp
+    typeName: InvoiceLineComparisonExp
 
 ---
 kind: Model
@@ -98,7 +101,7 @@ definition:
   source:
     dataConnectorName: chinook
     collection: InvoiceLine
-  filterExpressionType: InvoiceLineBoolExp
+  filterExpressionType: InvoiceLineComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:

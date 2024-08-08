@@ -5,7 +5,7 @@ definition:
   name: Track
   fields:
     - name: id
-      type: Chinook_ObjectId!
+      type: ObjectId!
     - name: albumId
       type: Int
     - name: bytes
@@ -23,7 +23,7 @@ definition:
     - name: trackId
       type: Int!
     - name: unitPrice
-      type: Chinook_Decimal!
+      type: Decimal!
   graphql:
     typeName: Track
     inputTypeName: TrackInput
@@ -84,46 +84,51 @@ definition:
           - unitPrice
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: TrackBoolExp
-  objectType: Track
-  dataConnectorName: chinook
-  dataConnectorObjectType: Track
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: albumId
-      operators:
-        enableAll: true
-    - fieldName: bytes
-      operators:
-        enableAll: true
-    - fieldName: composer
-      operators:
-        enableAll: true
-    - fieldName: genreId
-      operators:
-        enableAll: true
-    - fieldName: mediaTypeId
-      operators:
-        enableAll: true
-    - fieldName: milliseconds
-      operators:
-        enableAll: true
-    - fieldName: name
-      operators:
-        enableAll: true
-    - fieldName: trackId
-      operators:
-        enableAll: true
-    - fieldName: unitPrice
-      operators:
-        enableAll: true
+  name: TrackComparisonExp
+  operand:
+    object:
+      type: Track
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: albumId
+          booleanExpressionType: IntComparisonExp
+        - fieldName: bytes
+          booleanExpressionType: IntComparisonExp
+        - fieldName: composer
+          booleanExpressionType: StringComparisonExp
+        - fieldName: genreId
+          booleanExpressionType: IntComparisonExp
+        - fieldName: mediaTypeId
+          booleanExpressionType: IntComparisonExp
+        - fieldName: milliseconds
+          booleanExpressionType: IntComparisonExp
+        - fieldName: name
+          booleanExpressionType: StringComparisonExp
+        - fieldName: trackId
+          booleanExpressionType: IntComparisonExp
+        - fieldName: unitPrice
+          booleanExpressionType: DecimalComparisonExp
+      comparableRelationships:
+        - relationshipName: album
+          booleanExpressionType: AlbumComparisonExp
+        - relationshipName: genre
+          booleanExpressionType: GenreComparisonExp
+        - relationshipName: invoiceLines
+          booleanExpressionType: InvoiceLineComparisonExp
+        - relationshipName: mediaType
+          booleanExpressionType: MediaTypeComparisonExp
+        - relationshipName: playlistTracks
+          booleanExpressionType: PlaylistTrackComparisonExp
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: TrackBoolExp
+    typeName: TrackComparisonExp
 
 ---
 kind: Model
@@ -134,7 +139,7 @@ definition:
   source:
     dataConnectorName: chinook
     collection: Track
-  filterExpressionType: TrackBoolExp
+  filterExpressionType: TrackComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:

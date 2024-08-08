@@ -31,6 +31,29 @@ definition:
           - wins
 
 ---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: MoviesAwardsComparisonExp
+  operand:
+    object:
+      type: MoviesAwards
+      comparableFields:
+        - fieldName: nominations
+          booleanExpressionType: IntComparisonExp
+        - fieldName: text
+          booleanExpressionType: StringComparisonExp
+        - fieldName: wins
+          booleanExpressionType: IntComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: MoviesAwardsComparisonExp
+
+---
 kind: ObjectType
 version: v1
 definition:
@@ -39,7 +62,7 @@ definition:
     - name: id
       type: Int!
     - name: rating
-      type: Double!
+      type: Float!
     - name: votes
       type: Int!
   graphql:
@@ -63,6 +86,29 @@ definition:
           - votes
 
 ---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: MoviesImdbComparisonExp
+  operand:
+    object:
+      type: MoviesImdb
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: IntComparisonExp
+        - fieldName: rating
+          booleanExpressionType: FloatComparisonExp
+        - fieldName: votes
+          booleanExpressionType: IntComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: MoviesImdbComparisonExp
+
+---
 kind: ObjectType
 version: v1
 definition:
@@ -73,7 +119,7 @@ definition:
     - name: numReviews
       type: Int!
     - name: rating
-      type: Double!
+      type: Float!
   graphql:
     typeName: MoviesTomatoesCritic
     inputTypeName: MoviesTomatoesCriticInput
@@ -95,6 +141,29 @@ definition:
           - rating
 
 ---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: MoviesTomatoesCriticComparisonExp
+  operand:
+    object:
+      type: MoviesTomatoesCritic
+      comparableFields:
+        - fieldName: meter
+          booleanExpressionType: IntComparisonExp
+        - fieldName: numReviews
+          booleanExpressionType: IntComparisonExp
+        - fieldName: rating
+          booleanExpressionType: FloatComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: MoviesTomatoesCriticComparisonExp
+
+---
 kind: ObjectType
 version: v1
 definition:
@@ -105,7 +174,7 @@ definition:
     - name: numReviews
       type: Int!
     - name: rating
-      type: Double!
+      type: Float!
   graphql:
     typeName: MoviesTomatoesViewer
     inputTypeName: MoviesTomatoesViewerInput
@@ -125,6 +194,29 @@ definition:
           - meter
           - numReviews
           - rating
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: MoviesTomatoesViewerComparisonExp
+  operand:
+    object:
+      type: MoviesTomatoesViewer
+      comparableFields:
+        - fieldName: meter
+          booleanExpressionType: IntComparisonExp
+        - fieldName: numReviews
+          booleanExpressionType: IntComparisonExp
+        - fieldName: rating
+          booleanExpressionType: FloatComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: MoviesTomatoesViewerComparisonExp
 
 ---
 kind: ObjectType
@@ -178,6 +270,43 @@ definition:
           - rotten
           - viewer
           - website
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: MoviesTomatoesComparisonExp
+  operand:
+    object:
+      type: MoviesTomatoes
+      comparableFields:
+        - fieldName: boxOffice
+          booleanExpressionType: StringComparisonExp
+        - fieldName: consensus
+          booleanExpressionType: StringComparisonExp
+        - fieldName: critic
+          booleanExpressionType: MoviesTomatoesCriticComparisonExp
+        - fieldName: dvd
+          booleanExpressionType: DateComparisonExp
+        - fieldName: fresh
+          booleanExpressionType: IntComparisonExp
+        - fieldName: lastUpdated
+          booleanExpressionType: StringComparisonExp
+        - fieldName: production
+          booleanExpressionType: StringComparisonExp
+        - fieldName: rotten
+          booleanExpressionType: IntComparisonExp
+        - fieldName: viewer
+          booleanExpressionType: MoviesTomatoesViewerComparisonExp
+        - fieldName: website
+          booleanExpressionType: StringComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: MoviesTomatoesComparisonExp
 
 ---
 kind: ObjectType
@@ -336,82 +465,55 @@ definition:
           - year
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: MoviesBoolExp
-  objectType: Movies
-  dataConnectorName: sample_mflix
-  dataConnectorObjectType: movies
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: awards
-      operators:
-        enableAll: true
-    - fieldName: cast
-      operators:
-        enableAll: true
-    - fieldName: countries
-      operators:
-        enableAll: true
-    - fieldName: directors
-      operators:
-        enableAll: true
-    - fieldName: fullplot
-      operators:
-        enableAll: true
-    - fieldName: genres
-      operators:
-        enableAll: true
-    - fieldName: imdb
-      operators:
-        enableAll: true
-    - fieldName: languages
-      operators:
-        enableAll: true
-    - fieldName: lastupdated
-      operators:
-        enableAll: true
-    - fieldName: metacritic
-      operators:
-        enableAll: true
-    - fieldName: numMflixComments
-      operators:
-        enableAll: true
-    - fieldName: plot
-      operators:
-        enableAll: true
-    - fieldName: poster
-      operators:
-        enableAll: true
-    - fieldName: rated
-      operators:
-        enableAll: true
-    - fieldName: released
-      operators:
-        enableAll: true
-    - fieldName: runtime
-      operators:
-        enableAll: true
-    - fieldName: title
-      operators:
-        enableAll: true
-    - fieldName: tomatoes
-      operators:
-        enableAll: true
-    - fieldName: type
-      operators:
-        enableAll: true
-    - fieldName: writers
-      operators:
-        enableAll: true
-    - fieldName: year
-      operators:
-        enableAll: true
+  name: MoviesComparisonExp
+  operand:
+    object:
+      type: Movies
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: awards
+          booleanExpressionType: MoviesAwardsComparisonExp
+        - fieldName: fullplot
+          booleanExpressionType: StringComparisonExp
+        - fieldName: imdb
+          booleanExpressionType: MoviesImdbComparisonExp
+        - fieldName: lastupdated
+          booleanExpressionType: DateComparisonExp
+        - fieldName: metacritic
+          booleanExpressionType: IntComparisonExp
+        - fieldName: numMflixComments
+          booleanExpressionType: IntComparisonExp
+        - fieldName: plot
+          booleanExpressionType: StringComparisonExp
+        - fieldName: poster
+          booleanExpressionType: StringComparisonExp
+        - fieldName: rated
+          booleanExpressionType: StringComparisonExp
+        - fieldName: released
+          booleanExpressionType: DateComparisonExp
+        - fieldName: runtime
+          booleanExpressionType: IntComparisonExp
+        - fieldName: title
+          booleanExpressionType: StringComparisonExp
+        - fieldName: tomatoes
+          booleanExpressionType: MoviesTomatoesComparisonExp
+        - fieldName: type
+          booleanExpressionType: StringComparisonExp
+        - fieldName: year
+          booleanExpressionType: IntComparisonExp
+      comparableRelationships:
+        - relationshipName: comments
+          booleanExpressionType: CommentsComparisonExp
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: MoviesBoolExp
+    typeName: MoviesComparisonExp
 
 ---
 kind: Model
@@ -422,7 +524,7 @@ definition:
   source:
     dataConnectorName: sample_mflix
     collection: movies
-  filterExpressionType: MoviesBoolExp
+  filterExpressionType: MoviesComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:

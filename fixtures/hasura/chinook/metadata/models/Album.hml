@@ -5,7 +5,7 @@ definition:
   name: Album
   fields:
     - name: id
-      type: Chinook_ObjectId!
+      type: ObjectId!
     - name: albumId
       type: Int!
     - name: artistId
@@ -48,28 +48,33 @@ definition:
           - title
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: AlbumBoolExp
-  objectType: Album
-  dataConnectorName: chinook
-  dataConnectorObjectType: Album
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: albumId
-      operators:
-        enableAll: true
-    - fieldName: artistId
-      operators:
-        enableAll: true
-    - fieldName: title
-      operators:
-        enableAll: true
+  name: AlbumComparisonExp
+  operand:
+    object:
+      type: Album
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: albumId
+          booleanExpressionType: IntComparisonExp
+        - fieldName: artistId
+          booleanExpressionType: IntComparisonExp
+        - fieldName: title
+          booleanExpressionType: StringComparisonExp
+      comparableRelationships:
+        - relationshipName: artist
+          booleanExpressionType: ArtistComparisonExp
+        - relationshipName: tracks
+          booleanExpressionType: TrackComparisonExp
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: AlbumBoolExp
+    typeName: AlbumComparisonExp
 
 ---
 kind: Model
@@ -80,7 +85,7 @@ definition:
   source:
     dataConnectorName: chinook
     collection: Album
-  filterExpressionType: AlbumBoolExp
+  filterExpressionType: AlbumComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:

@@ -5,7 +5,7 @@ definition:
   name: Genre
   fields:
     - name: id
-      type: Chinook_ObjectId!
+      type: ObjectId!
     - name: genreId
       type: Int!
     - name: name
@@ -42,25 +42,29 @@ definition:
           - name
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: GenreBoolExp
-  objectType: Genre
-  dataConnectorName: chinook
-  dataConnectorObjectType: Genre
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: genreId
-      operators:
-        enableAll: true
-    - fieldName: name
-      operators:
-        enableAll: true
+  name: GenreComparisonExp
+  operand:
+    object:
+      type: Genre
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: genreId
+          booleanExpressionType: IntComparisonExp
+        - fieldName: name
+          booleanExpressionType: StringComparisonExp
+      comparableRelationships:
+        - relationshipName: tracks
+          booleanExpressionType: TrackComparisonExp
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: GenreBoolExp
+    typeName: GenreComparisonExp
 
 ---
 kind: Model
@@ -71,7 +75,7 @@ definition:
   source:
     dataConnectorName: chinook
     collection: Genre
-  filterExpressionType: GenreBoolExp
+  filterExpressionType: GenreComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:

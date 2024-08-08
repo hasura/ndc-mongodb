@@ -5,7 +5,7 @@ definition:
   name: Customer
   fields:
     - name: id
-      type: Chinook_ObjectId!
+      type: ObjectId!
     - name: address
       type: String
     - name: city
@@ -108,58 +108,53 @@ definition:
           - supportRepId
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: CustomerBoolExp
-  objectType: Customer
-  dataConnectorName: chinook
-  dataConnectorObjectType: Customer
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: address
-      operators:
-        enableAll: true
-    - fieldName: city
-      operators:
-        enableAll: true
-    - fieldName: company
-      operators:
-        enableAll: true
-    - fieldName: country
-      operators:
-        enableAll: true
-    - fieldName: customerId
-      operators:
-        enableAll: true
-    - fieldName: email
-      operators:
-        enableAll: true
-    - fieldName: fax
-      operators:
-        enableAll: true
-    - fieldName: firstName
-      operators:
-        enableAll: true
-    - fieldName: lastName
-      operators:
-        enableAll: true
-    - fieldName: phone
-      operators:
-        enableAll: true
-    - fieldName: postalCode
-      operators:
-        enableAll: true
-    - fieldName: state
-      operators:
-        enableAll: true
-    - fieldName: supportRepId
-      operators:
-        enableAll: true
+  name: CustomerComparisonExp
+  operand:
+    object:
+      type: Customer
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: address
+          booleanExpressionType: StringComparisonExp
+        - fieldName: city
+          booleanExpressionType: StringComparisonExp
+        - fieldName: company
+          booleanExpressionType: StringComparisonExp
+        - fieldName: country
+          booleanExpressionType: StringComparisonExp
+        - fieldName: customerId
+          booleanExpressionType: IntComparisonExp
+        - fieldName: email
+          booleanExpressionType: StringComparisonExp
+        - fieldName: fax
+          booleanExpressionType: StringComparisonExp
+        - fieldName: firstName
+          booleanExpressionType: StringComparisonExp
+        - fieldName: lastName
+          booleanExpressionType: StringComparisonExp
+        - fieldName: phone
+          booleanExpressionType: StringComparisonExp
+        - fieldName: postalCode
+          booleanExpressionType: StringComparisonExp
+        - fieldName: state
+          booleanExpressionType: StringComparisonExp
+        - fieldName: supportRepId
+          booleanExpressionType: IntComparisonExp
+      comparableRelationships:
+        - relationshipName: invoices
+          booleanExpressionType: InvoiceComparisonExp
+        - relationshipName: supportRep
+          booleanExpressionType: EmployeeComparisonExp
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: CustomerBoolExp
+    typeName: CustomerComparisonExp
 
 ---
 kind: Model
@@ -170,7 +165,7 @@ definition:
   source:
     dataConnectorName: chinook
     collection: Customer
-  filterExpressionType: CustomerBoolExp
+  filterExpressionType: CustomerComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:

@@ -41,25 +41,27 @@ definition:
           - userId
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: SessionsBoolExp
-  objectType: Sessions
-  dataConnectorName: sample_mflix
-  dataConnectorObjectType: sessions
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: jwt
-      operators:
-        enableAll: true
-    - fieldName: userId
-      operators:
-        enableAll: true
+  name: SessionsComparisonExp
+  operand:
+    object:
+      type: Sessions
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: jwt
+          booleanExpressionType: StringComparisonExp
+        - fieldName: userId
+          booleanExpressionType: StringComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: SessionsBoolExp
+    typeName: SessionsComparisonExp
 
 ---
 kind: Model
@@ -70,7 +72,7 @@ definition:
   source:
     dataConnectorName: sample_mflix
     collection: sessions
-  filterExpressionType: SessionsBoolExp
+  filterExpressionType: SessionsComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:

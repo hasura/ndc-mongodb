@@ -5,7 +5,7 @@ definition:
   name: MediaType
   fields:
     - name: id
-      type: Chinook_ObjectId!
+      type: ObjectId!
     - name: mediaTypeId
       type: Int!
     - name: name
@@ -42,25 +42,29 @@ definition:
           - name
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: MediaTypeBoolExp
-  objectType: MediaType
-  dataConnectorName: chinook
-  dataConnectorObjectType: MediaType
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: mediaTypeId
-      operators:
-        enableAll: true
-    - fieldName: name
-      operators:
-        enableAll: true
+  name: MediaTypeComparisonExp
+  operand:
+    object:
+      type: MediaType
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: mediaTypeId
+          booleanExpressionType: IntComparisonExp
+        - fieldName: name
+          booleanExpressionType: StringComparisonExp
+      comparableRelationships:
+        - relationshipName: tracks
+          booleanExpressionType: TrackComparisonExp
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: MediaTypeBoolExp
+    typeName: MediaTypeComparisonExp
 
 ---
 kind: Model
@@ -71,7 +75,7 @@ definition:
   source:
     dataConnectorName: chinook
     collection: MediaType
-  filterExpressionType: MediaTypeBoolExp
+  filterExpressionType: MediaTypeComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:

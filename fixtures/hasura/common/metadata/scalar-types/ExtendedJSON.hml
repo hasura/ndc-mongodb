@@ -1,0 +1,23 @@
+---
+kind: ScalarType
+version: v1
+definition:
+  name: ExtendedJSON
+  graphql:
+    typeName: ExtendedJSON
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: chinook
+  dataConnectorScalarType: ExtendedJSON
+  representation: ExtendedJSON
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: sample_mflix
+  dataConnectorScalarType: ExtendedJSON
+  representation: ExtendedJSON

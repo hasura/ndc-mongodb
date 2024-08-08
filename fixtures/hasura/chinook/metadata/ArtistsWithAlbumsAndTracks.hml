@@ -5,14 +5,14 @@ definition:
   name: AlbumWithTracks
   fields:
     - name: id
-      type: Chinook_ObjectId!
+      type: ObjectId!
     - name: title
       type: String!
     - name: tracks
       type: "[Track!]!"
   graphql:
-    typeName: Chinook_AlbumWithTracks
-    inputTypeName: Chinook_AlbumWithTracksInput
+    typeName: AlbumWithTracks
+    inputTypeName: AlbumWithTracksInput
   dataConnectorTypeMapping:
     - dataConnectorName: chinook
       dataConnectorObjectType: AlbumWithTracks
@@ -41,20 +41,41 @@ definition:
           - tracks
 
 ---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: AlbumWithTracksComparisonExp
+  operand:
+    object:
+      type: AlbumWithTracks
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: title
+          booleanExpressionType: StringComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: AlbumWithTracksComparisonExp
+
+---
 kind: ObjectType
 version: v1
 definition:
   name: ArtistWithAlbumsAndTracks
   fields:
     - name: id
-      type: Chinook_ObjectId!
+      type: ObjectId!
     - name: albums
       type: "[AlbumWithTracks!]!"
     - name: name
       type: String!
   graphql:
-    typeName: Chinook_ArtistWithAlbumsAndTracks
-    inputTypeName: Chinook_ArtistWithAlbumsAndTracksInput
+    typeName: ArtistWithAlbumsAndTracks
+    inputTypeName: ArtistWithAlbumsAndTracksInput
   dataConnectorTypeMapping:
     - dataConnectorName: chinook
       dataConnectorObjectType: ArtistWithAlbumsAndTracks
@@ -83,25 +104,25 @@ definition:
           - name
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: ArtistWithAlbumsAndTracksBoolExp
-  objectType: ArtistWithAlbumsAndTracks
-  dataConnectorName: chinook
-  dataConnectorObjectType: ArtistWithAlbumsAndTracks
-  comparableFields:
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: albums
-      operators:
-        enableAll: true
-    - fieldName: name
-      operators:
-        enableAll: true
+  name: ArtistWithAlbumsAndTracksComparisonExp
+  operand:
+    object:
+      type: ArtistWithAlbumsAndTracks
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: name
+          booleanExpressionType: StringComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: Chinook_ArtistWithAlbumsAndTracksBoolExp
+    typeName: ArtistWithAlbumsAndTracksComparisonExp
 
 ---
 kind: Model
@@ -112,7 +133,7 @@ definition:
   source:
     dataConnectorName: chinook
     collection: artists_with_albums_and_tracks
-  filterExpressionType: ArtistWithAlbumsAndTracksBoolExp
+  filterExpressionType: ArtistWithAlbumsAndTracksComparisonExp
   orderableFields:
     - fieldName: id
       orderByDirections:
@@ -130,7 +151,7 @@ definition:
       - queryRootField: artistsWithAlbumsAndTracksById
         uniqueIdentifier:
           - id
-    orderByExpressionType: Chinook_ArtistsWithAlbumsAndTracksOrderBy
+    orderByExpressionType: ArtistsWithAlbumsAndTracksOrderBy
   description: combines artist, albums, and tracks into a single document per artist
 
 ---
