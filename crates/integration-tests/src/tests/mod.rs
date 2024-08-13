@@ -7,6 +7,7 @@
 //     rust-analyzer.cargo.allFeatures = true
 //
 
+mod aggregation;
 mod basic;
 mod local_relationship;
 mod native_mutation;

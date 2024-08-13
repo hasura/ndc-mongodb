@@ -1,0 +1,19 @@
+---
+source: crates/integration-tests/src/tests/aggregation.rs
+expression: "graphql_query(r#\"\n                query {\n                  track(limit: 3) {\n                    unitPrice\n                  }\n                  trackAggregate(filter_input: {limit: 3}) {\n                    _count\n                    unitPrice {\n                      _count\n                      _count_distinct\n                      _avg\n                      _max\n                      _min\n                      _sum\n                    }\n                  }\n                }\n            \"#).run().await?"
+---
+data:
+  track:
+    - unitPrice: "0.99"
+    - unitPrice: "0.99"
+    - unitPrice: "0.99"
+  trackAggregate:
+    _count: 3
+    unitPrice:
+      _count: 3
+      _count_distinct: 1
+      _avg: "0.99"
+      _max: "0.99"
+      _min: "0.99"
+      _sum: "2.97"
+errors: ~
