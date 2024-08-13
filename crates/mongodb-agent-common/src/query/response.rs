@@ -138,7 +138,7 @@ fn serialize_aggregates(
     query_aggregates: &IndexMap<ndc_models::FieldName, Aggregate>,
     value: Bson,
 ) -> Result<IndexMap<ndc_models::FieldName, serde_json::Value>> {
-    let aggregates_type = type_for_aggregates(query_aggregates)?;
+    let aggregates_type = type_for_aggregates(query_aggregates);
     let json = bson_to_json(mode, &aggregates_type, value)?;
 
     // The NDC type uses an IndexMap for aggregate values; we need to convert the map
@@ -185,7 +185,7 @@ fn type_for_row_set(
     let mut type_fields = BTreeMap::new();
 
     if let Some(aggregates) = aggregates {
-        type_fields.insert("aggregates".into(), type_for_aggregates(aggregates)?);
+        type_fields.insert("aggregates".into(), type_for_aggregates(aggregates));
     }
 
     if let Some(query_fields) = fields {
@@ -199,9 +199,7 @@ fn type_for_row_set(
     }))
 }
 
-fn type_for_aggregates(
-    query_aggregates: &IndexMap<ndc_models::FieldName, Aggregate>,
-) -> Result<Type> {
+fn type_for_aggregates(query_aggregates: &IndexMap<ndc_models::FieldName, Aggregate>) -> Type {
     let fields = query_aggregates
         .iter()
         .map(|(field_name, aggregate)| {
@@ -219,7 +217,7 @@ fn type_for_aggregates(
             )
         })
         .collect();
-    Ok(Type::Object(ObjectType { fields, name: None }))
+    Type::Object(ObjectType { fields, name: None })
 }
 
 fn type_for_row(
