@@ -1,19 +1,33 @@
 ---
 source: crates/integration-tests/src/tests/aggregation.rs
-expression: "graphql_query(r#\"\n                query {\n                  track(limit: 3) {\n                    unitPrice\n                  }\n                  trackAggregate(filter_input: {limit: 3}) {\n                    _count\n                    unitPrice {\n                      _count\n                      _count_distinct\n                      _avg\n                      _max\n                      _min\n                      _sum\n                    }\n                  }\n                }\n            \"#).run().await?"
+expression: "graphql_query(r#\"\n                query($albumId: Int!) {\n                  track(order_by: { id: Asc }, where: { albumId: { _eq: $albumId } }) {\n                    milliseconds\n                    unitPrice\n                  }\n                  trackAggregate(\n                    filter_input: { order_by: { id: Asc }, where: { albumId: { _eq: $albumId } } }\n                  ) {\n                    _count\n                    milliseconds {\n                      _avg\n                      _max\n                      _min\n                      _sum\n                    }\n                    unitPrice {\n                      _count\n                      _count_distinct\n                    }\n                  }\n                }\n            \"#).variables(json!({\n                        \"albumId\": 9\n                    })).run().await?"
 ---
 data:
   track:
-    - unitPrice: "0.99"
-    - unitPrice: "0.99"
-    - unitPrice: "0.99"
+    - milliseconds: 221701
+      unitPrice: "0.99"
+    - milliseconds: 436453
+      unitPrice: "0.99"
+    - milliseconds: 374543
+      unitPrice: "0.99"
+    - milliseconds: 322925
+      unitPrice: "0.99"
+    - milliseconds: 288208
+      unitPrice: "0.99"
+    - milliseconds: 308035
+      unitPrice: "0.99"
+    - milliseconds: 369345
+      unitPrice: "0.99"
+    - milliseconds: 350197
+      unitPrice: "0.99"
   trackAggregate:
-    _count: 3
+    _count: 8
+    milliseconds:
+      _avg: 333925.875
+      _max: 436453
+      _min: 221701
+      _sum: 2671407
     unitPrice:
-      _count: 3
+      _count: 8
       _count_distinct: 1
-      _avg: "0.99"
-      _max: "0.99"
-      _min: "0.99"
-      _sum: "2.97"
 errors: ~
