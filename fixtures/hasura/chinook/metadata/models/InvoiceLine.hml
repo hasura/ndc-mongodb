@@ -93,6 +93,23 @@ definition:
     typeName: InvoiceLineComparisonExp
 
 ---
+kind: AggregateExpression
+version: v1
+definition:
+  name: InvoiceLineAggregateExp
+  operand:
+    object:
+      aggregatedType: InvoiceLine
+      aggregatableFields:
+        - fieldName: quantity
+          aggregateExpression: IntAggregateExp
+        - fieldName: unitPrice
+          aggregateExpression: DecimalAggregateExp
+  count: { enable: true }
+  graphql:
+    selectTypeName: InvoiceLineAggregateExp
+
+---
 kind: Model
 version: v1
 definition:
@@ -101,6 +118,7 @@ definition:
   source:
     dataConnectorName: chinook
     collection: InvoiceLine
+  aggregateExpression: InvoiceLineAggregateExp
   filterExpressionType: InvoiceLineComparisonExp
   orderableFields:
     - fieldName: id
@@ -122,6 +140,10 @@ definition:
       orderByDirections:
         enableAll: true
   graphql:
+    aggregate:
+      queryRootField:
+        invoiceLineAggregate
+    filterInputTypeName: InvoiceLineFilterInput
     selectMany:
       queryRootField: invoiceLine
     selectUniques:
