@@ -103,10 +103,7 @@ mod tests {
             .into();
 
         let expected_response = row_set()
-            .aggregates([
-                ("count", json!({ "$numberInt": "11" })),
-                ("avg", json!({ "$numberInt": "3" })),
-            ])
+            .aggregates([("count", json!(11)), ("avg", json!(3))])
             .into_response();
 
         let expected_pipeline = bson!([
@@ -175,7 +172,7 @@ mod tests {
             .into();
 
         let expected_response = row_set()
-            .aggregates([("avg", json!({ "$numberDouble": "3.1" }))])
+            .aggregates([("avg", json!(3.1))])
             .row([("student_gpa", 3.1)])
             .into_response();
 

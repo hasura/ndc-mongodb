@@ -261,25 +261,17 @@ mod tests {
         ]);
 
         let expected_response = query_response()
-            .row_set(
-                row_set()
-                    .aggregates([("count", json!({ "$numberInt": "2" }))])
-                    .rows([
-                        [
-                            ("albumId", json!(1)),
-                            ("title", json!("For Those About To Rock We Salute You")),
-                        ],
-                        [("albumId", json!(4)), ("title", json!("Let There Be Rock"))],
-                    ]),
-            )
-            .row_set(
-                row_set()
-                    .aggregates([("count", json!({ "$numberInt": "2" }))])
-                    .rows([
-                        [("albumId", json!(2)), ("title", json!("Balls to the Wall"))],
-                        [("albumId", json!(3)), ("title", json!("Restless and Wild"))],
-                    ]),
-            )
+            .row_set(row_set().aggregates([("count", json!(2))]).rows([
+                [
+                    ("albumId", json!(1)),
+                    ("title", json!("For Those About To Rock We Salute You")),
+                ],
+                [("albumId", json!(4)), ("title", json!("Let There Be Rock"))],
+            ]))
+            .row_set(row_set().aggregates([("count", json!(2))]).rows([
+                [("albumId", json!(2)), ("title", json!("Balls to the Wall"))],
+                [("albumId", json!(3)), ("title", json!("Restless and Wild"))],
+            ]))
             .build();
 
         let db = mock_aggregate_response_for_pipeline(
@@ -307,7 +299,7 @@ mod tests {
         );
 
         let result = execute_query_request(db, &music_config(), query_request).await?;
-        assert_eq!(expected_response, result);
+        assert_eq!(result, expected_response);
 
         Ok(())
     }
@@ -370,8 +362,8 @@ mod tests {
         ]);
 
         let expected_response = query_response()
-            .row_set(row_set().aggregates([("count", json!({ "$numberInt": "2" }))]))
-            .row_set(row_set().aggregates([("count", json!({ "$numberInt": "2" }))]))
+            .row_set(row_set().aggregates([("count", json!(2))]))
+            .row_set(row_set().aggregates([("count", json!(2))]))
             .build();
 
         let db = mock_aggregate_response_for_pipeline(
