@@ -613,7 +613,7 @@ mod tests {
                 "students_aggregate",
                 json!({
                     "aggregates": {
-                        "aggregate_count": { "$numberInt": "2" }
+                        "aggregate_count": 2
                     }
                 }),
             )])

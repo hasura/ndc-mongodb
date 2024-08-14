@@ -4,6 +4,8 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 - Accept predicate arguments in native mutations and native queries ([#92](https://github.com/hasura/ndc-mongodb/pull/92))
+- Serialize aggregate results as simple JSON (instead of Extended JSON) for
+  consistency with non-aggregate result serialization ([#96](https://github.com/hasura/ndc-mongodb/pull/96))
 
 ## [1.0.0] - 2024-07-09
 

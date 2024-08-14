@@ -135,10 +135,10 @@ fn serialize_row_set_with_aggregates(
 fn serialize_aggregates(
     mode: ExtendedJsonMode,
     path: &[&str],
-    _query_aggregates: &IndexMap<ndc_models::FieldName, Aggregate>,
+    query_aggregates: &IndexMap<ndc_models::FieldName, Aggregate>,
     value: Bson,
 ) -> Result<IndexMap<ndc_models::FieldName, serde_json::Value>> {
-    let aggregates_type = type_for_aggregates()?;
+    let aggregates_type = type_for_aggregates(query_aggregates);
     let json = bson_to_json(mode, &aggregates_type, value)?;
 
     // The NDC type uses an IndexMap for aggregate values; we need to convert the map
@@ -184,8 +184,8 @@ fn type_for_row_set(
 ) -> Result<Type> {
     let mut type_fields = BTreeMap::new();
 
-    if aggregates.is_some() {
-        type_fields.insert("aggregates".into(), type_for_aggregates()?);
+    if let Some(aggregates) = aggregates {
+        type_fields.insert("aggregates".into(), type_for_aggregates(aggregates));
     }
 
     if let Some(query_fields) = fields {
@@ -199,9 +199,25 @@ fn type_for_row_set(
     }))
 }
 
-// TODO: infer response type for aggregates MDB-130
-fn type_for_aggregates() -> Result<Type> {
-    Ok(Type::Scalar(MongoScalarType::ExtendedJSON))
+fn type_for_aggregates(query_aggregates: &IndexMap<ndc_models::FieldName, Aggregate>) -> Type {
+    let fields = query_aggregates
+        .iter()
+        .map(|(field_name, aggregate)| {
+            (
+                field_name.to_string().into(),
+                match aggregate {
+                    Aggregate::ColumnCount { .. } => {
+                        Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Int))
+                    }
+                    Aggregate::StarCount => {
+                        Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Int))
+                    }
+                    Aggregate::SingleColumn { result_type, .. } => result_type.clone(),
+                },
+            )
+        })
+        .collect();
+    Type::Object(ObjectType { fields, name: None })
 }
 
 fn type_for_row(
