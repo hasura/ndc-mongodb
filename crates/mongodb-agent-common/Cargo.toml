@@ -1,8 +1,8 @@
 [package]
 name = "mongodb-agent-common"
 description = "logic that is common to v2 and v3 agent versions"
-version = "0.1.0"
 edition = "2021"
+version.workspace = true
 
 [dependencies]
 configuration = { path = "../configuration" }
