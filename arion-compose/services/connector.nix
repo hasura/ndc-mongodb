@@ -37,7 +37,7 @@ let
       MONGODB_DATABASE_URI = database-uri;
       OTEL_SERVICE_NAME = "mongodb-connector";
       OTEL_EXPORTER_OTLP_ENDPOINT = otlp-endpoint;
-      RUST_LOG = "mongodb-connector=debug,dc_api=debug";
+      RUST_LOG = "configuration=debug,mongodb_agent_common=debug,mongodb_connector=debug,mongodb_support=debug,ndc_query_plan=debug";
     };
     volumes = [
       "${configuration-dir}:/configuration:ro"
