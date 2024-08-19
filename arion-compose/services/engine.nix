@@ -88,6 +88,7 @@ in
       "--port=${port}"
       "--metadata-path=${metadata}"
       "--authn-config-path=${auth-config}"
+      "--expose-internal-errors"
     ] ++ (pkgs.lib.optionals (otlp-endpoint != null) [
       "--otlp-endpoint=${otlp-endpoint}"
     ]);
@@ -95,7 +96,7 @@ in
       "${hostPort}:${port}"
     ];
     environment = {
-      RUST_LOG = "engine=debug,hasura-authn-core=debug";
+      RUST_LOG = "engine=debug,hasura_authn_core=debug,hasura_authn_jwt=debug,hasura_authn_noauth=debug,hasura_authn_webhook=debug,lang_graphql=debug,open_dds=debug,schema=debug,metadata-resolve=debug";
     };
     healthcheck = {
       test = [ "CMD" "curl" "-f" "http://localhost:${port}/" ];
