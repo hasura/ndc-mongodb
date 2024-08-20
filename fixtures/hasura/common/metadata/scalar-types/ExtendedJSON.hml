@@ -21,3 +21,95 @@ definition:
   dataConnectorName: sample_mflix
   dataConnectorScalarType: ExtendedJSON
   representation: ExtendedJSON
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: ExtendedJsonComparisonExp
+  operand:
+    scalar:
+      type: ExtendedJSON
+      comparisonOperators:
+        - name: _eq
+          argumentType: ExtendedJSON
+        - name: _neq
+          argumentType: ExtendedJSON
+        - name: _gt
+          argumentType: ExtendedJSON
+        - name: _gte
+          argumentType: ExtendedJSON
+        - name: _lt
+          argumentType: ExtendedJSON
+        - name: _lte
+          argumentType: ExtendedJSON
+        - name: _regex
+          argumentType: String
+        - name: _iregex
+          argumentType: String
+      dataConnectorOperatorMapping:
+        - dataConnectorName: chinook
+          dataConnectorScalarType: ExtendedJSON
+          operatorMapping:
+            _eq: _eq
+            _neq: _neq
+            _gt: _gt
+            _gte: _gte
+            _lt: _lt
+            _lte: _lte
+            _regex: _regex
+            _iregex: _iregex
+        - dataConnectorName: sample_mflix
+          dataConnectorScalarType: ExtendedJSON
+          operatorMapping:
+            _eq: _eq
+            _neq: _neq
+            _gt: _gt
+            _gte: _gte
+            _lt: _lt
+            _lte: _lte
+            _regex: _regex
+            _iregex: _iregex
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: ExtendedJsonComparisonExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: ExtendedJsonAggregateExp
+  operand:
+    scalar:
+      aggregatedType: ExtendedJSON
+      aggregationFunctions:
+        - name: _avg
+          returnType: ExtendedJSON
+        - name: _max
+          returnType: ExtendedJSON
+        - name: _min
+          returnType: ExtendedJSON
+        - name: _sum
+          returnType: ExtendedJSON
+      dataConnectorAggregationFunctionMapping:
+        - dataConnectorName: chinook
+          dataConnectorScalarType: ExtendedJSON
+          functionMapping:
+            _avg: { name: avg }
+            _max: { name: max }
+            _min: { name: min }
+            _sum: { name: sum }
+        - dataConnectorName: sample_mflix
+          dataConnectorScalarType: ExtendedJSON
+          functionMapping:
+            _avg: { name: avg }
+            _max: { name: max }
+            _min: { name: min }
+            _sum: { name: sum }
+  count: { enable: true }
+  countDistinct: { enable: true }
+  graphql:
+    selectTypeName: ExtendedJsonAggregateExp
