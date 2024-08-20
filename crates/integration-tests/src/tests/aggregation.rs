@@ -37,3 +37,39 @@ async fn runs_aggregation_over_top_level_fields() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+#[tokio::test]
+async fn aggregates_extended_json_representing_mixture_of_numeric_types() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+                query {
+
+                  track(order_by: { id: Asc }, where: { albumId: { _eq: $albumId } }) {
+                    milliseconds
+                    unitPrice
+                  }
+                  trackAggregate(
+                    filter_input: { order_by: { id: Asc }, where: { albumId: { _eq: $albumId } } }
+                  ) {
+                    _count
+                    milliseconds {
+                      _avg
+                      _max
+                      _min
+                      _sum
+                    }
+                    unitPrice {
+                      _count
+                      _count_distinct
+                    }
+                  }
+                }
+            "#
+        )
+        .variables(json!({ "albumId": 9 }))
+        .run()
+        .await?
+    );
+    Ok(())
+}

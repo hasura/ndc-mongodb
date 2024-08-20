@@ -172,17 +172,16 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1723539998,
-        "narHash": "sha256-9w9uF5JVPbIUXNf/HY+ug5yspXxVcLwFBE6KRgFhWZQ=",
-        "owner": "TheInnerLight",
-        "repo": "hasura-ddn-cli-nix",
-        "rev": "7e0bda12c484f08d194377389191c1a58920b2b1",
-        "type": "github"
+        "dirtyRev": "deddc18875d3c691553f50b27dc9c249552fc545-dirty",
+        "dirtyShortRev": "deddc18-dirty",
+        "lastModified": 1724193024,
+        "narHash": "sha256-VU7JvulNSIfQoltHjaBhUD9uFOFiwshqi8h1Q0MM39Q=",
+        "type": "git",
+        "url": "file:///home/jesse/projects/hasura/hasura-ddn-cli-nix"
       },
       "original": {
-        "owner": "TheInnerLight",
-        "repo": "hasura-ddn-cli-nix",
-        "type": "github"
+        "type": "git",
+        "url": "file:///home/jesse/projects/hasura/hasura-ddn-cli-nix"
       }
     },
     "hercules-ci-effects": {
