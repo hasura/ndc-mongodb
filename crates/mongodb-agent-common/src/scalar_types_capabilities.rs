@@ -25,12 +25,51 @@ pub fn scalar_types() -> BTreeMap<ndc_models::ScalarTypeName, ScalarType> {
 }
 
 fn extended_json_scalar_type() -> (ndc_models::ScalarTypeName, ScalarType) {
+    // Extended JSON could be anything, so allow all aggregation functions
+    let aggregation_functions = enum_iterator::all::<AggregationFunction>();
+
+    // Extended JSON could be anything, so allow all comparison operators
+    let comparison_operators = enum_iterator::all::<ComparisonFunction>();
+
+    let ext_json_type = Type::Named {
+        name: mongodb_support::EXTENDED_JSON_TYPE_NAME.into(),
+    };
+
     (
         mongodb_support::EXTENDED_JSON_TYPE_NAME.into(),
         ScalarType {
             representation: Some(TypeRepresentation::JSON),
-            aggregate_functions: BTreeMap::new(),
-            comparison_operators: BTreeMap::new(),
+            aggregate_functions: aggregation_functions
+                .into_iter()
+                .map(|aggregation_function| {
+                    let name = aggregation_function.graphql_name().into();
+                    let result_type = match aggregation_function {
+                        AggregationFunction::Avg => ext_json_type.clone(),
+                        AggregationFunction::Count => bson_to_named_type(S::Int),
+                        AggregationFunction::Min => ext_json_type.clone(),
+                        AggregationFunction::Max => ext_json_type.clone(),
+                        AggregationFunction::Sum => ext_json_type.clone(),
+                    };
+                    let definition = AggregateFunctionDefinition { result_type };
+                    (name, definition)
+                })
+                .collect(),
+            comparison_operators: comparison_operators
+                .into_iter()
+                .map(|comparison_fn| {
+                    let name = comparison_fn.graphql_name().into();
+                    let definition = match comparison_fn {
+                        C::Equal => ComparisonOperatorDefinition::Equal,
+                        C::Regex | C::IRegex => ComparisonOperatorDefinition::Custom {
+                            argument_type: bson_to_named_type(S::String),
+                        },
+                        _ => ComparisonOperatorDefinition::Custom {
+                            argument_type: ext_json_type.clone(),
+                        },
+                    };
+                    (name, definition)
+                })
+                .collect(),
         },
     )
 }
