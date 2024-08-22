@@ -172,16 +172,17 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "dirtyRev": "deddc18875d3c691553f50b27dc9c249552fc545-dirty",
-        "dirtyShortRev": "deddc18-dirty",
-        "lastModified": 1724193024,
-        "narHash": "sha256-VU7JvulNSIfQoltHjaBhUD9uFOFiwshqi8h1Q0MM39Q=",
-        "type": "git",
-        "url": "file:///home/jesse/projects/hasura/hasura-ddn-cli-nix"
+        "lastModified": 1724197678,
+        "narHash": "sha256-yXS2S3nmHKur+pKgcg3imMz+xBKf211jUEHwtVbWhUk=",
+        "owner": "hasura",
+        "repo": "ddn-cli-nix",
+        "rev": "4a1279dbb2fe79f447cd409df710eee3a98fc16e",
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///home/jesse/projects/hasura/hasura-ddn-cli-nix"
+        "owner": "hasura",
+        "repo": "ddn-cli-nix",
+        "type": "github"
       }
     },
     "hercules-ci-effects": {

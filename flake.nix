@@ -11,8 +11,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # hasura-ddn-cli.url = "github:TheInnerLight/hasura-ddn-cli-nix";
-    hasura-ddn-cli.url = "git+file:///home/jesse/projects/hasura/hasura-ddn-cli-nix";
+    hasura-ddn-cli.url = "github:hasura/ddn-cli-nix";
 
     # Allows selecting arbitrary Rust toolchain configurations by editing
     # `rust-toolchain.toml`
@@ -73,7 +72,6 @@
       # packages or replace packages in that set.
       overlays = [
         (import rust-overlay)
-        hasura-ddn-cli.overlays.default
         (final: prev: {
           # What's the deal with `pkgsBuildHost`? It has to do with
           # cross-compiling.
@@ -107,6 +105,8 @@
           # compiled for Linux but with the same architecture as `localSystem`.
           # This is useful for building Docker images on Mac developer machines.
           pkgsCross.linux = mkPkgsLinux final.buildPlatform.system;
+
+          ddn = hasura-ddn-cli.defaultPackage.${final.system};
         })
       ];
 
