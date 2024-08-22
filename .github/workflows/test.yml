@@ -30,6 +30,9 @@ jobs:
       - name: run linter checks with clippy 🔨
         run: nix build .#checks.x86_64-linux.lint --print-build-logs
 
+      - name: update rust-sec advisory db before scanning for vulnerabilities
+        run: nix flake lock --update-input advisory-db
+
       - name: audit for reported security problems 🔨
         run: nix build .#checks.x86_64-linux.audit --print-build-logs
 
