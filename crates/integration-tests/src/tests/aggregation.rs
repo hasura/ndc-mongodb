@@ -43,31 +43,59 @@ async fn aggregates_extended_json_representing_mixture_of_numeric_types() -> any
     assert_yaml_snapshot!(
         graphql_query(
             r#"
-                query {
-
-                  track(order_by: { id: Asc }, where: { albumId: { _eq: $albumId } }) {
-                    milliseconds
-                    unitPrice
-                  }
-                  trackAggregate(
-                    filter_input: { order_by: { id: Asc }, where: { albumId: { _eq: $albumId } } }
+                query ($types: String!) {
+                  extendedJsonTestDataAggregate(
+                    filter_input: { where: { type: { _regex: $types } } }
                   ) {
-                    _count
-                    milliseconds {
+                    value {
                       _avg
+                      _count
                       _max
                       _min
                       _sum
-                    }
-                    unitPrice {
-                      _count
                       _count_distinct
                     }
+                  }
+                  extendedJsonTestData(where: { type: { _regex: $types } }) {
+                    type
+                    value
                   }
                 }
             "#
         )
-        .variables(json!({ "albumId": 9 }))
+        .variables(json!({ "types": "decimal|double|int|long" }))
+        .run()
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn aggregates_mixture_of_numeric_and_null_values() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+                query ($types: String!) {
+                  extendedJsonTestDataAggregate(
+                    filter_input: { where: { type: { _regex: $types } } }
+                  ) {
+                    value {
+                      _avg
+                      _count
+                      _max
+                      _min
+                      _sum
+                      _count_distinct
+                    }
+                  }
+                  extendedJsonTestData(where: { type: { _regex: $types } }) {
+                    type
+                    value
+                  }
+                }
+            "#
+        )
+        .variables(json!({ "types": "double|null" }))
         .run()
         .await?
     );
