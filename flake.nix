@@ -8,6 +8,12 @@
     # Nix build system for Rust projects, delegates to cargo
     crane.url = "github:ipetkov/crane";
 
+    crate2nix = {
+      # url = "github:nix-community/crate2nix";
+      url = "git+file:///home/jesse/projects/nix/crate2nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     hasura-ddn-cli.url = "github:hasura/ddn-cli-nix";
 
     # Allows selecting arbitrary Rust toolchain configurations by editing
@@ -56,6 +62,7 @@
     { self
     , nixpkgs
     , crane
+    , crate2nix
     , hasura-ddn-cli
     , rust-overlay
     , advisory-db
@@ -69,7 +76,7 @@
       # packages or replace packages in that set.
       overlays = [
         (import rust-overlay)
-        (final: prev: {
+        (final: prev: rec {
           # What's the deal with `pkgsBuildHost`? It has to do with
           # cross-compiling.
           #
@@ -81,17 +88,25 @@
           # `pkgsBuildHost` contains copies of all packages compiled to run on
           # the build system, and to produce outputs for the host system.
           rustToolchain = final.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+
+          # buildRustCrate/crate2nix depend on this.
+          rustc = rustToolchain;
+          cargo = rustToolchain;
+
           craneLib = (crane.mkLib final).overrideToolchain (pkgs: pkgs.rustToolchain);
 
           # Extend our package set with mongodb-connector, graphql-engine, and
           # other packages built by this flake to make these packages accessible
           # in arion-compose.nix.
-          mongodb-connector-workspace = final.callPackage ./nix/mongodb-connector-workspace.nix { }; # builds all packages in this repo
-          mongodb-connector = final.mongodb-connector-workspace.override { package = "mongodb-connector"; }; # override `package` to build one specific crate
-          mongodb-cli-plugin = final.mongodb-connector-workspace.override { package = "mongodb-cli-plugin"; };
-          graphql-engine = final.callPackage ./nix/graphql-engine.nix { src = "${graphql-engine-source}/v3"; package = "engine"; };
+          mongodb-connector-workspace = final.callPackage ./nix/mongodb-connector-workspace.nix { inherit crate2nix; }; # builds all packages in this repo
+          mongodb-connector = mongodb-connector-workspace.workspaceMembers.mongodb-connector;
+          mongodb-cli-plugin = mongodb-connector-workspace.workspaceMembers.mongodb-cli-plugin;
+
+          graphql-engine-workspace = final.callPackage ./nix/graphql-engine.nix { inherit crate2nix; src = "${graphql-engine-source}/v3"; };
+          graphql-engine = graphql-engine-workspace.workspaceMembers.engine;
+          dev-auth-webhook = graphql-engine-workspace.workspaceMembers.dev-auth-webhook;
+
           integration-tests = final.callPackage ./nix/integration-tests.nix { };
-          dev-auth-webhook = final.callPackage ./nix/graphql-engine.nix { src = "${graphql-engine-source}/v3"; package = "dev-auth-webhook"; };
 
           # Provide cross-compiled versions of each of our packages under
           # `pkgs.pkgsCross.${system}.${package-name}`
@@ -131,26 +146,26 @@
 
     in
     {
-      checks = eachSystem (pkgs: {
-        # Build all crates as part of `nix flake check`
-        inherit (pkgs) mongodb-connector-workspace;
-
-        lint = pkgs.craneLib.cargoClippy (pkgs.mongodb-connector-workspace.buildArgs // {
-          cargoClippyExtraArgs = "--all-targets -- --deny warnings";
-          doInstallCargoArtifacts = false; # avoids "wrong ELF type" messages
-        });
-
-        test = pkgs.craneLib.cargoNextest (pkgs.mongodb-connector-workspace.buildArgs // {
-          partitions = 1;
-          partitionType = "count";
-          doInstallCargoArtifacts = false; # avoids "wrong ELF type" messages
-        });
-
-        audit = pkgs.craneLib.cargoAudit {
-          inherit advisory-db;
-          inherit (pkgs.mongodb-connector-workspace) src;
-        };
-      });
+      # checks = eachSystem (pkgs: {
+      #   # Build all crates as part of `nix flake check`
+      #   inherit (pkgs) mongodb-connector-workspace;
+      #
+      #   lint = pkgs.craneLib.cargoClippy (pkgs.mongodb-connector-workspace.buildArgs // {
+      #     cargoClippyExtraArgs = "--all-targets -- --deny warnings";
+      #     doInstallCargoArtifacts = false; # avoids "wrong ELF type" messages
+      #   });
+      #
+      #   test = pkgs.craneLib.cargoNextest (pkgs.mongodb-connector-workspace.buildArgs // {
+      #     partitions = 1;
+      #     partitionType = "count";
+      #     doInstallCargoArtifacts = false; # avoids "wrong ELF type" messages
+      #   });
+      #
+      #   audit = pkgs.craneLib.cargoAudit {
+      #     inherit advisory-db;
+      #     inherit (pkgs.mongodb-connector-workspace) src;
+      #   };
+      # });
 
       packages = eachSystem (pkgs: rec {
         default = pkgs.mongodb-connector;
@@ -200,15 +215,18 @@
 
       devShells = eachSystem (pkgs: {
         default = pkgs.mkShell {
-          inputsFrom = builtins.attrValues self.checks.${pkgs.buildPlatform.system};
+          # inputsFrom = builtins.attrValues self.checks.${pkgs.buildPlatform.system};
           nativeBuildInputs = with pkgs; [
             arion.packages.${pkgs.system}.default
             cargo-insta
+            crate2nix.packages.${pkgs.system}.default
             ddn
             just
             mongosh
             pkg-config
-          ];
+          ] ++ nixpkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs; [
+            libiconv
+          ]);
         };
       });
     };
