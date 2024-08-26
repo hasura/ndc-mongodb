@@ -9,8 +9,10 @@
 
 mod aggregation;
 mod basic;
+mod filtering;
 mod local_relationship;
 mod native_mutation;
 mod native_query;
 mod permissions;
 mod remote_relationship;
+mod sorting;

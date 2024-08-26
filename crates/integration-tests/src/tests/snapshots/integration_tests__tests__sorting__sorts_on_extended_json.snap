@@ -1,0 +1,45 @@
+---
+source: crates/integration-tests/src/tests/sorting.rs
+expression: "graphql_query(r#\"\n                query Sorting {\n                  extendedJsonTestData(order_by: { value: Desc }) {\n                    type\n                    value\n                  }\n                }\n            \"#).run().await?"
+---
+data:
+  extendedJsonTestData:
+    - type: date
+      value:
+        $date:
+          $numberLong: "1724164680000"
+    - type: date
+      value:
+        $date:
+          $numberLong: "1637571600000"
+    - type: string
+      value: "hello, world!"
+    - type: string
+      value: foo
+    - type: long
+      value:
+        $numberLong: "8"
+    - type: long
+      value:
+        $numberLong: "7"
+    - type: int
+      value:
+        $numberInt: "6"
+    - type: int
+      value:
+        $numberInt: "5"
+    - type: double
+      value:
+        $numberDouble: "4.0"
+    - type: double
+      value:
+        $numberDouble: "3.0"
+    - type: decimal
+      value:
+        $numberDecimal: "2"
+    - type: decimal
+      value:
+        $numberDecimal: "1"
+    - type: "null"
+      value: ~
+errors: ~

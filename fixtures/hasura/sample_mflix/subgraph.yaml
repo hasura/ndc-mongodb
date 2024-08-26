@@ -1,5 +1,5 @@
 kind: Subgraph
-version: v1
+version: v2
 definition:
   generator:
     rootPath: .

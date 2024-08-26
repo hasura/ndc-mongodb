@@ -4,6 +4,14 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+### Added
+
+- Extended JSON fields now support all comparison and aggregation functions ([#99](https://github.com/hasura/ndc-mongodb/pull/99))
+
+### Fixed
+
+### Changed
+
 ## [1.1.0] - 2024-08-16
 
 - Accept predicate arguments in native mutations and native queries ([#92](https://github.com/hasura/ndc-mongodb/pull/92))
