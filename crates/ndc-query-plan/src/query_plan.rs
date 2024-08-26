@@ -246,7 +246,7 @@ pub enum Expression<T: ConnectorTypes> {
         value: ComparisonValue<T>,
     },
     Exists {
-        in_collection: ExistsInCollection,
+        in_collection: ExistsInCollection<T>,
         predicate: Option<Box<Expression<T>>>,
     },
 }
@@ -444,7 +444,7 @@ pub enum ComparisonOperatorDefinition<T: ConnectorTypes> {
 
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
-pub enum ExistsInCollection {
+pub enum ExistsInCollection<T: ConnectorTypes> {
     Related {
         /// Key of the relation in the [Query] joins map. Relationships are scoped to the sub-query
         /// that defines the relation source.
@@ -454,5 +454,11 @@ pub enum ExistsInCollection {
         /// Key of the relation in the [QueryPlan] joins map. Unrelated collections are not scoped
         /// to a sub-query, instead they are given in the root [QueryPlan].
         unrelated_collection: String,
+    },
+    NestedCollection {
+        column_name: ndc::FieldName,
+        arguments: BTreeMap<ndc::ArgumentName, Argument<T>>,
+        /// Path to a nested collection via object columns
+        field_path: Vec<ndc::FieldName>,
     },
 }

@@ -68,6 +68,28 @@ fn find_object_type<'a, S>(
     }
 }
 
+/// Given the type of a collection and a field path returns the object type of the nested object at
+/// that path.
+pub fn find_nested_collection_type<S>(
+    collection_object_type: plan::ObjectType<S>,
+    field_path: &[ndc::FieldName],
+) -> Result<plan::ObjectType<S>>
+where
+    S: Clone,
+{
+    field_path
+        .iter()
+        .try_fold(collection_object_type, |obj_type, field_name| {
+            let field_type = find_object_field(&obj_type, field_name)?.clone();
+            match field_type {
+                plan::Type::Object(t) => Ok(t),
+                _ => Err(QueryPlanError::ExpectedObject {
+                    path: field_path.iter().map(|f| f.to_string()).collect(),
+                }),
+            }
+        })
+}
+
 pub fn lookup_relationship<'a>(
     relationships: &'a BTreeMap<ndc::RelationshipName, ndc::Relationship>,
     relationship: &ndc::RelationshipName,

@@ -15,12 +15,14 @@ mod tests;
 use std::collections::VecDeque;
 
 use crate::{self as plan, type_annotated_field, ObjectType, QueryPlan, Scope};
+use helpers::find_nested_collection_type;
 use indexmap::IndexMap;
 use itertools::Itertools;
 use ndc::{ExistsInCollection, QueryRequest};
 use ndc_models as ndc;
 use query_plan_state::QueryPlanInfo;
 
+pub use self::plan_for_mutation_request::plan_for_mutation_request;
 use self::{
     helpers::{find_object_field, find_object_field_path, lookup_relationship},
     plan_for_arguments::plan_for_arguments,
@@ -28,7 +30,6 @@ use self::{
     query_plan_error::QueryPlanError,
     query_plan_state::QueryPlanState,
 };
-pub use self::plan_for_mutation_request::plan_for_mutation_request;
 
 type Result<T> = std::result::Result<T, QueryPlanError>;
 
@@ -696,6 +697,46 @@ fn plan_for_exists<T: QueryContext>(
             let in_collection = plan::ExistsInCollection::Unrelated {
                 unrelated_collection: join_key,
             };
+            Ok((in_collection, predicate))
+        }
+        ndc::ExistsInCollection::NestedCollection {
+            column_name,
+            arguments,
+            field_path,
+        } => {
+            let arguments = if arguments.is_empty() {
+                Default::default()
+            } else {
+                Err(QueryPlanError::NotImplemented(
+                    "arguments on nested fields".to_string(),
+                ))?
+            };
+
+            // To support field arguments here we need a way to look up field parameters (a map of
+            // supported argument names to types). When we have that replace the above `arguments`
+            // assignment with this one:
+            // let arguments = plan_for_arguments(plan_state, parameters, arguments)?;
+
+            let nested_collection_type =
+                find_nested_collection_type(root_collection_object_type.clone(), &field_path)?;
+
+            let in_collection = plan::ExistsInCollection::NestedCollection {
+                column_name,
+                arguments,
+                field_path,
+            };
+
+            let predicate = predicate
+                .map(|expression| {
+                    plan_for_expression(
+                        &mut nested_state,
+                        root_collection_object_type,
+                        &nested_collection_type,
+                        *expression,
+                    )
+                })
+                .transpose()?;
+
             Ok((in_collection, predicate))
         }
     }?;

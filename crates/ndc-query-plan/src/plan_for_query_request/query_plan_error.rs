@@ -26,6 +26,9 @@ pub enum QueryPlanError {
     #[error("missing arguments: {}", .0.join(", "))]
     MissingArguments(Vec<ndc::ArgumentName>),
 
+    #[error("not implemented: {}", .0)]
+    NotImplemented(String),
+
     #[error("{0}")]
     RelationshipUnification(#[from] RelationshipUnificationError),
 
