@@ -6,7 +6,7 @@ This changelog documents the changes between release versions.
 
 ### Added
 
-- Extended JSON fields no support all comparison and aggregation functions ([#99](https://github.com/hasura/ndc-mongodb/pull/99))
+- Extended JSON fields now support all comparison and aggregation functions ([#99](https://github.com/hasura/ndc-mongodb/pull/99))
 
 ### Fixed
 
