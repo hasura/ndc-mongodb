@@ -1,0 +1,10 @@
+kind: DataConnectorLink
+version: v1
+definition:
+  name: test_cases
+  url:
+    readWriteUrls:
+      read:
+        valueFromEnv: SAMPLE_MFLIX_CONNECTOR_URL
+      write:
+        valueFromEnv: SAMPLE_MFLIX_CONNECTOR_URL

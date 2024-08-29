@@ -12,6 +12,7 @@
 , otlp-endpoint ? null
 , connector-port ? "7130"
 , connector-chinook-port ? "7131"
+, connector-test-cases-port ? "7132"
 , engine-port ? "7100"
 , mongodb-port ? "27017"
 }:
@@ -41,6 +42,17 @@ in
     };
   };
 
+  connector-test-cases = import ./services/connector.nix {
+    inherit pkgs otlp-endpoint;
+    configuration-dir = ../fixtures/hasura/test_cases/connector/test_cases;
+    database-uri = "mongodb://mongodb/test_cases";
+    port = connector-test-cases-port;
+    hostPort = hostPort connector-test-cases-port;
+    service.depends_on = {
+      mongodb.condition = "service_healthy";
+    };
+  };
+
   mongodb = import ./services/mongodb.nix {
     inherit pkgs;
     port = mongodb-port;
@@ -64,6 +76,7 @@ in
     ddn-dirs = [
       ../fixtures/hasura/chinook/metadata
       ../fixtures/hasura/sample_mflix/metadata
+      ../fixtures/hasura/test_cases/metadata
       ../fixtures/hasura/common/metadata
     ];
     service.depends_on = {
