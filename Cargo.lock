@@ -454,6 +454,7 @@ dependencies = [
  "serde_yaml",
  "tokio",
  "tokio-stream",
+ "tracing",
 ]
 
 [[package]]
