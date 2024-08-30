@@ -72,6 +72,7 @@ in
     connectors = {
       chinook = "http://connector-chinook:${connector-chinook-port}";
       sample_mflix = "http://connector:${connector-port}";
+      test_cases = "http://connector-test-cases:${connector-test-cases-port}";
     };
     ddn-dirs = [
       ../fixtures/hasura/chinook/metadata

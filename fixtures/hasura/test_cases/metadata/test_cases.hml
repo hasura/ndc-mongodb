@@ -573,8 +573,46 @@ definition:
               argument_type:
                 type: named
                 name: Undefined
-      object_types: {}
-      collections: []
+      object_types:
+        weird_field_names:
+          fields:
+            $invalid.name:
+              type:
+                type: named
+                name: Int
+            $invalid.object.name:
+              type:
+                type: named
+                name: weird_field_names_$invalid.object.name
+            _id:
+              type:
+                type: named
+                name: ObjectId
+            valid_object_name:
+              type:
+                type: named
+                name: weird_field_names_valid_object_name
+        weird_field_names_$invalid.object.name:
+          fields:
+            valid_name:
+              type:
+                type: named
+                name: Int
+        weird_field_names_valid_object_name:
+          fields:
+            $invalid.nested.name:
+              type:
+                type: named
+                name: Int
+      collections:
+        - name: weird_field_names
+          arguments: {}
+          type: weird_field_names
+          uniqueness_constraints:
+            weird_field_names_id:
+              unique_columns:
+                - _id
+          foreign_keys: {}
       functions: []
       procedures: []
     capabilities:
