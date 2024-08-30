@@ -57,6 +57,14 @@ impl Configuration {
         native_queries: BTreeMap<ndc::FunctionName, serialized::NativeQuery>,
         options: ConfigurationOptions,
     ) -> anyhow::Result<Self> {
+        tracing::debug!(
+            schema = %serde_json::to_string(&schema).unwrap(),
+            ?native_mutations,
+            ?native_queries,
+            options = %serde_json::to_string(&options).unwrap(),
+            "parsing connector configuration"
+        );
+
         let object_types_iter = || merge_object_types(&schema, &native_mutations, &native_queries);
         let object_type_errors = {
             let duplicate_type_names: Vec<&ndc::TypeName> = object_types_iter()

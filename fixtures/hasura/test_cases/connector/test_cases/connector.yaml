@@ -1,8 +1,0 @@
-kind: Connector
-version: v1
-definition:
-  name: test_cases
-  subgraph: test_cases
-  source: hasura/mongodb:v0.1.0
-  context: .
-  envFile: .env
