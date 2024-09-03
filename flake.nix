@@ -11,6 +11,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    hasura-ddn-cli.url = "github:hasura/ddn-cli-nix";
+
     # Allows selecting arbitrary Rust toolchain configurations by editing
     # `rust-toolchain.toml`
     rust-overlay = {
@@ -57,6 +59,7 @@
     { self
     , nixpkgs
     , crane
+    , hasura-ddn-cli
     , rust-overlay
     , advisory-db
     , arion
@@ -102,6 +105,8 @@
           # compiled for Linux but with the same architecture as `localSystem`.
           # This is useful for building Docker images on Mac developer machines.
           pkgsCross.linux = mkPkgsLinux final.buildPlatform.system;
+
+          ddn = hasura-ddn-cli.defaultPackage.${final.system};
         })
       ];
 
@@ -202,6 +207,7 @@
           nativeBuildInputs = with pkgs; [
             arion.packages.${pkgs.system}.default
             cargo-insta
+            ddn
             just
             mongosh
             pkg-config
