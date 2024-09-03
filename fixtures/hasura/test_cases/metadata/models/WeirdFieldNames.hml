@@ -107,28 +107,25 @@ definition:
           - validObjectName
 
 ---
-kind: ObjectBooleanExpressionType
+kind: BooleanExpressionType
 version: v1
 definition:
-  name: WeirdFieldNamesBoolExp
-  objectType: WeirdFieldNames
-  dataConnectorName: test_cases
-  dataConnectorObjectType: weird_field_names
-  comparableFields:
-    - fieldName: invalidName
-      operators:
-        enableAll: true
-    - fieldName: invalidObjectName
-      operators:
-        enableAll: true
-    - fieldName: id
-      operators:
-        enableAll: true
-    - fieldName: validObjectName
-      operators:
-        enableAll: true
+  name: WeirdFieldNamesComparisonExp
+  operand:
+    object:
+      type: WeirdFieldNames
+      comparableFields:
+        - fieldName: invalidName
+          booleanExpressionType: IntComparisonExp 
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
   graphql:
-    typeName: TestCases_WeirdFieldNamesBoolExp
+    typeName: TestCases_WeirdFieldNamesComparisonExp
 
 ---
 kind: Model
@@ -139,7 +136,7 @@ definition:
   source:
     dataConnectorName: test_cases
     collection: weird_field_names
-  filterExpressionType: WeirdFieldNamesBoolExp
+  filterExpressionType: WeirdFieldNamesComparisonExp
   orderableFields:
     - fieldName: invalidName
       orderByDirections:
@@ -154,6 +151,7 @@ definition:
       orderByDirections:
         enableAll: true
   graphql:
+    filterInputTypeName: testCases_WeirdFieldNamesFilterInput
     selectMany:
       queryRootField: testCases_weirdFieldNames
     selectUniques:

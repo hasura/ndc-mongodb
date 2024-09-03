@@ -3,6 +3,7 @@ use mongodb::bson::{self, doc, Bson, Document};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    column_ref::ColumnRef,
     interface_types::MongoAgentError,
     mongo_query_plan::{Field, NestedArray, NestedField, NestedObject, QueryPlan},
     mongodb::sanitize::get_field,
@@ -32,51 +33,58 @@ impl Selection {
         } else {
             &empty_map
         };
-        let doc = from_query_request_helper(&[], fields)?;
+        let doc = from_query_request_helper(None, fields)?;
         Ok(Selection(doc))
     }
 }
 
 fn from_query_request_helper(
-    parent_columns: &[&str],
+    parent_ref: Option<ColumnRef<'_>>,
     field_selection: &IndexMap<ndc_models::FieldName, Field>,
 ) -> Result<Document, MongoAgentError> {
     field_selection
         .iter()
-        .map(|(key, value)| Ok((key.to_string(), selection_for_field(parent_columns, value)?)))
+        .map(|(key, value)| {
+            Ok((
+                key.to_string(),
+                selection_for_field(parent_ref.clone(), value)?,
+            ))
+        })
         .collect()
 }
 
 /// Wraps column reference with an `$isNull` check. That catches cases where a field is missing
 /// from a document, and substitutes a concrete null value. Otherwise the field would be omitted
 /// from query results which leads to an error in the engine.
-fn value_or_null(col_path: String) -> Bson {
-    doc! { "$ifNull": [col_path, Bson::Null] }.into()
+fn value_or_null(value_ref: Bson) -> Bson {
+    doc! { "$ifNull": [value_ref, Bson::Null] }.into()
 }
 
-fn selection_for_field(parent_columns: &[&str], field: &Field) -> Result<Bson, MongoAgentError> {
+fn selection_for_field(
+    parent_ref: Option<ColumnRef<'_>>,
+    field: &Field,
+) -> Result<Bson, MongoAgentError> {
     match field {
         Field::Column {
             column,
             fields: None,
             ..
         } => {
-            let col_path = match parent_columns {
-                [] => format!("${column}"),
-                _ => format!("${}.{}", parent_columns.join("."), column),
+            let col_ref = match parent_ref {
+                Some(r) => r.into_nested_field(column),
+                None => ColumnRef::from_field(column),
             };
-            let bson_col_path = value_or_null(col_path);
-            Ok(bson_col_path)
+            Ok(value_or_null(col_ref.into_aggregate_expression()))
         }
         Field::Column {
             column,
             fields: Some(NestedField::Object(NestedObject { fields })),
             ..
         } => {
-            let nested_parent_columns = append_to_path(parent_columns, column.as_str());
-            let nested_parent_col_path = format!("${}", nested_parent_columns.join("."));
-            let nested_selection = from_query_request_helper(&nested_parent_columns, fields)?;
-            Ok(doc! {"$cond": {"if": nested_parent_col_path, "then": nested_selection, "else": Bson::Null}}.into())
+            let nested_parent_ref = nested_ref(parent_ref, column);
+            let nested_selection =
+                from_query_request_helper(Some(nested_parent_ref.clone()), fields)?;
+            Ok(doc! {"$cond": {"if": nested_parent_ref.into_aggregate_expression(), "then": nested_selection, "else": Bson::Null}}.into())
         }
         Field::Column {
             column,
@@ -85,11 +93,7 @@ fn selection_for_field(parent_columns: &[&str], field: &Field) -> Result<Bson, M
                     fields: nested_field,
                 })),
             ..
-        } => selection_for_array(
-            &append_to_path(parent_columns, column.as_str()),
-            nested_field,
-            0,
-        ),
+        } => selection_for_array(nested_ref(parent_ref, column), nested_field, 0),
         Field::Relationship {
             relationship,
             aggregates,
@@ -161,31 +165,34 @@ fn selection_for_field(parent_columns: &[&str], field: &Field) -> Result<Bson, M
 }
 
 fn selection_for_array(
-    parent_columns: &[&str],
+    parent_ref: ColumnRef<'_>,
     field: &NestedField,
     array_nesting_level: usize,
 ) -> Result<Bson, MongoAgentError> {
     match field {
         NestedField::Object(NestedObject { fields }) => {
-            let nested_parent_col_path = format!("${}", parent_columns.join("."));
-            let mut nested_selection = from_query_request_helper(&["$this"], fields)?;
+            let array_elem_ref = ColumnRef::Expression("$$this".into());
+            let mut nested_selection = from_query_request_helper(Some(array_elem_ref), fields)?;
             for _ in 0..array_nesting_level {
                 nested_selection = doc! {"$map": {"input": "$$this", "in": nested_selection}}
             }
-            let map_expression =
-                doc! {"$map": {"input": &nested_parent_col_path, "in": nested_selection}};
-            Ok(doc! {"$cond": {"if": &nested_parent_col_path, "then": map_expression, "else": Bson::Null}}.into())
+            let map_expression = doc! {"$map": {"input": parent_ref.clone().into_aggregate_expression(), "in": nested_selection}};
+            Ok(doc! {"$cond": {"if": parent_ref.into_aggregate_expression(), "then": map_expression, "else": Bson::Null}}.into())
         }
         NestedField::Array(NestedArray {
             fields: nested_field,
-        }) => selection_for_array(parent_columns, nested_field, array_nesting_level + 1),
+        }) => selection_for_array(parent_ref, nested_field, array_nesting_level + 1),
     }
 }
-fn append_to_path<'a, 'b, 'c>(parent_columns: &'a [&'b str], column: &'c str) -> Vec<&'c str>
-where
-    'b: 'c,
-{
-    parent_columns.iter().copied().chain(Some(column)).collect()
+
+fn nested_ref<'a, 'b: 'a>(
+    parent_ref: Option<ColumnRef<'a>>,
+    column: &'b ndc_models::FieldName,
+) -> ColumnRef<'b> {
+    match parent_ref {
+        Some(r) => r.into_nested_field(column),
+        None => ColumnRef::from_field(column),
+    }
 }
 
 /// The extend implementation provides a shallow merge.
@@ -282,7 +289,16 @@ mod tests {
                         "then": {
                             "$map": {
                                 "input": "$os",
-                                "in": {"cat": { "$ifNull": ["$$this.cat", null] }}
+                                "in": {
+                                    "cat": {
+                                        "$ifNull": [{
+                                            "$getField": {
+                                                "input": "$$this",
+                                                "field": "cat"
+                                            }
+                                        }, null]
+                                    }
+                                }
                             }
                         },
                         "else": null
@@ -297,7 +313,16 @@ mod tests {
                                 "in": {
                                     "$map": {
                                         "input": "$$this",
-                                        "in": {"cat": { "$ifNull": ["$$this.cat", null] }}
+                                        "in": {
+                                            "cat": {
+                                                "$ifNull": [{
+                                                    "$getField": {
+                                                        "input": "$$this",
+                                                        "field": "cat"
+                                                    }
+                                                }, null]
+                                            }
+                                        }
                                     }
                                 }
                             }

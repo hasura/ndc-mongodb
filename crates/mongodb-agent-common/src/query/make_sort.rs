@@ -1,12 +1,8 @@
-use itertools::Itertools as _;
+use anyhow::anyhow;
 use mongodb::bson::{bson, Document};
 use ndc_models::OrderDirection;
 
-use crate::{
-    interface_types::MongoAgentError,
-    mongo_query_plan::{OrderBy, OrderByTarget},
-    mongodb::sanitize::safe_name,
-};
+use crate::{column_ref::ColumnRef, interface_types::MongoAgentError, mongo_query_plan::OrderBy};
 
 pub fn make_sort(order_by: &OrderBy) -> Result<Document, MongoAgentError> {
     let OrderBy { elements } = order_by;
@@ -19,47 +15,12 @@ pub fn make_sort(order_by: &OrderBy) -> Result<Document, MongoAgentError> {
                 OrderDirection::Asc => bson!(1),
                 OrderDirection::Desc => bson!(-1),
             };
-            match &obe.target {
-                OrderByTarget::Column {
-                    name,
-                    field_path,
-                    path,
-                } => Ok((
-                    column_ref_with_path(name, field_path.as_deref(), path)?,
-                    direction,
-                )),
-                OrderByTarget::SingleColumnAggregate {
-                    column: _,
-                    function: _,
-                    path: _,
-                    result_type: _,
-                } =>
-                // TODO: MDB-150
-                {
-                    Err(MongoAgentError::NotImplemented(
-                        "ordering by single column aggregate",
-                    ))
-                }
-                OrderByTarget::StarCountAggregate { path: _ } => Err(
-                    // TODO: MDB-151
-                    MongoAgentError::NotImplemented("ordering by star count aggregate"),
-                ),
+            let column_ref = ColumnRef::from_order_by_target(&obe.target)?;
+            match column_ref {
+                ColumnRef::MatchKey(key) => Ok((key.to_string(), direction)),
+                // TODO: NDC-176
+                ColumnRef::Expression(_) => Err(MongoAgentError::BadQuery(anyhow!("sorting by field names that contain dollar signs or dots is not yet supported."))),
             }
         })
         .collect()
-}
-
-// TODO: MDB-159 Replace use of [safe_name] with [ColumnRef].
-fn column_ref_with_path(
-    name: &ndc_models::FieldName,
-    field_path: Option<&[ndc_models::FieldName]>,
-    relation_path: &[ndc_models::RelationshipName],
-) -> Result<String, MongoAgentError> {
-    relation_path
-        .iter()
-        .map(|n| n.as_str())
-        .chain(std::iter::once(name.as_str()))
-        .chain(field_path.into_iter().flatten().map(|n| n.as_str()))
-        .map(safe_name)
-        .process_results(|mut iter| iter.join("."))
 }
