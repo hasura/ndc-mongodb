@@ -151,7 +151,6 @@ definition:
       orderByDirections:
         enableAll: true
   graphql:
-    filterInputTypeName: testCases_WeirdFieldNamesFilterInput
     selectMany:
       queryRootField: testCases_weirdFieldNames
     selectUniques:
