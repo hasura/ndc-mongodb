@@ -4,6 +4,7 @@ use ndc_models::FieldName;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    column_ref::ColumnRef,
     interface_types::MongoAgentError,
     mongo_query_plan::{Field, NestedArray, NestedField, NestedObject, QueryPlan},
     mongodb::sanitize::get_field,
@@ -282,7 +283,16 @@ mod tests {
                         "then": {
                             "$map": {
                                 "input": "$os",
-                                "in": {"cat": { "$ifNull": ["$$this.cat", null] }}
+                                "in": {
+                                    "cat": {
+                                        "$ifNull": [{
+                                            "$getField": {
+                                                "input": "$$this",
+                                                "field": "cat"
+                                            }
+                                        }, null]
+                                    }
+                                }
                             }
                         },
                         "else": null
@@ -297,7 +307,16 @@ mod tests {
                                 "in": {
                                     "$map": {
                                         "input": "$$this",
-                                        "in": {"cat": { "$ifNull": ["$$this.cat", null] }}
+                                        "in": {
+                                            "cat": {
+                                                "$ifNull": [{
+                                                    "$getField": {
+                                                        "input": "$$this",
+                                                        "field": "cat"
+                                                    }
+                                                }, null]
+                                            }
+                                        }
                                     }
                                 }
                             }
