@@ -1,29 +1,23 @@
 use std::path::Path;
 
-use anyhow::anyhow;
 use async_trait::async_trait;
 use configuration::Configuration;
+use http::StatusCode;
 use mongodb_agent_common::{
-    explain::explain_query, health::check_health, mongo_query_plan::MongoConfiguration,
+    explain::explain_query, interface_types::MongoAgentError, mongo_query_plan::MongoConfiguration,
     query::handle_query_request, state::ConnectorState,
 };
 use ndc_sdk::{
-    connector::{
-        Connector, ConnectorSetup, ExplainError, FetchMetricsError, HealthError,
-        InitializationError, MutationError, ParseError, QueryError, SchemaError,
-    },
+    connector::{self, Connector, ConnectorSetup, ErrorResponse},
     json_response::JsonResponse,
     models::{
         Capabilities, ExplainResponse, MutationRequest, MutationResponse, QueryRequest,
         QueryResponse, SchemaResponse,
     },
 };
-use serde_json::Value;
+use serde_json::json;
 use tracing::instrument;
 
-use crate::error_mapping::{
-    error_response, mongo_agent_error_to_explain_error, mongo_agent_error_to_query_error,
-};
 use crate::{capabilities::mongo_capabilities, mutation::handle_mutation_request};
 
 #[derive(Clone, Default)]
@@ -38,10 +32,16 @@ impl ConnectorSetup for MongoConnector {
     async fn parse_configuration(
         &self,
         configuration_dir: impl AsRef<Path> + Send,
-    ) -> Result<MongoConfiguration, ParseError> {
+    ) -> connector::Result<MongoConfiguration> {
         let configuration = Configuration::parse_configuration(configuration_dir)
             .await
-            .map_err(|err| ParseError::Other(err.into()))?;
+            .map_err(|err| {
+                ErrorResponse::new(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    err.to_string(),
+                    json!({}),
+                )
+            })?;
         Ok(MongoConfiguration(configuration))
     }
 
@@ -54,7 +54,7 @@ impl ConnectorSetup for MongoConnector {
         &self,
         _configuration: &MongoConfiguration,
         _metrics: &mut prometheus::Registry,
-    ) -> Result<ConnectorState, InitializationError> {
+    ) -> connector::Result<ConnectorState> {
         let state = mongodb_agent_common::state::try_init_state().await?;
         Ok(state)
     }
@@ -70,25 +70,8 @@ impl Connector for MongoConnector {
     fn fetch_metrics(
         _configuration: &Self::Configuration,
         _state: &Self::State,
-    ) -> Result<(), FetchMetricsError> {
+    ) -> connector::Result<()> {
         Ok(())
-    }
-
-    #[instrument(err, skip_all)]
-    async fn health_check(
-        _configuration: &Self::Configuration,
-        state: &Self::State,
-    ) -> Result<(), HealthError> {
-        let status = check_health(state)
-            .await
-            .map_err(|e| HealthError::Other(e.into(), Value::Object(Default::default())))?;
-        match status.as_u16() {
-            200..=299 => Ok(()),
-            s => Err(HealthError::Other(
-                anyhow!("unhealthy status: {s}").into(),
-                Value::Object(Default::default()),
-            )),
-        }
     }
 
     async fn get_capabilities() -> Capabilities {
@@ -98,7 +81,7 @@ impl Connector for MongoConnector {
     #[instrument(err, skip_all)]
     async fn get_schema(
         configuration: &Self::Configuration,
-    ) -> Result<JsonResponse<SchemaResponse>, SchemaError> {
+    ) -> connector::Result<JsonResponse<SchemaResponse>> {
         let response = crate::schema::get_schema(configuration).await?;
         Ok(response.into())
     }
@@ -108,10 +91,10 @@ impl Connector for MongoConnector {
         configuration: &Self::Configuration,
         state: &Self::State,
         request: QueryRequest,
-    ) -> Result<JsonResponse<ExplainResponse>, ExplainError> {
+    ) -> connector::Result<JsonResponse<ExplainResponse>> {
         let response = explain_query(configuration, state, request)
             .await
-            .map_err(mongo_agent_error_to_explain_error)?;
+            .map_err(map_mongo_agent_error)?;
         Ok(response.into())
     }
 
@@ -120,10 +103,12 @@ impl Connector for MongoConnector {
         _configuration: &Self::Configuration,
         _state: &Self::State,
         _request: MutationRequest,
-    ) -> Result<JsonResponse<ExplainResponse>, ExplainError> {
-        Err(ExplainError::UnsupportedOperation(error_response(
-            "Explain for mutations is not implemented yet".to_owned(),
-        )))
+    ) -> connector::Result<JsonResponse<ExplainResponse>> {
+        Err(ErrorResponse::new(
+            StatusCode::NOT_IMPLEMENTED,
+            "Explain for mutations is not implemented yet".to_string(),
+            json!({}),
+        ))
     }
 
     #[instrument(err, skip_all)]
@@ -131,8 +116,9 @@ impl Connector for MongoConnector {
         configuration: &Self::Configuration,
         state: &Self::State,
         request: MutationRequest,
-    ) -> Result<JsonResponse<MutationResponse>, MutationError> {
-        handle_mutation_request(configuration, state, request).await
+    ) -> connector::Result<JsonResponse<MutationResponse>> {
+        let response = handle_mutation_request(configuration, state, request).await?;
+        Ok(response)
     }
 
     #[instrument(name = "/query", err, skip_all, fields(internal.visibility = "user"))]
@@ -140,10 +126,19 @@ impl Connector for MongoConnector {
         configuration: &Self::Configuration,
         state: &Self::State,
         request: QueryRequest,
-    ) -> Result<JsonResponse<QueryResponse>, QueryError> {
+    ) -> connector::Result<JsonResponse<QueryResponse>> {
         let response = handle_query_request(configuration, state, request)
             .await
-            .map_err(mongo_agent_error_to_query_error)?;
+            .map_err(map_mongo_agent_error)?;
         Ok(response.into())
     }
+}
+
+fn map_mongo_agent_error(err: MongoAgentError) -> ErrorResponse {
+    let (status_code, err_response) = err.status_and_error_response();
+    let details = match err_response.details {
+        Some(details) => details.into_iter().collect(),
+        None => json!({}),
+    };
+    ErrorResponse::new(status_code, err_response.message, details)
 }

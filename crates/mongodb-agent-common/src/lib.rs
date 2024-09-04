@@ -1,7 +1,6 @@
 pub mod aggregation_function;
 pub mod comparison_function;
 pub mod explain;
-pub mod health;
 pub mod interface_types;
 pub mod mongo_query_plan;
 pub mod mongodb;

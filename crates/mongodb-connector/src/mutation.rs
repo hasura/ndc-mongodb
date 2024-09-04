@@ -17,10 +17,9 @@ use ndc_query_plan::plan_for_mutation_request;
 use ndc_sdk::{
     connector::MutationError,
     json_response::JsonResponse,
-    models::{MutationOperationResults, MutationRequest, MutationResponse},
+    models::{ErrorResponse, MutationOperationResults, MutationRequest, MutationResponse},
 };
-
-use crate::error_mapping::error_response;
+use serde_json::json;
 
 pub async fn handle_mutation_request(
     config: &MongoConfiguration,
@@ -29,10 +28,10 @@ pub async fn handle_mutation_request(
 ) -> Result<JsonResponse<MutationResponse>, MutationError> {
     tracing::debug!(?config, mutation_request = %serde_json::to_string(&mutation_request).unwrap(), "executing mutation");
     let mutation_plan = plan_for_mutation_request(config, mutation_request).map_err(|err| {
-        MutationError::UnprocessableContent(error_response(format!(
-            "error processing mutation request: {}",
-            err
-        )))
+        MutationError::UnprocessableContent(ErrorResponse {
+            message: format!("error processing mutation request: {}", err),
+            details: json!({}),
+        })
     })?;
     let database = state.database();
     let jobs = look_up_procedures(config, &mutation_plan)?;
@@ -71,12 +70,13 @@ fn look_up_procedures<'a, 'b>(
         .partition_result();
 
     if !not_found.is_empty() {
-        return Err(MutationError::UnprocessableContent(error_response(
-            format!(
+        return Err(MutationError::UnprocessableContent(ErrorResponse {
+            message: format!(
                 "request includes unknown mutations: {}",
                 not_found.join(", ")
             ),
-        )));
+            details: json!({}),
+        }));
     }
 
     Ok(procedures)
@@ -88,16 +88,22 @@ async fn execute_procedure(
     procedure: Procedure<'_>,
     requested_fields: Option<&NestedField>,
 ) -> Result<MutationOperationResults, MutationError> {
-    let (result, result_type) = procedure
-        .execute(database.clone())
-        .await
-        .map_err(|err| MutationError::UnprocessableContent(error_response(err.to_string())))?;
+    let (result, result_type) = procedure.execute(database.clone()).await.map_err(|err| {
+        MutationError::UnprocessableContent(ErrorResponse {
+            message: err.to_string(),
+            details: json!({}),
+        })
+    })?;
 
     let rewritten_result = rewrite_response(requested_fields, result.into())?;
 
     let requested_result_type = if let Some(fields) = requested_fields {
-        type_for_nested_field(&[], &result_type, fields)
-            .map_err(|err| MutationError::UnprocessableContent(error_response(err.to_string())))?
+        type_for_nested_field(&[], &result_type, fields).map_err(|err| {
+            MutationError::UnprocessableContent(ErrorResponse {
+                message: err.to_string(),
+                details: json!({}),
+            })
+        })?
     } else {
         result_type
     };
@@ -107,7 +113,12 @@ async fn execute_procedure(
         &requested_result_type,
         rewritten_result,
     )
-    .map_err(|err| MutationError::UnprocessableContent(error_response(err.to_string())))?;
+    .map_err(|err| {
+        MutationError::UnprocessableContent(ErrorResponse {
+            message: err.to_string(),
+            details: json!({}),
+        })
+    })?;
 
     Ok(MutationOperationResults::Procedure {
         result: json_result,
@@ -130,12 +141,18 @@ fn rewrite_response(
             Ok(rewrite_array(fields, values)?.into())
         }
 
-        (Some(NestedField::Object(_)), _) => Err(MutationError::UnprocessableContent(
-            error_response("expected an object".to_owned()),
-        )),
-        (Some(NestedField::Array(_)), _) => Err(MutationError::UnprocessableContent(
-            error_response("expected an array".to_owned()),
-        )),
+        (Some(NestedField::Object(_)), _) => {
+            Err(MutationError::UnprocessableContent(ErrorResponse {
+                message: "expected an object".to_owned(),
+                details: json!({}),
+            }))
+        }
+        (Some(NestedField::Array(_)), _) => {
+            Err(MutationError::UnprocessableContent(ErrorResponse {
+                message: "expected an array".to_owned(),
+                details: json!({}),
+            }))
+        }
     }
 }
 
@@ -154,15 +171,18 @@ fn rewrite_doc(
                     fields,
                 } => {
                     let orig_value = doc.remove(column.as_str()).ok_or_else(|| {
-                        MutationError::UnprocessableContent(error_response(format!(
-                            "missing expected field from response: {name}"
-                        )))
+                        MutationError::UnprocessableContent(ErrorResponse {
+                            message: format!("missing expected field from response: {name}"),
+                            details: json!({}),
+                        })
                     })?;
                     rewrite_response(fields.as_ref(), orig_value)
                 }
                 Field::Relationship { .. } => Err(MutationError::UnsupportedOperation(
-                    error_response("The MongoDB connector does not support relationship references in mutations"
-                        .to_owned()),
+                    ErrorResponse {
+                        message: "The MongoDB connector does not support relationship references in mutations".to_owned(),
+                        details: json!({}),
+                    },
                 )),
             }?;
 

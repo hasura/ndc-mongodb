@@ -48,12 +48,25 @@ pub fn make_selector(expr: &Expression) -> Result<Document> {
                 },
                 None => doc! { format!("{relationship}.0"): { "$exists": true } },
             },
+            // TODO: NDC-434 If a `predicate` is not `None` it should be applied to the unrelated
+            // collection
             ExistsInCollection::Unrelated {
                 unrelated_collection,
             } => doc! {
                 "$expr": {
                     "$ne": [format!("$$ROOT.{unrelated_collection}.0"), null]
                 }
+            },
+            ExistsInCollection::NestedCollection {
+                column_name,
+                arguments,
+                field_path,
+            } => match predicate {
+                Some(_) => todo!(),
+                // Some(predicate) => doc! {
+                //
+                // },
+                None => todo!(),
             },
         }),
         Expression::BinaryComparisonOperator {
