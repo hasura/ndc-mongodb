@@ -3,7 +3,11 @@ use std::{borrow::Cow, iter::once};
 use mongodb::bson::{doc, Bson};
 use ndc_query_plan::Scope;
 
-use crate::{mongo_query_plan::ComparisonTarget, mongodb::sanitize::is_name_safe};
+use crate::{
+    interface_types::MongoAgentError,
+    mongo_query_plan::{ComparisonTarget, OrderByTarget},
+    mongodb::sanitize::is_name_safe,
+};
 
 /// Reference to a document field, or a nested property of a document field. There are two contexts
 /// where we reference columns:
@@ -36,16 +40,56 @@ impl<'a> ColumnRef<'a> {
     /// If the given target cannot be represented as a match query key, falls back to providing an
     /// aggregation expression referencing the column.
     pub fn from_comparison_target(column: &ComparisonTarget) -> ColumnRef<'_> {
-        from_target(column)
+        from_comparison_target(column)
+    }
+
+    /// TODO: This will hopefully become infallible once MDB-150 & MDB-151 are implemented.
+    pub fn from_order_by_target(target: &OrderByTarget) -> Result<ColumnRef<'_>, MongoAgentError> {
+        from_order_by_target(target)
+    }
+
+    pub fn from_field_path<'b>(
+        field_path: impl IntoIterator<Item = &'b ndc_models::FieldName>,
+    ) -> ColumnRef<'b> {
+        from_path(
+            None,
+            field_path
+                .into_iter()
+                .map(|field_name| field_name.as_ref() as &str),
+        )
+        .unwrap()
+    }
+
+    pub fn from_field(field_name: &ndc_models::FieldName) -> ColumnRef<'_> {
+        fold_path_element(None, field_name.as_ref())
+    }
+
+    pub fn into_nested_field<'b: 'a>(self, field_name: &'b ndc_models::FieldName) -> ColumnRef<'b> {
+        fold_path_element(Some(self), field_name.as_ref())
+    }
+
+    pub fn into_aggregate_expression(self) -> Bson {
+        match self {
+            ColumnRef::MatchKey(key) => format!("${key}").into(),
+            ColumnRef::Expression(expr) => expr,
+        }
     }
 }
 
-fn from_target(column: &ComparisonTarget) -> ColumnRef<'_> {
+fn from_comparison_target(column: &ComparisonTarget) -> ColumnRef<'_> {
     match column {
+        // We exclude `path` (the relationship path) from the resulting ColumnRef because MongoDB
+        // field references are not relationship-aware. Traversing relationship references is
+        // handled upstream.
         ComparisonTarget::Column {
             name, field_path, ..
         } => {
-            let name_and_path = once(name).chain(field_path.iter().flatten());
+            let name_and_path = once(name.as_ref() as &str).chain(
+                field_path
+                    .iter()
+                    .flatten()
+                    .map(|field_name| field_name.as_ref() as &str),
+            );
             // The None case won't come up if the input to [from_target_helper] has at least
             // one element, and we know it does because we start the iterable with `name`
             from_path(None, name_and_path).unwrap()
@@ -62,13 +106,54 @@ fn from_target(column: &ComparisonTarget) -> ColumnRef<'_> {
             let init = ColumnRef::MatchKey(format!("${}", name_from_scope(scope)).into());
             // The None case won't come up if the input to [from_target_helper] has at least
             // one element, and we know it does because we start the iterable with `name`
-            let col_ref =
-                from_path(Some(init), once(name).chain(field_path.iter().flatten())).unwrap();
+            let col_ref = from_path(
+                Some(init),
+                once(name.as_ref() as &str).chain(
+                    field_path
+                        .iter()
+                        .flatten()
+                        .map(|field_name| field_name.as_ref() as &str),
+                ),
+            )
+            .unwrap();
             match col_ref {
                 // move from MatchKey to Expression because "$$ROOT" is not valid in a match key
                 ColumnRef::MatchKey(key) => ColumnRef::Expression(format!("${key}").into()),
                 e @ ColumnRef::Expression(_) => e,
             }
+        }
+    }
+}
+
+fn from_order_by_target(target: &OrderByTarget) -> Result<ColumnRef<'_>, MongoAgentError> {
+    match target {
+        // We exclude `path` (the relationship path) from the resulting ColumnRef because MongoDB
+        // field references are not relationship-aware. Traversing relationship references is
+        // handled upstream.
+        OrderByTarget::Column {
+            name, field_path, ..
+        } => {
+            let name_and_path = once(name.as_ref() as &str).chain(
+                field_path
+                    .iter()
+                    .flatten()
+                    .map(|field_name| field_name.as_ref() as &str),
+            );
+            // The None case won't come up if the input to [from_target_helper] has at least
+            // one element, and we know it does because we start the iterable with `name`
+            Ok(from_path(None, name_and_path).unwrap())
+        }
+        OrderByTarget::SingleColumnAggregate { .. } => {
+            // TODO: MDB-150
+            Err(MongoAgentError::NotImplemented(
+                "ordering by single column aggregate".into(),
+            ))
+        }
+        OrderByTarget::StarCountAggregate { .. } => {
+            // TODO: MDB-151
+            Err(MongoAgentError::NotImplemented(
+                "ordering by star count aggregate".into(),
+            ))
         }
     }
 }
@@ -82,10 +167,10 @@ pub fn name_from_scope(scope: &Scope) -> Cow<'_, str> {
 
 fn from_path<'a>(
     init: Option<ColumnRef<'a>>,
-    path: impl IntoIterator<Item = &'a ndc_models::FieldName>,
+    path: impl IntoIterator<Item = &'a str>,
 ) -> Option<ColumnRef<'a>> {
     path.into_iter().fold(init, |accum, element| {
-        Some(fold_path_element(accum, element.as_ref()))
+        Some(fold_path_element(accum, element))
     })
 }
 
@@ -140,10 +225,7 @@ fn fold_path_element<'a>(
 /// Unlike `column_ref` this expression cannot be used as a match query key - it can only be used
 /// as an expression.
 pub fn column_expression(column: &ComparisonTarget) -> Bson {
-    match ColumnRef::from_comparison_target(column) {
-        ColumnRef::MatchKey(key) => format!("${key}").into(),
-        ColumnRef::Expression(expr) => expr,
-    }
+    ColumnRef::from_comparison_target(column).into_aggregate_expression()
 }
 
 #[cfg(test)]

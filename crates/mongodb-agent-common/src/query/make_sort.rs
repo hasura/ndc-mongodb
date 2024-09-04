@@ -37,12 +37,12 @@ pub fn make_sort(order_by: &OrderBy) -> Result<Document, MongoAgentError> {
                 // TODO: MDB-150
                 {
                     Err(MongoAgentError::NotImplemented(
-                        "ordering by single column aggregate",
+                        "ordering by single column aggregate".into(),
                     ))
                 }
                 OrderByTarget::StarCountAggregate { path: _ } => Err(
                     // TODO: MDB-151
-                    MongoAgentError::NotImplemented("ordering by star count aggregate"),
+                    MongoAgentError::NotImplemented("ordering by star count aggregate".into()),
                 ),
             }
         })
