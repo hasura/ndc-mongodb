@@ -137,11 +137,11 @@
     "graphql-engine-source": {
       "flake": false,
       "locked": {
-        "lastModified": 1722615509,
-        "narHash": "sha256-LH10Tc/UWZ1uwxrw4tohmqR/uzVi53jHnr+ziuxJi8I=",
+        "lastModified": 1725482688,
+        "narHash": "sha256-O0lGe8SriKV1ScaZvJbpN7pLZa2nQfratOwilWZlJ38=",
         "owner": "hasura",
         "repo": "graphql-engine",
-        "rev": "03c85f69857ef556e9bb26f8b92e9e47317991a3",
+        "rev": "419ce34f5bc9aa121db055d5a548a3fb9a13956c",
         "type": "github"
       },
       "original": {
@@ -259,11 +259,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1722565199,
-        "narHash": "sha256-2eek4vZKsYg8jip2WQWvAOGMMboQ40DIrllpsI6AlU4=",
+        "lastModified": 1725416653,
+        "narHash": "sha256-iNBv7ILlZI6ubhW0ExYy8YgiLKUerudxY7n8R5UQK2E=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "a9cd2009fb2eeacfea785b45bdbbc33612bba1f1",
+        "rev": "e5d3f9c2f24d852cddc79716daf0f65ce8468b28",
         "type": "github"
       },
       "original": {
