@@ -1,0 +1,170 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: WeirdFieldNamesInvalidObjectName
+  fields:
+    - name: validName
+      type: Int!
+  graphql:
+    typeName: TestCases_WeirdFieldNamesInvalidObjectName
+    inputTypeName: TestCases_WeirdFieldNamesInvalidObjectNameInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: test_cases
+      dataConnectorObjectType: weird_field_names_$invalid.object.name
+      fieldMapping:
+        validName:
+          column:
+            name: valid_name
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: WeirdFieldNamesInvalidObjectName
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - validName
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: WeirdFieldNamesValidObjectName
+  fields:
+    - name: invalidNestedName
+      type: Int!
+  graphql:
+    typeName: TestCases_WeirdFieldNamesValidObjectName
+    inputTypeName: TestCases_WeirdFieldNamesValidObjectNameInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: test_cases
+      dataConnectorObjectType: weird_field_names_valid_object_name
+      fieldMapping:
+        invalidNestedName:
+          column:
+            name: $invalid.nested.name
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: WeirdFieldNamesValidObjectName
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - invalidNestedName
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: WeirdFieldNames
+  fields:
+    - name: invalidName
+      type: Int!
+    - name: invalidObjectName
+      type: WeirdFieldNamesInvalidObjectName!
+    - name: id
+      type: ObjectId!
+    - name: validObjectName
+      type: WeirdFieldNamesValidObjectName!
+  graphql:
+    typeName: TestCases_WeirdFieldNames
+    inputTypeName: TestCases_WeirdFieldNamesInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: test_cases
+      dataConnectorObjectType: weird_field_names
+      fieldMapping:
+        invalidName:
+          column:
+            name: $invalid.name
+        invalidObjectName:
+          column:
+            name: $invalid.object.name
+        id:
+          column:
+            name: _id
+        validObjectName:
+          column:
+            name: valid_object_name
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: WeirdFieldNames
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - invalidName
+          - invalidObjectName
+          - id
+          - validObjectName
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: WeirdFieldNamesComparisonExp
+  operand:
+    object:
+      type: WeirdFieldNames
+      comparableFields:
+        - fieldName: invalidName
+          booleanExpressionType: IntComparisonExp 
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: TestCases_WeirdFieldNamesComparisonExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: WeirdFieldNames
+  objectType: WeirdFieldNames
+  source:
+    dataConnectorName: test_cases
+    collection: weird_field_names
+  filterExpressionType: WeirdFieldNamesComparisonExp
+  orderableFields:
+    - fieldName: invalidName
+      orderByDirections:
+        enableAll: true
+    - fieldName: invalidObjectName
+      orderByDirections:
+        enableAll: true
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: validObjectName
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: testCases_weirdFieldNames
+    selectUniques:
+      - queryRootField: testCases_weirdFieldNamesById
+        uniqueIdentifier:
+          - id
+    orderByExpressionType: TestCases_WeirdFieldNamesOrderBy
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: WeirdFieldNames
+  permissions:
+    - role: admin
+      select:
+        filter: null

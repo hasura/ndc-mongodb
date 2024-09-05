@@ -16,12 +16,27 @@ arion up -d
 We have two subgraphs, and two connector configurations. So a lot of these
 commands are repeated for each subgraph + connector combination.
 
-Run introspection to update connector configuration:
+Run introspection to update connector configuration. To do that through the ddn
+CLI run these commands in the same directory as this README file:
 
 ```sh
 $ ddn connector introspect --connector sample_mflix/connector/sample_mflix/connector.yaml
 
 $ ddn connector introspect --connector chinook/connector/chinook/connector.yaml
+
+$ ddn connector introspect --connector test_cases/connector/test_cases/connector.yaml
+```
+
+Alternatively run `mongodb-cli-plugin` directly to use the CLI plugin version in
+this repo. The plugin binary is provided by the Nix dev shell. Use these
+commands:
+
+```sh
+$ mongodb-cli-plugin --connection-uri mongodb://localhost/sample_mflix --context-path sample_mflix/connector/ update
+
+$ mongodb-cli-plugin --connection-uri mongodb://localhost/chinook --context-path chinook/connector/ update
+
+$ mongodb-cli-plugin --connection-uri mongodb://localhost/test_cases --context-path test_cases/connector/ update
 ```
 
 Update Hasura metadata based on connector configuration
@@ -32,4 +47,6 @@ introspection):
 $ ddn connector-link update sample_mflix --subgraph sample_mflix/subgraph.yaml --env-file sample_mflix/.env.sample_mflix --add-all-resources
 
 $ ddn connector-link update chinook --subgraph chinook/subgraph.yaml --env-file chinook/.env.chinook --add-all-resources
+
+$ ddn connector-link update test_cases --subgraph test_cases/subgraph.yaml --env-file test_cases/.env.test_cases --add-all-resources
 ```

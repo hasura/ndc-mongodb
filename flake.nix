@@ -210,6 +210,7 @@
             ddn
             just
             mongosh
+            mongodb-cli-plugin
             pkg-config
           ];
         };

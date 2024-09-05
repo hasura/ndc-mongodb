@@ -1,0 +1,4 @@
+{ "_id": { "$oid": "66cf91a0ec1dfb55954378bd" }, "$invalid.name": 1, "$invalid.object.name": { "valid_name": 1 }, "valid_object_name": { "$invalid.nested.name": 1 } }
+{ "_id": { "$oid": "66cf9230ec1dfb55954378be" }, "$invalid.name": 2, "$invalid.object.name": { "valid_name": 2 }, "valid_object_name": { "$invalid.nested.name": 2 } }
+{ "_id": { "$oid": "66cf9274ec1dfb55954378bf" }, "$invalid.name": 3, "$invalid.object.name": { "valid_name": 3 }, "valid_object_name": { "$invalid.nested.name": 3 } }
+{ "_id": { "$oid": "66cf9295ec1dfb55954378c0" }, "$invalid.name": 4, "$invalid.object.name": { "valid_name": 4 }, "valid_object_name": { "$invalid.nested.name": 4 } }
