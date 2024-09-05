@@ -92,7 +92,8 @@ pub fn make_selector(expr: &Expression) -> Result<Document> {
                 field_path,
                 ..
             } => {
-                let column_ref = ColumnRef::from_field_path(once(column_name).chain(field_path));
+                let column_ref =
+                    ColumnRef::from_field_path(field_path.iter().chain(once(column_name)));
                 match (column_ref, predicate) {
                     (ColumnRef::MatchKey(key), Some(predicate)) => doc! {
                         key: {
@@ -253,7 +254,9 @@ mod tests {
 
     use crate::{
         comparison_function::ComparisonFunction,
-        mongo_query_plan::{ComparisonTarget, ComparisonValue, Expression, Type},
+        mongo_query_plan::{
+            ComparisonTarget, ComparisonValue, ExistsInCollection, Expression, Type,
+        },
         query::pipeline_for_query_request,
         test_helpers::{chinook_config, chinook_relationships},
     };
@@ -463,6 +466,76 @@ mod tests {
         ]);
 
         assert_eq!(bson::to_bson(&pipeline).unwrap(), expected_pipeline);
+        Ok(())
+    }
+
+    #[test]
+    fn compares_value_to_elements_of_array_field() -> anyhow::Result<()> {
+        let selector = make_selector(&Expression::Exists {
+            in_collection: ExistsInCollection::NestedCollection {
+                column_name: "staff".into(),
+                arguments: Default::default(),
+                field_path: Default::default(),
+            },
+            predicate: Some(Box::new(Expression::BinaryComparisonOperator {
+                column: ComparisonTarget::Column {
+                    name: "last_name".into(),
+                    field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                    field_path: Default::default(),
+                    path: Default::default(),
+                },
+                operator: ComparisonFunction::Equal,
+                value: ComparisonValue::Scalar {
+                    value: "Hughes".into(),
+                    value_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                },
+            })),
+        })?;
+
+        let expected = doc! {
+            "staff": {
+                "$elemMatch": {
+                    "last_name": { "$eq": "Hughes" }
+                }
+            }
+        };
+
+        assert_eq!(selector, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn compares_value_to_elements_of_array_field_of_nested_object() -> anyhow::Result<()> {
+        let selector = make_selector(&Expression::Exists {
+            in_collection: ExistsInCollection::NestedCollection {
+                column_name: "staff".into(),
+                arguments: Default::default(),
+                field_path: vec!["site_info".into()],
+            },
+            predicate: Some(Box::new(Expression::BinaryComparisonOperator {
+                column: ComparisonTarget::Column {
+                    name: "last_name".into(),
+                    field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                    field_path: Default::default(),
+                    path: Default::default(),
+                },
+                operator: ComparisonFunction::Equal,
+                value: ComparisonValue::Scalar {
+                    value: "Hughes".into(),
+                    value_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                },
+            })),
+        })?;
+
+        let expected = doc! {
+            "site_info.staff": {
+                "$elemMatch": {
+                    "last_name": { "$eq": "Hughes" }
+                }
+            }
+        };
+
+        assert_eq!(selector, expected);
         Ok(())
     }
 }
