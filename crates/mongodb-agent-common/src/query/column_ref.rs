@@ -1,3 +1,7 @@
+// Some of the methods here have been added to support future work - suppressing the dead code
+// check prevents warnings in the meantime.
+#![allow(dead_code)]
+
 use std::{borrow::Cow, iter::once};
 
 use mongodb::bson::{doc, Bson};
