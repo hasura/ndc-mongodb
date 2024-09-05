@@ -24,6 +24,10 @@ pub async fn execute_query_request(
     config: &MongoConfiguration,
     query_request: QueryRequest,
 ) -> Result<QueryResponse> {
+    tracing::debug!(
+        query_request = %serde_json::to_string(&query_request).unwrap(),
+        "query request"
+    );
     let query_plan = preprocess_query_request(config, query_request)?;
     let pipeline = pipeline_for_query_request(config, &query_plan)?;
     let documents = execute_query_pipeline(database, config, &query_plan, pipeline).await?;
