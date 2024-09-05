@@ -7,6 +7,7 @@ This changelog documents the changes between release versions.
 ### Added
 
 - Extended JSON fields now support all comparison and aggregation functions ([#99](https://github.com/hasura/ndc-mongodb/pull/99))
+- Updated to ndc-spec v0.1.6. This change implements the new "exists in nested collection" capability ([#101](https://github.com/hasura/ndc-mongodb/pull/101))
 
 ### Fixed
 
