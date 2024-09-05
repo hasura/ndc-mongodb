@@ -20,7 +20,7 @@ in
 
     connector = import ./services/connector.nix {
       inherit pkgs;
-      configuration-dir = ../fixtures/hasura/chinook/connector/chinook;
+      configuration-dir = ../fixtures/hasura/chinook/connector;
       database-uri = "mongodb://mongodb/chinook";
       port = connector-port;
       service.depends_on.mongodb.condition = "service_healthy";

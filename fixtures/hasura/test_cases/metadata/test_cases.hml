@@ -574,6 +574,28 @@ definition:
                 type: named
                 name: Undefined
       object_types:
+        nested_collection:
+          fields:
+            _id:
+              type:
+                type: named
+                name: ObjectId
+            institution:
+              type:
+                type: named
+                name: String
+            staff:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: nested_collection_staff
+        nested_collection_staff:
+          fields:
+            name:
+              type:
+                type: named
+                name: String
         weird_field_names:
           fields:
             $invalid.name:
@@ -605,6 +627,14 @@ definition:
                 type: named
                 name: Int
       collections:
+        - name: nested_collection
+          arguments: {}
+          type: nested_collection
+          uniqueness_constraints:
+            nested_collection_id:
+              unique_columns:
+                - _id
+          foreign_keys: {}
         - name: weird_field_names
           arguments: {}
           type: weird_field_names
@@ -616,7 +646,7 @@ definition:
       functions: []
       procedures: []
     capabilities:
-      version: 0.1.5
+      version: 0.1.6
       capabilities:
         query:
           aggregates: {}

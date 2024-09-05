@@ -5,7 +5,7 @@ use ndc_query_plan::QueryContext as _;
 use ndc_sdk::{connector, models as ndc};
 
 pub async fn get_schema(config: &MongoConfiguration) -> connector::Result<ndc::SchemaResponse> {
-    Ok(ndc::SchemaResponse {
+    let schema = ndc::SchemaResponse {
         collections: config.collections().values().cloned().collect(),
         functions: config
             .functions()
@@ -20,5 +20,7 @@ pub async fn get_schema(config: &MongoConfiguration) -> connector::Result<ndc::S
             .map(|(name, object_type)| (name.clone(), object_type.clone()))
             .collect(),
         scalar_types: SCALAR_TYPES.clone(),
-    })
+    };
+    tracing::debug!(schema = %serde_json::to_string(&schema).unwrap(), "get_schema");
+    Ok(schema)
 }

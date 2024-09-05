@@ -20,11 +20,11 @@ Run introspection to update connector configuration. To do that through the ddn
 CLI run these commands in the same directory as this README file:
 
 ```sh
-$ ddn connector introspect --connector sample_mflix/connector/sample_mflix/connector.yaml
+$ ddn connector introspect --connector sample_mflix/connector/connector.yaml
 
-$ ddn connector introspect --connector chinook/connector/chinook/connector.yaml
+$ ddn connector introspect --connector chinook/connector/connector.yaml
 
-$ ddn connector introspect --connector test_cases/connector/test_cases/connector.yaml
+$ ddn connector introspect --connector test_cases/connector/connector.yaml
 ```
 
 Alternatively run `mongodb-cli-plugin` directly to use the CLI plugin version in

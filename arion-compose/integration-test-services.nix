@@ -22,7 +22,7 @@ in
 {
   connector = import ./services/connector.nix {
     inherit pkgs otlp-endpoint;
-    configuration-dir = ../fixtures/hasura/sample_mflix/connector/sample_mflix;
+    configuration-dir = ../fixtures/hasura/sample_mflix/connector;
     database-uri = "mongodb://mongodb/sample_mflix";
     port = connector-port;
     hostPort = hostPort connector-port;
@@ -33,7 +33,7 @@ in
 
   connector-chinook = import ./services/connector.nix {
     inherit pkgs otlp-endpoint;
-    configuration-dir = ../fixtures/hasura/chinook/connector/chinook;
+    configuration-dir = ../fixtures/hasura/chinook/connector;
     database-uri = "mongodb://mongodb/chinook";
     port = connector-chinook-port;
     hostPort = hostPort connector-chinook-port;
@@ -44,7 +44,7 @@ in
 
   connector-test-cases = import ./services/connector.nix {
     inherit pkgs otlp-endpoint;
-    configuration-dir = ../fixtures/hasura/test_cases/connector/test_cases;
+    configuration-dir = ../fixtures/hasura/test_cases/connector;
     database-uri = "mongodb://mongodb/test_cases";
     port = connector-test-cases-port;
     hostPort = hostPort connector-test-cases-port;

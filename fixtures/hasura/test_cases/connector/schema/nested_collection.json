@@ -1,0 +1,40 @@
+{
+  "name": "nested_collection",
+  "collections": {
+    "nested_collection": {
+      "type": "nested_collection"
+    }
+  },
+  "objectTypes": {
+    "nested_collection": {
+      "fields": {
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        },
+        "institution": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "staff": {
+          "type": {
+            "arrayOf": {
+              "object": "nested_collection_staff"
+            }
+          }
+        }
+      }
+    },
+    "nested_collection_staff": {
+      "fields": {
+        "name": {
+          "type": {
+            "scalar": "string"
+          }
+        }
+      }
+    }
+  }
+}
