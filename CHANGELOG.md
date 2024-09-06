@@ -7,7 +7,113 @@ This changelog documents the changes between release versions.
 ### Added
 
 - Extended JSON fields now support all comparison and aggregation functions ([#99](https://github.com/hasura/ndc-mongodb/pull/99))
-- Updated to ndc-spec v0.1.6. This change implements the new "exists in nested collection" capability ([#101](https://github.com/hasura/ndc-mongodb/pull/101))
+- Update to ndc-spec v0.1.6 which allows filtering by object values in array fields ([#101](https://github.com/hasura/ndc-mongodb/pull/101))
+
+#### Filtering by values in arrays
+
+In this update you can filter by making comparisons to object values inside
+arrays. For example consider a MongoDB database with these three documents:
+
+```json
+{ "institution": "Black Mesa", "staff": [{ "name": "Freeman" }, { "name": "Calhoun" }] }
+{ "institution": "Aperture Science", "staff": [{ "name": "GLaDOS" }, { "name": "Chell" }] }
+{ "institution": "City 17", "staff": [{ "name": "Alyx" }, { "name": "Freeman" }, { "name": "Breen" }] }
+```
+
+You can now write a GraphQL query with a `where` clause that checks individual
+entries in the `staff` arrays:
+
+```graphql
+query {
+  institutions(where: { staff: { name: { _eq: "Freeman" } } }) {
+    institution
+  }
+}
+```
+
+Which produces the result:
+
+```json
+{ "data": { "institutions": [
+  { "institution": "Black Mesa" },
+  { "institution": "City 17" } 
+] } }
+```
+
+The filter selects documents where **any** element in the array passes the
+condition. If you want to select only documents where _every_ array element
+passes then negate the comparison on array element values, and also negate the
+entire predicate like this:
+
+```graphql
+query EveryElementMustMatch {
+  institutions(
+    where: { _not: { staff: { name: { _neq: "Freeman" } } } }
+  ) {
+    institution
+  }
+}
+```
+
+**Note:** It is currently only possible to filter on arrays that contain
+objects. Filtering on arrays that contain scalar values or nested arrays will
+come later.
+
+To configure DDN metadata to filter on array fields configure the
+`BooleanExpressionType` for the containing document object type to use an
+**object** boolean expression type for comparisons on the array field. The
+GraphQL Engine will transparently distribute object comparisons over array
+elements. For example the above example is configured with this boolean
+expression type for documents:
+
+```yaml
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: InstitutionComparisonExp
+  operand:
+    object:
+      type: Institution
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdComparisonExp
+        - fieldName: institution
+          booleanExpressionType: StringComparisonExp
+        - fieldName: staff
+          booleanExpressionType: InstitutionStaffComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: InstitutionComparisonExp
+```
+
+`InstitutionStaffComparisonExp` is the boolean expression type for objects
+inside the `staff` array. It looks like this:
+
+```yaml
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: InstitutionStaffComparisonExp
+  operand:
+    object:
+      type: InstitutionStaff
+      comparableFields:
+        - fieldName: name
+          booleanExpressionType: StringComparisonExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: InstitutionStaffComparisonExp
+```
 
 ### Fixed
 
