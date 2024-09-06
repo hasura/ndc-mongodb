@@ -31,3 +31,21 @@ async fn filters_on_extended_json_using_string_comparison() -> anyhow::Result<()
     );
     Ok(())
 }
+
+#[tokio::test]
+async fn filters_by_comparisons_on_elements_of_array_field() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+            query {
+              testCases_nestedCollection(where: { staff: { name: { _eq: "Freeman" } } }) {
+                institution
+              }
+            }
+            "#
+        )
+        .run()
+        .await?
+    );
+    Ok(())
+}
