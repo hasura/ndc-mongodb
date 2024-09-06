@@ -1,0 +1,9 @@
+---
+source: crates/integration-tests/src/tests/filtering.rs
+expression: "graphql_query(r#\"\n            query {\n              testCases_nestedCollection(where: { staff: { name: { _eq: \"Freeman\" } } }) {\n                institution\n              }\n            }\n            \"#).run().await?"
+---
+data:
+  testCases_nestedCollection:
+    - institution: City 17
+    - institution: Black Mesa
+errors: ~
