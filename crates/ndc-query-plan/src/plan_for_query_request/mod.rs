@@ -12,7 +12,7 @@ mod plan_test_helpers;
 #[cfg(test)]
 mod tests;
 
-use std::collections::VecDeque;
+use std::{collections::VecDeque, iter::once};
 
 use crate::{self as plan, type_annotated_field, ObjectType, QueryPlan, Scope};
 use helpers::find_nested_collection_type;
@@ -717,8 +717,14 @@ fn plan_for_exists<T: QueryContext>(
             // assignment with this one:
             // let arguments = plan_for_arguments(plan_state, parameters, arguments)?;
 
-            let nested_collection_type =
-                find_nested_collection_type(root_collection_object_type.clone(), &field_path)?;
+            let nested_collection_type = find_nested_collection_type(
+                root_collection_object_type.clone(),
+                &field_path
+                    .clone()
+                    .into_iter()
+                    .chain(once(column_name.clone()))
+                    .collect_vec(),
+            )?;
 
             let in_collection = plan::ExistsInCollection::NestedCollection {
                 column_name,

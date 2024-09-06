@@ -77,16 +77,25 @@ pub fn find_nested_collection_type<S>(
 where
     S: Clone,
 {
+    fn normalize_object_type<S>(
+        field_path: &[ndc::FieldName],
+        t: plan::Type<S>,
+    ) -> Result<plan::ObjectType<S>> {
+        match t {
+            plan::Type::Object(t) => Ok(t),
+            plan::Type::ArrayOf(t) => normalize_object_type(field_path, *t),
+            plan::Type::Nullable(t) => normalize_object_type(field_path, *t),
+            _ => Err(QueryPlanError::ExpectedObject {
+                path: field_path.iter().map(|f| f.to_string()).collect(),
+            }),
+        }
+    }
+
     field_path
         .iter()
         .try_fold(collection_object_type, |obj_type, field_name| {
             let field_type = find_object_field(&obj_type, field_name)?.clone();
-            match field_type {
-                plan::Type::Object(t) => Ok(t),
-                _ => Err(QueryPlanError::ExpectedObject {
-                    path: field_path.iter().map(|f| f.to_string()).collect(),
-                }),
-            }
+            normalize_object_type(field_path, field_type)
         })
 }
 
