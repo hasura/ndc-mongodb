@@ -23,6 +23,14 @@ definition:
   representation: ObjectId
 
 ---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: test_cases
+  dataConnectorScalarType: ObjectId
+  representation: ObjectId
+
+---
 kind: BooleanExpressionType
 version: v1
 definition:
@@ -42,6 +50,11 @@ definition:
             _eq: _eq
             _neq: _neq
         - dataConnectorName: sample_mflix
+          dataConnectorScalarType: ObjectId
+          operatorMapping:
+            _eq: _eq
+            _neq: _neq
+        - dataConnectorName: test_cases
           dataConnectorScalarType: ObjectId
           operatorMapping:
             _eq: _eq

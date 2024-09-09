@@ -11,6 +11,7 @@
 let
   connector-port = "7130";
   connector-chinook-port = "7131";
+  connector-test-cases-port = "7132";
   engine-port = "7100";
 
   services = import ./integration-test-services.nix {
@@ -26,10 +27,12 @@ in
       inherit pkgs;
       connector-url = "http://connector:${connector-port}/";
       connector-chinook-url = "http://connector-chinook:${connector-chinook-port}/";
+      connector-test-cases-url = "http://connector-test-cases:${connector-test-cases-port}/";
       engine-graphql-url = "http://engine:${engine-port}/graphql";
       service.depends_on = {
         connector.condition = "service_healthy";
         connector-chinook.condition = "service_healthy";
+        connector-test-cases.condition = "service_healthy";
         engine.condition = "service_healthy";
       };
       # Run the container as the current user so when it writes to the snapshots

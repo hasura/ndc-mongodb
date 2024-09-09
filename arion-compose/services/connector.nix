@@ -12,7 +12,7 @@
 , profile ? "dev" # Rust crate profile, usually either "dev" or "release"
 , hostPort ? null
 , command ? ["serve"]
-, configuration-dir ? ../../fixtures/hasura/sample_mflix/connector/sample_mflix
+, configuration-dir ? ../../fixtures/hasura/sample_mflix/connector
 , database-uri ? "mongodb://mongodb/sample_mflix"
 , service ? { } # additional options to customize this service configuration
 , otlp-endpoint ? null
@@ -32,16 +32,14 @@ let
       "${hostPort}:${port}" # host:container
     ];
     environment = pkgs.lib.filterAttrs (_: v: v != null) {
-      HASURA_CONFIGURATION_DIRECTORY = "/configuration";
+      HASURA_CONFIGURATION_DIRECTORY = (pkgs.lib.sources.cleanSource configuration-dir).outPath;
       HASURA_CONNECTOR_PORT = port;
       MONGODB_DATABASE_URI = database-uri;
       OTEL_SERVICE_NAME = "mongodb-connector";
       OTEL_EXPORTER_OTLP_ENDPOINT = otlp-endpoint;
       RUST_LOG = "configuration=debug,mongodb_agent_common=debug,mongodb_connector=debug,mongodb_support=debug,ndc_query_plan=debug";
     };
-    volumes = [
-      "${configuration-dir}:/configuration:ro"
-    ] ++ extra-volumes;
+    volumes = extra-volumes;
     healthcheck = {
       test = [ "CMD" "${pkgs.pkgsCross.linux.curl}/bin/curl" "-f" "http://localhost:${port}/health" ];
       start_period = "5s";

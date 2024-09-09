@@ -23,6 +23,14 @@ definition:
   representation: ExtendedJSON
 
 ---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: test_cases
+  dataConnectorScalarType: ExtendedJSON
+  representation: ExtendedJSON
+
+---
 kind: BooleanExpressionType
 version: v1
 definition:
@@ -70,6 +78,17 @@ definition:
             _lte: _lte
             _regex: _regex
             _iregex: _iregex
+        - dataConnectorName: test_cases
+          dataConnectorScalarType: ExtendedJSON
+          operatorMapping:
+            _eq: _eq
+            _neq: _neq
+            _gt: _gt
+            _gte: _gte
+            _lt: _lt
+            _lte: _lte
+            _regex: _regex
+            _iregex: _iregex
   logicalOperators:
     enable: true
   isNull:
@@ -103,6 +122,13 @@ definition:
             _min: { name: min }
             _sum: { name: sum }
         - dataConnectorName: sample_mflix
+          dataConnectorScalarType: ExtendedJSON
+          functionMapping:
+            _avg: { name: avg }
+            _max: { name: max }
+            _min: { name: min }
+            _sum: { name: sum }
+        - dataConnectorName: test_cases
           dataConnectorScalarType: ExtendedJSON
           functionMapping:
             _avg: { name: avg }

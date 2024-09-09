@@ -1,0 +1,3 @@
+{ "institution": "Black Mesa", "staff": [{ "name": "Freeman" }, { "name": "Calhoun" }] }
+{ "institution": "Aperture Science", "staff": [{ "name": "GLaDOS" }, { "name": "Chell" }] }
+{ "institution": "City 17", "staff": [{ "name": "Alyx" }, { "name": "Freeman" }, { "name": "Breen" }] }

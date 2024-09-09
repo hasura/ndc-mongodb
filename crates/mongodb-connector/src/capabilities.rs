@@ -1,5 +1,5 @@
 use ndc_sdk::models::{
-    Capabilities, LeafCapability, NestedFieldCapabilities, QueryCapabilities,
+    Capabilities, ExistsCapabilities, LeafCapability, NestedFieldCapabilities, QueryCapabilities,
     RelationshipCapabilities,
 };
 
@@ -13,6 +13,9 @@ pub fn mongo_capabilities() -> Capabilities {
                 filter_by: Some(LeafCapability {}),
                 order_by: Some(LeafCapability {}),
                 aggregates: None,
+            },
+            exists: ExistsCapabilities {
+                nested_collections: Some(LeafCapability {}),
             },
         },
         mutation: ndc_sdk::models::MutationCapabilities {

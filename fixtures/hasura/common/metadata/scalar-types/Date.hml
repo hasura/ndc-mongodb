@@ -23,6 +23,14 @@ definition:
   representation: Date
 
 ---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: test_cases
+  dataConnectorScalarType: Date
+  representation: Date
+
+---
 kind: BooleanExpressionType
 version: v1
 definition:
@@ -62,6 +70,15 @@ definition:
             _gte: _gte
             _lt: _lt
             _lte: _lte
+        - dataConnectorName: test_cases
+          dataConnectorScalarType: Date
+          operatorMapping:
+            _eq: _eq
+            _neq: _neq
+            _gt: _gt
+            _gte: _gte
+            _lt: _lt
+            _lte: _lte
   logicalOperators:
     enable: true
   isNull:
@@ -89,6 +106,11 @@ definition:
             _max: { name: max }
             _min: { name: min }
         - dataConnectorName: sample_mflix
+          dataConnectorScalarType: Date
+          functionMapping:
+            _max: { name: max }
+            _min: { name: min }
+        - dataConnectorName: test_cases
           dataConnectorScalarType: Date
           functionMapping:
             _max: { name: max }

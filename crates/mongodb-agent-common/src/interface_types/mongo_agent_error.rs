@@ -1,4 +1,7 @@
-use std::fmt::{self, Display};
+use std::{
+    borrow::Cow,
+    fmt::{self, Display},
+};
 
 use http::StatusCode;
 use mongodb::bson;
@@ -19,7 +22,7 @@ pub enum MongoAgentError {
     MongoDBDeserialization(#[from] mongodb::bson::de::Error),
     MongoDBSerialization(#[from] mongodb::bson::ser::Error),
     MongoDBSupport(#[from] mongodb_support::error::Error),
-    NotImplemented(&'static str),
+    NotImplemented(Cow<'static, str>),
     Procedure(#[from] ProcedureError),
     QueryPlan(#[from] QueryPlanError),
     ResponseSerialization(#[from] QueryResponseError),

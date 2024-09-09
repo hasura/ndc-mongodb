@@ -11,8 +11,6 @@ use crate::aggregation_function::AggregationFunction;
 use crate::comparison_function::ComparisonFunction;
 use crate::scalar_types_capabilities::SCALAR_TYPES;
 
-pub use ndc_query_plan::OrderByTarget;
-
 #[derive(Clone, Debug)]
 pub struct MongoConfiguration(pub Configuration);
 
@@ -103,7 +101,7 @@ pub type Argument = ndc_query_plan::Argument<MongoConfiguration>;
 pub type Arguments = ndc_query_plan::Arguments<MongoConfiguration>;
 pub type ComparisonTarget = ndc_query_plan::ComparisonTarget<MongoConfiguration>;
 pub type ComparisonValue = ndc_query_plan::ComparisonValue<MongoConfiguration>;
-pub type ExistsInCollection = ndc_query_plan::ExistsInCollection;
+pub type ExistsInCollection = ndc_query_plan::ExistsInCollection<MongoConfiguration>;
 pub type Expression = ndc_query_plan::Expression<MongoConfiguration>;
 pub type Field = ndc_query_plan::Field<MongoConfiguration>;
 pub type MutationOperation = ndc_query_plan::MutationOperation<MongoConfiguration>;
@@ -114,6 +112,7 @@ pub type NestedArray = ndc_query_plan::NestedArray<MongoConfiguration>;
 pub type NestedObject = ndc_query_plan::NestedObject<MongoConfiguration>;
 pub type ObjectType = ndc_query_plan::ObjectType<MongoScalarType>;
 pub type OrderBy = ndc_query_plan::OrderBy<MongoConfiguration>;
+pub type OrderByTarget = ndc_query_plan::OrderByTarget<MongoConfiguration>;
 pub type Query = ndc_query_plan::Query<MongoConfiguration>;
 pub type QueryPlan = ndc_query_plan::QueryPlan<MongoConfiguration>;
 pub type Relationship = ndc_query_plan::Relationship<MongoConfiguration>;

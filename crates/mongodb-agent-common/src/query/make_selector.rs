@@ -1,3 +1,5 @@
+use std::iter::once;
+
 use anyhow::anyhow;
 use mongodb::bson::{self, doc, Document};
 use ndc_models::UnaryComparisonOperator;
@@ -19,6 +21,34 @@ fn bson_from_scalar_value(value: &serde_json::Value, value_type: &Type) -> Resul
     json_to_bson(value_type, value.clone()).map_err(|e| MongoAgentError::BadQuery(anyhow!(e)))
 }
 
+/// Creates a "query document" that filters documents according to the given expression. Query
+/// documents are used as arguments for the `$match` aggregation stage, and for the db.find()
+/// command.
+///
+/// Query documents are distinct from "aggregation expressions". The latter are more general.
+///
+/// TODO: NDC-436 To handle complex expressions with sub-expressions that require a switch to an
+/// aggregation expression context we need to turn this into multiple functions to handle context
+/// switching. Something like this:
+///
+///   struct QueryDocument(bson::Document);
+///   struct AggregationExpression(bson::Document);
+///
+///   enum ExpressionPlan {
+///     QueryDocument(QueryDocument),
+///     AggregationExpression(AggregationExpression),
+///   }
+///
+///   fn make_query_document(expr: &Expression) -> QueryDocument;
+///   fn make_aggregate_expression(expr: &Expression) -> AggregationExpression;
+///   fn make_expression_plan(exr: &Expression) -> ExpressionPlan;
+///
+/// The idea is to change `make_selector` to `make_query_document`, and instead of making recursive
+/// calls to itself `make_query_document` would make calls to `make_expression_plan` (which would
+/// call itself recursively). If any part of the expression plan evaluates to
+/// `ExpressionPlan::AggregationExpression(_)` then the entire plan needs to be an aggregation
+/// expression, wrapped with the `$expr` query document operator at the top level. So recursion
+/// needs to be depth-first.
 pub fn make_selector(expr: &Expression) -> Result<Document> {
     match expr {
         Expression::And { expressions } => {
@@ -48,6 +78,8 @@ pub fn make_selector(expr: &Expression) -> Result<Document> {
                 },
                 None => doc! { format!("{relationship}.0"): { "$exists": true } },
             },
+            // TODO: NDC-434 If a `predicate` is not `None` it should be applied to the unrelated
+            // collection
             ExistsInCollection::Unrelated {
                 unrelated_collection,
             } => doc! {
@@ -55,6 +87,54 @@ pub fn make_selector(expr: &Expression) -> Result<Document> {
                     "$ne": [format!("$$ROOT.{unrelated_collection}.0"), null]
                 }
             },
+            ExistsInCollection::NestedCollection {
+                column_name,
+                field_path,
+                ..
+            } => {
+                let column_ref =
+                    ColumnRef::from_field_path(field_path.iter().chain(once(column_name)));
+                match (column_ref, predicate) {
+                    (ColumnRef::MatchKey(key), Some(predicate)) => doc! {
+                        key: {
+                            "$elemMatch": make_selector(predicate)?
+                        }
+                    },
+                    (ColumnRef::MatchKey(key), None) => doc! {
+                        key: {
+                            "$exists": true,
+                            "$not": { "$size": 0 },
+                        }
+                    },
+                    (ColumnRef::Expression(column_expr), Some(predicate)) => {
+                        // TODO: NDC-436 We need to be able to create a plan for `predicate` that
+                        // evaluates with the variable `$$this` as document root since that
+                        // references each array element. With reference to the plan in the
+                        // TODO comment above, this scoped predicate plan needs to be created
+                        // with `make_aggregate_expression` since we are in an aggregate
+                        // expression context at this point.
+                        let predicate_scoped_to_nested_document: Document =
+                                Err(MongoAgentError::NotImplemented(format!("currently evaluating the predicate, {predicate:?}, in a nested collection context is not implemented").into()))?;
+                        doc! {
+                            "$expr": {
+                               "$anyElementTrue": {
+                                    "$map": {
+                                        "input": column_expr,
+                                        "in": predicate_scoped_to_nested_document,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    (ColumnRef::Expression(column_expr), None) => {
+                        doc! {
+                            "$expr": {
+                                "$gt": [{ "$size": column_expr }, 0]
+                            }
+                        }
+                    }
+                }
+            }
         }),
         Expression::BinaryComparisonOperator {
             column,
@@ -95,7 +175,7 @@ fn make_binary_comparison_selector(
                 || !value_column.relationship_path().is_empty()
             {
                 return Err(MongoAgentError::NotImplemented(
-                    "binary comparisons between two fields where either field is in a related collection",
+                    "binary comparisons between two fields where either field is in a related collection".into(),
                 ));
             }
             doc! {
@@ -174,7 +254,9 @@ mod tests {
 
     use crate::{
         comparison_function::ComparisonFunction,
-        mongo_query_plan::{ComparisonTarget, ComparisonValue, Expression, Type},
+        mongo_query_plan::{
+            ComparisonTarget, ComparisonValue, ExistsInCollection, Expression, Type,
+        },
         query::pipeline_for_query_request,
         test_helpers::{chinook_config, chinook_relationships},
     };
@@ -384,6 +466,76 @@ mod tests {
         ]);
 
         assert_eq!(bson::to_bson(&pipeline).unwrap(), expected_pipeline);
+        Ok(())
+    }
+
+    #[test]
+    fn compares_value_to_elements_of_array_field() -> anyhow::Result<()> {
+        let selector = make_selector(&Expression::Exists {
+            in_collection: ExistsInCollection::NestedCollection {
+                column_name: "staff".into(),
+                arguments: Default::default(),
+                field_path: Default::default(),
+            },
+            predicate: Some(Box::new(Expression::BinaryComparisonOperator {
+                column: ComparisonTarget::Column {
+                    name: "last_name".into(),
+                    field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                    field_path: Default::default(),
+                    path: Default::default(),
+                },
+                operator: ComparisonFunction::Equal,
+                value: ComparisonValue::Scalar {
+                    value: "Hughes".into(),
+                    value_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                },
+            })),
+        })?;
+
+        let expected = doc! {
+            "staff": {
+                "$elemMatch": {
+                    "last_name": { "$eq": "Hughes" }
+                }
+            }
+        };
+
+        assert_eq!(selector, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn compares_value_to_elements_of_array_field_of_nested_object() -> anyhow::Result<()> {
+        let selector = make_selector(&Expression::Exists {
+            in_collection: ExistsInCollection::NestedCollection {
+                column_name: "staff".into(),
+                arguments: Default::default(),
+                field_path: vec!["site_info".into()],
+            },
+            predicate: Some(Box::new(Expression::BinaryComparisonOperator {
+                column: ComparisonTarget::Column {
+                    name: "last_name".into(),
+                    field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                    field_path: Default::default(),
+                    path: Default::default(),
+                },
+                operator: ComparisonFunction::Equal,
+                value: ComparisonValue::Scalar {
+                    value: "Hughes".into(),
+                    value_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                },
+            })),
+        })?;
+
+        let expected = doc! {
+            "site_info.staff": {
+                "$elemMatch": {
+                    "last_name": { "$eq": "Hughes" }
+                }
+            }
+        };
+
+        assert_eq!(selector, expected);
         Ok(())
     }
 }
