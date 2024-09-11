@@ -13,19 +13,14 @@ This connector is built using the [Rust Data Connector SDK](https://github.com/h
 - [Hasura V3 Documentation](https://hasura.io/docs/3.0/)
 
 Docs for the MongoDB data connector:
-<!-- TODO: Edit, change, delete as your wish. 
-You must have Code of Conduct, Contributing, Support and Security though -->
+
 - [Usage](https://hasura.io/docs/3.0/connectors/mongodb/)
-- [Architecture](./docs/architecture.md)
 - [Building](./docs/building.md)
 - [Development](./docs/development.md)
 - [Docker Images](./docs/docker-images.md)
 - [Code of Conduct](./docs/code-of-conduct.md)
 - [Contributing](./docs/contributing.md)
-- [Authentication](./docs/authentication.md)
-- [Debugging](./docs/debugging.md)
 - [Limitations](./docs/limitations.md)
-- [Production](./docs/production.md)
 - [Support](./docs/support.md)
 - [Security](./docs/security.md)
 

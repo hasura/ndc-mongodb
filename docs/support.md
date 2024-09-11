@@ -12,6 +12,9 @@ If you want to report a security issue, please [read this](security.md).
 
 ## Frequently Asked Questions
 
+If your question is not answered here please also check
+[limitations](./limitations.md).
+
 ### Why am I getting strings instead of numbers?
 
 MongoDB stores data in [BSON][] format which has several numeric types:
