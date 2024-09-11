@@ -1,5 +1,21 @@
+# Building the MongoDB Data Connector
 
-## Build
+## Prerequisites
+
+- [Nix][Determinate Systems Nix Installer]
+- [Docker](https://docs.docker.com/engine/install/)
+- [skopeo](https://github.com/containers/skopeo) (optional)
+
+The easiest way to set up build and development dependencies for this project is
+to use Nix. If you don't already have Nix we recommend the [Determinate Systems
+Nix Installer][] which automatically applies settings required by this project.
+
+[Determinate Systems Nix Installer]: https://github.com/DeterminateSystems/nix-installer/blob/main/README.md
+
+For more on project setup, and resources provided by the development shell see
+[development](./development.md).
+
+## Building
 
 To build the MongoDB connector run,
 
@@ -36,3 +52,7 @@ $ nix build .#docker-aarch64-linux --print-build-logs \
 
 If you don't want to install `skopeo` you can run it through Nix, `nix run
 nixpkgs#skopeo -- --insecure-policy copy docker-archive:result docker-daemon:mongo-connector:1.2.3`
+
+## Pre-build Docker Images
+
+See [docker-images](./docker-images.md)
