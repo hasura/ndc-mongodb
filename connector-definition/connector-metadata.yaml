@@ -13,3 +13,4 @@ dockerComposeWatch:
   - path: ./
     target: /etc/connector
     action: sync+restart
+documentationPage: "https://hasura.io/docs/3.0/connectors/mongodb/"
