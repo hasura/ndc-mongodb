@@ -27,7 +27,8 @@ You must have Code of Conduct, Contributing, Support and Security though -->
 - [Production](./docs/production.md)
 - [Support](./docs/support.md)
 - [Security](./docs/security.md)
-- [Edit and/or add additional relevant links]
+- [Docker Images](./docs/docker-images.md)
+- [FAQ & Troubleshooting]()
 
 ## Features
 
@@ -53,12 +54,9 @@ Below, you'll find a matrix of all supported features for the MongoDB data conne
 
 ## Before you get Started
 
-[Prerequisites or recommended steps before using the connector.]
-
 1. The [DDN CLI](https://hasura.io/docs/3.0/cli/installation) and [Docker](https://docs.docker.com/engine/install/) installed
 2. A [supergraph](https://hasura.io/docs/3.0/getting-started/init-supergraph)
 3. A [subgraph](https://hasura.io/docs/3.0/getting-started/init-subgraph)
-<!-- TODO: add anything connector-specific here -->
 
 The steps below explain how to initialize and configure a connector for local
 development on your data graph. You can learn how to deploy a connector — after
