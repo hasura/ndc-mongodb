@@ -1,6 +1,7 @@
 use futures::Stream;
 use futures_util::TryStreamExt as _;
 use mongodb::bson;
+use mongodb_support::aggregate::Pipeline;
 use ndc_models::{QueryRequest, QueryResponse};
 use ndc_query_plan::plan_for_query_request;
 use tracing::{instrument, Instrument};
@@ -9,7 +10,7 @@ use super::{pipeline::pipeline_for_query_request, response::serialize_query_resp
 use crate::{
     interface_types::MongoAgentError,
     mongo_query_plan::{MongoConfiguration, QueryPlan},
-    mongodb::{CollectionTrait as _, DatabaseTrait, Pipeline},
+    mongodb::{CollectionTrait as _, DatabaseTrait},
     query::QueryTarget,
 };
 

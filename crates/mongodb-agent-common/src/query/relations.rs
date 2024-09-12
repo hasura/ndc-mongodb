@@ -2,16 +2,13 @@ use std::collections::BTreeMap;
 
 use itertools::Itertools as _;
 use mongodb::bson::{doc, Bson, Document};
+use mongodb_support::aggregate::{Pipeline, Stage};
 use ndc_query_plan::Scope;
 
 use crate::mongo_query_plan::{MongoConfiguration, Query, QueryPlan};
 use crate::mongodb::sanitize::safe_name;
-use crate::mongodb::Pipeline;
 use crate::query::column_ref::name_from_scope;
-use crate::{
-    interface_types::MongoAgentError,
-    mongodb::{sanitize::variable, Stage},
-};
+use crate::{interface_types::MongoAgentError, mongodb::sanitize::variable};
 
 use super::pipeline::pipeline_for_non_foreach;
 use super::query_level::QueryLevel;

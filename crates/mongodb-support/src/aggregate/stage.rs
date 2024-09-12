@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use mongodb::bson;
 use serde::Serialize;
 
-use super::{accumulator::Accumulator, pipeline::Pipeline, Selection};
+use super::{Accumulator, Pipeline, Selection};
 
 /// Aggergation Pipeline Stage. This is a work-in-progress - we are adding enum variants to match
 /// MongoDB pipeline stage types as we need them in this app. For documentation on all stage types
