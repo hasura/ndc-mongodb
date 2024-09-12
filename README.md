@@ -114,7 +114,7 @@ ddn connector introspect <connector-name>
 
 Remember to use the same value for `<connector-name>` That you used in step 2.
 
-This will a tree of files that looks like this (this example is based on the
+This will create a tree of files that looks like this (this example is based on the
 [sample_mflix][] sample database):
 
 [sample_mflix]: https://www.mongodb.com/docs/atlas/sample-data/sample-mflix/
