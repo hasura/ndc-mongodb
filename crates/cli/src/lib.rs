@@ -1,8 +1,9 @@
 //! The interpretation of the commands that the CLI can handle.
 
+mod exit_codes;
 mod introspection;
 mod logging;
-mod native_query_builder;
+mod native_query;
 
 use std::path::PathBuf;
 
@@ -11,6 +12,7 @@ use clap::{Parser, Subcommand};
 // Exported for use in tests
 pub use introspection::type_from_bson;
 use mongodb_agent_common::state::ConnectorState;
+pub use native_query::native_query_from_pipeline;
 
 #[derive(Debug, Clone, Parser)]
 pub struct UpdateArgs {
@@ -29,6 +31,9 @@ pub struct UpdateArgs {
 pub enum Command {
     /// Update the configuration by introspecting the database, using the configuration options.
     Update(UpdateArgs),
+
+    #[command(subcommand)]
+    NativeQuery(native_query::Command),
 }
 
 pub struct Context {
@@ -40,6 +45,7 @@ pub struct Context {
 pub async fn run(command: Command, context: &Context) -> anyhow::Result<()> {
     match command {
         Command::Update(args) => update(context, &args).await?,
+        Command::NativeQuery(command) => native_query::run(context, command).await?,
     };
     Ok(())
 }

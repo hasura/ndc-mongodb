@@ -5,7 +5,7 @@ use ndc_models as ndc;
 use ndc_query_plan as plan;
 use plan::QueryPlanError;
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::serialized;
 
@@ -39,7 +39,7 @@ impl NativeQuery {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Hash, JsonSchema)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum NativeQueryRepresentation {
     Collection,

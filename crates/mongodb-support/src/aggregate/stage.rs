@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use mongodb::bson;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::{Accumulator, Pipeline, Selection};
 
@@ -9,7 +9,7 @@ use super::{Accumulator, Pipeline, Selection};
 /// MongoDB pipeline stage types as we need them in this app. For documentation on all stage types
 /// see,
 /// https://www.mongodb.com/docs/manual/reference/operator/aggregation-pipeline/#std-label-aggregation-pipeline-operator-reference
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum Stage {
     /// Returns literal documents from input expressions.
     ///

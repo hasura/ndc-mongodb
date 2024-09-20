@@ -1,12 +1,12 @@
 use std::{borrow::Borrow, ops::Deref};
 
 use mongodb::bson;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::stage::Stage;
 
 /// Aggregation Pipeline
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(transparent)]
 pub struct Pipeline {
     pub stages: Vec<Stage>,

@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use mongodb::bson;
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     native_query::NativeQueryRepresentation,
@@ -11,7 +11,7 @@ use crate::{
 
 /// Define an arbitrary MongoDB aggregation pipeline that can be referenced in your data graph. For
 /// details on aggregation pipelines see https://www.mongodb.com/docs/manual/core/aggregation-pipeline/
-#[derive(Clone, Debug, Deserialize, JsonSchema, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct NativeQuery {
     /// Representation may be either "collection" or "function". If you choose "collection" then
