@@ -2,6 +2,7 @@
 
 mod introspection;
 mod logging;
+mod native_query_builder;
 
 use std::path::PathBuf;
 

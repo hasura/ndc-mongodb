@@ -11,7 +11,7 @@ use crate::{
 
 /// Define an arbitrary MongoDB aggregation pipeline that can be referenced in your data graph. For
 /// details on aggregation pipelines see https://www.mongodb.com/docs/manual/core/aggregation-pipeline/
-#[derive(Clone, Debug, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct NativeQuery {
     /// Representation may be either "collection" or "function". If you choose "collection" then

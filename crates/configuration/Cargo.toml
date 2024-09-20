@@ -12,6 +12,7 @@ futures = "^0.3"
 itertools = { workspace = true }
 mongodb = { workspace = true }
 ndc-models = { workspace = true }
+ref-cast = { workspace = true }
 schemars = { workspace = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }

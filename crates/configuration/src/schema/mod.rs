@@ -1,11 +1,12 @@
 use std::collections::BTreeMap;
 
+use ref_cast::RefCast as _;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use mongodb_support::BsonScalarType;
 
-use crate::{WithName, WithNameRef};
+use crate::{MongoScalarType, WithName, WithNameRef};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -100,6 +101,30 @@ impl From<Type> for ndc_models::Type {
     }
 }
 
+impl From<ndc_models::Type> for Type {
+    fn from(t: ndc_models::Type) -> Self {
+        match t {
+            ndc_models::Type::Named { name } => {
+                let scalar_type_name = ndc_models::ScalarTypeName::ref_cast(&name);
+                match MongoScalarType::try_from(scalar_type_name) {
+                    Ok(MongoScalarType::Bson(scalar_type)) => Type::Scalar(scalar_type),
+                    Ok(MongoScalarType::ExtendedJSON) => Type::ExtendedJSON,
+                    Err(_) => Type::Object(name.to_string()),
+                }
+            }
+            ndc_models::Type::Nullable { underlying_type } => {
+                Type::Nullable(Box::new(Self::from(*underlying_type)))
+            }
+            ndc_models::Type::Array { element_type } => {
+                Type::ArrayOf(Box::new(Self::from(*element_type)))
+            }
+            ndc_models::Type::Predicate { object_type_name } => {
+                Type::Predicate { object_type_name }
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ObjectType {
@@ -139,6 +164,19 @@ impl From<ObjectType> for ndc_models::ObjectType {
     }
 }
 
+impl From<ndc_models::ObjectType> for ObjectType {
+    fn from(object_type: ndc_models::ObjectType) -> Self {
+        ObjectType {
+            description: object_type.description,
+            fields: object_type
+                .fields
+                .into_iter()
+                .map(|(name, field)| (name, field.into()))
+                .collect(),
+        }
+    }
+}
+
 /// Information about an object type field.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -166,6 +204,15 @@ impl From<ObjectField> for ndc_models::ObjectField {
             description: field.description,
             r#type: field.r#type.into(),
             arguments: BTreeMap::new(),
+        }
+    }
+}
+
+impl From<ndc_models::ObjectField> for ObjectField {
+    fn from(field: ndc_models::ObjectField) -> Self {
+        ObjectField {
+            description: field.description,
+            r#type: field.r#type.into(),
         }
     }
 }

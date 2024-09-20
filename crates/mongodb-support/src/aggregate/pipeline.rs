@@ -1,3 +1,5 @@
+use std::{borrow::Borrow, ops::Deref};
+
 use mongodb::bson;
 use serde::Serialize;
 
@@ -32,6 +34,26 @@ impl Pipeline {
     }
 }
 
+impl AsRef<[Stage]> for Pipeline {
+    fn as_ref(&self) -> &[Stage] {
+        &self.stages
+    }
+}
+
+impl Borrow<[Stage]> for Pipeline {
+    fn borrow(&self) -> &[Stage] {
+        &self.stages
+    }
+}
+
+impl Deref for Pipeline {
+    type Target = [Stage];
+
+    fn deref(&self) -> &Self::Target {
+        &self.stages
+    }
+}
+
 /// This impl allows passing a [Pipeline] as the first argument to [mongodb::Collection::aggregate].
 impl IntoIterator for Pipeline {
     type Item = bson::Document;
@@ -55,5 +77,11 @@ impl FromIterator<Stage> for Pipeline {
         Pipeline {
             stages: iter.into_iter().collect(),
         }
+    }
+}
+
+impl From<Pipeline> for Vec<bson::Document> {
+    fn from(value: Pipeline) -> Self {
+        value.into_iter().collect()
     }
 }
