@@ -42,6 +42,12 @@ impl From<Selection> for bson::Document {
     }
 }
 
+impl<'a> From<&'a Selection> for &'a bson::Document {
+    fn from(value: &'a Selection) -> Self {
+        &value.0
+    }
+}
+
 // This won't fail, but it might in the future if we add some sort of validation or parsing.
 impl TryFrom<bson::Document> for Selection {
     type Error = anyhow::Error;

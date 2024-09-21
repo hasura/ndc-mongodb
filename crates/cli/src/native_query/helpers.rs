@@ -1,4 +1,4 @@
-use configuration::{schema, Configuration};
+use configuration::Configuration;
 use ndc_models as ndc;
 
 use super::error::{Error, Result};
@@ -23,15 +23,4 @@ pub fn find_collection_object_type(
 ) -> Result<ndc::ObjectTypeName> {
     let collection = find_collection(configuration, collection_name)?;
     Ok(collection.collection_type.clone())
-}
-
-fn find_object_type<'a>(
-    configuration: &'a Configuration,
-    object_type_name: &'a ndc::ObjectTypeName,
-) -> Result<schema::ObjectType> {
-    let object_type = configuration
-        .object_types
-        .get(object_type_name)
-        .ok_or_else(|| Error::UnknownObjectType(object_type_name.to_string()))?;
-    Ok(object_type.clone().into())
 }

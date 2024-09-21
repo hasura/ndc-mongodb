@@ -1,6 +1,9 @@
+mod aggregation_expression;
 pub mod error;
 mod helpers;
 mod infer_result_type;
+mod pipeline_type_context;
+mod reference_shorthand;
 
 use std::path::{Path, PathBuf};
 use std::process::exit;
@@ -18,7 +21,7 @@ use crate::exit_codes::ExitCode;
 use crate::Context;
 
 use self::error::Result;
-use self::infer_result_type::{infer_result_type, Constraint};
+use self::infer_result_type::infer_result_type;
 
 /// Create native queries - custom MongoDB queries that integrate into your data graph
 #[derive(Clone, Debug, Subcommand)]
@@ -135,19 +138,15 @@ pub fn native_query_from_pipeline(
     let pipeline_types =
         infer_result_type(configuration, name, input_collection.as_ref(), &pipeline)?;
     // TODO: move warnings to `run` function
-    for warning in pipeline_types.warnings() {
+    for warning in pipeline_types.warnings {
         println!("warning: {warning}");
     }
-    let result_document_type = match pipeline_types.result_doc_type()? {
-        Constraint::Type(t) => t,
-        Constraint::InsufficientContext => todo!("could not infer result type"),
-    };
     Ok(NativeQuery {
         representation: Collection,
         input_collection,
         arguments: Default::default(), // TODO: infer arguments
-        result_document_type,
-        object_types: pipeline_types.object_types(),
+        result_document_type: pipeline_types.result_document_type,
+        object_types: pipeline_types.object_types,
         pipeline: pipeline.into(),
         description: None,
     })

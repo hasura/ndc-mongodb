@@ -161,5 +161,5 @@ pub fn chinook_relationships() -> BTreeMap<String, ndc_models::Relationship> {
 
 /// Configuration for a MongoDB database that resembles MongoDB's sample_mflix test data set.
 pub fn mflix_config() -> MongoConfiguration {
-    MongoConfiguration(test_helpers::mflix_config())
+    MongoConfiguration(test_helpers::configuration::mflix_config())
 }
