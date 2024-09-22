@@ -19,7 +19,7 @@ pub struct Collection {
 }
 
 /// The type of values that a column, field, or argument may take.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum Type {
     /// Any BSON value, represented as Extended JSON.

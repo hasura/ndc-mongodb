@@ -1,4 +1,5 @@
 use mongodb::bson;
+use ndc_models::{FieldName, ObjectTypeName};
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -13,8 +14,17 @@ pub enum Error {
     )]
     IncompletePipeline,
 
+    #[error("Object type, {object_type}, does not have a field named {field_name}")]
+    ObjectMissingField {
+        object_type: ObjectTypeName,
+        field_name: FieldName,
+    },
+
     #[error("Cannot infer a result type for this pipeline. But you can create a native query by writing the configuration file by hand.")]
     UnableToInferResultType,
+
+    #[error("Error parsing a string in the aggregation pipeline: {0}")]
+    UnableToParseReferenceShorthand(String),
 
     #[error("Type inference is not currently implemented for stage {stage_index} in the aggregation pipeline. Please file a bug report, and declare types for your native query by hand.\n\n{stage}")]
     UnknownAggregationStage {

@@ -186,7 +186,7 @@ mod tests {
             pipeline.clone(),
         )?;
 
-        let expected_document_type_name: ObjectTypeName = "selected_title".into();
+        let expected_document_type_name: ObjectTypeName = "selected_title_documents".into();
 
         let expected_object_types = [(
             expected_document_type_name.clone(),

@@ -1,3 +1,4 @@
+use ndc_models::FieldName;
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while1},
@@ -8,37 +9,46 @@ use nom::{
     IResult,
 };
 
+use super::error::{Error, Result};
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Reference {
     /// Reference to a variable that is substituted by the connector from GraphQL inputs before
     /// sending to MongoDB. For example, `"{{ artist_id }}`.
     NativeQueryVariable {
         name: String,
-        variable_type: Option<String>,
+        type_annotation: Option<String>,
     },
 
     /// Reference to a variable that is defined as part of the pipeline syntax. May be followed by
     /// a dot-separated path to a nested field. For example, `"$$CURRENT.foo.bar"`
     PipelineVariable {
         name: String,
-        nested_path: Vec<String>,
+        nested_path: Vec<FieldName>,
     },
 
     /// Reference to a field of the input document. May be followed by a dot-separated path to
     /// a nested field. For example, `"$tomatoes.viewer.rating"`
     InputDocumentField {
-        name: String,
-        nested_path: Vec<String>,
+        name: FieldName,
+        nested_path: Vec<FieldName>,
     },
 
     /// The expression evaluates to a string - that's all we need to know
     String,
 }
 
+pub fn parse_reference_shorthand(input: &str) -> Result<Reference> {
+    match reference_shorthand(input) {
+        Ok((_, r)) => Ok(r),
+        Err(err) => Err(Error::UnableToParseReferenceShorthand(format!("{err}"))),
+    }
+}
+
 /// Reference shorthand is a string in an aggregation expression that may evaluate to the value of
 /// a field of the input document if the string begins with $, or to a variable if it begins with
 /// $$, or may be a plain string.
-pub fn reference_shorthand(input: &str) -> IResult<&str, Reference> {
+fn reference_shorthand(input: &str) -> IResult<&str, Reference> {
     all_consuming(alt((
         native_query_variable,
         pipeline_variable,
@@ -67,13 +77,13 @@ fn native_query_variable(input: &str) -> IResult<&str, Reference> {
 
     let variable = Reference::NativeQueryVariable {
         name: name.to_string(),
-        variable_type: variable_type.map(ToString::to_string),
+        type_annotation: variable_type.map(ToString::to_string),
     };
     Ok((remaining, variable))
 }
 
 fn pipeline_variable(input: &str) -> IResult<&str, Reference> {
-    let variable_parser = preceded(tag("$$"), cut(variable_name));
+    let variable_parser = preceded(tag("$$"), cut(mongodb_variable_name));
     let (remaining, (name, path)) = pair(variable_parser, nested_path)(input)?;
     let variable = Reference::PipelineVariable {
         name: name.to_string(),
@@ -83,27 +93,27 @@ fn pipeline_variable(input: &str) -> IResult<&str, Reference> {
 }
 
 fn input_document_field(input: &str) -> IResult<&str, Reference> {
-    let field_parser = preceded(tag("$"), cut(variable_name));
+    let field_parser = preceded(tag("$"), cut(mongodb_variable_name));
     let (remaining, (name, path)) = pair(field_parser, nested_path)(input)?;
     let field = Reference::InputDocumentField {
-        name: name.to_string(),
+        name: name.into(),
         nested_path: path,
     };
     Ok((remaining, field))
 }
 
-fn variable_name(input: &str) -> IResult<&str, &str> {
+fn mongodb_variable_name(input: &str) -> IResult<&str, &str> {
     let first_char = alt((alpha1, tag("_")));
     let succeeding_char = alt((alphanumeric1, tag("_"), non_ascii1));
     recognize(pair(first_char, many0_count(succeeding_char)))(input)
 }
 
-fn nested_path(input: &str) -> IResult<&str, Vec<String>> {
+fn nested_path(input: &str) -> IResult<&str, Vec<FieldName>> {
     let component_parser = preceded(tag("."), take_while1(|c| c != '.'));
     let (remaining, components) = many0(component_parser)(input)?;
     Ok((
         remaining,
-        components.into_iter().map(ToString::to_string).collect(),
+        components.into_iter().map(|c| c.into()).collect(),
     ))
 }
 

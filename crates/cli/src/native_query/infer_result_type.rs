@@ -8,6 +8,7 @@ use ndc_models::{CollectionName, ObjectTypeName};
 use crate::introspection::{sampling::make_object_type, type_unification::unify_object_types};
 
 use super::{
+    aggregation_expression,
     error::{Error, Result},
     helpers::find_collection_object_type,
     pipeline_type_context::{PipelineTypeContext, PipelineTypes},
@@ -17,7 +18,8 @@ type ObjectTypes = BTreeMap<ObjectTypeName, ObjectType>;
 
 pub fn infer_result_type(
     configuration: &Configuration,
-    type_name_root: &str,
+    // If we have to define a new object type, use this name
+    desired_object_type_name: &str,
     input_collection: Option<&CollectionName>,
     pipeline: &Pipeline,
 ) -> Result<PipelineTypes> {
@@ -25,60 +27,69 @@ pub fn infer_result_type(
         .map(|collection_name| find_collection_object_type(configuration, collection_name))
         .transpose()?;
     let mut stages = pipeline.iter().enumerate();
-    let context = match stages.next() {
-        Some((stage_index, stage)) => infer_result_type_helper(
-            PipelineTypeContext::new(configuration, collection_doc_type, type_name_root),
-            stage_index,
-            stage,
-            stages,
-        ),
+    let mut context = PipelineTypeContext::new(configuration, collection_doc_type);
+    match stages.next() {
+        Some((stage_index, stage)) => {
+            infer_result_type_helper(&mut context, desired_object_type_name, stage_index, stage, stages)
+        }
         None => Err(Error::EmptyPipeline),
     }?;
     context.try_into()
 }
 
 pub fn infer_result_type_helper<'a, 'b>(
-    context: PipelineTypeContext<'a>,
+    context: &mut PipelineTypeContext<'a>,
+    desired_object_type_name: &str,
     stage_index: usize,
     stage: &Stage,
     mut rest: impl Iterator<Item = (usize, &'b Stage)>,
-) -> Result<PipelineTypeContext<'a>> {
-    let next_context = match stage {
+) -> Result<()> {
+    match stage {
         Stage::Documents(docs) => {
-            let object_type_name = context.unique_type_name();
-            let new_object_types = infer_type_from_documents(&object_type_name, docs);
-            context.set_stage_doc_type(object_type_name, new_object_types)
+            let document_type_name =
+                context.unique_type_name(&format!("{desired_object_type_name}_documents"));
+            let new_object_types = infer_type_from_documents(&document_type_name, docs);
+            context.set_stage_doc_type(document_type_name, new_object_types);
         }
-        Stage::Match(_) => context,
-        Stage::Sort(_) => context,
-        Stage::Limit(_) => context,
+        Stage::Match(_) => (),
+        Stage::Sort(_) => (),
+        Stage::Limit(_) => (),
         Stage::Lookup { .. } => todo!("lookup stage"),
-        Stage::Skip(_) => context,
+        Stage::Skip(_) => (),
         Stage::Group { .. } => todo!("group stage"),
         Stage::Facet(_) => todo!("facet stage"),
         Stage::Count(_) => todo!("count stage"),
         Stage::ReplaceWith(selection) => {
-            let object_type_name = context.unique_type_name();
+            let object_type_name = context.unique_type_name(desired_object_type_name);
             let selection: &Document = selection.into();
-            todo!()
+            aggregation_expression::infer_type_from_document(
+                context,
+                object_type_name.clone(),
+                selection.clone(),
+            )?;
+            context.set_stage_doc_type(object_type_name, Default::default());
         }
         Stage::Other(doc) => {
             let warning = Error::UnknownAggregationStage {
                 stage_index,
                 stage: doc.clone(),
             };
-            context.unknown_stage_doc_type(warning)
+            context.set_unknown_stage_doc_type(warning);
         }
     };
     match rest.next() {
-        Some((next_stage_index, next_stage)) => {
-            infer_result_type_helper(next_context, next_stage_index, next_stage, rest)
-        }
-        None => Ok(next_context),
+        Some((next_stage_index, next_stage)) => infer_result_type_helper(
+            context,
+            desired_object_type_name,
+            next_stage_index,
+            next_stage,
+            rest,
+        ),
+        None => Ok(()),
     }
 }
 
-fn infer_type_from_documents(
+pub fn infer_type_from_documents(
     object_type_name: &ObjectTypeName,
     documents: &[Document],
 ) -> ObjectTypes {
@@ -96,15 +107,6 @@ fn infer_type_from_documents(
         .map(|type_with_name| (type_with_name.name, type_with_name.value))
         .collect()
 }
-
-/// Filter object types from [accumulated_object_types] unless they are referenced directly or
-/// indirectly by [type_name].
-// fn prune_object_types(
-//     type_name: &ObjectTypeName,
-//     accumulated_object_types: Vec<NamedObjectType>,
-// ) -> Vec<NamedObjectType> {
-//     accumulated_object_types // TODO: more complete pruning
-// }
 
 #[cfg(test)]
 mod tests {
@@ -130,7 +132,7 @@ mod tests {
         let config = mflix_config();
         let pipeline_types = infer_result_type(&config, "documents", None, &pipeline).unwrap();
         let expected = [(
-            "documents".into(),
+            "documents_documents".into(),
             ObjectType {
                 fields: [
                     (

@@ -1,24 +1,28 @@
 use std::collections::BTreeMap;
+use std::iter::once;
 
 use configuration::schema::{ObjectField, ObjectType, Type};
 use mongodb::bson::{Bson, Document};
+use mongodb_support::BsonScalarType;
 use ndc_models::ObjectTypeName;
 
+use super::helpers::nested_field_type;
 use super::pipeline_type_context::PipelineTypeContext;
 
 use super::error::Result;
+use super::reference_shorthand::{parse_reference_shorthand, Reference};
 
-pub fn infer_type_from_replacement_doc(
-    mut context: PipelineTypeContext<'_>,
+pub fn infer_type_from_document(
+    context: &mut PipelineTypeContext<'_>,
     object_type_name: ObjectTypeName,
-    replacement_doc: Document,
-) -> Result<PipelineTypeContext<'_>> {
-    let fields = replacement_doc
+    document: Document,
+) -> Result<()> {
+    let fields = document
         .into_iter()
         .map(|(field_name, bson)| {
-            let field_object_type_name = format!("{object_type_name}_{field_name}").into();
+            let field_object_type_name = &format!("{object_type_name}_{field_name}");
             let object_field_type =
-                infer_type_from_aggregation_expression(&mut context, field_object_type_name, bson)?;
+                infer_type_from_aggregation_expression(context, field_object_type_name, bson)?;
             let object_field = ObjectField {
                 r#type: object_field_type,
                 description: None,
@@ -31,19 +35,25 @@ pub fn infer_type_from_replacement_doc(
         description: None,
     };
     context.insert_object_type(object_type_name, object_type);
-    Ok(context)
+    Ok(())
 }
 
 fn infer_type_from_aggregation_expression(
     context: &mut PipelineTypeContext<'_>,
-    type_name: ObjectTypeName,
+    desired_object_type_name: &str,
     bson: Bson,
 ) -> Result<Type> {
-    match bson {
-        Bson::Double(_) => todo!(),
-        Bson::String(string) => infer_type_from_reference_shorthand(context, type_name, string),
-        Bson::Array(_) => todo!(),
-        Bson::Document(_) => todo!(),
+    let t = match bson {
+        Bson::Double(_) => Type::Scalar(BsonScalarType::Double),
+        Bson::String(string) => {
+            infer_type_from_reference_shorthand(context, desired_object_type_name, &string)?
+        }
+        Bson::Array(_) => todo!("array type"),
+        Bson::Document(doc) => {
+            let object_type_name = context.unique_type_name(desired_object_type_name);
+            infer_type_from_document(context, object_type_name.clone(), doc)?;
+            Type::Object(object_type_name.to_string())
+        }
         Bson::Boolean(_) => todo!(),
         Bson::Null => todo!(),
         Bson::RegularExpression(_) => todo!(),
@@ -61,13 +71,28 @@ fn infer_type_from_aggregation_expression(
         Bson::MaxKey => todo!(),
         Bson::MinKey => todo!(),
         Bson::DbPointer(_) => todo!(),
-    }
+    };
+    Ok(t)
 }
 
-fn infer_type_from_reference_shorthand<'a>(
-    context: &mut PipelineTypeContext<'a>,
-    type_name: ObjectTypeName,
-    input: String,
+fn infer_type_from_reference_shorthand(
+    context: &mut PipelineTypeContext<'_>,
+    object_type_name: &str,
+    input: &str,
 ) -> Result<Type> {
-    todo!()
+    let reference = parse_reference_shorthand(&input)?;
+    let t = match reference {
+        Reference::NativeQueryVariable {
+            name,
+            type_annotation,
+        } => todo!(),
+        Reference::PipelineVariable { name, nested_path } => todo!(),
+        Reference::InputDocumentField { name, nested_path } => {
+            let doc_type = context.get_input_document_type_name()?;
+            let path = once(&name).chain(&nested_path);
+            nested_field_type(context, doc_type.to_string(), path)?
+        }
+        Reference::String => Type::Scalar(BsonScalarType::String),
+    };
+    Ok(t)
 }
