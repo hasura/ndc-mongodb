@@ -57,10 +57,10 @@ pub struct PipelineTypeContext<'a> {
 }
 
 impl PipelineTypeContext<'_> {
-    pub fn new<'a>(
-        configuration: &'a Configuration,
+    pub fn new(
+        configuration: &Configuration,
         input_collection_document_type: Option<ObjectTypeName>,
-    ) -> PipelineTypeContext<'a> {
+    ) -> PipelineTypeContext<'_> {
         PipelineTypeContext {
             configuration,
             input_doc_type: input_collection_document_type.map(|type_name| {
@@ -100,14 +100,14 @@ impl PipelineTypeContext<'_> {
 
     pub fn unique_type_name(&self, desired_type_name: &str) -> ObjectTypeName {
         let mut counter = 0;
-        let mut type_name: ObjectTypeName = format!("{desired_type_name}").into();
+        let mut type_name: ObjectTypeName = desired_type_name.into();
         while self.configuration.object_types.contains_key(&type_name)
             || self.object_types.contains_key(&type_name)
         {
             counter += 1;
             type_name = format!("{desired_type_name}_{counter}").into();
         }
-        type_name.into()
+        type_name
     }
 
     pub fn set_stage_doc_type(&mut self, type_name: ObjectTypeName, mut object_types: ObjectTypes) {
@@ -143,7 +143,7 @@ impl PipelineTypeContext<'_> {
             None => Err(Error::IncompletePipeline),
             Some(constraints) => {
                 let len = constraints.len();
-                let first_constraint = constraints.into_iter().next();
+                let first_constraint = constraints.iter().next();
                 if let (1, Some(Constraint::ConcreteType(Type::Object(t)))) =
                     (len, first_constraint)
                 {

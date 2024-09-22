@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::BTreeMap};
+use std::collections::BTreeMap;
 
 use configuration::{
     schema::{ObjectField, ObjectType, Type},
@@ -71,14 +71,18 @@ pub fn infer_result_type_helper<'a, 'b>(
         Stage::Facet(_) => todo!("facet stage"),
         Stage::Count(_) => todo!("count stage"),
         Stage::ReplaceWith(selection) => {
-            let object_type_name = context.unique_type_name(desired_object_type_name);
             let selection: &Document = selection.into();
-            aggregation_expression::infer_type_from_document(
+            let result_type = aggregation_expression::infer_type_from_aggregation_expression(
                 context,
-                object_type_name.clone(),
-                selection.clone(),
+                desired_object_type_name,
+                selection.clone().into(),
             )?;
-            context.set_stage_doc_type(object_type_name, Default::default());
+            match result_type {
+                Type::Object(object_type_name) => {
+                    context.set_stage_doc_type(object_type_name.into(), Default::default());
+                }
+                t => Err(Error::ExpectedObject { actual_type: t })?,
+            }
         }
         Stage::Unwind {
             path,
@@ -169,13 +173,13 @@ fn infer_type_from_unwind_stage(
         context: &mut PipelineTypeContext<'_>,
         ultimate_field_type: Type,
         parent_object_type: &mut ObjectType,
-        desired_object_type_name: Cow<'_, str>,
+        desired_object_type_name: &str,
         field_name: FieldName,
         mut rest: impl Iterator<Item = FieldName>,
     ) {
         match rest.next() {
             Some(next_field_name) => {
-                let object_type_name = context.unique_type_name(&desired_object_type_name);
+                let object_type_name = context.unique_type_name(desired_object_type_name);
                 let mut object_type = ObjectType {
                     fields: Default::default(),
                     description: None,
@@ -184,7 +188,7 @@ fn infer_type_from_unwind_stage(
                     context,
                     ultimate_field_type,
                     &mut object_type,
-                    format!("{desired_object_type_name}_{next_field_name}").into(),
+                    &format!("{desired_object_type_name}_{next_field_name}"),
                     next_field_name,
                     rest,
                 );
@@ -212,7 +216,7 @@ fn infer_type_from_unwind_stage(
         context,
         *field_element_type,
         &mut doc_type,
-        desired_object_type_name.into(),
+        desired_object_type_name,
         name,
         nested_path_iter,
     );
