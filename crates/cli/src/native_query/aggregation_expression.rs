@@ -45,9 +45,7 @@ fn infer_type_from_aggregation_expression(
 ) -> Result<Type> {
     let t = match bson {
         Bson::Double(_) => Type::Scalar(BsonScalarType::Double),
-        Bson::String(string) => {
-            infer_type_from_reference_shorthand(context, desired_object_type_name, &string)?
-        }
+        Bson::String(string) => infer_type_from_reference_shorthand(context, &string)?,
         Bson::Array(_) => todo!("array type"),
         Bson::Document(doc) => {
             let object_type_name = context.unique_type_name(desired_object_type_name);
@@ -75,9 +73,8 @@ fn infer_type_from_aggregation_expression(
     Ok(t)
 }
 
-fn infer_type_from_reference_shorthand(
+pub fn infer_type_from_reference_shorthand(
     context: &mut PipelineTypeContext<'_>,
-    object_type_name: &str,
     input: &str,
 ) -> Result<Type> {
     let reference = parse_reference_shorthand(&input)?;

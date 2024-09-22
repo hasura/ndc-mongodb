@@ -1,4 +1,5 @@
-use mongodb::bson;
+use configuration::schema::Type;
+use mongodb::bson::{self, Bson};
 use ndc_models::{FieldName, ObjectTypeName};
 use thiserror::Error;
 
@@ -8,6 +9,17 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     #[error("Cannot infer a result type for an empty pipeline")]
     EmptyPipeline,
+
+    #[error(
+        "Expected {reference} to reference an array, but instead it references a {referenced_type:?}"
+    )]
+    ExpectedArrayReference {
+        reference: Bson,
+        referenced_type: Type,
+    },
+
+    #[error("Expected a path for the $unwind stage")]
+    ExpectedStringPath(Bson),
 
     #[error(
         "Cannot infer a result document type for pipeline because it does not produce documents"

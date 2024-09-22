@@ -1,17 +1,24 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
-use configuration::{schema::ObjectType, Configuration};
+use configuration::{
+    schema::{ObjectField, ObjectType, Type},
+    Configuration,
+};
 use mongodb::bson::Document;
-use mongodb_support::aggregate::{Pipeline, Stage};
-use ndc_models::{CollectionName, ObjectTypeName};
+use mongodb_support::{
+    aggregate::{Pipeline, Stage},
+    BsonScalarType,
+};
+use ndc_models::{CollectionName, FieldName, ObjectTypeName};
 
 use crate::introspection::{sampling::make_object_type, type_unification::unify_object_types};
 
 use super::{
-    aggregation_expression,
+    aggregation_expression::{self, infer_type_from_reference_shorthand},
     error::{Error, Result},
     helpers::find_collection_object_type,
     pipeline_type_context::{PipelineTypeContext, PipelineTypes},
+    reference_shorthand::{parse_reference_shorthand, Reference},
 };
 
 type ObjectTypes = BTreeMap<ObjectTypeName, ObjectType>;
@@ -29,9 +36,13 @@ pub fn infer_result_type(
     let mut stages = pipeline.iter().enumerate();
     let mut context = PipelineTypeContext::new(configuration, collection_doc_type);
     match stages.next() {
-        Some((stage_index, stage)) => {
-            infer_result_type_helper(&mut context, desired_object_type_name, stage_index, stage, stages)
-        }
+        Some((stage_index, stage)) => infer_result_type_helper(
+            &mut context,
+            desired_object_type_name,
+            stage_index,
+            stage,
+            stages,
+        ),
         None => Err(Error::EmptyPipeline),
     }?;
     context.try_into()
@@ -69,6 +80,17 @@ pub fn infer_result_type_helper<'a, 'b>(
             )?;
             context.set_stage_doc_type(object_type_name, Default::default());
         }
+        Stage::Unwind {
+            path,
+            include_array_index,
+            preserve_null_and_empty_arrays,
+        } => infer_type_from_unwind_stage(
+            context,
+            desired_object_type_name,
+            path,
+            include_array_index.as_deref(),
+            *preserve_null_and_empty_arrays,
+        )?,
         Stage::Other(doc) => {
             let warning = Error::UnknownAggregationStage {
                 stage_index,
@@ -106,6 +128,99 @@ pub fn infer_type_from_documents(
         .into_iter()
         .map(|type_with_name| (type_with_name.name, type_with_name.value))
         .collect()
+}
+
+fn infer_type_from_unwind_stage(
+    context: &mut PipelineTypeContext<'_>,
+    desired_object_type_name: &str,
+    path: &str,
+    include_array_index: Option<&str>,
+    _preserve_null_and_empty_arrays: Option<bool>,
+) -> Result<()> {
+    let field_to_unwind = parse_reference_shorthand(path)?;
+    let Reference::InputDocumentField { name, nested_path } = field_to_unwind else {
+        return Err(Error::ExpectedStringPath(path.into()));
+    };
+
+    let field_type = infer_type_from_reference_shorthand(context, path)?;
+    let Type::ArrayOf(field_element_type) = field_type else {
+        return Err(Error::ExpectedArrayReference {
+            reference: path.into(),
+            referenced_type: field_type,
+        });
+    };
+
+    let nested_path_iter = nested_path.into_iter();
+
+    let mut doc_type = context.get_input_document_type()?.into_owned();
+    if let Some(index_field_name) = include_array_index {
+        doc_type.fields.insert(
+            index_field_name.into(),
+            ObjectField {
+                r#type: Type::Scalar(BsonScalarType::Long),
+                description: Some(format!("index of unwound array elements in {name}")),
+            },
+        );
+    }
+
+    // If `path` includes a nested_path then the type for the unwound field will be nested
+    // objects
+    fn build_nested_types(
+        context: &mut PipelineTypeContext<'_>,
+        ultimate_field_type: Type,
+        parent_object_type: &mut ObjectType,
+        desired_object_type_name: Cow<'_, str>,
+        field_name: FieldName,
+        mut rest: impl Iterator<Item = FieldName>,
+    ) {
+        match rest.next() {
+            Some(next_field_name) => {
+                let object_type_name = context.unique_type_name(&desired_object_type_name);
+                let mut object_type = ObjectType {
+                    fields: Default::default(),
+                    description: None,
+                };
+                build_nested_types(
+                    context,
+                    ultimate_field_type,
+                    &mut object_type,
+                    format!("{desired_object_type_name}_{next_field_name}").into(),
+                    next_field_name,
+                    rest,
+                );
+                context.insert_object_type(object_type_name.clone(), object_type);
+                parent_object_type.fields.insert(
+                    field_name,
+                    ObjectField {
+                        r#type: Type::Object(object_type_name.into()),
+                        description: None,
+                    },
+                );
+            }
+            None => {
+                parent_object_type.fields.insert(
+                    field_name,
+                    ObjectField {
+                        r#type: ultimate_field_type,
+                        description: None,
+                    },
+                );
+            }
+        }
+    }
+    build_nested_types(
+        context,
+        *field_element_type,
+        &mut doc_type,
+        desired_object_type_name.into(),
+        name,
+        nested_path_iter,
+    );
+
+    let object_type_name = context.unique_type_name(desired_object_type_name);
+    context.insert_object_type(object_type_name, doc_type);
+
+    Ok(())
 }
 
 #[cfg(test)]

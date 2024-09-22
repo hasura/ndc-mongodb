@@ -155,12 +155,12 @@ impl PipelineTypeContext<'_> {
         }
     }
 
-    // pub fn get_input_document_type(&self) -> Result<Cow<'_, ObjectType>> {
-    //     let document_type_name = self.get_input_document_type_name()?.clone().into();
-    //     Ok(self
-    //         .get_object_type(&document_type_name)
-    //         .expect("if we have an input document type name we should have the object type"))
-    // }
+    pub fn get_input_document_type(&self) -> Result<Cow<'_, ObjectType>> {
+        let document_type_name = self.get_input_document_type_name()?.into();
+        Ok(self
+            .get_object_type(&document_type_name)
+            .expect("if we have an input document type name we should have the object type"))
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

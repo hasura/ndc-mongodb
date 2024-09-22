@@ -164,7 +164,7 @@ mod tests {
     };
     use mongodb::bson::doc;
     use mongodb_support::{
-        aggregate::{Pipeline, Stage},
+        aggregate::{Accumulator, Pipeline, Selection, Stage},
         BsonScalarType,
     };
     use ndc_models::ObjectTypeName;
@@ -201,6 +201,71 @@ mod tests {
                     ),
                     (
                         "bar".into(),
+                        ObjectField {
+                            r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::Int))),
+                            description: None,
+                        },
+                    ),
+                ]
+                .into(),
+                description: None,
+            },
+        )]
+        .into();
+
+        let expected = NativeQuery {
+            representation: Collection,
+            input_collection: Some("movies".into()),
+            arguments: Default::default(),
+            result_document_type: expected_document_type_name,
+            object_types: expected_object_types,
+            pipeline: pipeline.into(),
+            description: None,
+        };
+
+        assert_eq!(native_query, expected);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn infers_native_query_from_non_trivial_pipeline() -> Result<()> {
+        let config = read_configuration().await?;
+        let pipeline = Pipeline::new(vec![
+            Stage::ReplaceWith(Selection::new(doc! {
+                "title_words": { "$split": ["$title", " "] }
+            })),
+            Stage::Unwind {
+                path: "$title_words".to_string(),
+                include_array_index: None,
+                preserve_null_and_empty_arrays: None,
+            },
+            Stage::Group {
+                key_expression: "$title_words".into(),
+                accumulators: [("title_count".into(), Accumulator::Count)].into(),
+            },
+        ]);
+        let native_query = native_query_from_pipeline(
+            &config,
+            "title_word_frequency",
+            Some("movies".into()),
+            pipeline.clone(),
+        )?;
+
+        let expected_document_type_name: ObjectTypeName = "title_word_frequency".into();
+
+        let expected_object_types = [(
+            expected_document_type_name.clone(),
+            ObjectType {
+                fields: [
+                    (
+                        "_id".into(),
+                        ObjectField {
+                            r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::String))),
+                            description: None,
+                        },
+                    ),
+                    (
+                        "title_count".into(),
                         ObjectField {
                             r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::Int))),
                             description: None,
