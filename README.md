@@ -1,180 +1,188 @@
-# Hasura MongoDB Connector
+# Hasura MongoDB Data Connector
 
-This repo provides a service that connects [Hasura v3][] to MongoDB databases.
-Supports MongoDB 6 or later.
+[![Docs](https://img.shields.io/badge/docs-v3.x-brightgreen.svg?style=flat)](https://hasura.io/docs/3.0/connectors/mongodb/)
+[![ndc-hub](https://img.shields.io/badge/ndc--hub-postgres-blue.svg?style=flat)](https://hasura.io/connectors/mongodb)
+[![License](https://img.shields.io/badge/license-Apache--2.0-purple.svg?style=flat)](LICENSE.txt)
 
-[Hasura v3]: https://hasura.io/
+This Hasura data connector connects MongoDB to your data graph giving you an
+instant GraphQL API to access your MongoDB data. Supports MongoDB 6 or later.
 
-## Docker Images
+This connector is built using the [Rust Data Connector SDK](https://github.com/hasura/ndc-hub#rusk-sdk) and implements the [Data Connector Spec](https://github.com/hasura/ndc-spec).
 
-The MongoDB connector is available from the [Hasura connectors directory][].
-There are also Docker images available at:
+- [See the listing in the Hasura Hub](https://hasura.io/connectors/mongodb)
+- [Hasura V3 Documentation](https://hasura.io/docs/3.0/)
 
-https://github.com/hasura/ndc-mongodb/pkgs/container/ndc-mongodb
+Docs for the MongoDB data connector:
 
-The published Docker images are multi-arch, supporting amd64 and arm64 Linux.
+- [Usage](https://hasura.io/docs/3.0/connectors/mongodb/)
+- [Building](./docs/building.md)
+- [Development](./docs/development.md)
+- [Docker Images](./docs/docker-images.md)
+- [Code of Conduct](./docs/code-of-conduct.md)
+- [Contributing](./docs/contributing.md)
+- [Limitations](./docs/limitations.md)
+- [Support](./docs/support.md)
+- [Security](./docs/security.md)
 
-[Hasura connectors directory]: https://hasura.io/connectors/mongodb
+## Features
 
-## Build Requirements
+Below, you'll find a matrix of all supported features for the MongoDB data connector:
 
-The easiest way to set up build and development dependencies for this project is
-to use Nix. If you don't already have Nix we recommend the [Determinate Systems
-Nix Installer][] which automatically applies settings required by this project.
+| Feature                                         | Supported | Notes |
+| ----------------------------------------------- | --------- | ----- |
+| Native Queries + Logical Models                 | ✅        |       |
+| Simple Object Query                             | ✅        |       |
+| Filter / Search                                 | ✅        |       |
+| Filter by fields of Nested Objects              | ✅        |       |
+| Filter by values in Nested Arrays               | ✅        |       |
+| Simple Aggregation                              | ✅        |       |
+| Aggregate fields of Nested Objects              | ❌        |       |
+| Aggregate values of Nested Arrays               | ❌        |       |
+| Sort                                            | ✅        |       |
+| Sorty by fields of Nested Objects               | ❌        |       |
+| Paginate                                        | ✅        |       |
+| Collection Relationships                        | ✅        |       |
+| Remote Relationships                            | ✅        |       |
+| Relationships Keyed by Fields of Nested Objects | ❌        |       |
+| Mutations                                       | ✅        | Provided by custom [Native Mutations](TODO) - predefined basic mutations are also planned |
 
-[Determinate Systems Nix Installer]: https://github.com/DeterminateSystems/nix-installer/blob/main/README.md
+## Before you get Started
 
-If you prefer to manage dependencies yourself you will need,
+1. The [DDN CLI](https://hasura.io/docs/3.0/cli/installation) and [Docker](https://docs.docker.com/engine/install/) installed
+2. A [supergraph](https://hasura.io/docs/3.0/getting-started/init-supergraph)
+3. A [subgraph](https://hasura.io/docs/3.0/getting-started/init-subgraph)
 
-* Rust via Rustup
-* MongoDB `>= 6`
-* OpenSSL development files
+The steps below explain how to initialize and configure a connector for local
+development on your data graph. You can learn how to deploy a connector — after
+it's been configured
+— [here](https://hasura.io/docs/3.0/getting-started/deployment/deploy-a-connector).
 
-## Quickstart
+For instructions on local development on the MongoDB connector itself see
+[development.md](development.md).
 
-To run everything you need run this command to start services in Docker
-containers:
+## Using the MongoDB connector
 
-```sh
-$ just up
+### Step 1: Authenticate your CLI session
+
+```bash
+ddn auth login
 ```
 
-Next access the GraphQL interface at http://localhost:7100/
+### Step 2: Configure the connector
 
-If you are using the development shell (see below) the `just` command will be
-provided automatically.
+Once you have an initialized supergraph and subgraph, run the initialization command in interactive mode while 
+providing a name for the connector in the prompt:
 
-Run the above command again to restart after making code changes.
-
-## Build
-
-To build the MongoDB connector run,
-
-```sh
-$ nix build --print-build-logs && cp result/bin/mongodb-connector <dest>
+```bash
+ddn connector init <connector-name> -i
 ```
 
-To cross-compile statically-linked binaries for x86_64 or ARM for Linux run,
+`<connector-name>` may be any name you choose for your particular project.
 
-```sh
-$ nix build .#mongo-connector-x86_64-linux --print-build-logs && cp result/bin/mongodb-connector <dest>
-$ nix build .#mongo-connector-aarch64-linux --print-build-logs && cp result/bin/mongodb-connector <dest>
+#### Step 2.1: Choose the hasura/mongodb from the list
+
+#### Step 2.2: Choose a port for the connector
+
+The CLI will ask for a specific port to run the connector on. Choose a port that is not already in use or use the 
+default suggested port.
+
+#### Step 2.3: Provide env vars for the connector
+
+| Name                   | Description                                                          |
+|------------------------|----------------------------------------------------------------------|
+| `MONGODB_DATABASE_URI` | Connection URI for the MongoDB database to connect - see notes below |
+
+`MONGODB_DATABASE_URI` is a string with your database' hostname, login
+credentials, and database name. A simple example is
+`mongodb://admin@pass:localhost/my_database`. If you are using a hosted database
+on MongoDB Atlas you can get the URI from the "Data Services" tab in the project
+dashboard:
+
+- open the "Data Services" tab
+- click "Get connection string"
+- you will see a 3-step dialog - ignore all 3 steps, you don't need to change anything
+- copy the string that begins with `mongodb+srv://`
+  
+## Step 3: Introspect the connector
+
+Set up configuration for the connector with this command. This will introspect
+your database to infer a schema with types for your data.
+
+```bash
+ddn connector introspect <connector-name>
 ```
 
-The Nix configuration outputs Docker images in `.tar.gz` files. You can use
-`docker load -i` to install these to the local machine's docker daemon. But it
-may be more helpful to use `skopeo` for this purpose so that you can apply
-a chosen tag, or override the image name.
+Remember to use the same value for `<connector-name>` That you used in step 2.
 
-To build and install a Docker image locally (you can change
-`mongodb-connector:1.2.3` to whatever image name and tag you prefer),
+This will create a tree of files that looks like this (this example is based on the
+[sample_mflix][] sample database):
 
-```sh
-$ nix build .#docker --print-build-logs \
-  && skopeo --insecure-policy copy docker-archive:result docker-daemon:mongo-connector:1.2.3
+[sample_mflix]: https://www.mongodb.com/docs/atlas/sample-data/sample-mflix/
+
+```
+app/connector
+└── <connector-name>
+   ├── compose.yaml        -- defines a docker service for the connector
+   ├── connector.yaml      -- defines connector version to fetch from hub, subgraph, env var mapping
+   ├── configuration.json  -- options for configuring the connector
+   ├── schema              -- inferred types for collection documents - one file per collection
+   │  ├── comments.json
+   │  ├── movies.json
+   │  ├── sessions.json
+   │  ├── theaters.json
+   │  └── users.json
+   ├── native_mutations    -- custom mongodb commands to appear in your data graph
+   │  └── your_mutation.json
+   └── native_queries      -- custom mongodb aggregation pipelines to appear in your data graph
+      └── your_query.json
 ```
 
-To build a Docker image with a cross-compiled ARM binary,
+The `native_mutations` and `native_queries` directories will not be created
+automatically - create those directories as needed.
 
-```sh
-$ nix build .#docker-aarch64-linux --print-build-logs \
-  && skopeo --insecure-policy copy docker-archive:result docker-daemon:mongo-connector:1.2.3
+Feel free to edit these files to change options, or to make manual tweaks to
+inferred schema types. If inferred types do not look accurate you can edit
+`configuration.json`, change `sampleSize` to a larger number to randomly sample
+more collection documents, and run the `introspect` command again.
+
+## Step 4: Add your resources
+
+This command will query the MongoDB connector to produce DDN metadata that
+declares resources provided by the connector in your data graph.
+
+```bash
+ddn connector-link add-resources <connector-name>
 ```
 
-If you don't want to install `skopeo` you can run it through Nix, `nix run
-nixpkgs#skopeo -- --insecure-policy copy docker-archive:result docker-daemon:mongo-connector:1.2.3`
+The connector must be running before you run this command! If you have not
+already done so you can run the connector with `ddn run docker-start`.
 
+If you have changed the configuration described in Step 3 it is important to
+restart the connector. Running `ddn run docker-start` again will restart the
+connector if configuration has changed.
 
-## Developing
+This will create and update DDN metadata files. Once again this example is based
+on the [sample_mflix][] data set:
 
-### The development shell
-
-This project uses a development shell configured in `flake.nix` that automatically
-loads specific version of Rust along with all other project dependencies. The
-simplest way to start a development shell is with this command:
-
-```sh
-$ nix develop
+```
+app/metadata
+├── mongodb.hml        -- DataConnectorLink has connector connection details & database schema
+├── mongodb-types.hml  -- maps connector scalar types to GraphQL scalar types
+├── Comments.hml       -- The remaining files map database collections to GraphQL object types
+├── Movies.hml
+├── Sessions.hml
+├── Theaters.hml
+└── Users.hml
 ```
 
-If you are going to be doing a lot of work on this project it can be more
-convenient to set up [direnv][] which automatically links project dependencies
-in your shell when you cd to the project directory, and automatically reverses
-all shell modifications when you navigate to another directory. You can also set
-up direnv integration in your editor to get your editor LSP to use the same
-version of Rust that the project uses.
+## Documentation
 
-[direnv]: https://direnv.net/
+View the full documentation for the MongoDB connector [here](https://hasura.io/docs/3.0/connectors/mongodb/).
 
-### Running the Connector During Development
+## Contributing
 
-There is a `justfile` for getting started quickly. You can use its recipes to
-run relevant services locally including the MongoDB connector itself, a MongoDB
-database server, and the Hasura GraphQL Engine. Use these commands:
-
-```sh
-just up           # start services; run this again to restart after making code changes
-just down         # stop services
-just down-volumes # stop services, and remove MongoDB database volume
-just logs         # see service logs
-just test         # run unit and integration tests
-just              # list available recipes
-```
-
-Integration tests run in an independent set of ephemeral docker containers.
-
-The `just` command is provided automatically if you are using the development
-shell. Or you can install it yourself.
-
-The `justfile` delegates to arion which is a frontend for docker-compose that
-adds a layer of convenience where it can easily load agent code changes. If you
-are using the devShell you can run `arion` commands directly. They mostly work
-just like `docker-compose` commands:
-
-To start all services run:
-
-    $ arion up -d
-
-To recompile and restart the connector after code changes run:
-
-    $ arion up -d connector
-
-The arion configuration runs these services:
-
-- connector: the MongoDB data connector agent defined in this repo (port 7130)
-- mongodb
-- Hasura GraphQL Engine
-- a stubbed authentication server
-- jaeger to collect logs (see UI at http://localhost:16686/)
-
-Connect to the HGE GraphiQL UI at http://localhost:7100/
-
-Instead of a `docker-compose.yaml` configuration is found in `arion-compose.nix`.
-
-### Working with Test Data
-
-The arion configuration in the previous section preloads MongoDB with test data.
-There is corresponding OpenDDN configuration in the `fixtures/hasura/`
-directory.
-
-Preloaded databases are populated by scripts in `fixtures/mongodb/`. Any `.js`
-or `.sh` scripts added to this directory will be run when the mongodb service is
-run from a fresh state. Note that you will have to remove any existing docker
-volume to get to a fresh state. Using arion you can remove volumes by running
-`arion down --volumes`.
-
-### Running with a different MongoDB version
-
-Override the MongoDB version that arion runs by assigning a Docker image name to
-the environment variable `MONGODB_IMAGE`. For example,
-
-    $ arion down --volumes # delete potentially-incompatible MongoDB data
-    $ MONGODB_IMAGE=mongo:6 arion up -d
-
-Or run integration tests against a specific MongoDB version,
-
-    $ MONGODB_IMAGE=mongo:6 just test-integration
+Check out our [contributing guide](./docs/contributing.md) for more details.
 
 ## License
 
-The Hasura MongoDB Connector is available under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) (Apache-2.0).
+The MongoDB connector is available under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
