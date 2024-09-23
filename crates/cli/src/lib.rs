@@ -11,7 +11,7 @@ use clap::{Parser, Subcommand};
 
 // Exported for use in tests
 pub use introspection::type_from_bson;
-use mongodb_agent_common::state::ConnectorState;
+use mongodb_agent_common::state::try_init_state_from_uri;
 pub use native_query::native_query_from_pipeline;
 
 #[derive(Debug, Clone, Parser)]
@@ -38,7 +38,7 @@ pub enum Command {
 
 pub struct Context {
     pub path: PathBuf,
-    pub connector_state: ConnectorState,
+    pub connection_uri: Option<String>,
 }
 
 /// Run a command in a given directory.
@@ -52,6 +52,8 @@ pub async fn run(command: Command, context: &Context) -> anyhow::Result<()> {
 
 /// Update the configuration in the current directory by introspecting the database.
 async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
+    let connector_state = try_init_state_from_uri(context.connection_uri.as_ref()).await?;
+
     let configuration_options =
         configuration::parse_configuration_options_file(&context.path).await;
     // Prefer arguments passed to cli, and fallback to the configuration file
@@ -79,7 +81,7 @@ async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
 
     if !no_validator_schema {
         let schemas_from_json_validation =
-            introspection::get_metadata_from_validation_schema(&context.connector_state).await?;
+            introspection::get_metadata_from_validation_schema(&connector_state).await?;
         configuration::write_schema_directory(&context.path, schemas_from_json_validation).await?;
     }
 
@@ -88,7 +90,7 @@ async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
         sample_size,
         all_schema_nullable,
         config_file_changed,
-        &context.connector_state,
+        &connector_state,
         &existing_schemas,
     )
     .await?;
