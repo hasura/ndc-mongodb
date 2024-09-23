@@ -11,14 +11,15 @@ use super::pipeline_type_context::PipelineTypeContext;
 
 use super::error::{Error, Result};
 use super::reference_shorthand::{parse_reference_shorthand, Reference};
+use super::type_constraint::TypeConstraint;
 
 pub fn infer_type_from_aggregation_expression(
     context: &mut PipelineTypeContext<'_>,
     desired_object_type_name: &str,
     bson: Bson,
-) -> Result<Type> {
+) -> Result<TypeConstraint> {
     let t = match bson {
-        Bson::Double(_) => Type::Scalar(BsonScalarType::Double),
+        Bson::Double(_) => TypeConstraint::Scalar(BsonScalarType::Double),
         Bson::String(string) => infer_type_from_reference_shorthand(context, &string)?,
         Bson::Array(_) => todo!("array type"),
         Bson::Document(doc) => {
@@ -115,7 +116,7 @@ fn infer_type_from_document(
 pub fn infer_type_from_reference_shorthand(
     context: &mut PipelineTypeContext<'_>,
     input: &str,
-) -> Result<Type> {
+) -> Result<TypeConstraint> {
     let reference = parse_reference_shorthand(input)?;
     let t = match reference {
         Reference::NativeQueryVariable { .. } => todo!(),

@@ -59,6 +59,8 @@ pub fn infer_result_type_helper<'a, 'b>(
 ) -> Result<()> {
     match stage {
         Stage::Documents(docs) => {
+
+
             let document_type_name =
                 context.unique_type_name(&format!("{desired_object_type_name}_documents"));
             let new_object_types = infer_type_from_documents(&document_type_name, docs);

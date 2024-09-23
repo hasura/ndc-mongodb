@@ -4,6 +4,7 @@ mod helpers;
 mod infer_result_type;
 mod pipeline_type_context;
 mod reference_shorthand;
+mod type_constraint;
 
 use std::path::{Path, PathBuf};
 use std::process::exit;

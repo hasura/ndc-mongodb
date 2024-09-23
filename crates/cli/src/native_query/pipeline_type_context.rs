@@ -9,16 +9,14 @@ use configuration::{
     schema::{ObjectType, Type},
     Configuration,
 };
-use deriving_via::DerivingVia;
 use ndc_models::ObjectTypeName;
 
-use super::error::{Error, Result};
+use super::{
+    error::{Error, Result},
+    type_constraint::{TypeConstraint, TypeVariable},
+};
 
 type ObjectTypes = BTreeMap<ObjectTypeName, ObjectType>;
-
-#[derive(DerivingVia)]
-#[deriving(Copy, Debug, Eq, Hash)]
-pub struct TypeVariable(u32);
 
 /// Information exported from [PipelineTypeContext] after type inference is complete.
 #[derive(Clone, Debug)]
@@ -33,7 +31,7 @@ impl<'a> TryFrom<PipelineTypeContext<'a>> for PipelineTypes {
 
     fn try_from(context: PipelineTypeContext<'a>) -> Result<Self> {
         Ok(Self {
-            result_document_type: context.get_input_document_type_name()?.into(),
+            result_document_type: context.get_input_document_type_name()?.clone(),
             object_types: context.object_types.clone(),
             warnings: context.warnings,
         })
@@ -46,13 +44,13 @@ pub struct PipelineTypeContext<'a> {
 
     /// Document type for inputs to the pipeline stage being evaluated. At the start of the
     /// pipeline this is the document type for the input collection, if there is one.
-    input_doc_type: Option<HashSet<Constraint>>,
+    input_doc_type: Option<TypeVariable>,
 
     /// Object types defined in the process of type inference. [self.input_doc_type] may refer to
     /// to a type here, or in [self.configuration.object_types]
     object_types: ObjectTypes,
 
-    type_variables: HashMap<TypeVariable, HashSet<Constraint>>,
+    type_variables: HashMap<TypeVariable, HashSet<TypeConstraint>>,
     next_type_variable: u32,
 
     warnings: Vec<Error>,
@@ -63,32 +61,38 @@ impl PipelineTypeContext<'_> {
         configuration: &Configuration,
         input_collection_document_type: Option<ObjectTypeName>,
     ) -> PipelineTypeContext<'_> {
-        PipelineTypeContext {
+        let mut context = PipelineTypeContext {
             configuration,
-            input_doc_type: input_collection_document_type.map(|type_name| {
-                HashSet::from_iter([Constraint::ConcreteType(Type::Object(
-                    type_name.to_string(),
-                ))])
-            }),
+            input_doc_type: None,
             object_types: Default::default(),
             type_variables: Default::default(),
             next_type_variable: 0,
             warnings: Default::default(),
+        };
+
+        if let Some(type_name) = input_collection_document_type {
+            context.set_stage_doc_type(type_name)
         }
+
+        context
     }
 
     pub fn new_type_variable(
         &mut self,
-        constraints: impl IntoIterator<Item = Constraint>,
+        constraints: impl IntoIterator<Item = TypeConstraint>,
     ) -> TypeVariable {
-        let variable = TypeVariable(self.next_type_variable);
+        let variable = TypeVariable::new(self.next_type_variable);
         self.next_type_variable += 1;
         self.type_variables
             .insert(variable, constraints.into_iter().collect());
         variable
     }
 
-    pub fn set_type_variable_constraint(&mut self, variable: TypeVariable, constraint: Constraint) {
+    pub fn set_type_variable_constraint(
+        &mut self,
+        variable: TypeVariable,
+        constraint: TypeConstraint,
+    ) {
         let entry = self
             .type_variables
             .get_mut(&variable)
@@ -112,18 +116,14 @@ impl PipelineTypeContext<'_> {
         type_name
     }
 
-    pub fn set_stage_doc_type(&mut self, type_name: ObjectTypeName, mut object_types: ObjectTypes) {
-        self.input_doc_type = Some(
-            [Constraint::ConcreteType(Type::Object(
-                type_name.to_string(),
-            ))]
-            .into(),
-        );
-        self.object_types.append(&mut object_types);
+    pub fn set_stage_doc_type(&mut self, type_name: ObjectTypeName) {
+        let type_variable = self.new_type_variable([(TypeConstraint::Object(type_name))]);
+        self.input_doc_type = Some(type_variable);
     }
 
     pub fn set_unknown_stage_doc_type(&mut self, warning: Error) {
-        self.input_doc_type = Some([].into());
+        let type_variable = self.new_type_variable([]);
+        self.input_doc_type = Some(type_variable);
         self.warnings.push(warning);
     }
 
@@ -140,15 +140,16 @@ impl PipelineTypeContext<'_> {
 
     /// Get the input document type for the next stage. Forces to a concrete type, and returns an
     /// error if a concrete type cannot be inferred.
-    pub fn get_input_document_type_name(&self) -> Result<&str> {
-        match &self.input_doc_type {
+    pub fn get_input_document_type_name(&self) -> Result<&ObjectTypeName> {
+        match self
+            .input_doc_type
+            .and_then(|var| self.type_variables.get(&var))
+        {
             None => Err(Error::IncompletePipeline),
             Some(constraints) => {
                 let len = constraints.len();
                 let first_constraint = constraints.iter().next();
-                if let (1, Some(Constraint::ConcreteType(Type::Object(t)))) =
-                    (len, first_constraint)
-                {
+                if let (1, Some(TypeConstraint::Object(t))) = (len, first_constraint) {
                     Ok(t)
                 } else {
                     Err(Error::UnableToInferResultType)
@@ -158,18 +159,9 @@ impl PipelineTypeContext<'_> {
     }
 
     pub fn get_input_document_type(&self) -> Result<Cow<'_, ObjectType>> {
-        let document_type_name = self.get_input_document_type_name()?.into();
+        let document_type_name = self.get_input_document_type_name()?;
         Ok(self
             .get_object_type(&document_type_name)
             .expect("if we have an input document type name we should have the object type"))
     }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Constraint {
-    /// The variable appears in a context with a specific type, and this is it.
-    ConcreteType(Type),
-
-    /// The variable has the same type as another type variable.
-    TypeRef(TypeVariable),
 }
