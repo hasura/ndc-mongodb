@@ -16,6 +16,7 @@ pub struct Args {
     /// The path to the configuration. Defaults to the current directory.
     #[arg(
         long = "context-path",
+        short = 'p',
         env = "HASURA_PLUGIN_CONNECTOR_CONTEXT_PATH",
         value_name = "DIRECTORY",
         value_hint = ValueHint::DirPath
