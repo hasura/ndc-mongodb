@@ -72,8 +72,8 @@ fn infer_type_from_aggregation_expression_document(
 }
 
 fn infer_type_from_operator_expression(
-    context: &mut PipelineTypeContext<'_>,
-    desired_object_type_name: &str,
+    _context: &mut PipelineTypeContext<'_>,
+    _desired_object_type_name: &str,
     operator: &str,
     operands: Bson,
 ) -> Result<Type> {
@@ -118,11 +118,8 @@ pub fn infer_type_from_reference_shorthand(
 ) -> Result<Type> {
     let reference = parse_reference_shorthand(input)?;
     let t = match reference {
-        Reference::NativeQueryVariable {
-            name,
-            type_annotation,
-        } => todo!(),
-        Reference::PipelineVariable { name, nested_path } => todo!(),
+        Reference::NativeQueryVariable { .. } => todo!(),
+        Reference::PipelineVariable { .. } => todo!(),
         Reference::InputDocumentField { name, nested_path } => {
             let doc_type = context.get_input_document_type_name()?;
             let path = once(&name).chain(&nested_path);
