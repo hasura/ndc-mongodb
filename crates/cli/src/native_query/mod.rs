@@ -265,7 +265,7 @@ mod tests {
                     (
                         "_id".into(),
                         ObjectField {
-                            r#type: Type::ArrayOf(Box::new(Type::Scalar(BsonScalarType::String))),
+                            r#type: Type::Scalar(BsonScalarType::String),
                             description: None,
                         },
                     ),

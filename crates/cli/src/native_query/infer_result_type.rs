@@ -101,13 +101,16 @@ pub fn infer_result_type_helper<'a, 'b>(
             path,
             include_array_index,
             preserve_null_and_empty_arrays,
-        } => infer_type_from_unwind_stage(
-            context,
-            desired_object_type_name,
-            path,
-            include_array_index.as_deref(),
-            *preserve_null_and_empty_arrays,
-        )?,
+        } => {
+            let result_type = infer_type_from_unwind_stage(
+                context,
+                desired_object_type_name,
+                path,
+                include_array_index.as_deref(),
+                *preserve_null_and_empty_arrays,
+            )?;
+            context.set_stage_doc_type(result_type, Default::default())
+        }
         Stage::Other(doc) => {
             let warning = Error::UnknownAggregationStage {
                 stage_index,
@@ -239,7 +242,7 @@ fn infer_type_from_unwind_stage(
     path: &str,
     include_array_index: Option<&str>,
     _preserve_null_and_empty_arrays: Option<bool>,
-) -> Result<()> {
+) -> Result<ObjectTypeName> {
     let field_to_unwind = parse_reference_shorthand(path)?;
     let Reference::InputDocumentField { name, nested_path } = field_to_unwind else {
         return Err(Error::ExpectedStringPath(path.into()));
@@ -321,9 +324,9 @@ fn infer_type_from_unwind_stage(
     );
 
     let object_type_name = context.unique_type_name(desired_object_type_name);
-    context.insert_object_type(object_type_name, doc_type);
+    context.insert_object_type(object_type_name.clone(), doc_type);
 
-    Ok(())
+    Ok(object_type_name)
 }
 
 #[cfg(test)]
@@ -337,7 +340,9 @@ mod tests {
     use pretty_assertions::assert_eq;
     use test_helpers::configuration::mflix_config;
 
-    use super::infer_result_type;
+    use crate::native_query::pipeline_type_context::PipelineTypeContext;
+
+    use super::{infer_result_type, infer_type_from_unwind_stage};
 
     type Result<T> = anyhow::Result<T>;
 
@@ -408,6 +413,63 @@ mod tests {
         .into();
         let actual = pipeline_types.object_types;
         assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn infers_type_from_unwind_stage() -> Result<()> {
+        let config = mflix_config();
+        let mut context = PipelineTypeContext::new(&config, None);
+        context.insert_object_type(
+            "words_doc".into(),
+            ObjectType {
+                fields: [(
+                    "words".into(),
+                    ObjectField {
+                        r#type: Type::ArrayOf(Box::new(Type::Scalar(BsonScalarType::String))),
+                        description: None,
+                    },
+                )]
+                .into(),
+                description: None,
+            },
+        );
+        context.set_stage_doc_type("words_doc".into(), Default::default());
+
+        let inferred_type_name = infer_type_from_unwind_stage(
+            &mut context,
+            "unwind_stage",
+            "$words",
+            Some("idx"),
+            Some(false),
+        )?;
+
+        assert_eq!(
+            context
+                .get_object_type(&inferred_type_name)
+                .unwrap()
+                .into_owned(),
+            ObjectType {
+                fields: [
+                    (
+                        "words".into(),
+                        ObjectField {
+                            r#type: Type::Scalar(BsonScalarType::String),
+                            description: None,
+                        }
+                    ),
+                    (
+                        "idx".into(),
+                        ObjectField {
+                            r#type: Type::Scalar(BsonScalarType::Long),
+                            description: Some("index of unwound array elements in words".into()),
+                        }
+                    ),
+                ]
+                .into(),
+                description: None,
+            }
+        );
         Ok(())
     }
 }
