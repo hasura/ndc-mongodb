@@ -29,15 +29,15 @@ pub enum Command {
     /// Create a native query from a JSON file containing an aggregation pipeline
     Create {
         /// Name that will identify the query in your data graph
-        #[arg(short = 'n', required = true)]
+        #[arg(long, short = 'n', required = true)]
         name: String,
 
         /// Name of the collection that acts as input for the pipeline - omit for a pipeline that does not require input
-        #[arg(short = 'c')]
+        #[arg(long, short = 'c')]
         collection: Option<CollectionName>,
 
         /// Overwrite any existing native query configuration with the same name
-        #[arg(short = 'f')]
+        #[arg(long, short = 'f')]
         force: bool,
 
         /// Path to a JSON file with an aggregation pipeline
