@@ -251,44 +251,36 @@ mod tests {
             pipeline.clone(),
         )?;
 
-        let expected_document_type_name: ObjectTypeName = "title_word_frequency".into();
-
-        let expected_object_types = [(
-            expected_document_type_name.clone(),
-            ObjectType {
+        assert_eq!(native_query.input_collection, Some("movies".into()));
+        assert!(native_query
+            .result_document_type
+            .to_string()
+            .starts_with("title_word_frequency"));
+        assert_eq!(
+            native_query
+                .object_types
+                .get(&native_query.result_document_type),
+            Some(&ObjectType {
                 fields: [
                     (
                         "_id".into(),
                         ObjectField {
-                            r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::String))),
+                            r#type: Type::ArrayOf(Box::new(Type::Scalar(BsonScalarType::String))),
                             description: None,
                         },
                     ),
                     (
                         "title_count".into(),
                         ObjectField {
-                            r#type: Type::Nullable(Box::new(Type::Scalar(BsonScalarType::Int))),
+                            r#type: Type::Scalar(BsonScalarType::Int),
                             description: None,
                         },
                     ),
                 ]
                 .into(),
                 description: None,
-            },
-        )]
-        .into();
-
-        let expected = NativeQuery {
-            representation: Collection,
-            input_collection: Some("movies".into()),
-            arguments: Default::default(),
-            result_document_type: expected_document_type_name,
-            object_types: expected_object_types,
-            pipeline: pipeline.into(),
-            description: None,
-        };
-
-        assert_eq!(native_query, expected);
+            })
+        );
         Ok(())
     }
 

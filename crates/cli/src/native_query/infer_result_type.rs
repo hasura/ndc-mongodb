@@ -1,12 +1,12 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, iter::once};
 
 use configuration::{
     schema::{ObjectField, ObjectType, Type},
     Configuration,
 };
-use mongodb::bson::Document;
+use mongodb::bson::{Bson, Document};
 use mongodb_support::{
-    aggregate::{Pipeline, Stage},
+    aggregate::{Accumulator, Pipeline, Stage},
     BsonScalarType,
 };
 use ndc_models::{CollectionName, FieldName, ObjectTypeName};
@@ -14,7 +14,9 @@ use ndc_models::{CollectionName, FieldName, ObjectTypeName};
 use crate::introspection::{sampling::make_object_type, type_unification::unify_object_types};
 
 use super::{
-    aggregation_expression::{self, infer_type_from_reference_shorthand},
+    aggregation_expression::{
+        self, infer_type_from_aggregation_expression, infer_type_from_reference_shorthand,
+    },
     error::{Error, Result},
     helpers::find_collection_object_type,
     pipeline_type_context::{PipelineTypeContext, PipelineTypes},
@@ -67,7 +69,18 @@ pub fn infer_result_type_helper<'a, 'b>(
         Stage::Limit(_) => (),
         Stage::Lookup { .. } => todo!("lookup stage"),
         Stage::Skip(_) => (),
-        Stage::Group { .. } => todo!("group stage"),
+        Stage::Group {
+            key_expression,
+            accumulators,
+        } => {
+            let object_type_name = infer_type_from_group_stage(
+                context,
+                desired_object_type_name,
+                key_expression,
+                accumulators,
+            )?;
+            context.set_stage_doc_type(object_type_name, Default::default())
+        }
         Stage::Facet(_) => todo!("facet stage"),
         Stage::Count(_) => todo!("count stage"),
         Stage::ReplaceWith(selection) => {
@@ -132,6 +145,92 @@ pub fn infer_type_from_documents(
         .into_iter()
         .map(|type_with_name| (type_with_name.name, type_with_name.value))
         .collect()
+}
+
+fn infer_type_from_group_stage(
+    context: &mut PipelineTypeContext<'_>,
+    desired_object_type_name: &str,
+    key_expression: &Bson,
+    accumulators: &BTreeMap<String, Accumulator>,
+) -> Result<ObjectTypeName> {
+    let group_key_expression_type = infer_type_from_aggregation_expression(
+        context,
+        &format!("{desired_object_type_name}_id"),
+        key_expression.clone(),
+    )?;
+
+    let group_expression_field: (FieldName, ObjectField) = (
+        "_id".into(),
+        ObjectField {
+            r#type: group_key_expression_type.clone(),
+            description: None,
+        },
+    );
+    let accumulator_fields = accumulators.iter().map(|(key, accumulator)| {
+        let accumulator_type = match accumulator {
+            Accumulator::Count => Type::Scalar(BsonScalarType::Int),
+            Accumulator::Min(expr) => infer_type_from_aggregation_expression(
+                context,
+                &format!("{desired_object_type_name}_min"),
+                expr.clone(),
+            )?,
+            Accumulator::Max(expr) => infer_type_from_aggregation_expression(
+                context,
+                &format!("{desired_object_type_name}_min"),
+                expr.clone(),
+            )?,
+            Accumulator::Push(expr) => {
+                let t = infer_type_from_aggregation_expression(
+                    context,
+                    &format!("{desired_object_type_name}_push"),
+                    expr.clone(),
+                )?;
+                Type::ArrayOf(Box::new(t))
+            }
+            Accumulator::Avg(expr) => {
+                let t = infer_type_from_aggregation_expression(
+                    context,
+                    &format!("{desired_object_type_name}_avg"),
+                    expr.clone(),
+                )?;
+                match t {
+                    Type::ExtendedJSON => t,
+                    Type::Scalar(scalar_type) if scalar_type.is_numeric() => t,
+                    _ => Type::Nullable(Box::new(Type::Scalar(BsonScalarType::Int))),
+                }
+            }
+            Accumulator::Sum(expr) => {
+                let t = infer_type_from_aggregation_expression(
+                    context,
+                    &format!("{desired_object_type_name}_push"),
+                    expr.clone(),
+                )?;
+                match t {
+                    Type::ExtendedJSON => t,
+                    Type::Scalar(scalar_type) if scalar_type.is_numeric() => t,
+                    _ => Type::Scalar(BsonScalarType::Int),
+                }
+            }
+        };
+        Ok::<_, Error>((
+            key.clone().into(),
+            ObjectField {
+                r#type: accumulator_type,
+                description: None,
+            },
+        ))
+    });
+    let fields = once(Ok(group_expression_field))
+        .chain(accumulator_fields)
+        .collect::<Result<_>>()?;
+
+    let object_type = ObjectType {
+        fields,
+        description: None,
+    };
+    let object_type_name = context.unique_type_name(desired_object_type_name);
+    context.insert_object_type(object_type_name.clone(), object_type);
+    Ok(object_type_name)
 }
 
 fn infer_type_from_unwind_stage(
