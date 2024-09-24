@@ -116,16 +116,22 @@ pub fn lookup_relationship<'a>(
 /// column does not have an array type we fall back to the default assumption that the value type
 /// should be the same as the column type.
 ///
-/// We could check if the column has an array type, and the given value is a JSON value that is not
-/// an array. But if the comparison value is a _variable_ we don't have any value to check so that
-/// strategy would not allow array-to-scalar comparisons with variables which would mean queries
-/// behave differently with inline values vs variables.
+/// For now this assumes that if the column has an array type, the value type is a scalar type.
+/// That's the simplest option since we don't support array-to-array comparisons yet.
 ///
-/// The option that gives the most consistency is to assume that the value type is a scalar type if
-/// the value is a JSON value or a variable. But that means that in the future we won't be able to
-/// get make equality comparisons between to arrays unless they are both column values, or we get
-/// type information from the engine. (In the case of column-to-column comparisons we can get types
-/// from the schema, which happens in `plan_for_comparison_value`, so none of this is a problem).
+/// TODO: When we do support array-to-array comparisons we will need to either:
+///
+/// - input the [ndc::ComparisonValue] into this function, and any query request variables; check
+///   that the given JSON value or variable values are not array values, and if so assume the value
+///   type should be a scalar type
+/// - or get the GraphQL Engine to include a type with [ndc::ComparisonValue] in which case we can
+///   use that as the value type
+///
+/// It is important that queries behave the same when given an inline value or variables. So we
+/// can't just check the value of an [ndc::ComparisonValue::Scalar], and punt on an
+/// [ndc::ComparisonValue::Variable] input. The latter requires accessing query request variables,
+/// and it will take a little more work to thread those through the code to make them available
+/// here.
 pub fn value_type_in_possible_array_equality_comparison<S>(
     column_type: plan::Type<S>,
 ) -> plan::Type<S>
