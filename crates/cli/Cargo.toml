@@ -3,6 +3,9 @@ name = "mongodb-cli-plugin"
 edition = "2021"
 version.workspace = true
 
+[features]
+native-query-subcommand = []
+
 [dependencies]
 configuration = { path = "../configuration" }
 mongodb-agent-common = { path = "../mongodb-agent-common" }

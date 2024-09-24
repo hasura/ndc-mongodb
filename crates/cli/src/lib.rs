@@ -3,6 +3,8 @@
 mod exit_codes;
 mod introspection;
 mod logging;
+
+#[cfg(feature = "native-query-subcommand")]
 mod native_query;
 
 use std::path::PathBuf;
@@ -12,6 +14,7 @@ use clap::{Parser, Subcommand};
 // Exported for use in tests
 pub use introspection::type_from_bson;
 use mongodb_agent_common::state::try_init_state_from_uri;
+#[cfg(feature = "native-query-subcommand")]
 pub use native_query::native_query_from_pipeline;
 
 #[derive(Debug, Clone, Parser)]
@@ -32,6 +35,7 @@ pub enum Command {
     /// Update the configuration by introspecting the database, using the configuration options.
     Update(UpdateArgs),
 
+    #[cfg(feature = "native-query-subcommand")]
     #[command(subcommand)]
     NativeQuery(native_query::Command),
 }
@@ -45,6 +49,8 @@ pub struct Context {
 pub async fn run(command: Command, context: &Context) -> anyhow::Result<()> {
     match command {
         Command::Update(args) => update(context, &args).await?,
+
+        #[cfg(feature = "native-query-subcommand")]
         Command::NativeQuery(command) => native_query::run(context, command).await?,
     };
     Ok(())
