@@ -16,6 +16,8 @@ pub enum ComparisonFunction {
     Equal,
     NotEqual,
 
+    In,
+
     Regex,
     /// case-insensitive regex
     IRegex,
@@ -33,6 +35,7 @@ impl ComparisonFunction {
             C::GreaterThanOrEqual => "_gte",
             C::Equal => "_eq",
             C::NotEqual => "_neq",
+            C::In => "_in",
             C::Regex => "_regex",
             C::IRegex => "_iregex",
         }
@@ -45,6 +48,7 @@ impl ComparisonFunction {
             C::GreaterThan => "$gt",
             C::GreaterThanOrEqual => "$gte",
             C::Equal => "$eq",
+            C::In => "$in",
             C::NotEqual => "$ne",
             C::Regex => "$regex",
             C::IRegex => "$regex",
