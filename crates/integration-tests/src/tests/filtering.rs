@@ -73,22 +73,22 @@ async fn filters_by_comparisons_on_elements_of_array_of_scalars() -> anyhow::Res
     Ok(())
 }
 
-// #[tokio::test]
-// async fn filters_by_comparisons_on_elements_of_array_of_scalars_against_variable(
-// ) -> anyhow::Result<()> {
-//     assert_yaml_snapshot!(
-//         run_connector_query(
-//             Connector::SampleMflix,
-//             query_request()
-//                 .variables([[("cast_member", "Albert Austin")]])
-//                 .collection("movies")
-//                 .query(
-//                     query()
-//                         .predicate(binop("_eq", target!("cast"), variable!(cast_member)))
-//                         .fields([field!("title"), field!("cast")]),
-//                 )
-//         )
-//         .await?
-//     );
-//     Ok(())
-// }
+#[tokio::test]
+async fn filters_by_comparisons_on_elements_of_array_of_scalars_against_variable(
+) -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::SampleMflix,
+            query_request()
+                .variables([[("cast_member", "Albert Austin")]])
+                .collection("movies")
+                .query(
+                    query()
+                        .predicate(binop("_eq", target!("cast"), variable!(cast_member)))
+                        .fields([field!("title"), field!("cast")]),
+                )
+        )
+        .await?
+    );
+    Ok(())
+}
