@@ -147,11 +147,28 @@ pub fn make_selector(expr: &Expression) -> Result<Document> {
                     ColumnRef::MatchKey(key) => doc! {
                         key: { "$eq": null }
                     },
-                    ColumnRef::Expression(expr) => doc! {
-                        "$expr": {
-                            "$eq": [expr, null]
+                    ColumnRef::Expression(expr) => {
+                        // Special case for array-to-scalar comparisons - this is required because implicit
+                        // existential quantification over arrays for scalar comparisons does not work in
+                        // aggregation expressions.
+                        if column.get_field_type().is_array() {
+                            doc! {
+                                "$expr": {
+                                    "$reduce": {
+                                        "input": expr,
+                                        "initialValue": false,
+                                        "in": { "$eq": ["$$this", null] }
+                                    },
+                                },
+                            }
+                        } else {
+                            doc! {
+                                "$expr": {
+                                    "$eq": [expr, null]
+                                }
+                            }
                         }
-                    },
+                    }
                 };
                 Ok(traverse_relationship_path(
                     column.relationship_path(),
@@ -189,9 +206,26 @@ fn make_binary_comparison_selector(
             let comparison_value = bson_from_scalar_value(value, value_type)?;
             let match_doc = match ColumnRef::from_comparison_target(target_column) {
                 ColumnRef::MatchKey(key) => operator.mongodb_match_query(key, comparison_value),
-                ColumnRef::Expression(expr) => doc! {
-                    "$expr": operator.mongodb_aggregation_expression(expr, comparison_value)
-                },
+                ColumnRef::Expression(expr) => {
+                    // Special case for array-to-scalar comparisons - this is required because implicit
+                    // existential quantification over arrays for scalar comparisons does not work in
+                    // aggregation expressions.
+                    if target_column.get_field_type().is_array() && !value_type.is_array() {
+                        doc! {
+                            "$expr": {
+                                "$reduce": {
+                                    "input": expr,
+                                    "initialValue": false,
+                                    "in": operator.mongodb_aggregation_expression("$$this", comparison_value)
+                                },
+                            },
+                        }
+                    } else {
+                        doc! {
+                            "$expr": operator.mongodb_aggregation_expression(expr, comparison_value)
+                        }
+                    }
+                }
             };
             traverse_relationship_path(target_column.relationship_path(), match_doc)
         }
@@ -200,12 +234,28 @@ fn make_binary_comparison_selector(
             variable_type,
         } => {
             let comparison_value = variable_to_mongo_expression(name, variable_type);
-            let match_doc = doc! {
-                "$expr": operator.mongodb_aggregation_expression(
-                    column_expression(target_column),
-                    comparison_value
-                )
-            };
+            let match_doc =
+                // Special case for array-to-scalar comparisons - this is required because implicit
+                // existential quantification over arrays for scalar comparisons does not work in
+                // aggregation expressions.
+                if target_column.get_field_type().is_array() && !variable_type.is_array() {
+                    doc! {
+                        "$expr": {
+                            "$reduce": {
+                                "input": column_expression(target_column),
+                                "initialValue": false,
+                                "in": operator.mongodb_aggregation_expression("$$this", comparison_value)
+                            },
+                        },
+                    }
+                } else {
+                    doc! {
+                        "$expr": operator.mongodb_aggregation_expression(
+                            column_expression(target_column),
+                            comparison_value
+                        )
+                    }
+                };
             traverse_relationship_path(target_column.relationship_path(), match_doc)
         }
     };
