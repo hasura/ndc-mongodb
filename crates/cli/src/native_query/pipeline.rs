@@ -1,9 +1,10 @@
 use std::{collections::BTreeMap, iter::once};
 
 use configuration::{
-    schema::{ObjectField, ObjectType, Type},
+    schema::{ObjectType, Type},
     Configuration,
 };
+use itertools::Itertools as _;
 use mongodb::bson::{Bson, Document};
 use mongodb_support::{
     aggregate::{Accumulator, Pipeline, Stage},
@@ -21,56 +22,79 @@ use super::{
     helpers::find_collection_object_type,
     pipeline_type_context::{PipelineTypeContext, PipelineTypes},
     reference_shorthand::{parse_reference_shorthand, Reference},
+    type_constraint::{ObjectTypeConstraint, TypeConstraint},
 };
 
 type ObjectTypes = BTreeMap<ObjectTypeName, ObjectType>;
 
-pub fn infer_result_type(
+pub fn infer_pipeline_types(
     configuration: &Configuration,
     // If we have to define a new object type, use this name
     desired_object_type_name: &str,
     input_collection: Option<&CollectionName>,
     pipeline: &Pipeline,
 ) -> Result<PipelineTypes> {
+    if pipeline.is_empty() {
+        return Err(Error::EmptyPipeline);
+    }
+
     let collection_doc_type = input_collection
         .map(|collection_name| find_collection_object_type(configuration, collection_name))
         .transpose()?;
-    let mut stages = pipeline.iter().enumerate();
+
     let mut context = PipelineTypeContext::new(configuration, collection_doc_type);
-    match stages.next() {
-        Some((stage_index, stage)) => infer_result_type_helper(
+
+    let object_type_name = context.unique_type_name(desired_object_type_name);
+
+    for (stage_index, stage) in pipeline.iter().enumerate() {
+        if let Some(output_type) = infer_stage_output_type(
             &mut context,
-            desired_object_type_name,
+            &format!("{desired_object_type_name}_stage{stage_index}"),
             stage_index,
             stage,
-            stages,
-        ),
-        None => Err(Error::EmptyPipeline),
-    }?;
+        )? {
+            context.set_stage_doc_type(output_type);
+        };
+    }
+
+    // Try to set the desired type name for the overall pipeline output
+    let last_stage_type = context.get_input_document_type()?;
+    if let TypeConstraint::Object(stage_type_name) = last_stage_type {
+        if let Some(object_type) = context.get_object_type(&stage_type_name) {
+            context.insert_object_type(object_type_name.clone(), object_type.into_owned());
+            context.set_stage_doc_type(TypeConstraint::Object(object_type_name))
+        }
+    }
+
     context.try_into()
 }
 
-pub fn infer_result_type_helper<'a, 'b>(
+fn infer_stage_output_type<'a, 'b>(
     context: &mut PipelineTypeContext<'a>,
     desired_object_type_name: &str,
     stage_index: usize,
     stage: &Stage,
-    mut rest: impl Iterator<Item = (usize, &'b Stage)>,
-) -> Result<()> {
-    match stage {
+) -> Result<Option<TypeConstraint>> {
+    let output_type = match stage {
         Stage::Documents(docs) => {
-
-
-            let document_type_name =
-                context.unique_type_name(&format!("{desired_object_type_name}_documents"));
-            let new_object_types = infer_type_from_documents(&document_type_name, docs);
-            context.set_stage_doc_type(document_type_name, new_object_types);
+            let doc_constraints = docs
+                .iter()
+                .map(|doc| {
+                    infer_type_from_aggregation_expression(
+                        context,
+                        &format!("{desired_object_type_name}_document"),
+                        doc.into(),
+                    )
+                })
+                .collect::<Result<Vec<_>>>()?;
+            let type_variable = context.new_type_variable(doc_constraints);
+            Some(TypeConstraint::Variable(type_variable))
         }
-        Stage::Match(_) => (),
-        Stage::Sort(_) => (),
-        Stage::Limit(_) => (),
+        Stage::Match(_) => None,
+        Stage::Sort(_) => None,
+        Stage::Limit(_) => None,
         Stage::Lookup { .. } => todo!("lookup stage"),
-        Stage::Skip(_) => (),
+        Stage::Skip(_) => None,
         Stage::Group {
             key_expression,
             accumulators,
@@ -81,56 +105,43 @@ pub fn infer_result_type_helper<'a, 'b>(
                 key_expression,
                 accumulators,
             )?;
-            context.set_stage_doc_type(object_type_name, Default::default())
+            Some(TypeConstraint::Object(object_type_name))
         }
         Stage::Facet(_) => todo!("facet stage"),
         Stage::Count(_) => todo!("count stage"),
         Stage::ReplaceWith(selection) => {
             let selection: &Document = selection.into();
-            let result_type = aggregation_expression::infer_type_from_aggregation_expression(
-                context,
-                desired_object_type_name,
-                selection.clone().into(),
-            )?;
-            match result_type {
-                Type::Object(object_type_name) => {
-                    context.set_stage_doc_type(object_type_name.into(), Default::default());
-                }
-                t => Err(Error::ExpectedObject { actual_type: t })?,
-            }
+            Some(
+                aggregation_expression::infer_type_from_aggregation_expression(
+                    context,
+                    desired_object_type_name,
+                    selection.clone().into(),
+                )?,
+            )
         }
         Stage::Unwind {
             path,
             include_array_index,
             preserve_null_and_empty_arrays,
-        } => {
-            let result_type = infer_type_from_unwind_stage(
-                context,
-                desired_object_type_name,
-                path,
-                include_array_index.as_deref(),
-                *preserve_null_and_empty_arrays,
-            )?;
-            context.set_stage_doc_type(result_type, Default::default())
-        }
-        Stage::Other(doc) => {
-            let warning = Error::UnknownAggregationStage {
-                stage_index,
-                stage: doc.clone(),
-            };
-            context.set_unknown_stage_doc_type(warning);
-        }
-    };
-    match rest.next() {
-        Some((next_stage_index, next_stage)) => infer_result_type_helper(
+        } => Some(infer_type_from_unwind_stage(
             context,
             desired_object_type_name,
-            next_stage_index,
-            next_stage,
-            rest,
-        ),
-        None => Ok(()),
-    }
+            path,
+            include_array_index.as_deref(),
+            *preserve_null_and_empty_arrays,
+        )?),
+        Stage::Other(doc) => {
+            context.add_warning(Error::UnknownAggregationStage {
+                stage_index,
+                stage: doc.clone(),
+            });
+            // We don't know what the type is here so we represent it with an unconstrained type
+            // variable.
+            let type_variable = context.new_type_variable([]);
+            Some(TypeConstraint::Variable(type_variable))
+        }
+    };
+    Ok(output_type)
 }
 
 pub fn infer_type_from_documents(
@@ -164,16 +175,12 @@ fn infer_type_from_group_stage(
         key_expression.clone(),
     )?;
 
-    let group_expression_field: (FieldName, ObjectField) = (
-        "_id".into(),
-        ObjectField {
-            r#type: group_key_expression_type.clone(),
-            description: None,
-        },
-    );
+    let group_expression_field: (FieldName, TypeConstraint) =
+        ("_id".into(), group_key_expression_type.clone());
+
     let accumulator_fields = accumulators.iter().map(|(key, accumulator)| {
         let accumulator_type = match accumulator {
-            Accumulator::Count => Type::Scalar(BsonScalarType::Int),
+            Accumulator::Count => TypeConstraint::Scalar(BsonScalarType::Int),
             Accumulator::Min(expr) => infer_type_from_aggregation_expression(
                 context,
                 &format!("{desired_object_type_name}_min"),
@@ -190,7 +197,7 @@ fn infer_type_from_group_stage(
                     &format!("{desired_object_type_name}_push"),
                     expr.clone(),
                 )?;
-                Type::ArrayOf(Box::new(t))
+                TypeConstraint::ArrayOf(Box::new(t))
             }
             Accumulator::Avg(expr) => {
                 let t = infer_type_from_aggregation_expression(
@@ -199,9 +206,11 @@ fn infer_type_from_group_stage(
                     expr.clone(),
                 )?;
                 match t {
-                    Type::ExtendedJSON => t,
-                    Type::Scalar(scalar_type) if scalar_type.is_numeric() => t,
-                    _ => Type::Nullable(Box::new(Type::Scalar(BsonScalarType::Int))),
+                    TypeConstraint::ExtendedJSON => t,
+                    TypeConstraint::Scalar(scalar_type) if scalar_type.is_numeric() => t,
+                    _ => TypeConstraint::Nullable(Box::new(TypeConstraint::Scalar(
+                        BsonScalarType::Int,
+                    ))),
                 }
             }
             Accumulator::Sum(expr) => {
@@ -211,28 +220,19 @@ fn infer_type_from_group_stage(
                     expr.clone(),
                 )?;
                 match t {
-                    Type::ExtendedJSON => t,
-                    Type::Scalar(scalar_type) if scalar_type.is_numeric() => t,
-                    _ => Type::Scalar(BsonScalarType::Int),
+                    TypeConstraint::ExtendedJSON => t,
+                    TypeConstraint::Scalar(scalar_type) if scalar_type.is_numeric() => t,
+                    _ => TypeConstraint::Scalar(BsonScalarType::Int),
                 }
             }
         };
-        Ok::<_, Error>((
-            key.clone().into(),
-            ObjectField {
-                r#type: accumulator_type,
-                description: None,
-            },
-        ))
+        Ok::<_, Error>((key.clone().into(), accumulator_type))
     });
+
     let fields = once(Ok(group_expression_field))
         .chain(accumulator_fields)
         .collect::<Result<_>>()?;
-
-    let object_type = ObjectType {
-        fields,
-        description: None,
-    };
+    let object_type = ObjectTypeConstraint { fields };
     let object_type_name = context.unique_type_name(desired_object_type_name);
     context.insert_object_type(object_type_name.clone(), object_type);
     Ok(object_type_name)
@@ -244,30 +244,20 @@ fn infer_type_from_unwind_stage(
     path: &str,
     include_array_index: Option<&str>,
     _preserve_null_and_empty_arrays: Option<bool>,
-) -> Result<ObjectTypeName> {
+) -> Result<TypeConstraint> {
     let field_to_unwind = parse_reference_shorthand(path)?;
     let Reference::InputDocumentField { name, nested_path } = field_to_unwind else {
         return Err(Error::ExpectedStringPath(path.into()));
     };
-
     let field_type = infer_type_from_reference_shorthand(context, path)?;
-    let Type::ArrayOf(field_element_type) = field_type else {
-        return Err(Error::ExpectedArrayReference {
-            reference: path.into(),
-            referenced_type: field_type,
-        });
+
+    let mut unwind_stage_object_type = ObjectTypeConstraint {
+        fields: Default::default(),
     };
-
-    let nested_path_iter = nested_path.into_iter();
-
-    let mut doc_type = context.get_input_document_type()?.into_owned();
     if let Some(index_field_name) = include_array_index {
-        doc_type.fields.insert(
+        unwind_stage_object_type.fields.insert(
             index_field_name.into(),
-            ObjectField {
-                r#type: Type::Scalar(BsonScalarType::Long),
-                description: Some(format!("index of unwound array elements in {name}")),
-            },
+            TypeConstraint::Scalar(BsonScalarType::Long),
         );
     }
 
@@ -275,8 +265,8 @@ fn infer_type_from_unwind_stage(
     // objects
     fn build_nested_types(
         context: &mut PipelineTypeContext<'_>,
-        ultimate_field_type: Type,
-        parent_object_type: &mut ObjectType,
+        ultimate_field_type: TypeConstraint,
+        parent_object_type: &mut ObjectTypeConstraint,
         desired_object_type_name: &str,
         field_name: FieldName,
         mut rest: impl Iterator<Item = FieldName>,
@@ -284,9 +274,8 @@ fn infer_type_from_unwind_stage(
         match rest.next() {
             Some(next_field_name) => {
                 let object_type_name = context.unique_type_name(desired_object_type_name);
-                let mut object_type = ObjectType {
+                let mut object_type = ObjectTypeConstraint {
                     fields: Default::default(),
-                    description: None,
                 };
                 build_nested_types(
                     context,
@@ -297,38 +286,36 @@ fn infer_type_from_unwind_stage(
                     rest,
                 );
                 context.insert_object_type(object_type_name.clone(), object_type);
-                parent_object_type.fields.insert(
-                    field_name,
-                    ObjectField {
-                        r#type: Type::Object(object_type_name.into()),
-                        description: None,
-                    },
-                );
+                parent_object_type
+                    .fields
+                    .insert(field_name, TypeConstraint::Object(object_type_name.into()));
             }
             None => {
-                parent_object_type.fields.insert(
-                    field_name,
-                    ObjectField {
-                        r#type: ultimate_field_type,
-                        description: None,
-                    },
-                );
+                parent_object_type
+                    .fields
+                    .insert(field_name, ultimate_field_type);
             }
         }
     }
     build_nested_types(
         context,
-        *field_element_type,
-        &mut doc_type,
+        TypeConstraint::ElementOf(Box::new(field_type)),
+        &mut unwind_stage_object_type,
         desired_object_type_name,
         name,
-        nested_path_iter,
+        nested_path.into_iter(),
     );
 
-    let object_type_name = context.unique_type_name(desired_object_type_name);
-    context.insert_object_type(object_type_name.clone(), doc_type);
+    // let object_type_name = context.unique_type_name(desired_object_type_name);
+    // context.insert_object_type(object_type_name.clone(), unwind_stage_object_type);
 
-    Ok(object_type_name)
+    // We just inferred an object type for the fields that are **added** by the unwind stage. To
+    // get the full output type the added fields must be merged with fields from the output of the
+    // previous stage.
+    Ok(TypeConstraint::WithFieldOverrides {
+        target_type: Box::new(context.get_input_document_type()?.clone()),
+        fields: unwind_stage_object_type.fields,
+    })
 }
 
 #[cfg(test)]
@@ -344,7 +331,7 @@ mod tests {
 
     use crate::native_query::pipeline_type_context::PipelineTypeContext;
 
-    use super::{infer_result_type, infer_type_from_unwind_stage};
+    use super::{infer_pipeline_types, infer_type_from_unwind_stage};
 
     type Result<T> = anyhow::Result<T>;
 
@@ -355,7 +342,7 @@ mod tests {
             doc! { "bar": 2 },
         ])]);
         let config = mflix_config();
-        let pipeline_types = infer_result_type(&config, "documents", None, &pipeline).unwrap();
+        let pipeline_types = infer_pipeline_types(&config, "documents", None, &pipeline).unwrap();
         let expected = [(
             "documents_documents".into(),
             ObjectType {
@@ -391,7 +378,7 @@ mod tests {
             "selected_title": "$title"
         }))]);
         let config = mflix_config();
-        let pipeline_types = infer_result_type(
+        let pipeline_types = infer_pipeline_types(
             &config,
             "movies_selection",
             Some(&("movies".into())),

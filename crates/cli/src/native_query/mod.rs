@@ -1,7 +1,7 @@
 mod aggregation_expression;
 pub mod error;
 mod helpers;
-mod infer_result_type;
+mod pipeline;
 mod pipeline_type_context;
 mod reference_shorthand;
 mod type_constraint;
@@ -22,7 +22,7 @@ use crate::exit_codes::ExitCode;
 use crate::Context;
 
 use self::error::Result;
-use self::infer_result_type::infer_result_type;
+use self::pipeline::infer_pipeline_types;
 
 /// Create native queries - custom MongoDB queries that integrate into your data graph
 #[derive(Clone, Debug, Subcommand)]
@@ -137,7 +137,7 @@ pub fn native_query_from_pipeline(
     pipeline: Pipeline,
 ) -> Result<NativeQuery> {
     let pipeline_types =
-        infer_result_type(configuration, name, input_collection.as_ref(), &pipeline)?;
+        infer_pipeline_types(configuration, name, input_collection.as_ref(), &pipeline)?;
     // TODO: move warnings to `run` function
     for warning in pipeline_types.warnings {
         println!("warning: {warning}");
@@ -233,6 +233,7 @@ mod tests {
         let config = read_configuration().await?;
         let pipeline = Pipeline::new(vec![
             Stage::ReplaceWith(Selection::new(doc! {
+                "title": "$title",
                 "title_words": { "$split": ["$title", " "] }
             })),
             Stage::Unwind {

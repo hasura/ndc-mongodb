@@ -3,7 +3,7 @@ use ndc_models::{CollectionInfo, CollectionName, FieldName, ObjectTypeName};
 
 use super::{
     error::{Error, Result},
-    pipeline_type_context::PipelineTypeContext,
+    pipeline_type_context::PipelineTypeContext, type_constraint::TypeConstraint,
 };
 
 fn find_collection<'a>(
@@ -34,8 +34,8 @@ pub fn nested_field_type<'a>(
     context: &PipelineTypeContext<'_>,
     object_type_name: String,
     nested_path: impl IntoIterator<Item = &'a FieldName>,
-) -> Result<Type> {
-    let mut parent_type = Type::Object(object_type_name);
+) -> Result<TypeConstraint> {
+    let mut parent_type = TypeConstraint::Object(object_type_name);
     for path_component in nested_path {
         if let Type::Object(type_name) = parent_type {
             let object_type = context
