@@ -3,6 +3,8 @@ use mongodb::bson::{self, Bson, Document};
 use ndc_models::{FieldName, ObjectTypeName};
 use thiserror::Error;
 
+use super::type_constraint::TypeConstraint;
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Clone, Debug, Error)]
@@ -38,11 +40,11 @@ pub enum Error {
         field_name: FieldName,
     },
 
-    #[error("Type mismatch in {context}: expected {expected:?}, but got {actual:?}")]
+    #[error("Type mismatch in {context}: {a:?} is not compatible with {b:?}")]
     TypeMismatch {
         context: String,
-        expected: String,
-        actual: Bson,
+        a: TypeConstraint,
+        b: TypeConstraint,
     },
 
     #[error("Cannot infer a result type for this pipeline. But you can create a native query by writing the configuration file by hand.")]

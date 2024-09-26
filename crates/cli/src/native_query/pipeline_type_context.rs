@@ -26,7 +26,7 @@ impl<'a> TryFrom<PipelineTypeContext<'a>> for PipelineTypes {
 
     fn try_from(context: PipelineTypeContext<'a>) -> Result<Self> {
         Ok(Self {
-            result_document_type: context.get_input_document_type_name()?.clone(),
+            result_document_type: context.get_input_document_type()?,
             object_types: context.object_types.clone(),
             warnings: context.warnings,
         })
