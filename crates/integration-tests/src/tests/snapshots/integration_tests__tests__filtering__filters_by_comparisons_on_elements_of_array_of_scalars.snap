@@ -1,0 +1,13 @@
+---
+source: crates/integration-tests/src/tests/filtering.rs
+expression: "graphql_query(r#\"\n            query MyQuery {\n              movies(where: { cast: { _eq: \"Albert Austin\" } }) {\n                title\n                cast\n              }\n            }\n            \"#).run().await?"
+---
+data:
+  movies:
+    - title: The Immigrant
+      cast:
+        - Charles Chaplin
+        - Edna Purviance
+        - Eric Campbell
+        - Albert Austin
+errors: ~
