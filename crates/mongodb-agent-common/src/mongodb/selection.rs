@@ -188,13 +188,6 @@ fn nested_column_reference<'a>(
     }
 }
 
-// fn append_to_path<'a, 'b, 'c, T>(parent_columns: &'a [&'b T], column: &'c T) -> Vec<&'c T>
-// where
-//     'b: 'c,
-// {
-//     parent_columns.iter().copied().chain(Some(column)).collect()
-// }
-
 /// The extend implementation provides a shallow merge.
 impl Extend<(String, Bson)> for Selection {
     fn extend<T: IntoIterator<Item = (String, Bson)>>(&mut self, iter: T) {
