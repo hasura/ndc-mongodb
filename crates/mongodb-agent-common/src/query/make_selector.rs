@@ -106,7 +106,11 @@ pub fn make_selector(expr: &Expression) -> Result<Document> {
                             "$not": { "$size": 0 },
                         }
                     },
-                    (ColumnRef::Expression(column_expr), Some(predicate)) => {
+                    (
+                        column_expr @ (ColumnRef::ExpressionStringShorthand(_)
+                        | ColumnRef::Expression(_)),
+                        Some(predicate),
+                    ) => {
                         // TODO: NDC-436 We need to be able to create a plan for `predicate` that
                         // evaluates with the variable `$$this` as document root since that
                         // references each array element. With reference to the plan in the
@@ -119,17 +123,21 @@ pub fn make_selector(expr: &Expression) -> Result<Document> {
                             "$expr": {
                                "$anyElementTrue": {
                                     "$map": {
-                                        "input": column_expr,
+                                        "input": column_expr.into_aggregate_expression(),
                                         "in": predicate_scoped_to_nested_document,
                                     }
                                 }
                             }
                         }
                     }
-                    (ColumnRef::Expression(column_expr), None) => {
+                    (
+                        column_expr @ (ColumnRef::ExpressionStringShorthand(_)
+                        | ColumnRef::Expression(_)),
+                        None,
+                    ) => {
                         doc! {
                             "$expr": {
-                                "$gt": [{ "$size": column_expr }, 0]
+                                "$gt": [{ "$size": column_expr.into_aggregate_expression() }, 0]
                             }
                         }
                     }
@@ -147,7 +155,7 @@ pub fn make_selector(expr: &Expression) -> Result<Document> {
                     ColumnRef::MatchKey(key) => doc! {
                         key: { "$eq": null }
                     },
-                    ColumnRef::Expression(expr) => {
+                    expr => {
                         // Special case for array-to-scalar comparisons - this is required because implicit
                         // existential quantification over arrays for scalar comparisons does not work in
                         // aggregation expressions.
@@ -155,7 +163,7 @@ pub fn make_selector(expr: &Expression) -> Result<Document> {
                             doc! {
                                 "$expr": {
                                     "$reduce": {
-                                        "input": expr,
+                                        "input": expr.into_aggregate_expression(),
                                         "initialValue": false,
                                         "in": { "$eq": ["$$this", null] }
                                     },
@@ -164,7 +172,7 @@ pub fn make_selector(expr: &Expression) -> Result<Document> {
                         } else {
                             doc! {
                                 "$expr": {
-                                    "$eq": [expr, null]
+                                    "$eq": [expr.into_aggregate_expression(), null]
                                 }
                             }
                         }
@@ -206,7 +214,7 @@ fn make_binary_comparison_selector(
             let comparison_value = bson_from_scalar_value(value, value_type)?;
             let match_doc = match ColumnRef::from_comparison_target(target_column) {
                 ColumnRef::MatchKey(key) => operator.mongodb_match_query(key, comparison_value),
-                ColumnRef::Expression(expr) => {
+                expr => {
                     // Special case for array-to-scalar comparisons - this is required because implicit
                     // existential quantification over arrays for scalar comparisons does not work in
                     // aggregation expressions.
@@ -214,7 +222,7 @@ fn make_binary_comparison_selector(
                         doc! {
                             "$expr": {
                                 "$reduce": {
-                                    "input": expr,
+                                    "input": expr.into_aggregate_expression(),
                                     "initialValue": false,
                                     "in": operator.mongodb_aggregation_expression("$$this", comparison_value)
                                 },
@@ -222,7 +230,7 @@ fn make_binary_comparison_selector(
                         }
                     } else {
                         doc! {
-                            "$expr": operator.mongodb_aggregation_expression(expr, comparison_value)
+                            "$expr": operator.mongodb_aggregation_expression(expr.into_aggregate_expression(), comparison_value)
                         }
                     }
                 }

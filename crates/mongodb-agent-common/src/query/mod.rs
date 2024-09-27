@@ -1,4 +1,4 @@
-mod column_ref;
+pub mod column_ref;
 mod constants;
 mod execute_query_request;
 mod foreach;
