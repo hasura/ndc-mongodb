@@ -9,6 +9,7 @@ This changelog documents the changes between release versions.
 ### Fixed
 
 - Selecting nested fields with names that begin with a dollar sign ([#108](https://github.com/hasura/ndc-mongodb/pull/108))
+- Sorting by fields with names that begin with a dollar sign ([#109](https://github.com/hasura/ndc-mongodb/pull/109))
 
 ### Changed
 
