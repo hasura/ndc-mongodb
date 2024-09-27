@@ -70,3 +70,23 @@ async fn selects_array_within_array() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+#[tokio::test]
+async fn selects_nested_field_with_dollar_sign_in_name() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+            query {
+              testCases_nestedFieldWithDollar {
+                configuration {
+                  schema
+                }
+              }
+            }
+            "#
+        )
+        .run()
+        .await?
+    );
+    Ok(())
+}
