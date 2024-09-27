@@ -77,7 +77,7 @@ async fn selects_nested_field_with_dollar_sign_in_name() -> anyhow::Result<()> {
         graphql_query(
             r#"
             query {
-              testCases_nestedFieldWithDollar {
+              testCases_nestedFieldWithDollar(order_by: { configuration: Asc }) {
                 configuration {
                   schema
                 }
