@@ -31,7 +31,13 @@ use crate::{
 /// caller to switch contexts in the second case.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ColumnRef<'a> {
+    /// Reference that can be used as a key in a match document. For example, "$imdb.rating".
     MatchKey(Cow<'a, str>),
+
+    /// Just like MatchKey, except that this form can reference variables. For example,
+    /// "$$this.title". Can only be used in aggregation expressions, is not used as a key.
+    ExpressionStringShorthand(Cow<'a, str>),
+
     Expression(Bson),
 }
 
@@ -68,6 +74,11 @@ impl<'a> ColumnRef<'a> {
         fold_path_element(None, field_name.as_ref())
     }
 
+    /// Get a reference to a pipeline variable
+    pub fn variable(variable_name: impl std::fmt::Display) -> Self {
+        Self::ExpressionStringShorthand(format!("$${variable_name}").into())
+    }
+
     pub fn into_nested_field<'b: 'a>(self, field_name: &'b ndc_models::FieldName) -> ColumnRef<'b> {
         fold_path_element(Some(self), field_name.as_ref())
     }
@@ -75,6 +86,7 @@ impl<'a> ColumnRef<'a> {
     pub fn into_aggregate_expression(self) -> Bson {
         match self {
             ColumnRef::MatchKey(key) => format!("${key}").into(),
+            ColumnRef::ExpressionStringShorthand(key) => key.to_string().into(),
             ColumnRef::Expression(expr) => expr,
         }
     }
@@ -107,10 +119,8 @@ fn from_comparison_target(column: &ComparisonTarget) -> ColumnRef<'_> {
             // "$$ROOT" is not actually a valid match key, but cheating here makes the
             // implementation much simpler. This match branch produces a ColumnRef::Expression
             // in all cases.
-            let init = ColumnRef::MatchKey(format!("${}", name_from_scope(scope)).into());
-            // The None case won't come up if the input to [from_target_helper] has at least
-            // one element, and we know it does because we start the iterable with `name`
-            let col_ref = from_path(
+            let init = ColumnRef::variable(name_from_scope(scope));
+            from_path(
                 Some(init),
                 once(name.as_ref() as &str).chain(
                     field_path
@@ -119,12 +129,9 @@ fn from_comparison_target(column: &ComparisonTarget) -> ColumnRef<'_> {
                         .map(|field_name| field_name.as_ref() as &str),
                 ),
             )
-            .unwrap();
-            match col_ref {
-                // move from MatchKey to Expression because "$$ROOT" is not valid in a match key
-                ColumnRef::MatchKey(key) => ColumnRef::Expression(format!("${key}").into()),
-                e @ ColumnRef::Expression(_) => e,
-            }
+            // The None case won't come up if the input to [from_target_helper] has at least
+            // one element, and we know it does because we start the iterable with `name`
+            .unwrap()
         }
     }
 }
@@ -186,28 +193,13 @@ fn fold_path_element<'a>(
         (Some(ColumnRef::MatchKey(parent)), true) => {
             ColumnRef::MatchKey(format!("{parent}.{path_element}").into())
         }
-        (Some(ColumnRef::MatchKey(parent)), false) => ColumnRef::Expression(
+        (Some(ColumnRef::ExpressionStringShorthand(parent)), true) => {
+            ColumnRef::ExpressionStringShorthand(format!("{parent}.{path_element}").into())
+        }
+        (Some(parent), _) => ColumnRef::Expression(
             doc! {
                 "$getField": {
-                    "input": format!("${parent}"),
-                    "field": { "$literal": path_element },
-                }
-            }
-            .into(),
-        ),
-        (Some(ColumnRef::Expression(parent)), true) => ColumnRef::Expression(
-            doc! {
-                "$getField": {
-                    "input": parent,
-                    "field": path_element,
-                }
-            }
-            .into(),
-        ),
-        (Some(ColumnRef::Expression(parent)), false) => ColumnRef::Expression(
-            doc! {
-                "$getField": {
-                    "input": parent,
+                    "input": parent.into_aggregate_expression(),
                     "field": { "$literal": path_element },
                 }
             }
@@ -293,7 +285,7 @@ mod tests {
             doc! {
                 "$getField": {
                     "input": { "$getField": { "$literal": "meta.subtitles" } },
-                    "field": "english_us",
+                    "field": { "$literal": "english_us" },
                 }
             }
             .into(),
@@ -360,7 +352,7 @@ mod tests {
             scope: Scope::Root,
         };
         let actual = ColumnRef::from_comparison_target(&target);
-        let expected = ColumnRef::Expression("$$scope_root.field.prop1.prop2".into());
+        let expected = ColumnRef::ExpressionStringShorthand("$$scope_root.field.prop1.prop2".into());
         assert_eq!(actual, expected);
         Ok(())
     }

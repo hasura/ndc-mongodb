@@ -4,6 +4,14 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+### Added
+
+### Fixed
+
+- Selecting nested fields with names that begin with a dollar sign ([#108](https://github.com/hasura/ndc-mongodb/pull/108))
+
+### Changed
+
 ## [1.2.0] - 2024-09-12
 
 ### Added
@@ -116,10 +124,6 @@ definition:
   graphql:
     typeName: InstitutionStaffComparisonExp
 ```
-
-### Fixed
-
-### Changed
 
 ## [1.1.0] - 2024-08-16
 

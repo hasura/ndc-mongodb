@@ -1,0 +1,3 @@
+{ "configuration": { "$schema": "schema1" } }
+{ "configuration": { "$schema": null } }
+{ "configuration": { "$schema": "schema3" } }
