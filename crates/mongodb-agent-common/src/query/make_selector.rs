@@ -5,13 +5,15 @@ use mongodb::bson::{self, doc, Document};
 use ndc_models::UnaryComparisonOperator;
 
 use crate::{
-    column_ref::{column_expression, ColumnRef},
     comparison_function::ComparisonFunction,
     interface_types::MongoAgentError,
     mongo_query_plan::{ComparisonTarget, ComparisonValue, ExistsInCollection, Expression, Type},
+    query::column_ref::column_expression,
 };
 
-use super::{query_variable_name::query_variable_name, serialization::json_to_bson};
+use super::{
+    column_ref::ColumnRef, query_variable_name::query_variable_name, serialization::json_to_bson,
+};
 
 pub type Result<T> = std::result::Result<T, MongoAgentError>;
 

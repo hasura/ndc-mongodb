@@ -4,7 +4,6 @@ use ndc_models::FieldName;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    column_ref::ColumnRef,
     interface_types::MongoAgentError,
     mongo_query_plan::{Field, NestedArray, NestedField, NestedObject, QueryPlan},
     mongodb::sanitize::get_field,

@@ -172,39 +172,6 @@ fn from_order_by_target(target: &OrderByTarget) -> Result<ColumnRef<'_>, MongoAg
     }
 }
 
-fn from_order_by_target(target: &OrderByTarget) -> Result<ColumnRef<'_>, MongoAgentError> {
-    match target {
-        // We exclude `path` (the relationship path) from the resulting ColumnRef because MongoDB
-        // field references are not relationship-aware. Traversing relationship references is
-        // handled upstream.
-        OrderByTarget::Column {
-            name, field_path, ..
-        } => {
-            let name_and_path = once(name.as_ref() as &str).chain(
-                field_path
-                    .iter()
-                    .flatten()
-                    .map(|field_name| field_name.as_ref() as &str),
-            );
-            // The None case won't come up if the input to [from_target_helper] has at least
-            // one element, and we know it does because we start the iterable with `name`
-            Ok(from_path(None, name_and_path).unwrap())
-        }
-        OrderByTarget::SingleColumnAggregate { .. } => {
-            // TODO: MDB-150
-            Err(MongoAgentError::NotImplemented(
-                "ordering by single column aggregate",
-            ))
-        }
-        OrderByTarget::StarCountAggregate { .. } => {
-            // TODO: MDB-151
-            Err(MongoAgentError::NotImplemented(
-                "ordering by star count aggregate",
-            ))
-        }
-    }
-}
-
 pub fn name_from_scope(scope: &Scope) -> Cow<'_, str> {
     match scope {
         Scope::Root => "scope_root".into(),

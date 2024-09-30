@@ -4,10 +4,10 @@ use itertools::Itertools as _;
 use mongodb::bson::{doc, Bson, Document};
 use ndc_query_plan::Scope;
 
-use crate::column_ref::name_from_scope;
 use crate::mongo_query_plan::{MongoConfiguration, Query, QueryPlan};
 use crate::mongodb::sanitize::safe_name;
 use crate::mongodb::Pipeline;
+use crate::query::column_ref::name_from_scope;
 use crate::{
     interface_types::MongoAgentError,
     mongodb::{sanitize::variable, Stage},
