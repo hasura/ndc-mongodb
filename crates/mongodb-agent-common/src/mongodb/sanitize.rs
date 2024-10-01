@@ -35,7 +35,7 @@ pub fn is_name_safe(name: &str) -> bool {
 /// Given a collection or field name, returns Ok if the name is safe, or Err if it contains
 /// characters that MongoDB will interpret specially.
 ///
-/// TODO: MDB-159, MBD-160 remove this function in favor of ColumnRef which is infallible
+/// TODO: ENG-973 remove this function in favor of ColumnRef which is infallible
 pub fn safe_name(name: &str) -> Result<Cow<str>, MongoAgentError> {
     if name.starts_with('$') || name.contains('.') {
         Err(MongoAgentError::BadQuery(anyhow!("cannot execute query that includes the name, \"{name}\", because it includes characters that MongoDB interperets specially")))
@@ -56,7 +56,7 @@ const ESCAPE_CHAR_ESCAPE_SEQUENCE: u32 = 0xff;
 
 /// MongoDB variable names allow a limited set of ASCII characters, or any non-ASCII character.
 /// See https://www.mongodb.com/docs/manual/reference/aggregation-variables/
-fn escape_invalid_variable_chars(input: &str) -> String {
+pub fn escape_invalid_variable_chars(input: &str) -> String {
     let mut encoded = String::new();
     for char in input.chars() {
         match char {

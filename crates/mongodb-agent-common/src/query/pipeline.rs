@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use itertools::Itertools;
 use mongodb::bson::{self, doc, Bson};
 use tracing::instrument;
 
@@ -13,7 +14,8 @@ use crate::{
 use super::{
     constants::{RESULT_FIELD, ROWS_FIELD},
     foreach::pipeline_for_foreach,
-    make_selector, make_sort,
+    make_selector,
+    make_sort::make_sort_stages,
     native_query::pipeline_for_native_query,
     query_level::QueryLevel,
     relations::pipeline_for_relations,
@@ -70,16 +72,17 @@ pub fn pipeline_for_non_foreach(
         .map(make_selector)
         .transpose()?
         .map(Stage::Match);
-    let sort_stage: Option<Stage> = order_by
+    let sort_stages: Vec<Stage> = order_by
         .iter()
-        .map(|o| Ok(Stage::Sort(make_sort(o)?)) as Result<_, MongoAgentError>)
-        .next()
-        .transpose()?;
+        .map(make_sort_stages)
+        .flatten_ok()
+        .collect::<Result<Vec<_>, _>>()?;
     let skip_stage = offset.map(Stage::Skip);
 
-    [match_stage, sort_stage, skip_stage]
+    match_stage
         .into_iter()
-        .flatten()
+        .chain(sort_stages)
+        .chain(skip_stage)
         .for_each(|stage| pipeline.push(stage));
 
     // `diverging_stages` includes either a $facet stage if the query includes aggregates, or the
