@@ -1,5 +1,6 @@
 mod make_aggregation_expression;
 mod make_expression_plan;
+mod make_query_document;
 
 use mongodb::bson::{doc, Document};
 
@@ -25,6 +26,32 @@ pub fn make_selector(expr: &Expression) -> Result<Document> {
         },
     };
     Ok(selector)
+}
+
+// TODO: How about doing it this way?
+mod proposal {
+    use crate::mongo_query_plan::Expression;
+
+    use super::{
+        make_aggregation_expression::{self, AggregationExpression}, make_expression_plan::{ExpressionPlan, QueryDocument},
+    };
+    use super::super::Result;
+
+    fn make_expression_plan(expression: &Expression) -> Result<ExpressionPlan> {
+        if let Some(query_doc) = make_query_document(expression)? {
+            Ok(ExpressionPlan::QueryDocument(query_doc))
+        } else {
+            make_aggregation_expression(expression)
+        }
+    }
+
+    fn make_query_document(expression: &Expression) -> Result<Option<QueryDocument>> {
+        todo!()
+    }
+
+    fn make_aggregation_expression(expression: &Expression) -> Result<AggregationExpression> {
+        todo!()
+    }
 }
 
 #[cfg(test)]
