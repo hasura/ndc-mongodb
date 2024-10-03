@@ -152,25 +152,6 @@ fn make_binary_comparison_selector(
     value: &ComparisonValue,
 ) -> Result<Option<QueryDocument>> {
     let query_doc = match value {
-        ComparisonValue::Column {
-            column: value_column,
-        } => {
-            // TODO: ENG-1153 Do we want an implicit exists in the value relationship? If both
-            // target and value reference relationships do we want an exists in a Cartesian product
-            // of the two?
-            if !value_column.relationship_path().is_empty() {
-                return Err(MongoAgentError::NotImplemented("binary comparisons where the right-side of the comparison references a relationship".into()));
-            }
-
-            let left_operand = ColumnRef::from_comparison_target(target_column);
-            let right_operand = ColumnRef::from_comparison_target(value_column);
-            match (left_operand, right_operand) {
-                (ColumnRef::MatchKey(left), ColumnRef::MatchKey(right)) => Some(QueryDocument(
-                    operator.mongodb_match_query(left, right.into_owned().into()),
-                )),
-                _ => None,
-            }
-        }
         ComparisonValue::Scalar { value, value_type } => {
             let comparison_value = bson_from_scalar_value(value, value_type)?;
             match ColumnRef::from_comparison_target(target_column) {
@@ -180,6 +161,7 @@ fn make_binary_comparison_selector(
                 _ => None,
             }
         }
+        ComparisonValue::Column { .. } => None,
         // Variables cannot be referenced in match documents
         ComparisonValue::Variable { .. } => None,
     };

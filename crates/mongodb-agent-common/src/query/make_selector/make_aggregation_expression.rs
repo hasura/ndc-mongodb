@@ -210,9 +210,10 @@ fn make_binary_comparison_selector(
                     },
                 }
             } else {
-                doc! {
-                    "$expr": operator.mongodb_aggregation_expression(column_expression(target_column), comparison_value)
-                }
+                operator.mongodb_aggregation_expression(
+                    column_expression(target_column),
+                    comparison_value,
+                )
             };
             AggregationExpression(expression_doc.into())
         }
@@ -227,21 +228,17 @@ fn make_binary_comparison_selector(
                 // aggregation expressions.
                 if target_column.get_field_type().is_array() && !variable_type.is_array() {
                     doc! {
-                        "$expr": {
-                            "$reduce": {
-                                "input": column_expression(target_column),
-                                "initialValue": false,
-                                "in": operator.mongodb_aggregation_expression("$$this", comparison_value.into_aggregate_expression())
-                            },
+                        "$reduce": {
+                            "input": column_expression(target_column),
+                            "initialValue": false,
+                            "in": operator.mongodb_aggregation_expression("$$this", comparison_value.into_aggregate_expression())
                         },
                     }
                 } else {
-                    doc! {
-                        "$expr": operator.mongodb_aggregation_expression(
-                            column_expression(target_column),
-                            comparison_value.into_aggregate_expression()
-                        )
-                    }
+                    operator.mongodb_aggregation_expression(
+                        column_expression(target_column),
+                        comparison_value.into_aggregate_expression()
+                    )
                 };
             AggregationExpression(expression_doc.into())
         }

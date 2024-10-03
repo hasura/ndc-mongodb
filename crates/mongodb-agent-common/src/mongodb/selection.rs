@@ -284,12 +284,7 @@ mod tests {
                                 "input": "$os",
                                 "in": {
                                     "cat": {
-                                        "$ifNull": [{
-                                            "$getField": {
-                                                "input": "$$this",
-                                                "field": "cat"
-                                            }
-                                        }, null]
+                                        "$ifNull": ["$$this.cat", null]
                                     }
                                 }
                             }
@@ -308,12 +303,7 @@ mod tests {
                                         "input": "$$this",
                                         "in": {
                                             "cat": {
-                                                "$ifNull": [{
-                                                    "$getField": {
-                                                        "input": "$$this",
-                                                        "field": "cat"
-                                                    }
-                                                }, null]
+                                                "$ifNull": ["$$this.cat", null]
                                             }
                                         }
                                     }
