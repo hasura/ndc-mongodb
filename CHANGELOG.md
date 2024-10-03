@@ -4,6 +4,8 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+## [1.3.0] - 2024-10-01
+
 ### Added
 
 ### Fixed
