@@ -14,6 +14,7 @@ use crate::{
 
 use super::Result;
 
+#[derive(Clone, Debug)]
 pub struct QueryDocument(pub bson::Document);
 
 impl QueryDocument {
@@ -154,9 +155,9 @@ fn make_binary_comparison_selector(
         ComparisonValue::Column {
             column: value_column,
         } => {
-            // TODO: Do we want an implicit exists in the value relationship? If both target and
-            // value reference relationships do we want an exists in a Cartesian product of the
-            // two?
+            // TODO: ENG-1153 Do we want an implicit exists in the value relationship? If both
+            // target and value reference relationships do we want an exists in a Cartesian product
+            // of the two?
             if !value_column.relationship_path().is_empty() {
                 return Err(MongoAgentError::NotImplemented("binary comparisons where the right-side of the comparison references a relationship".into()));
             }
@@ -184,7 +185,7 @@ fn make_binary_comparison_selector(
     };
 
     let implicit_exists_over_relationship =
-        query_doc.map(|d| traverse_relationship_path(target_column.relationship_path(), d));
+        query_doc.and_then(|d| traverse_relationship_path(target_column.relationship_path(), d));
 
     Ok(implicit_exists_over_relationship)
 }
@@ -203,7 +204,7 @@ fn make_unary_comparison_selector(
     };
 
     let implicit_exists_over_relationship =
-        query_doc.map(|d| traverse_relationship_path(target_column.relationship_path(), d));
+        query_doc.and_then(|d| traverse_relationship_path(target_column.relationship_path(), d));
 
     Ok(implicit_exists_over_relationship)
 }
@@ -215,16 +216,21 @@ fn make_unary_comparison_selector(
 /// the target column.
 fn traverse_relationship_path(
     path: &[ndc_models::RelationshipName],
-    QueryDocument(mut expression): QueryDocument,
-) -> QueryDocument {
+    QueryDocument(expression): QueryDocument,
+) -> Option<QueryDocument> {
+    let mut expression = Some(expression);
     for path_element in path.iter().rev() {
-        expression = doc! {
-            path_element.to_string(): {
-                "$elemMatch": expression
-            }
-        }
+        let path_element_ref = ColumnRef::from_relationship(path_element);
+        expression = expression.and_then(|expr| match path_element_ref {
+            ColumnRef::MatchKey(key) => Some(doc! {
+                key: {
+                    "$elemMatch": expr
+                }
+            }),
+            _ => None,
+        });
     }
-    QueryDocument(expression)
+    expression.map(QueryDocument)
 }
 
 /// Convert a JSON Value into BSON using the provided type information.

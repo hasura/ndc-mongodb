@@ -6,9 +6,10 @@ use mongodb::bson::{doc, Document};
 
 use crate::{interface_types::MongoAgentError, mongo_query_plan::Expression};
 
-use self::{
+pub use self::{
     make_aggregation_expression::AggregationExpression,
-    make_expression_plan::{make_expression_plan, ExpressionPlan, QueryDocument},
+    make_expression_plan::{make_expression_plan, ExpressionPlan},
+    make_query_document::QueryDocument,
 };
 
 pub type Result<T> = std::result::Result<T, MongoAgentError>;
@@ -26,32 +27,6 @@ pub fn make_selector(expr: &Expression) -> Result<Document> {
         },
     };
     Ok(selector)
-}
-
-// TODO: How about doing it this way?
-mod proposal {
-    use crate::mongo_query_plan::Expression;
-
-    use super::{
-        make_aggregation_expression::{self, AggregationExpression}, make_expression_plan::{ExpressionPlan, QueryDocument},
-    };
-    use super::super::Result;
-
-    fn make_expression_plan(expression: &Expression) -> Result<ExpressionPlan> {
-        if let Some(query_doc) = make_query_document(expression)? {
-            Ok(ExpressionPlan::QueryDocument(query_doc))
-        } else {
-            make_aggregation_expression(expression)
-        }
-    }
-
-    fn make_query_document(expression: &Expression) -> Result<Option<QueryDocument>> {
-        todo!()
-    }
-
-    fn make_aggregation_expression(expression: &Expression) -> Result<AggregationExpression> {
-        todo!()
-    }
 }
 
 #[cfg(test)]
