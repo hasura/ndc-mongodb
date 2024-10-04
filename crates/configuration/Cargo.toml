@@ -18,3 +18,4 @@ serde_json = { version = "1" }
 serde_yaml = "^0.9"
 tokio = "1"
 tokio-stream = { version = "^0.1", features = ["fs"] }
+tracing = "0.1"

@@ -72,6 +72,30 @@ async fn selects_array_within_array() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn selects_field_names_that_require_escaping() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+            query {
+              testCases_weirdFieldNames(limit: 1, order_by: { invalidName: Asc }) {
+                invalidName
+                invalidObjectName {
+                  validName
+                }
+                validObjectName {
+                  invalidNestedName
+                }
+              }
+            }
+            "#
+        )
+        .run()
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn selects_nested_field_with_dollar_sign_in_name() -> anyhow::Result<()> {
     assert_yaml_snapshot!(
         graphql_query(

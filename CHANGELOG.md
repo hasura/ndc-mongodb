@@ -4,9 +4,15 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
-## [1.3.0] - 2024-10-01
-
 ### Added
+
+### Changed
+
+### Fixed
+
+- Fixes for filtering by complex predicate that references variables, or field names that require escaping ([#111](https://github.com/hasura/ndc-mongodb/pull/111))
+
+## [1.3.0] - 2024-10-01
 
 ### Fixed
 

@@ -282,7 +282,11 @@ mod tests {
                         "then": {
                             "$map": {
                                 "input": "$os",
-                                "in": {"cat": { "$ifNull": ["$$this.cat", null] }}
+                                "in": {
+                                    "cat": {
+                                        "$ifNull": ["$$this.cat", null]
+                                    }
+                                }
                             }
                         },
                         "else": null
@@ -297,7 +301,11 @@ mod tests {
                                 "in": {
                                     "$map": {
                                         "input": "$$this",
-                                        "in": {"cat": { "$ifNull": ["$$this.cat", null] }}
+                                        "in": {
+                                            "cat": {
+                                                "$ifNull": ["$$this.cat", null]
+                                            }
+                                        }
                                     }
                                 }
                             }

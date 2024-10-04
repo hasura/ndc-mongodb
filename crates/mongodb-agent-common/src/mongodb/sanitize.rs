@@ -28,8 +28,8 @@ pub fn variable(name: &str) -> String {
 /// Returns false if the name contains characters that MongoDB will interpret specially, such as an
 /// initial dollar sign, or dots. This indicates whether a name is safe for field references
 /// - variable names are more strict.
-pub fn is_name_safe(name: &str) -> bool {
-    !(name.starts_with('$') || name.contains('.'))
+pub fn is_name_safe(name: impl AsRef<str>) -> bool {
+    !(name.as_ref().starts_with('$') || name.as_ref().contains('.'))
 }
 
 /// Given a collection or field name, returns Ok if the name is safe, or Err if it contains

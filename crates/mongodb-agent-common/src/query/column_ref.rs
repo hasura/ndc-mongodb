@@ -74,6 +74,14 @@ impl<'a> ColumnRef<'a> {
         fold_path_element(None, field_name.as_ref())
     }
 
+    pub fn from_relationship(relationship_name: &ndc_models::RelationshipName) -> ColumnRef<'_> {
+        fold_path_element(None, relationship_name.as_ref())
+    }
+
+    pub fn from_unrelated_collection(collection_name: &str) -> ColumnRef<'_> {
+        fold_path_element(Some(ColumnRef::variable("ROOT")), collection_name)
+    }
+
     /// Get a reference to a pipeline variable
     pub fn variable(variable_name: impl std::fmt::Display) -> Self {
         Self::ExpressionStringShorthand(format!("$${variable_name}").into())
