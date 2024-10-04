@@ -4,17 +4,6 @@ use ndc_test_helpers::{asc, binop, field, query, query_request, target, variable
 
 #[tokio::test]
 async fn runs_native_query_with_function_representation() -> anyhow::Result<()> {
-    // Skip this test in MongoDB 5 because the example fails there. We're getting an error:
-    //
-    // > Kind: Command failed: Error code 5491300 (Location5491300): $documents' is not allowed in user requests, labels: {}
-    //
-    // This doesn't affect native queries that don't use the $documents stage.
-    if let Ok(image) = std::env::var("MONGODB_IMAGE") {
-        if image == "mongo:5" {
-            return Ok(());
-        }
-    }
-
     assert_yaml_snapshot!(
         graphql_query(
             r#"
@@ -55,17 +44,6 @@ async fn runs_native_query_with_collection_representation() -> anyhow::Result<()
 
 #[tokio::test]
 async fn runs_native_query_with_variable_sets() -> anyhow::Result<()> {
-    // Skip this test in MongoDB 5 because the example fails there. We're getting an error:
-    //
-    // > Kind: Command failed: Error code 5491300 (Location5491300): $documents' is not allowed in user requests, labels: {}
-    //
-    // This means that remote joins are not working in MongoDB 5
-    if let Ok(image) = std::env::var("MONGODB_IMAGE") {
-        if image == "mongo:5" {
-            return Ok(());
-        }
-    }
-
     assert_yaml_snapshot!(
         run_connector_query(
             Connector::SampleMflix,
