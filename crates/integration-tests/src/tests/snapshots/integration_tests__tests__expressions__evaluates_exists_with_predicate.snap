@@ -1,0 +1,11 @@
+---
+source: crates/integration-tests/src/tests/expressions.rs
+expression: "run_connector_query(Connector::Chinook,\n            query_request().collection(\"Artist\").query(query().predicate(exists(ExistsInCollection::Related {\n                                    relationship: \"albums\".into(),\n                                    arguments: Default::default(),\n                                },\n                                binop(\"_iregex\", target!(\"Title\"),\n                                    value!(\"Wild\")))).fields([field!(\"_id\"), field!(\"Name\"),\n                                relation_field!(\"albums\" => \"albums\",\n                                    query().fields([field!(\"Title\")]))])).relationships([(\"albums\",\n                            relationship(\"Album\", [(\"ArtistId\", \"ArtistId\")]))])).await?"
+---
+- rows:
+    - Name: Accept
+      _id: 66134cc163c113a2dc1364ad
+      albums:
+        rows:
+          - Title: Balls to the Wall
+          - Title: Restless and Wild
