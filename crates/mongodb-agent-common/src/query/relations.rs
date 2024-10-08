@@ -171,16 +171,12 @@ fn lookup_with_uncorrelated_subquery(
         .into_iter()
         .map(|(local_field, remote_field)| {
             doc! { "$eq": [
-                ColumnRef::variable(local_field).into_aggregate_expression(),
+                ColumnRef::variable(variable(local_field.as_str())).into_aggregate_expression(),
                 ColumnRef::from_field(remote_field).into_aggregate_expression(),
             ] }
         })
         .collect();
 
-    // Match only documents on the right side of the join that match the column-mapping
-    // criteria. In the case where we have only one column mapping using the $lookup stage's
-    // `local_field` and `foreign_field` shorthand would give better performance (~10%), but that
-    // locks us into MongoDB v5.0 or later.
     let mut pipeline = Pipeline::from_iter([Stage::Match(if matchers.len() == 1 {
         doc! { "$expr": matchers.into_iter().next().unwrap() }
     } else {
@@ -203,8 +199,9 @@ fn lookup_with_uncorrelated_subquery(
 mod tests {
     use configuration::Configuration;
     use mongodb::bson::{bson, Bson};
+    use ndc_models::{FieldName, QueryResponse};
     use ndc_test_helpers::{
-        binop, collection, exists, field, named_type, object_type, query, query_request,
+        binop, collection, exists, field, named_type, object, object_type, query, query_request,
         relation_field, relationship, row_set, star_count_aggregate, target, value,
     };
     use pretty_assertions::assert_eq;
@@ -479,6 +476,82 @@ mod tests {
 
         let result = execute_query_request(db, &students_config(), query_request).await?;
         assert_eq!(expected_response, result);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn escapes_column_mappings_names_if_necessary() -> Result<(), anyhow::Error> {
+        let query_request = query_request()
+            .collection("weird_field_names")
+            .query(query().fields([
+                field!("$invalid.name"),
+                relation_field!("join" => "join", query().fields([
+                  field!("$invalid.name")
+                ])),
+            ]))
+            .relationships([(
+                "join",
+                relationship("weird_field_names", [("$invalid.name", "$invalid.name")]),
+            )])
+            .into();
+
+        let expected_pipeline = bson!([
+            {
+                "$lookup": {
+                    "from": "weird_field_names",
+                    "let": {
+                        "v_·24invalid·2ename": { "$getField": { "$literal": "$invalid.name" } },
+                        "scope_root": "$$ROOT",
+                    },
+                    "pipeline": [
+                        {
+                            "$match": { "$expr": {
+                                "$eq": [
+                                    "$$v_·24invalid·2ename",
+                                    { "$getField": { "$literal": "$invalid.name" } }
+                                ]
+                            } },
+                        },
+                        {
+                            "$replaceWith": {
+                                "$invalid.name": { "$ifNull": [{ "$getField": { "$literal": "$invalid.name" } }, null] },
+                            },
+                        },
+                    ],
+                    "as": "join",
+                },
+            },
+            {
+                "$replaceWith": {
+                    "$invalid.name": { "$ifNull": [{ "$getField": { "$literal": "$invalid.name" } }, null] },
+                    "join": {
+                        "rows": {
+                            "$map": {
+                                "input": { "$getField": { "$literal": "join" } },
+                                "in": {
+                                    "$invalid.name": {
+                                        "$getField": {
+                                            "input": "$$this",
+                                            "field": { "$literal": "$invalid.name" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                },
+            },
+        ]);
+
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "weird_field_names",
+            expected_pipeline,
+            bson!({}),
+        );
+
+        execute_query_request(db, &test_cases_config(), query_request).await?;
+        // assert_eq!(expected_response, result);
 
         Ok(())
     }
@@ -973,6 +1046,25 @@ mod tests {
                     ]),
                 ),
             ]
+            .into(),
+            functions: Default::default(),
+            procedures: Default::default(),
+            native_mutations: Default::default(),
+            native_queries: Default::default(),
+            options: Default::default(),
+        })
+    }
+
+    fn test_cases_config() -> MongoConfiguration {
+        MongoConfiguration(Configuration {
+            collections: [collection("weird_field_names")].into(),
+            object_types: [(
+                "weird_field_names".into(),
+                object_type([
+                    ("_id", named_type("ObjectId")),
+                    ("$invalid.name", named_type("Int")),
+                ]),
+            )]
             .into(),
             functions: Default::default(),
             procedures: Default::default(),

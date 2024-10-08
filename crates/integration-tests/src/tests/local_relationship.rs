@@ -200,7 +200,7 @@ async fn joins_on_field_names_that_require_escaping() -> anyhow::Result<()> {
                 .relationships([(
                     "join",
                     relationship("weird_field_names", [("$invalid.name", "$invalid.name")])
-                ),])
+                )])
         )
         .await?
     );
