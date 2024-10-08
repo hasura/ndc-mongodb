@@ -1,6 +1,6 @@
 use crate::{connector::Connector, graphql_query, run_connector_query};
 use insta::assert_yaml_snapshot;
-use ndc_test_helpers::{field, query, query_request, relation_field, relationship};
+use ndc_test_helpers::{asc, field, query, query_request, relation_field, relationship};
 
 #[tokio::test]
 async fn joins_local_relationships() -> anyhow::Result<()> {
@@ -191,12 +191,16 @@ async fn joins_on_field_names_that_require_escaping() -> anyhow::Result<()> {
             Connector::TestCases,
             query_request()
                 .collection("weird_field_names")
-                .query(query().fields([
-                    field!("invalid_name" => "$invalid.name"),
-                    relation_field!("join" => "join", query().fields([
-                      field!("invalid_name" => "$invalid.name")
-                    ]))
-                ]))
+                .query(
+                    query()
+                        .fields([
+                            field!("invalid_name" => "$invalid.name"),
+                            relation_field!("join" => "join", query().fields([
+                              field!("invalid_name" => "$invalid.name")
+                            ]))
+                        ])
+                        .order_by([asc!("_id")])
+                )
                 .relationships([(
                     "join",
                     relationship("weird_field_names", [("$invalid.name", "$invalid.name")])
