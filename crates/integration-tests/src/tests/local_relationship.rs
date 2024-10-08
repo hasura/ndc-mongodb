@@ -192,9 +192,9 @@ async fn joins_on_field_names_that_require_escaping() -> anyhow::Result<()> {
             query_request()
                 .collection("weird_field_names")
                 .query(query().fields([
-                    field!("$invalid.name"),
+                    field!("invalid_name" => "$invalid.name"),
                     relation_field!("join" => "join", query().fields([
-                      field!("$invalid.name")
+                      field!("invalid_name" => "$invalid.name")
                     ]))
                 ]))
                 .relationships([(

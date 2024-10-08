@@ -485,9 +485,9 @@ mod tests {
         let query_request = query_request()
             .collection("weird_field_names")
             .query(query().fields([
-                field!("$invalid.name"),
+                field!("invalid_name" => "$invalid.name"),
                 relation_field!("join" => "join", query().fields([
-                  field!("$invalid.name")
+                  field!("invalid_name" => "$invalid.name")
                 ])),
             ]))
             .relationships([(
@@ -515,7 +515,7 @@ mod tests {
                         },
                         {
                             "$replaceWith": {
-                                "$invalid.name": { "$ifNull": [{ "$getField": { "$literal": "$invalid.name" } }, null] },
+                                "invalid_name": { "$ifNull": [{ "$getField": { "$literal": "$invalid.name" } }, null] },
                             },
                         },
                     ],
@@ -524,18 +524,13 @@ mod tests {
             },
             {
                 "$replaceWith": {
-                    "$invalid.name": { "$ifNull": [{ "$getField": { "$literal": "$invalid.name" } }, null] },
+                    "invalid_name": { "$ifNull": [{ "$getField": { "$literal": "$invalid.name" } }, null] },
                     "join": {
                         "rows": {
                             "$map": {
                                 "input": { "$getField": { "$literal": "join" } },
                                 "in": {
-                                    "$invalid.name": {
-                                        "$getField": {
-                                            "input": "$$this",
-                                            "field": { "$literal": "$invalid.name" }
-                                        }
-                                    }
+                                    "invalid_name": "$$this.invalid_name",
                                 }
                             }
                         }
