@@ -4,6 +4,7 @@ edition = "2021"
 version.workspace = true
 
 [dependencies]
+anyhow = "1"
 enum-iterator = "^2.0.0"
 indexmap = { workspace = true }
 mongodb = { workspace = true }
@@ -11,6 +12,3 @@ schemars = "^0.8.12"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "1"
-
-[dev-dependencies]
-anyhow = "1"

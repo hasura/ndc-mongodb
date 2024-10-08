@@ -2,13 +2,14 @@ use std::collections::BTreeMap;
 
 use itertools::Itertools;
 use mongodb::bson::{self, doc, Bson};
+use mongodb_support::aggregate::{Accumulator, Pipeline, Selection, Stage};
 use tracing::instrument;
 
 use crate::{
     aggregation_function::AggregationFunction,
     interface_types::MongoAgentError,
     mongo_query_plan::{Aggregate, MongoConfiguration, Query, QueryPlan},
-    mongodb::{sanitize::get_field, Accumulator, Pipeline, Selection, Stage},
+    mongodb::{sanitize::get_field, selection_from_query_request},
 };
 
 use super::{
@@ -116,15 +117,18 @@ pub fn pipeline_for_fields_facet(
         ..
     } = &query_plan.query;
 
-    let mut selection = Selection::from_query_request(query_plan)?;
+    let mut selection = selection_from_query_request(query_plan)?;
     if query_level != QueryLevel::Top {
         // Queries higher up the chain might need to reference relationships from this query. So we
         // forward relationship arrays if this is not the top-level query.
         for relationship_key in relationships.keys() {
-            selection.0.insert(
-                relationship_key.to_owned(),
-                get_field(relationship_key.as_str()),
-            );
+            selection = selection.try_map_document(|mut doc| {
+                doc.insert(
+                    relationship_key.to_owned(),
+                    get_field(relationship_key.as_str()),
+                );
+                doc
+            })?;
         }
     }
 
@@ -209,7 +213,7 @@ fn facet_pipelines_for_query(
         _ => None,
     };
 
-    let selection = Selection(
+    let selection = Selection::new(
         [select_aggregates, select_rows]
             .into_iter()
             .flatten()

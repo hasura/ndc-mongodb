@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
-use mongodb::bson::{self, doc, Bson, Document};
+use mongodb::bson::{doc, Bson, Document};
+use mongodb_support::aggregate::Selection;
 use ndc_models::FieldName;
-use serde::{Deserialize, Serialize};
 
 use crate::{
     interface_types::MongoAgentError,
@@ -10,33 +10,18 @@ use crate::{
     query::column_ref::ColumnRef,
 };
 
-/// Wraps a BSON document that represents a MongoDB "expression" that constructs a document based
-/// on the output of a previous aggregation pipeline stage. A Selection value is intended to be
-/// used as the argument to a $replaceWith pipeline stage.
-///
-/// When we compose pipelines, we can pair each Pipeline with a Selection that extracts the data we
-/// want, in the format we want it to provide to HGE. We can collect Selection values and merge
-/// them to form one stage after all of the composed pipelines.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[serde(transparent)]
-pub struct Selection(pub bson::Document);
-
-impl Selection {
-    pub fn from_doc(doc: bson::Document) -> Self {
-        Selection(doc)
-    }
-
-    pub fn from_query_request(query_request: &QueryPlan) -> Result<Selection, MongoAgentError> {
-        // let fields = (&query_request.query.fields).flatten().unwrap_or_default();
-        let empty_map = IndexMap::new();
-        let fields = if let Some(fs) = &query_request.query.fields {
-            fs
-        } else {
-            &empty_map
-        };
-        let doc = from_query_request_helper(None, fields)?;
-        Ok(Selection(doc))
-    }
+pub fn selection_from_query_request(
+    query_request: &QueryPlan,
+) -> Result<Selection, MongoAgentError> {
+    // let fields = (&query_request.query.fields).flatten().unwrap_or_default();
+    let empty_map = IndexMap::new();
+    let fields = if let Some(fs) = &query_request.query.fields {
+        fs
+    } else {
+        &empty_map
+    };
+    let doc = from_query_request_helper(None, fields)?;
+    Ok(Selection::new(doc))
 }
 
 fn from_query_request_helper(
@@ -188,27 +173,6 @@ fn nested_column_reference<'a>(
     }
 }
 
-/// The extend implementation provides a shallow merge.
-impl Extend<(String, Bson)> for Selection {
-    fn extend<T: IntoIterator<Item = (String, Bson)>>(&mut self, iter: T) {
-        self.0.extend(iter);
-    }
-}
-
-impl From<Selection> for bson::Document {
-    fn from(value: Selection) -> Self {
-        value.0
-    }
-}
-
-// This won't fail, but it might in the future if we add some sort of validation or parsing.
-impl TryFrom<bson::Document> for Selection {
-    type Error = anyhow::Error;
-    fn try_from(value: bson::Document) -> Result<Self, Self::Error> {
-        Ok(Selection(value))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use configuration::Configuration;
@@ -220,9 +184,7 @@ mod tests {
     };
     use pretty_assertions::assert_eq;
 
-    use crate::mongo_query_plan::MongoConfiguration;
-
-    use super::Selection;
+    use crate::{mongo_query_plan::MongoConfiguration, mongodb::selection_from_query_request};
 
     #[test]
     fn calculates_selection_for_query_request() -> Result<(), anyhow::Error> {
@@ -250,7 +212,7 @@ mod tests {
 
         let query_plan = plan_for_query_request(&foo_config(), query_request)?;
 
-        let selection = Selection::from_query_request(&query_plan)?;
+        let selection = selection_from_query_request(&query_plan)?;
         assert_eq!(
             Into::<Document>::into(selection),
             doc! {
@@ -342,7 +304,7 @@ mod tests {
         // twice (once with the key `class_students`, and then with the key `class_students_0`).
         // This is because the queries on the two relationships have different scope names. The
         // query would work with just one lookup. Can we do that optimization?
-        let selection = Selection::from_query_request(&query_plan)?;
+        let selection = selection_from_query_request(&query_plan)?;
         assert_eq!(
             Into::<Document>::into(selection),
             doc! {

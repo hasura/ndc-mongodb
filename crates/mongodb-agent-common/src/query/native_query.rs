@@ -3,12 +3,12 @@ use std::collections::BTreeMap;
 use configuration::native_query::NativeQuery;
 use itertools::Itertools as _;
 use mongodb::bson::Bson;
+use mongodb_support::aggregate::{Pipeline, Stage};
 use ndc_models::ArgumentName;
 
 use crate::{
     interface_types::MongoAgentError,
     mongo_query_plan::{Argument, MongoConfiguration, QueryPlan},
-    mongodb::{Pipeline, Stage},
     procedure::{interpolated_command, ProcedureError},
 };
 

@@ -6,12 +6,11 @@ use mongodb::{
     options::{AggregateOptions, FindOptions},
     Collection,
 };
+use mongodb_support::aggregate::Pipeline;
 use serde::de::DeserializeOwned;
 
 #[cfg(test)]
 use mockall::automock;
-
-use super::Pipeline;
 
 #[cfg(test)]
 use super::test_helpers::MockCursor;
