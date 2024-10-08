@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use mongodb::bson;
 use serde::{Deserialize, Serialize};
 
-use super::{Accumulator, Pipeline, Selection};
+use super::{Accumulator, Pipeline, Selection, SortDocument};
 
 /// Aggergation Pipeline Stage. This is a work-in-progress - we are adding enum variants to match
 /// MongoDB pipeline stage types as we need them in this app. For documentation on all stage types
@@ -11,6 +11,13 @@ use super::{Accumulator, Pipeline, Selection};
 /// https://www.mongodb.com/docs/manual/reference/operator/aggregation-pipeline/#std-label-aggregation-pipeline-operator-reference
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum Stage {
+    /// Adds new fields to documents. $addFields outputs documents that contain all existing fields
+    /// from the input documents and newly added fields.
+    ///
+    /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/addFields/
+    #[serde(rename = "$addFields")]
+    AddFields(bson::Document),
+
     /// Returns literal documents from input expressions.
     ///
     /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/documents/#mongodb-pipeline-pipe.-documents
@@ -35,7 +42,7 @@ pub enum Stage {
     ///
     /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/sort/#mongodb-pipeline-pipe.-sort
     #[serde(rename = "$sort")]
-    Sort(bson::Document),
+    Sort(SortDocument),
 
     /// Passes the first n documents unmodified to the pipeline where n is the specified limit. For
     /// each input document, outputs either one document (for the first n documents) or zero

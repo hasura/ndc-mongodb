@@ -24,6 +24,14 @@ impl<S> Type<S> {
             t => Type::Nullable(Box::new(t)),
         }
     }
+
+    pub fn is_array(&self) -> bool {
+        match self {
+            Type::ArrayOf(_) => true,
+            Type::Nullable(t) => t.is_array(),
+            _ => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

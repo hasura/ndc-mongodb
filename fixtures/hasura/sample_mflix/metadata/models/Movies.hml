@@ -574,7 +574,11 @@ definition:
           booleanExpressionType: ObjectIdComparisonExp
         - fieldName: awards
           booleanExpressionType: MoviesAwardsComparisonExp
+        - fieldName: cast
+          booleanExpressionType: StringComparisonExp
         - fieldName: fullplot
+          booleanExpressionType: StringComparisonExp
+        - fieldName: genres
           booleanExpressionType: StringComparisonExp
         - fieldName: imdb
           booleanExpressionType: MoviesImdbComparisonExp

@@ -1,0 +1,35 @@
+{
+  "name": "nested_field_with_dollar",
+  "collections": {
+    "nested_field_with_dollar": {
+      "type": "nested_field_with_dollar"
+    }
+  },
+  "objectTypes": {
+    "nested_field_with_dollar": {
+      "fields": {
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        },
+        "configuration": {
+          "type": {
+            "object": "nested_field_with_dollar_configuration"
+          }
+        }
+      }
+    },
+    "nested_field_with_dollar_configuration": {
+      "fields": {
+        "$schema": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

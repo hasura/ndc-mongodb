@@ -1,4 +1,4 @@
-mod column_ref;
+pub mod column_ref;
 mod constants;
 mod execute_query_request;
 mod foreach;
@@ -18,7 +18,7 @@ use ndc_models::{QueryRequest, QueryResponse};
 use self::execute_query_request::execute_query_request;
 pub use self::{
     make_selector::make_selector,
-    make_sort::make_sort,
+    make_sort::make_sort_stages,
     pipeline::{is_response_faceted, pipeline_for_non_foreach, pipeline_for_query_request},
     query_target::QueryTarget,
     response::QueryResponseError,

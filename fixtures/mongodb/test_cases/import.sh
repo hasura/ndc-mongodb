@@ -13,5 +13,6 @@ FIXTURES=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 echo "📡 Importing test case data..."
 mongoimport --db test_cases --collection weird_field_names --file "$FIXTURES"/weird_field_names.json
 mongoimport --db test_cases --collection nested_collection --file "$FIXTURES"/nested_collection.json
+mongoimport --db test_cases --collection nested_field_with_dollar --file "$FIXTURES"/nested_field_with_dollar.json
 echo "✅ test case data imported..."
 

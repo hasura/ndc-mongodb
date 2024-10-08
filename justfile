@@ -37,9 +37,9 @@ test-e2e: (_arion "arion-compose/e2e-testing.nix" "test")
 
 # Run `just test-integration` on several MongoDB versions
 test-mongodb-versions:
-  MONGODB_IMAGE=mongo:5 just test-integration
   MONGODB_IMAGE=mongo:6 just test-integration
   MONGODB_IMAGE=mongo:7 just test-integration
+  MONGODB_IMAGE=mongo:8 just test-integration
 
 # Runs a specified service in a specified project config using arion (a nix
 # frontend for docker-compose). Propagates the exit status from that service.

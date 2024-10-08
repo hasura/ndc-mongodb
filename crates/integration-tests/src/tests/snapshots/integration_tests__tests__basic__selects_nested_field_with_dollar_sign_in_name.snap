@@ -1,0 +1,13 @@
+---
+source: crates/integration-tests/src/tests/basic.rs
+expression: "graphql_query(r#\"\n            query {\n              testCases_nestedFieldWithDollar(order_by: { configuration: Asc }) {\n                configuration {\n                  schema\n                }\n              }\n            }\n            \"#).run().await?"
+---
+data:
+  testCases_nestedFieldWithDollar:
+    - configuration:
+        schema: ~
+    - configuration:
+        schema: schema1
+    - configuration:
+        schema: schema3
+errors: ~

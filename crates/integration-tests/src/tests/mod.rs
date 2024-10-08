@@ -9,6 +9,7 @@
 
 mod aggregation;
 mod basic;
+mod expressions;
 mod filtering;
 mod local_relationship;
 mod native_mutation;
