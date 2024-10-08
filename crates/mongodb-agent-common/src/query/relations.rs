@@ -901,114 +901,125 @@ mod tests {
         Ok(())
     }
 
-    // TODO: This test requires updated ndc_models that add `field_path` to
-    // [ndc::ComparisonTarget::Column]
-    // #[tokio::test]
-    // async fn filters_by_field_nested_in_object_in_related_collection() -> Result<(), anyhow::Error>
-    // {
-    //     let query_request = query_request()
-    //         .collection("comments")
-    //         .query(
-    //             query()
-    //                 .fields([relation_field!("movie" => "movie", query().fields([
-    //                     field!("credits" => "credits", object!([
-    //                         field!("director"),
-    //                     ])),
-    //                 ]))])
-    //                 .limit(50)
-    //                 .predicate(exists(
-    //                     ndc_models::ExistsInCollection::Related {
-    //                         relationship: "movie".into(),
-    //                         arguments: Default::default(),
-    //                     },
-    //                     binop(
-    //                         "_eq",
-    //                         target!("credits", field_path: ["director"]),
-    //                         value!("Martin Scorsese"),
-    //                     ),
-    //                 )),
-    //         )
-    //         .relationships([("movie", relationship("movies", [("movie_id", "_id")]))])
-    //         .into();
-    //
-    //     let expected_response = row_set()
-    //         .row([
-    //             ("name", "Beric Dondarrion"),
-    //             (
-    //                 "movie",
-    //                 json!({ "rows": [{
-    //                     "credits": {
-    //                         "director": "Martin Scorsese",
-    //                     }
-    //                 }]}),
-    //             ),
-    //         ])
-    //         .into();
-    //
-    //     let expected_pipeline = bson!([
-    //         {
-    //             "$lookup": {
-    //                 "from": "movies",
-    //                 "localField": "movie_id",
-    //                 "foreignField": "_id",
-    //                 "pipeline": [
-    //                     {
-    //                         "$replaceWith": {
-    //                             "credits": {
-    //                                 "$cond": {
-    //                                     "if": "$credits",
-    //                                     "then": { "director": { "$ifNull": ["$credits.director", null] } },
-    //                                     "else": null,
-    //                                 }
-    //                             },
-    //                         }
-    //                     }
-    //                 ],
-    //                 "as": "movie"
-    //             }
-    //         },
-    //         {
-    //             "$match": {
-    //                 "movie.credits.director": {
-    //                     "$eq": "Martin Scorsese"
-    //                 }
-    //             }
-    //         },
-    //         {
-    //             "$limit": Bson::Int64(50),
-    //         },
-    //         {
-    //             "$replaceWith": {
-    //                 "name": { "$ifNull": ["$name", null] },
-    //                 "movie": {
-    //                     "rows": {
-    //                         "$getField": {
-    //                             "$literal": "movie"
-    //                         }
-    //                     }
-    //                 },
-    //             }
-    //         },
-    //     ]);
-    //
-    //     let db = mock_collection_aggregate_response_for_pipeline(
-    //         "comments",
-    //         expected_pipeline,
-    //         bson!([{
-    //             "name": "Beric Dondarrion",
-    //             "movie": { "rows": [{
-    //                 "credits": {
-    //                     "director": "Martin Scorsese"
-    //                 }
-    //             }] },
-    //         }]),
-    //     );
-    //
-    //     let result = execute_query_request(db, &mflix_config(), query_request).await?;
-    //     assert_eq!(expected_response, result);
-    //
-    //     Ok(())
-    // }
+    #[tokio::test]
+    async fn filters_by_field_nested_in_object_in_related_collection() -> Result<(), anyhow::Error>
+    {
+        let query_request = query_request()
+            .collection("comments")
+            .query(
+                query()
+                    .fields([
+                        field!("name"),
+                        relation_field!("movie" => "movie", query().fields([
+                            field!("credits" => "credits", object!([
+                                field!("director"),
+                            ])),
+                        ])),
+                    ])
+                    .limit(50)
+                    .predicate(exists(
+                        ndc_models::ExistsInCollection::Related {
+                            relationship: "movie".into(),
+                            arguments: Default::default(),
+                        },
+                        binop(
+                            "_eq",
+                            target!("credits", field_path: [Some(FieldName::from("director"))]),
+                            value!("Martin Scorsese"),
+                        ),
+                    )),
+            )
+            .relationships([("movie", relationship("movies", [("movie_id", "_id")]))])
+            .into();
+
+        let expected_response: QueryResponse = row_set()
+            .row([
+                ("name", json!("Beric Dondarrion")),
+                (
+                    "movie",
+                    json!({ "rows": [{
+                        "credits": {
+                            "director": "Martin Scorsese",
+                        }
+                    }]}),
+                ),
+            ])
+            .into();
+
+        let expected_pipeline = bson!([
+            {
+                "$lookup": {
+                    "from": "movies",
+                    "localField": "movie_id",
+                    "foreignField": "_id",
+                    "let": {
+                        "scope_root": "$$ROOT",
+                    },
+                    "pipeline": [
+                        {
+                            "$replaceWith": {
+                                "credits": {
+                                    "$cond": {
+                                        "if": "$credits",
+                                        "then": { "director": { "$ifNull": ["$credits.director", null] } },
+                                        "else": null,
+                                    }
+                                },
+                            }
+                        }
+                    ],
+                    "as": "movie"
+                }
+            },
+            {
+                "$match": {
+                    "movie": {
+                        "$elemMatch": {
+                            "credits.director": {
+                                "$eq": "Martin Scorsese"
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                "$limit": Bson::Int64(50),
+            },
+            {
+                "$replaceWith": {
+                    "name": { "$ifNull": ["$name", null] },
+                    "movie": {
+                        "rows": {
+                            "$map": {
+                                "input": { "$getField": { "$literal": "movie" } },
+                                "in": {
+                                    "credits": "$$this.credits",
+                                }
+                            }
+                        }
+                    },
+                }
+            },
+        ]);
+
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "comments",
+            expected_pipeline,
+            bson!([{
+                "name": "Beric Dondarrion",
+                "movie": { "rows": [{
+                    "credits": {
+                        "director": "Martin Scorsese"
+                    }
+                }] },
+            }]),
+        );
+
+        let result = execute_query_request(db, &mflix_config(), query_request).await?;
+        assert_eq!(expected_response, result);
+
+        Ok(())
+    }
 
     fn students_config() -> MongoConfiguration {
         MongoConfiguration(Configuration {
