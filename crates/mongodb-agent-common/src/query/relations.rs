@@ -547,7 +547,7 @@ mod tests {
         let db = mock_collection_aggregate_response_for_pipeline(
             "weird_field_names",
             expected_pipeline,
-            bson!({}),
+            bson!([]),
         );
 
         execute_query_request(db, &test_cases_config(), query_request).await?;
