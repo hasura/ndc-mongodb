@@ -3,12 +3,11 @@
 //! This is intended to be automatically downloaded and invoked via the Hasura CLI, as a plugin.
 //! It is unlikely that end-users will use it directly.
 
-use anyhow::anyhow;
 use std::env;
 use std::path::PathBuf;
 
 use clap::{Parser, ValueHint};
-use mongodb_agent_common::state::{try_init_state_from_uri, DATABASE_URI_ENV_VAR};
+use mongodb_agent_common::state::DATABASE_URI_ENV_VAR;
 use mongodb_cli_plugin::{run, Command, Context};
 
 /// The command-line arguments.
@@ -17,6 +16,7 @@ pub struct Args {
     /// The path to the configuration. Defaults to the current directory.
     #[arg(
         long = "context-path",
+        short = 'p',
         env = "HASURA_PLUGIN_CONNECTOR_CONTEXT_PATH",
         value_name = "DIRECTORY",
         value_hint = ValueHint::DirPath
@@ -46,16 +46,9 @@ pub async fn main() -> anyhow::Result<()> {
         Some(path) => path,
         None => env::current_dir()?,
     };
-    let connection_uri = args.connection_uri.ok_or(anyhow!(
-        "Missing environment variable {}",
-        DATABASE_URI_ENV_VAR
-    ))?;
-    let connector_state = try_init_state_from_uri(&connection_uri)
-        .await
-        .map_err(|e| anyhow!("Error initializing MongoDB state {}", e))?;
     let context = Context {
         path,
-        connector_state,
+        connection_uri: args.connection_uri,
     };
     run(args.subcommand, &context).await?;
     Ok(())

@@ -1,11 +1,12 @@
 use async_trait::async_trait;
 use futures_util::Stream;
 use mongodb::{bson::Document, error::Error, options::AggregateOptions, Database};
+use mongodb_support::aggregate::Pipeline;
 
 #[cfg(test)]
 use mockall::automock;
 
-use super::{CollectionTrait, Pipeline};
+use super::CollectionTrait;
 
 #[cfg(test)]
 use super::MockCollectionTrait;

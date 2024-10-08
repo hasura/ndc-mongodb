@@ -94,7 +94,7 @@ async fn sample_schema_from_collection(
     }
 }
 
-fn make_object_type(
+pub fn make_object_type(
     object_type_name: &ndc_models::ObjectTypeName,
     document: &Document,
     is_collection_type: bool,

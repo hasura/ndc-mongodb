@@ -2,12 +2,13 @@ use std::{collections::BTreeMap, iter::once};
 
 use itertools::join;
 use mongodb::bson::bson;
+use mongodb_support::aggregate::{SortDocument, Stage};
 use ndc_models::OrderDirection;
 
 use crate::{
     interface_types::MongoAgentError,
     mongo_query_plan::{OrderBy, OrderByTarget},
-    mongodb::{sanitize::escape_invalid_variable_chars, SortDocument, Stage},
+    mongodb::sanitize::escape_invalid_variable_chars,
 };
 
 use super::column_ref::ColumnRef;
@@ -112,11 +113,12 @@ fn safe_alias(target: &OrderByTarget) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use mongodb::bson::doc;
+    use mongodb_support::aggregate::SortDocument;
     use ndc_models::{FieldName, OrderDirection};
     use ndc_query_plan::OrderByElement;
     use pretty_assertions::assert_eq;
 
-    use crate::{mongo_query_plan::OrderBy, mongodb::SortDocument, query::column_ref::ColumnRef};
+    use crate::{mongo_query_plan::OrderBy, query::column_ref::ColumnRef};
 
     use super::make_sort;
 

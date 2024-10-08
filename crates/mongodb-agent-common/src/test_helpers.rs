@@ -161,36 +161,5 @@ pub fn chinook_relationships() -> BTreeMap<String, ndc_models::Relationship> {
 
 /// Configuration for a MongoDB database that resembles MongoDB's sample_mflix test data set.
 pub fn mflix_config() -> MongoConfiguration {
-    MongoConfiguration(Configuration {
-        collections: [collection("comments"), collection("movies")].into(),
-        object_types: [
-            (
-                "comments".into(),
-                object_type([
-                    ("_id", named_type("ObjectId")),
-                    ("movie_id", named_type("ObjectId")),
-                    ("name", named_type("String")),
-                ]),
-            ),
-            (
-                "credits".into(),
-                object_type([("director", named_type("String"))]),
-            ),
-            (
-                "movies".into(),
-                object_type([
-                    ("_id", named_type("ObjectId")),
-                    ("credits", named_type("credits")),
-                    ("title", named_type("String")),
-                    ("year", named_type("Int")),
-                ]),
-            ),
-        ]
-        .into(),
-        functions: Default::default(),
-        procedures: Default::default(),
-        native_mutations: Default::default(),
-        native_queries: Default::default(),
-        options: Default::default(),
-    })
+    MongoConfiguration(test_helpers::configuration::mflix_config())
 }

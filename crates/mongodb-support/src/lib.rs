@@ -1,3 +1,4 @@
+pub mod aggregate;
 pub mod align;
 mod bson_type;
 pub mod error;

@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use itertools::Itertools as _;
 use mongodb::bson::{self, doc, Bson};
+use mongodb_support::aggregate::{Pipeline, Selection, Stage};
 use ndc_query_plan::VariableSet;
 
 use super::pipeline::pipeline_for_non_foreach;
@@ -8,12 +9,8 @@ use super::query_level::QueryLevel;
 use super::query_variable_name::query_variable_name;
 use super::serialization::json_to_bson;
 use super::QueryTarget;
+use crate::interface_types::MongoAgentError;
 use crate::mongo_query_plan::{MongoConfiguration, QueryPlan, Type, VariableTypes};
-use crate::mongodb::Selection;
-use crate::{
-    interface_types::MongoAgentError,
-    mongodb::{Pipeline, Stage},
-};
 
 type Result<T> = std::result::Result<T, MongoAgentError>;
 
@@ -62,7 +59,7 @@ pub fn pipeline_for_foreach(
             "rows": "$query"
         }
     };
-    let selection_stage = Stage::ReplaceWith(Selection(selection));
+    let selection_stage = Stage::ReplaceWith(Selection::new(selection));
 
     Ok(Pipeline {
         stages: vec![variable_sets_stage, lookup_stage, selection_stage],
