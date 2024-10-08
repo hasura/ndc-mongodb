@@ -3,7 +3,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::{get_connector_chinook_url, get_connector_url};
+use crate::{get_connector_chinook_url, get_connector_test_cases_url, get_connector_url};
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(transparent)]
@@ -17,6 +17,7 @@ pub struct ConnectorQueryRequest {
 pub enum Connector {
     Chinook,
     SampleMflix,
+    TestCases,
 }
 
 impl Connector {
@@ -24,6 +25,7 @@ impl Connector {
         match self {
             Connector::Chinook => get_connector_chinook_url(),
             Connector::SampleMflix => get_connector_url(),
+            Connector::TestCases => get_connector_test_cases_url(),
         }
     }
 }

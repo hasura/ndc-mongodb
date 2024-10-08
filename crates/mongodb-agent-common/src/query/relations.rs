@@ -1,11 +1,10 @@
 use std::collections::BTreeMap;
 
 use itertools::Itertools as _;
-use mongodb::bson::{doc, Bson, Document};
+use mongodb::bson::{doc, Document};
 use ndc_query_plan::Scope;
 
 use crate::mongo_query_plan::{MongoConfiguration, Query, QueryPlan};
-use crate::mongodb::sanitize::safe_name;
 use crate::mongodb::Pipeline;
 use crate::query::column_ref::name_from_scope;
 use crate::{
@@ -13,6 +12,7 @@ use crate::{
     mongodb::{sanitize::variable, Stage},
 };
 
+use super::column_ref::ColumnRef;
 use super::pipeline::pipeline_for_non_foreach;
 use super::query_level::QueryLevel;
 
@@ -47,13 +47,13 @@ pub fn pipeline_for_relations(
                 QueryLevel::Relationship,
             )?;
 
-            make_lookup_stage(
+            Ok(make_lookup_stage(
                 relationship.target_collection.clone(),
                 &relationship.column_mapping,
                 name.to_owned(),
                 lookup_pipeline,
                 scope.as_ref(),
-            )
+            )) as Result<_>
         })
         .try_collect()?;
 
@@ -66,38 +66,60 @@ fn make_lookup_stage(
     r#as: ndc_models::RelationshipName,
     lookup_pipeline: Pipeline,
     scope: Option<&Scope>,
-) -> Result<Stage> {
-    // If we are mapping a single field in the source collection to a single field in the target
-    // collection then we can use the correlated subquery syntax.
-    if column_mapping.len() == 1 {
+) -> Stage {
+    // If there is a single column mapping, and the source and target field references can be
+    // expressed as match keys (we don't need to escape field names), then we can use a concise
+    // correlated subquery. Otherwise we need to fall back to an uncorrelated subquery.
+    let safe_single_column_mapping = if column_mapping.len() == 1 {
         // Safe to unwrap because we just checked the hashmap size
         let (source_selector, target_selector) = column_mapping.iter().next().unwrap();
-        single_column_mapping_lookup(
-            from,
-            source_selector,
-            target_selector,
-            r#as,
-            lookup_pipeline,
-            scope,
-        )
+
+        let source_ref = ColumnRef::from_field(source_selector);
+        let target_ref = ColumnRef::from_field(target_selector);
+
+        match (source_ref, target_ref) {
+            (ColumnRef::MatchKey(source_key), ColumnRef::MatchKey(target_key)) => {
+                Some((source_key.to_string(), target_key.to_string()))
+            }
+
+            // If the source and target refs cannot be expressed in required syntax then we need to
+            // fall back to a lookup pipeline that con compare arbitrary expressions.
+            // [multiple_column_mapping_lookup] does this.
+            _ => None,
+        }
     } else {
-        multiple_column_mapping_lookup(from, column_mapping, r#as, lookup_pipeline, scope)
+        None
+    };
+
+    match safe_single_column_mapping {
+        Some((source_selector_key, target_selector_key)) => {
+            lookup_with_concise_correlated_subquery(
+                from,
+                source_selector_key,
+                target_selector_key,
+                r#as,
+                lookup_pipeline,
+                scope,
+            )
+        }
+        None => {
+            lookup_with_uncorrelated_subquery(from, column_mapping, r#as, lookup_pipeline, scope)
+        }
     }
 }
 
-// TODO: ENG-973 Replace uses of [safe_name] with [ColumnRef].
-fn single_column_mapping_lookup(
+fn lookup_with_concise_correlated_subquery(
     from: ndc_models::CollectionName,
-    source_selector: &ndc_models::FieldName,
-    target_selector: &ndc_models::FieldName,
+    source_selector_key: String,
+    target_selector_key: String,
     r#as: ndc_models::RelationshipName,
     lookup_pipeline: Pipeline,
     scope: Option<&Scope>,
-) -> Result<Stage> {
-    Ok(Stage::Lookup {
+) -> Stage {
+    Stage::Lookup {
         from: Some(from.to_string()),
-        local_field: Some(safe_name(source_selector.as_str())?.into_owned()),
-        foreign_field: Some(safe_name(target_selector.as_str())?.into_owned()),
+        local_field: Some(source_selector_key),
+        foreign_field: Some(target_selector_key),
         r#let: scope.map(|scope| {
             doc! {
                 name_from_scope(scope): "$$ROOT"
@@ -109,28 +131,30 @@ fn single_column_mapping_lookup(
             Some(lookup_pipeline)
         },
         r#as: r#as.to_string(),
-    })
+    }
 }
 
-fn multiple_column_mapping_lookup(
+/// The concise correlated subquery syntax with `localField` and `foreignField` only works when
+/// joining on one field. To join on multiple fields it is necessary to bind variables to fields on
+/// the left side of the join, and to emit a custom `$match` stage to filter the right side of the
+/// join. This version also allows comparing arbitrary expressions for the join which we need for
+/// cases like joining on field names that require escaping.
+fn lookup_with_uncorrelated_subquery(
     from: ndc_models::CollectionName,
     column_mapping: &BTreeMap<ndc_models::FieldName, ndc_models::FieldName>,
     r#as: ndc_models::RelationshipName,
     lookup_pipeline: Pipeline,
     scope: Option<&Scope>,
-) -> Result<Stage> {
+) -> Stage {
     let mut let_bindings: Document = column_mapping
         .keys()
         .map(|local_field| {
-            Ok((
+            (
                 variable(local_field.as_str()),
-                Bson::String(format!(
-                    "${}",
-                    safe_name(local_field.as_str())?.into_owned()
-                )),
-            ))
+                ColumnRef::from_field(local_field).into_aggregate_expression(),
+            )
         })
-        .collect::<Result<_>>()?;
+        .collect();
 
     if let Some(scope) = scope {
         let_bindings.insert(name_from_scope(scope), "$$ROOT");
@@ -146,12 +170,12 @@ fn multiple_column_mapping_lookup(
     let matchers: Vec<Document> = column_pairs
         .into_iter()
         .map(|(local_field, remote_field)| {
-            Ok(doc! { "$eq": [
-                format!("$${}", variable(local_field.as_str())),
-                format!("${}", safe_name(remote_field.as_str())?)
-            ] })
+            doc! { "$eq": [
+                ColumnRef::variable(local_field).into_aggregate_expression(),
+                ColumnRef::from_field(remote_field).into_aggregate_expression(),
+            ] }
         })
-        .collect::<Result<_>>()?;
+        .collect();
 
     // Match only documents on the right side of the join that match the column-mapping
     // criteria. In the case where we have only one column mapping using the $lookup stage's
@@ -165,14 +189,14 @@ fn multiple_column_mapping_lookup(
     pipeline.append(lookup_pipeline);
     let pipeline: Option<Pipeline> = pipeline.into();
 
-    Ok(Stage::Lookup {
+    Stage::Lookup {
         from: Some(from.to_string()),
         local_field: None,
         foreign_field: None,
         r#let: let_bindings.into(),
         pipeline,
         r#as: r#as.to_string(),
-    })
+    }
 }
 
 #[cfg(test)]
