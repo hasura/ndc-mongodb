@@ -1,0 +1,12 @@
+---
+source: crates/integration-tests/src/tests/sorting.rs
+expression: "graphql_query(r#\"\n            query {\n              testCases_weirdFieldNames(limit: 1, order_by: { invalidName: Asc }) {\n                invalidName\n                invalidObjectName {\n                  validName\n                }\n                validObjectName {\n                  invalidNestedName\n                }\n              }\n            }\n            \"#).run().await?"
+---
+data:
+  testCases_weirdFieldNames:
+    - invalidName: 1
+      invalidObjectName:
+        validName: 1
+      validObjectName:
+        invalidNestedName: 1
+errors: ~

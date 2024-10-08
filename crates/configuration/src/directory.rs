@@ -154,6 +154,12 @@ where
     for<'a> T: Deserialize<'a>,
 {
     let bytes = fs::read(path.as_ref()).await?;
+    tracing::debug!(
+        path = %path.as_ref().display(),
+        ?format,
+        content = %std::str::from_utf8(&bytes).unwrap_or("<invalid utf8 content>"),
+        "parse_config_file"
+    );
     let value = match format {
         FileFormat::Json => serde_json::from_slice(&bytes)
             .with_context(|| format!("error parsing {:?}", path.as_ref()))?,

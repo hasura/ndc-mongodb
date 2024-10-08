@@ -4,6 +4,23 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+- Fixes for filtering by complex predicate that references variables, or field names that require escaping ([#111](https://github.com/hasura/ndc-mongodb/pull/111))
+
+## [1.3.0] - 2024-10-01
+
+### Fixed
+
+- Selecting nested fields with names that begin with a dollar sign ([#108](https://github.com/hasura/ndc-mongodb/pull/108))
+- Sorting by fields with names that begin with a dollar sign ([#109](https://github.com/hasura/ndc-mongodb/pull/109))
+
+### Changed
+
 ## [1.2.0] - 2024-09-12
 
 ### Added
@@ -116,10 +133,6 @@ definition:
   graphql:
     typeName: InstitutionStaffComparisonExp
 ```
-
-### Fixed
-
-### Changed
 
 ## [1.1.0] - 2024-08-16
 

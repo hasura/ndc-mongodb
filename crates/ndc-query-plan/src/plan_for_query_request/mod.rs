@@ -15,7 +15,7 @@ mod tests;
 use std::{collections::VecDeque, iter::once};
 
 use crate::{self as plan, type_annotated_field, ObjectType, QueryPlan, Scope};
-use helpers::find_nested_collection_type;
+use helpers::{find_nested_collection_type, value_type_in_possible_array_equality_comparison};
 use indexmap::IndexMap;
 use itertools::Itertools;
 use ndc::{ExistsInCollection, QueryRequest};
@@ -516,7 +516,10 @@ fn plan_for_binary_comparison<T: QueryContext>(
         .context
         .find_comparison_operator(comparison_target.get_field_type(), &operator)?;
     let value_type = match operator_definition {
-        plan::ComparisonOperatorDefinition::Equal => comparison_target.get_field_type().clone(),
+        plan::ComparisonOperatorDefinition::Equal => {
+            let column_type = comparison_target.get_field_type().clone();
+            value_type_in_possible_array_equality_comparison(column_type)
+        }
         plan::ComparisonOperatorDefinition::In => {
             plan::Type::ArrayOf(Box::new(comparison_target.get_field_type().clone()))
         }

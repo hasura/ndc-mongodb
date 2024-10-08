@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use ndc_models as ndc;
 
-use crate as plan;
+use crate::{self as plan};
 
 use super::query_plan_error::QueryPlanError;
 
@@ -106,4 +106,46 @@ pub fn lookup_relationship<'a>(
     relationships
         .get(relationship)
         .ok_or_else(|| QueryPlanError::UnspecifiedRelation(relationship.to_owned()))
+}
+
+/// Special case handling for array comparisons! Normally we assume that the right operand of Equal
+/// is the same type as the left operand. BUT MongoDB allows comparing arrays to scalar values in
+/// which case the condition passes if any array element is equal to the given scalar value. So
+/// this function needs to return a scalar type if the user is expecting array-to-scalar
+/// comparison, or an array type if the user is expecting array-to-array comparison. Or if the
+/// column does not have an array type we fall back to the default assumption that the value type
+/// should be the same as the column type.
+///
+/// For now this assumes that if the column has an array type, the value type is a scalar type.
+/// That's the simplest option since we don't support array-to-array comparisons yet.
+///
+/// TODO: When we do support array-to-array comparisons we will need to either:
+///
+/// - input the [ndc::ComparisonValue] into this function, and any query request variables; check
+///   that the given JSON value or variable values are not array values, and if so assume the value
+///   type should be a scalar type
+/// - or get the GraphQL Engine to include a type with [ndc::ComparisonValue] in which case we can
+///   use that as the value type
+///
+/// It is important that queries behave the same when given an inline value or variables. So we
+/// can't just check the value of an [ndc::ComparisonValue::Scalar], and punt on an
+/// [ndc::ComparisonValue::Variable] input. The latter requires accessing query request variables,
+/// and it will take a little more work to thread those through the code to make them available
+/// here.
+pub fn value_type_in_possible_array_equality_comparison<S>(
+    column_type: plan::Type<S>,
+) -> plan::Type<S>
+where
+    S: Clone,
+{
+    match column_type {
+        plan::Type::ArrayOf(t) => *t,
+        plan::Type::Nullable(t) => match *t {
+            v @ plan::Type::ArrayOf(_) => {
+                value_type_in_possible_array_equality_comparison(v.clone())
+            }
+            t => plan::Type::Nullable(Box::new(t)),
+        },
+        _ => column_type,
+    }
 }

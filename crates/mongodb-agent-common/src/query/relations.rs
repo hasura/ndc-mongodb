@@ -82,7 +82,7 @@ fn make_lookup_stage(
     }
 }
 
-// TODO: MDB-160 Replace uses of [safe_name] with [ColumnRef].
+// TODO: ENG-973 Replace uses of [safe_name] with [ColumnRef].
 fn single_column_mapping_lookup(
     from: ndc_models::CollectionName,
     source_selector: &ndc_models::FieldName,

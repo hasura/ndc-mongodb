@@ -241,6 +241,11 @@ definition:
               argument_type:
                 type: named
                 name: ExtendedJSON
+            _in:
+              type: custom
+              argument_type:
+                type: named
+                name: ExtendedJSON
             _iregex:
               type: custom
               argument_type:
@@ -596,6 +601,24 @@ definition:
               type:
                 type: named
                 name: String
+        nested_field_with_dollar:
+          fields:
+            _id:
+              type:
+                type: named
+                name: ObjectId
+            configuration:
+              type:
+                type: named
+                name: nested_field_with_dollar_configuration
+        nested_field_with_dollar_configuration:
+          fields:
+            $schema:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
         weird_field_names:
           fields:
             $invalid.name:
@@ -632,6 +655,14 @@ definition:
           type: nested_collection
           uniqueness_constraints:
             nested_collection_id:
+              unique_columns:
+                - _id
+          foreign_keys: {}
+        - name: nested_field_with_dollar
+          arguments: {}
+          type: nested_field_with_dollar
+          uniqueness_constraints:
+            nested_field_with_dollar_id:
               unique_columns:
                 - _id
           foreign_keys: {}
