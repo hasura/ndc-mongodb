@@ -1,9 +1,6 @@
 use std::borrow::Cow;
 
-use anyhow::anyhow;
 use mongodb::bson::{doc, Document};
-
-use crate::interface_types::MongoAgentError;
 
 /// Produces a MongoDB expression that references a field by name in a way that is safe from code
 /// injection.
@@ -30,18 +27,6 @@ pub fn variable(name: &str) -> String {
 /// - variable names are more strict.
 pub fn is_name_safe(name: impl AsRef<str>) -> bool {
     !(name.as_ref().starts_with('$') || name.as_ref().contains('.'))
-}
-
-/// Given a collection or field name, returns Ok if the name is safe, or Err if it contains
-/// characters that MongoDB will interpret specially.
-///
-/// TODO: ENG-973 remove this function in favor of ColumnRef which is infallible
-pub fn safe_name(name: &str) -> Result<Cow<str>, MongoAgentError> {
-    if name.starts_with('$') || name.contains('.') {
-        Err(MongoAgentError::BadQuery(anyhow!("cannot execute query that includes the name, \"{name}\", because it includes characters that MongoDB interperets specially")))
-    } else {
-        Ok(Cow::Borrowed(name))
-    }
 }
 
 // The escape character must be a valid character in MongoDB variable names, but must not appear in

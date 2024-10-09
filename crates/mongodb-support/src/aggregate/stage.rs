@@ -69,6 +69,9 @@ pub enum Stage {
         ///
         /// If a local document does not contain a localField value, the $lookup uses a null value
         /// for the match.
+        ///
+        /// Must be a string. Does not begin with a dollar sign. May contain dots to select nested
+        /// fields.
         #[serde(skip_serializing_if = "Option::is_none")]
         local_field: Option<String>,
         /// Specifies the foreign documents' foreignField to perform an equality match with the
@@ -76,6 +79,9 @@ pub enum Stage {
         ///
         /// If a foreign document does not contain a foreignField value, the $lookup uses a null
         /// value for the match.
+        ///
+        /// Must be a string. Does not begin with a dollar sign. May contain dots to select nested
+        /// fields.
         #[serde(skip_serializing_if = "Option::is_none")]
         foreign_field: Option<String>,
         /// Optional. Specifies the variables to use in the pipeline stages. Use the variable

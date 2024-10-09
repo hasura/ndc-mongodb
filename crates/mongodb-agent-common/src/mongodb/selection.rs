@@ -88,7 +88,9 @@ fn selection_for_field(
                     .map(|(field_name, _)| {
                         (
                             field_name.to_string(),
-                            format!("$$this.{field_name}").into(),
+                            ColumnRef::variable("this")
+                                .into_nested_field(field_name)
+                                .into_aggregate_expression(),
                         )
                     })
                     .collect()
