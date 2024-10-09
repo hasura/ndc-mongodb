@@ -1,0 +1,11 @@
+---
+source: crates/integration-tests/src/tests/expressions.rs
+expression: "run_connector_query(Connector::TestCases,\n            query_request().collection(\"weird_field_names\").query(query().predicate(exists(ExistsInCollection::NestedCollection {\n                                    column_name: \"$invalid.array\".into(),\n                                    arguments: Default::default(),\n                                    field_path: Default::default(),\n                                },\n                                binop(\"_lt\", target!(\"$invalid.element\"),\n                                    value!(3)))).fields([field!(\"_id\"),\n                                field!(\"invalid_array\" => \"$invalid.array\",\n                                    array!(object!([field!(\"invalid_element\" =>\n                                    \"$invalid.element\")])))]).order_by([asc!(\"$invalid.name\")]))).await?"
+---
+- rows:
+    - _id: 66cf91a0ec1dfb55954378bd
+      invalid_array:
+        - invalid_element: 1
+    - _id: 66cf9230ec1dfb55954378be
+      invalid_array:
+        - invalid_element: 2

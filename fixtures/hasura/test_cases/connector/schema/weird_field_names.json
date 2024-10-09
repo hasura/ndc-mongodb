@@ -8,6 +8,13 @@
   "objectTypes": {
     "weird_field_names": {
       "fields": {
+        "$invalid.array": {
+          "type": {
+            "arrayOf": {
+              "object": "weird_field_names_$invalid.array"
+            }
+          }
+        },
         "$invalid.name": {
           "type": {
             "scalar": "int"
@@ -26,6 +33,15 @@
         "valid_object_name": {
           "type": {
             "object": "weird_field_names_valid_object_name"
+          }
+        }
+      }
+    },
+    "weird_field_names_$invalid.array": {
+      "fields": {
+        "$invalid.element": {
+          "type": {
+            "scalar": "int"
           }
         }
       }
