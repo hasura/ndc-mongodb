@@ -52,6 +52,35 @@ pub enum TypeConstraint {
     },
 }
 
+impl TypeConstraint {
+    /// Order constraints by complexity to help with type unification
+    pub fn complexity(&self) -> usize {
+        match self {
+            TypeConstraint::Variable(_) => 0,
+            TypeConstraint::ExtendedJSON => 0,
+            TypeConstraint::Scalar(_) => 0,
+            TypeConstraint::Object(_) => 1,
+            TypeConstraint::Predicate { .. } => 1,
+            TypeConstraint::ArrayOf(constraint) => 1 + constraint.complexity(),
+            TypeConstraint::Nullable(constraint) => 1 + constraint.complexity(),
+            TypeConstraint::ElementOf(constraint) => 2 + constraint.complexity(),
+            TypeConstraint::FieldOf { target_type, path } => {
+                2 + target_type.complexity() + path.len()
+            }
+            TypeConstraint::WithFieldOverrides {
+                target_type,
+                fields,
+            } => {
+                let overridden_field_complexity: usize = fields
+                    .values()
+                    .map(|constraint| constraint.complexity())
+                    .sum();
+                2 + target_type.complexity() + overridden_field_complexity
+            }
+        }
+    }
+}
+
 impl From<ndc_models::Type> for TypeConstraint {
     fn from(t: ndc_models::Type) -> Self {
         match t {
@@ -75,6 +104,15 @@ impl From<ndc_models::Type> for TypeConstraint {
         }
     }
 }
+
+// /// Order constraints by complexity to help with type unification
+// impl PartialOrd for TypeConstraint {
+//     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+//         let a = self.complexity();
+//         let b = other.complexity();
+//         a.partial_cmp(&b)
+//     }
+// }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ObjectTypeConstraint {

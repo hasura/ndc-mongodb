@@ -20,6 +20,9 @@ pub enum Error {
         referenced_type: Type,
     },
 
+    #[error("Expected an array type, but got: {actual_type:?}")]
+    ExpectedArray { actual_type: Type },
+
     #[error("Expected an object type, but got: {actual_type:?}")]
     ExpectedObject { actual_type: Type },
 

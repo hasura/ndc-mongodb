@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use configuration::schema::Type;
+use itertools::Itertools;
 use mongodb_support::BsonScalarType;
 use ndc_models::ObjectTypeName;
 
@@ -24,11 +25,70 @@ enum Simplified<T> {
     Both((T, T)),
 }
 
-// fn types_are_solved(
-//     context: &PipelineTypeContext<'_>,
-//     type_variables: HashMap<TypeVariable, HashSet<TypeConstraint>>,
-// ) -> bool {
-// }
+impl<T> Simplified<T> {
+    fn map<F, U>(self, mut f: F) -> Simplified<U>
+    where
+        F: FnMut(T) -> U,
+    {
+        match self {
+            Simplified::One(x) => Simplified::One(f(x)),
+            Simplified::Both((x, y)) => Simplified::Both((f(x), f(y))),
+        }
+    }
+}
+
+fn unify(
+    mut type_variables: HashMap<TypeVariable, HashSet<TypeConstraint>>,
+) -> Result<HashMap<TypeVariable, Type>> {
+    let variables: Vec<TypeVariable> = type_variables.keys().copied().collect();
+
+    // let mut complexities: HashMap<TypeVariable, usize> = type_variables
+    //     .iter()
+    //     .map(|(variable, constraints)| {
+    //         let complexity = constraints.iter().map(TypeConstraint::complexity).sum();
+    //         (*variable, complexity)
+    //     })
+    //     .collect();
+
+    let mut solutions = HashMap::new();
+    let is_solved = |variable| solutions.contains_key(variable);
+
+    loop {
+        let least_complex_variable = *type_variables
+            .iter()
+            .filter(|(v, _)| !is_solved(*v))
+            .sorted_unstable_by_key(|(_, constraints)| {
+                let complexity: usize = constraints.iter().map(TypeConstraint::complexity).sum();
+                complexity
+            })
+            .next()
+            .unwrap()
+            .0;
+    }
+
+    Ok(solutions)
+}
+
+fn substitute(
+    type_variables: &mut HashMap<TypeVariable, HashSet<TypeConstraint>>,
+    variable: TypeVariable,
+    constraints: HashSet<TypeConstraint>,
+) {
+}
+
+// TODO: Replace occurences of:
+//
+//     a1 : [ ElementOf(a2) ]
+//     b1 : [ FieldOf(b2, path) ]
+//
+// with:
+//
+//     a1: [ ]
+//     a2: [ ArrayOf(a1) ]
+//     b1: [ ]
+//     b2: [ Object { path: b1 } ]
+//
+// fn top_down_substitution() {}
 
 fn solve_variable(
     variable: TypeVariable,
@@ -38,6 +98,34 @@ fn solve_variable(
     constraints.iter().fold(None, |accum, next_constraint| {
         simplify_constraint_pair(object_types, type_variables, accum, next_constraint)
     })
+}
+
+/// In cases where there is enough information present in the constraint itself to infer a concrete
+/// type, do that. Returns None if there is not enough information present.
+fn constraint_to_type(constraint: &TypeConstraint) -> Result<Option<Type>> {
+    let solution = match constraint {
+        C::ExtendedJSON => Some(Type::ExtendedJSON),
+        C::Scalar(s) => Some(Type::Scalar(s.clone())),
+        C::Object(name) => Some(Type::Object(name.to_string())),
+        C::ArrayOf(c) => constraint_to_type(c)?.map(|t| Type::ArrayOf(Box::new(t))),
+        C::Nullable(c) => constraint_to_type(c)?.map(|t| Type::Nullable(Box::new(t))),
+        C::Predicate { object_type_name } => Some(Type::Predicate {
+            object_type_name: object_type_name.clone(),
+        }),
+        C::Variable(_) => None,
+        C::ElementOf(c) => constraint_to_type(c)?
+            .map(|t| match t {
+                Type::ArrayOf(elem_type) => Ok(*elem_type),
+                _ => Err(Error::ExpectedArray { actual_type: t }),
+            })
+            .transpose()?,
+        C::FieldOf { target_type, path } => todo!(),
+        C::WithFieldOverrides {
+            target_type,
+            fields,
+        } => todo!(),
+    };
+    Ok(solution)
 }
 
 fn simplify_constraint_pair(
@@ -50,213 +138,178 @@ fn simplify_constraint_pair(
     b: TypeConstraint,
 ) -> Simplified<TypeConstraint> {
     match (a, b) {
-        (C::ExtendedJSON, _) | (_, C::ExtendedJSON) => C::ExtendedJSON,
+        (C::ExtendedJSON, _) | (_, C::ExtendedJSON) => Simplified::One(C::ExtendedJSON),
         (C::Scalar(a), C::Scalar(b)) => solve_scalar(a, b),
 
-        (C::Nullable(a), b) => C::Nullable(Box::new(simplify_constraint_pair(
-            object_types,
-            type_variables,
-            *a,
-            b,
-        ))),
-        (a, C::Nullable(b)) => C::Nullable(Box::new(simplify_constraint_pair(
-            object_types,
-            type_variables,
-            a,
-            *b,
-        ))),
+        (C::Nullable(a), b) => simplify_constraint_pair(object_types, type_variables, *a, b)
+            .map(|constraint| C::Nullable(Box::new(constraint))),
+        (a, C::Nullable(b)) => simplify_constraint_pair(object_types, type_variables, a, *b)
+            .map(|constraint| C::Nullable(Box::new(constraint))),
 
-        (C::Variable(a), b) => todo!(),
+        (C::Variable(a), b) => todo!(), // return list of constraints for a with b appended?
 
-        (TypeConstraint::Scalar(_), TypeConstraint::Variable(_)) => todo!(),
-        (TypeConstraint::Scalar(_), TypeConstraint::ElementOf(_)) => todo!(),
-        (TypeConstraint::Scalar(_), TypeConstraint::FieldOf { target_type, path }) => todo!(),
+        (C::Scalar(_), C::Variable(_)) => todo!(),
+        (C::Scalar(_), C::ElementOf(_)) => todo!(),
+        (C::Scalar(_), C::FieldOf { target_type, path }) => todo!(),
         (
-            TypeConstraint::Scalar(_),
-            TypeConstraint::WithFieldOverrides {
+            C::Scalar(_),
+            C::WithFieldOverrides {
                 target_type,
                 fields,
             },
         ) => todo!(),
-        (TypeConstraint::Object(_), TypeConstraint::Scalar(_)) => todo!(),
-        (TypeConstraint::Object(_), TypeConstraint::Object(_)) => todo!(),
-        (TypeConstraint::Object(_), TypeConstraint::ArrayOf(_)) => todo!(),
-        (TypeConstraint::Object(_), TypeConstraint::Nullable(_)) => todo!(),
-        (TypeConstraint::Object(_), TypeConstraint::Predicate { object_type_name }) => todo!(),
-        (TypeConstraint::Object(_), TypeConstraint::Variable(_)) => todo!(),
-        (TypeConstraint::Object(_), TypeConstraint::ElementOf(_)) => todo!(),
-        (TypeConstraint::Object(_), TypeConstraint::FieldOf { target_type, path }) => todo!(),
+        (C::Object(_), C::Scalar(_)) => todo!(),
+        (C::Object(_), C::Object(_)) => todo!(),
+        (C::Object(_), C::ArrayOf(_)) => todo!(),
+        (C::Object(_), C::Nullable(_)) => todo!(),
+        (C::Object(_), C::Predicate { object_type_name }) => todo!(),
+        (C::Object(_), C::Variable(_)) => todo!(),
+        (C::Object(_), C::ElementOf(_)) => todo!(),
+        (C::Object(_), C::FieldOf { target_type, path }) => todo!(),
         (
-            TypeConstraint::Object(_),
-            TypeConstraint::WithFieldOverrides {
+            C::Object(_),
+            C::WithFieldOverrides {
                 target_type,
                 fields,
             },
         ) => todo!(),
-        (TypeConstraint::ArrayOf(_), TypeConstraint::Scalar(_)) => todo!(),
-        (TypeConstraint::ArrayOf(_), TypeConstraint::Object(_)) => todo!(),
-        (TypeConstraint::ArrayOf(_), TypeConstraint::ArrayOf(_)) => todo!(),
-        (TypeConstraint::ArrayOf(_), TypeConstraint::Nullable(_)) => todo!(),
-        (TypeConstraint::ArrayOf(_), TypeConstraint::Predicate { object_type_name }) => todo!(),
-        (TypeConstraint::ArrayOf(_), TypeConstraint::Variable(_)) => todo!(),
-        (TypeConstraint::ArrayOf(_), TypeConstraint::ElementOf(_)) => todo!(),
-        (TypeConstraint::ArrayOf(_), TypeConstraint::FieldOf { target_type, path }) => todo!(),
+        (C::ArrayOf(_), C::Scalar(_)) => todo!(),
+        (C::ArrayOf(_), C::Object(_)) => todo!(),
+        (C::ArrayOf(_), C::ArrayOf(_)) => todo!(),
+        (C::ArrayOf(_), C::Nullable(_)) => todo!(),
+        (C::ArrayOf(_), C::Predicate { object_type_name }) => todo!(),
+        (C::ArrayOf(_), C::Variable(_)) => todo!(),
+        (C::ArrayOf(_), C::ElementOf(_)) => todo!(),
+        (C::ArrayOf(_), C::FieldOf { target_type, path }) => todo!(),
         (
-            TypeConstraint::ArrayOf(_),
-            TypeConstraint::WithFieldOverrides {
+            C::ArrayOf(_),
+            C::WithFieldOverrides {
                 target_type,
                 fields,
             },
         ) => todo!(),
-        (TypeConstraint::Nullable(_), TypeConstraint::Scalar(_)) => todo!(),
-        (TypeConstraint::Nullable(_), TypeConstraint::Object(_)) => todo!(),
-        (TypeConstraint::Nullable(_), TypeConstraint::ArrayOf(_)) => todo!(),
-        (TypeConstraint::Nullable(_), TypeConstraint::Nullable(_)) => todo!(),
-        (TypeConstraint::Nullable(_), TypeConstraint::Predicate { object_type_name }) => todo!(),
-        (TypeConstraint::Nullable(_), TypeConstraint::Variable(_)) => todo!(),
-        (TypeConstraint::Nullable(_), TypeConstraint::ElementOf(_)) => todo!(),
-        (TypeConstraint::Nullable(_), TypeConstraint::FieldOf { target_type, path }) => todo!(),
+        (C::Predicate { object_type_name }, C::Scalar(_)) => todo!(),
+        (C::Predicate { object_type_name }, C::Object(_)) => todo!(),
+        (C::Predicate { object_type_name }, C::ArrayOf(_)) => todo!(),
+        (C::Predicate { object_type_name }, C::Nullable(_)) => todo!(),
+        (C::Predicate { object_type_name }, C::Predicate { object_type_name }) => todo!(),
+        (C::Predicate { object_type_name }, C::Variable(_)) => todo!(),
+        (C::Predicate { object_type_name }, C::ElementOf(_)) => todo!(),
+        (C::Predicate { object_type_name }, C::FieldOf { target_type, path }) => todo!(),
         (
-            TypeConstraint::Nullable(_),
-            TypeConstraint::WithFieldOverrides {
+            C::Predicate { object_type_name },
+            C::WithFieldOverrides {
                 target_type,
                 fields,
             },
         ) => todo!(),
-        (TypeConstraint::Predicate { object_type_name }, TypeConstraint::Scalar(_)) => todo!(),
-        (TypeConstraint::Predicate { object_type_name }, TypeConstraint::Object(_)) => todo!(),
-        (TypeConstraint::Predicate { object_type_name }, TypeConstraint::ArrayOf(_)) => todo!(),
-        (TypeConstraint::Predicate { object_type_name }, TypeConstraint::Nullable(_)) => todo!(),
+        (C::Variable(_), C::Scalar(_)) => todo!(),
+        (C::Variable(_), C::Object(_)) => todo!(),
+        (C::Variable(_), C::ArrayOf(_)) => todo!(),
+        (C::Variable(_), C::Nullable(_)) => todo!(),
+        (C::Variable(_), C::Predicate { object_type_name }) => todo!(),
+        (C::Variable(_), C::Variable(_)) => todo!(),
+        (C::Variable(_), C::ElementOf(_)) => todo!(),
+        (C::Variable(_), C::FieldOf { target_type, path }) => todo!(),
         (
-            TypeConstraint::Predicate { object_type_name },
-            TypeConstraint::Predicate { object_type_name },
-        ) => todo!(),
-        (TypeConstraint::Predicate { object_type_name }, TypeConstraint::Variable(_)) => todo!(),
-        (TypeConstraint::Predicate { object_type_name }, TypeConstraint::ElementOf(_)) => todo!(),
-        (
-            TypeConstraint::Predicate { object_type_name },
-            TypeConstraint::FieldOf { target_type, path },
-        ) => todo!(),
-        (
-            TypeConstraint::Predicate { object_type_name },
-            TypeConstraint::WithFieldOverrides {
+            C::Variable(_),
+            C::WithFieldOverrides {
                 target_type,
                 fields,
             },
         ) => todo!(),
-        (TypeConstraint::Variable(_), TypeConstraint::Scalar(_)) => todo!(),
-        (TypeConstraint::Variable(_), TypeConstraint::Object(_)) => todo!(),
-        (TypeConstraint::Variable(_), TypeConstraint::ArrayOf(_)) => todo!(),
-        (TypeConstraint::Variable(_), TypeConstraint::Nullable(_)) => todo!(),
-        (TypeConstraint::Variable(_), TypeConstraint::Predicate { object_type_name }) => todo!(),
-        (TypeConstraint::Variable(_), TypeConstraint::Variable(_)) => todo!(),
-        (TypeConstraint::Variable(_), TypeConstraint::ElementOf(_)) => todo!(),
-        (TypeConstraint::Variable(_), TypeConstraint::FieldOf { target_type, path }) => todo!(),
+        (C::ElementOf(_), C::Scalar(_)) => todo!(),
+        (C::ElementOf(_), C::Object(_)) => todo!(),
+        (C::ElementOf(_), C::ArrayOf(_)) => todo!(),
+        (C::ElementOf(_), C::Nullable(_)) => todo!(),
+        (C::ElementOf(_), C::Predicate { object_type_name }) => todo!(),
+        (C::ElementOf(_), C::Variable(_)) => todo!(),
+        (C::ElementOf(_), C::ElementOf(_)) => todo!(),
+        (C::ElementOf(_), C::FieldOf { target_type, path }) => todo!(),
         (
-            TypeConstraint::Variable(_),
-            TypeConstraint::WithFieldOverrides {
+            C::ElementOf(_),
+            C::WithFieldOverrides {
                 target_type,
                 fields,
             },
         ) => todo!(),
-        (TypeConstraint::ElementOf(_), TypeConstraint::Scalar(_)) => todo!(),
-        (TypeConstraint::ElementOf(_), TypeConstraint::Object(_)) => todo!(),
-        (TypeConstraint::ElementOf(_), TypeConstraint::ArrayOf(_)) => todo!(),
-        (TypeConstraint::ElementOf(_), TypeConstraint::Nullable(_)) => todo!(),
-        (TypeConstraint::ElementOf(_), TypeConstraint::Predicate { object_type_name }) => todo!(),
-        (TypeConstraint::ElementOf(_), TypeConstraint::Variable(_)) => todo!(),
-        (TypeConstraint::ElementOf(_), TypeConstraint::ElementOf(_)) => todo!(),
-        (TypeConstraint::ElementOf(_), TypeConstraint::FieldOf { target_type, path }) => todo!(),
+        (C::FieldOf { target_type, path }, C::Scalar(_)) => todo!(),
+        (C::FieldOf { target_type, path }, C::Object(_)) => todo!(),
+        (C::FieldOf { target_type, path }, C::ArrayOf(_)) => todo!(),
+        (C::FieldOf { target_type, path }, C::Nullable(_)) => todo!(),
+        (C::FieldOf { target_type, path }, C::Predicate { object_type_name }) => todo!(),
+        (C::FieldOf { target_type, path }, C::Variable(_)) => todo!(),
+        (C::FieldOf { target_type, path }, C::ElementOf(_)) => todo!(),
+        (C::FieldOf { target_type, path }, C::FieldOf { target_type, path }) => todo!(),
         (
-            TypeConstraint::ElementOf(_),
-            TypeConstraint::WithFieldOverrides {
-                target_type,
-                fields,
-            },
-        ) => todo!(),
-        (TypeConstraint::FieldOf { target_type, path }, TypeConstraint::Scalar(_)) => todo!(),
-        (TypeConstraint::FieldOf { target_type, path }, TypeConstraint::Object(_)) => todo!(),
-        (TypeConstraint::FieldOf { target_type, path }, TypeConstraint::ArrayOf(_)) => todo!(),
-        (TypeConstraint::FieldOf { target_type, path }, TypeConstraint::Nullable(_)) => todo!(),
-        (
-            TypeConstraint::FieldOf { target_type, path },
-            TypeConstraint::Predicate { object_type_name },
-        ) => todo!(),
-        (TypeConstraint::FieldOf { target_type, path }, TypeConstraint::Variable(_)) => todo!(),
-        (TypeConstraint::FieldOf { target_type, path }, TypeConstraint::ElementOf(_)) => todo!(),
-        (
-            TypeConstraint::FieldOf { target_type, path },
-            TypeConstraint::FieldOf { target_type, path },
-        ) => todo!(),
-        (
-            TypeConstraint::FieldOf { target_type, path },
-            TypeConstraint::WithFieldOverrides {
+            C::FieldOf { target_type, path },
+            C::WithFieldOverrides {
                 target_type,
                 fields,
             },
         ) => todo!(),
         (
-            TypeConstraint::WithFieldOverrides {
+            C::WithFieldOverrides {
                 target_type,
                 fields,
             },
-            TypeConstraint::Scalar(_),
+            C::Scalar(_),
         ) => todo!(),
         (
-            TypeConstraint::WithFieldOverrides {
+            C::WithFieldOverrides {
                 target_type,
                 fields,
             },
-            TypeConstraint::Object(_),
+            C::Object(_),
         ) => todo!(),
         (
-            TypeConstraint::WithFieldOverrides {
+            C::WithFieldOverrides {
                 target_type,
                 fields,
             },
-            TypeConstraint::ArrayOf(_),
+            C::ArrayOf(_),
         ) => todo!(),
         (
-            TypeConstraint::WithFieldOverrides {
+            C::WithFieldOverrides {
                 target_type,
                 fields,
             },
-            TypeConstraint::Nullable(_),
+            C::Nullable(_),
         ) => todo!(),
         (
-            TypeConstraint::WithFieldOverrides {
+            C::WithFieldOverrides {
                 target_type,
                 fields,
             },
-            TypeConstraint::Predicate { object_type_name },
+            C::Predicate { object_type_name },
         ) => todo!(),
         (
-            TypeConstraint::WithFieldOverrides {
+            C::WithFieldOverrides {
                 target_type,
                 fields,
             },
-            TypeConstraint::Variable(_),
+            C::Variable(_),
         ) => todo!(),
         (
-            TypeConstraint::WithFieldOverrides {
+            C::WithFieldOverrides {
                 target_type,
                 fields,
             },
-            TypeConstraint::ElementOf(_),
+            C::ElementOf(_),
         ) => todo!(),
         (
-            TypeConstraint::WithFieldOverrides {
+            C::WithFieldOverrides {
                 target_type,
                 fields,
             },
-            TypeConstraint::FieldOf { target_type, path },
+            C::FieldOf { target_type, path },
         ) => todo!(),
         (
-            TypeConstraint::WithFieldOverrides {
+            C::WithFieldOverrides {
                 target_type,
                 fields,
             },
-            TypeConstraint::WithFieldOverrides {
+            C::WithFieldOverrides {
                 target_type,
                 fields,
             },
