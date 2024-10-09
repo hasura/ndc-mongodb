@@ -37,7 +37,7 @@ fn get_connector_chinook_url() -> anyhow::Result<Url> {
 }
 
 fn get_connector_test_cases_url() -> anyhow::Result<Url> {
-    let input = env::var(CONNECTOR_TEST_CASES_URL).map_err(|_| anyhow!("please set {CONNECTOR_TEST_CASES_URL} to the the base URL of a running MongoDB connector instance"))?;
+    let input = env::var(CONNECTOR_TEST_CASES_URL).map_err(|_| anyhow!("please set {CONNECTOR_TEST_CASES_URL} to the base URL of a running MongoDB connector instance"))?;
     let url = Url::parse(&input)?;
     Ok(url)
 }

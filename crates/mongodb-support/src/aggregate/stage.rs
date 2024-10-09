@@ -1,15 +1,15 @@
 use std::collections::BTreeMap;
 
 use mongodb::bson;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-use super::{accumulator::Accumulator, pipeline::Pipeline, Selection, SortDocument};
+use super::{Accumulator, Pipeline, Selection, SortDocument};
 
 /// Aggergation Pipeline Stage. This is a work-in-progress - we are adding enum variants to match
 /// MongoDB pipeline stage types as we need them in this app. For documentation on all stage types
 /// see,
 /// https://www.mongodb.com/docs/manual/reference/operator/aggregation-pipeline/#std-label-aggregation-pipeline-operator-reference
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum Stage {
     /// Adds new fields to documents. $addFields outputs documents that contain all existing fields
     /// from the input documents and newly added fields.
@@ -161,6 +161,32 @@ pub enum Stage {
     /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/replaceWith/#mongodb-pipeline-pipe.-replaceWith
     #[serde(rename = "$replaceWith")]
     ReplaceWith(Selection),
+
+    /// Deconstructs an array field from the input documents to output a document for each element.
+    /// Each output document is the input document with the value of the array field replaced by
+    /// the element.
+    ///
+    /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/unwind/
+    #[serde(rename = "$unwind", rename_all = "camelCase")]
+    Unwind {
+        /// Field path to an array field. To specify a field path, prefix the field name with
+        /// a dollar sign $ and enclose in quotes.
+        path: String,
+
+        /// Optional. The name of a new field to hold the array index of the element. The name
+        /// cannot start with a dollar sign $.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        include_array_index: Option<String>,
+
+        /// Optional.
+        ///
+        /// - If true, if the path is null, missing, or an empty array, $unwind outputs the document.
+        /// - If false, if path is null, missing, or an empty array, $unwind does not output a document.
+        ///
+        /// The default value is false.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        preserve_null_and_empty_arrays: Option<bool>,
+    },
 
     /// For cases where we receive pipeline stages from an external source, such as a native query,
     /// and we don't want to attempt to parse it we store the stage BSON document unaltered.

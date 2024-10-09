@@ -1,6 +1,7 @@
 pub mod arb_bson;
 mod arb_plan_type;
 pub mod arb_type;
+pub mod configuration;
 
 use enum_iterator::Sequence as _;
 use mongodb_support::ExtendedJsonMode;
