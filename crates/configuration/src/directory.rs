@@ -63,7 +63,7 @@ pub async fn read_directory(
         .await?
         .unwrap_or_default();
 
-    let options = parse_configuration_options_file(dir).await;
+    let options = parse_configuration_options_file(dir).await?;
 
     native_mutations.extend(native_procedures.into_iter());
 
@@ -129,24 +129,35 @@ where
     }
 }
 
-pub async fn parse_configuration_options_file(dir: &Path) -> ConfigurationOptions {
-    let json_filename = CONFIGURATION_OPTIONS_BASENAME.to_owned() + ".json";
-    let json_config_file = parse_config_file(&dir.join(json_filename), JSON).await;
-    if let Ok(config_options) = json_config_file {
-        return config_options;
+pub async fn parse_configuration_options_file(dir: &Path) -> anyhow::Result<ConfigurationOptions> {
+    let json_filename = configuration_file_path(dir, JSON);
+    if fs::try_exists(&json_filename).await? {
+        return parse_config_file(json_filename, JSON).await;
     }
 
-    let yaml_filename = CONFIGURATION_OPTIONS_BASENAME.to_owned() + ".yaml";
-    let yaml_config_file = parse_config_file(&dir.join(yaml_filename), YAML).await;
-    if let Ok(config_options) = yaml_config_file {
-        return config_options;
+    let yaml_filename = configuration_file_path(dir, YAML);
+    if fs::try_exists(&yaml_filename).await? {
+        return parse_config_file(yaml_filename, YAML).await;
     }
+
+    tracing::warn!(
+        "{CONFIGURATION_OPTIONS_BASENAME}.json not found, using default connector settings"
+    );
 
     // If a configuration file does not exist use defaults and write the file
     let defaults: ConfigurationOptions = Default::default();
     let _ = write_file(dir, CONFIGURATION_OPTIONS_BASENAME, &defaults).await;
     let _ = write_config_metadata_file(dir).await;
-    defaults
+    Ok(defaults)
+}
+
+fn configuration_file_path(dir: &Path, format: FileFormat) -> PathBuf {
+    let mut file_path = dir.join(CONFIGURATION_OPTIONS_BASENAME);
+    match format {
+        FileFormat::Json => file_path.set_extension("json"),
+        FileFormat::Yaml => file_path.set_extension("yaml"),
+    };
+    file_path
 }
 
 async fn parse_config_file<T>(path: impl AsRef<Path>, format: FileFormat) -> anyhow::Result<T>

@@ -42,6 +42,7 @@ impl ConnectorSetup for MongoConnector {
                     json!({}),
                 )
             })?;
+        tracing::debug!(?configuration);
         Ok(MongoConfiguration(configuration))
     }
 
