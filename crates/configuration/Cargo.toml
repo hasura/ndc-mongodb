@@ -14,8 +14,8 @@ mongodb = { workspace = true }
 ndc-models = { workspace = true }
 ref-cast = { workspace = true }
 schemars = { workspace = true }
-serde = { version = "1", features = ["derive"] }
-serde_json = { version = "1" }
+serde = { workspace = true }
+serde_json = { workspace = true }
 serde_yaml = "^0.9"
 tokio = "1"
 tokio-stream = { version = "^0.1", features = ["fs"] }
