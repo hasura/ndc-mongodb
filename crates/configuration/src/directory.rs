@@ -276,3 +276,45 @@ pub async fn get_config_file_changed(dir: impl AsRef<Path>) -> anyhow::Result<bo
         _ => Ok(true),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use async_tempfile::TempDir;
+    use googletest::prelude::*;
+    use serde_json::json;
+    use tokio::fs;
+
+    use super::{read_directory, CONFIGURATION_OPTIONS_BASENAME};
+
+    #[googletest::test]
+    #[tokio::test]
+    async fn errors_on_typo_in_extended_json_mode_string() -> Result<()> {
+        let input = json!({
+            "introspectionOptions": {
+                "sampleSize": 1_000,
+                "noValidatorSchema": true,
+                "allSchemaNullable": false,
+            },
+            "serializationOptions": {
+                "extendedJsonMode": "no-such-mode",
+            },
+        });
+
+        let config_dir = TempDir::new().await?;
+        let mut config_file = config_dir.join(CONFIGURATION_OPTIONS_BASENAME);
+        config_file.set_extension("json");
+        fs::write(config_file, serde_json::to_vec(&input)?).await?;
+
+        let actual = read_directory(config_dir).await;
+
+        expect_that!(
+            actual,
+            err(predicate(|e: &anyhow::Error| e
+                .root_cause()
+                .to_string()
+                .contains("unknown variant `no-such-mode`")))
+        );
+
+        Ok(())
+    }
+}

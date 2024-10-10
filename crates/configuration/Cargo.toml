@@ -20,3 +20,7 @@ serde_yaml = "^0.9"
 tokio = "1"
 tokio-stream = { version = "^0.1", features = ["fs"] }
 tracing = "0.1"
+
+[dev-dependencies]
+async-tempfile = "^0.6.0"
+googletest = "^0.12.0"
