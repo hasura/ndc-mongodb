@@ -56,7 +56,7 @@ pub async fn run(context: &Context, command: Command) -> anyhow::Result<()> {
             let configuration = match read_directory(&context.path).await {
                 Ok(c) => c,
                 Err(err) => {
-                    eprintln!("Could not read connector configuration - configuration must be initialized before creating native queries.\n\n{err}");
+                    eprintln!("Could not read connector configuration - configuration must be initialized before creating native queries.\n\n{err:#}");
                     exit(ExitCode::CouldNotReadConfiguration.into())
                 }
             };

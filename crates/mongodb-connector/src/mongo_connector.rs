@@ -38,7 +38,7 @@ impl ConnectorSetup for MongoConnector {
             .map_err(|err| {
                 ErrorResponse::new(
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    err.to_string(),
+                    format!("{err:#}"), // alternate selector (:#) includes root cause in string
                     json!({}),
                 )
             })?;
