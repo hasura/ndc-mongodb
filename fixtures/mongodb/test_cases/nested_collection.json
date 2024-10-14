@@ -1,3 +1,3 @@
-{ "institution": "Black Mesa", "staff": [{ "name": "Freeman" }, { "name": "Calhoun" }] }
-{ "institution": "Aperture Science", "staff": [{ "name": "GLaDOS" }, { "name": "Chell" }] }
-{ "institution": "City 17", "staff": [{ "name": "Alyx" }, { "name": "Freeman" }, { "name": "Breen" }] }
+{ "_id": { "$oid": "6705a1c2c2df58ace3e67806" }, "institution": "Black Mesa", "staff": [{ "name": "Freeman" }, { "name": "Calhoun" }] }
+{ "_id": { "$oid": "6705a1cec2df58ace3e67807" }, "institution": "Aperture Science", "staff": [{ "name": "GLaDOS" }, { "name": "Chell" }] }
+{ "_id": { "$oid": "6705a1d7c2df58ace3e67808" }, "institution": "City 17", "staff": [{ "name": "Alyx" }, { "name": "Freeman" }, { "name": "Breen" }] }
