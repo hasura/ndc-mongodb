@@ -203,7 +203,7 @@ impl Configuration {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ConfigurationOptions {
     /// Options for introspection
     pub introspection_options: ConfigurationIntrospectionOptions,
@@ -215,7 +215,7 @@ pub struct ConfigurationOptions {
 }
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ConfigurationIntrospectionOptions {
     // For introspection how many documents should be sampled per collection.
     pub sample_size: u32,
@@ -238,7 +238,7 @@ impl Default for ConfigurationIntrospectionOptions {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ConfigurationSerializationOptions {
     /// Extended JSON has two modes: canonical and relaxed. This option determines which mode is
     /// used for output. This setting has no effect on inputs (query arguments, etc.).

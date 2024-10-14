@@ -8,6 +8,8 @@ This changelog documents the changes between release versions.
 
 ### Changed
 
+- **BREAKING:** If `configuration.json` cannot be parsed the connector will fail to start. This change also prohibits unknown keys in that file. These changes will help to prevent typos configuration being silently ignored. ([#115](https://github.com/hasura/ndc-mongodb/pull/115))
+
 ### Fixed
 
 - Fixes for filtering by complex predicate that references variables, or field names that require escaping ([#111](https://github.com/hasura/ndc-mongodb/pull/111))
