@@ -47,6 +47,7 @@ pub enum TypeConstraint {
 
     /// A type that modifies another type by adding or replacing object fields.
     WithFieldOverrides {
+        augmented_object_type_name: ObjectTypeName,
         target_type: Box<TypeConstraint>,
         fields: BTreeMap<FieldName, TypeConstraint>,
     },

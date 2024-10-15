@@ -1,9 +1,12 @@
+mod constraint_to_type;
+
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use configuration::schema::Type;
+use configuration::schema::{ObjectType, Type};
 use itertools::Itertools;
 use mongodb_support::BsonScalarType;
-use ndc_models::ObjectTypeName;
+use ndc_models::{FieldName, ObjectTypeName};
+use nonempty::NonEmpty;
 
 use crate::introspection::type_unification::is_supertype;
 
@@ -98,34 +101,6 @@ fn solve_variable(
     constraints.iter().fold(None, |accum, next_constraint| {
         simplify_constraint_pair(object_types, type_variables, accum, next_constraint)
     })
-}
-
-/// In cases where there is enough information present in the constraint itself to infer a concrete
-/// type, do that. Returns None if there is not enough information present.
-fn constraint_to_type(constraint: &TypeConstraint) -> Result<Option<Type>> {
-    let solution = match constraint {
-        C::ExtendedJSON => Some(Type::ExtendedJSON),
-        C::Scalar(s) => Some(Type::Scalar(s.clone())),
-        C::Object(name) => Some(Type::Object(name.to_string())),
-        C::ArrayOf(c) => constraint_to_type(c)?.map(|t| Type::ArrayOf(Box::new(t))),
-        C::Nullable(c) => constraint_to_type(c)?.map(|t| Type::Nullable(Box::new(t))),
-        C::Predicate { object_type_name } => Some(Type::Predicate {
-            object_type_name: object_type_name.clone(),
-        }),
-        C::Variable(_) => None,
-        C::ElementOf(c) => constraint_to_type(c)?
-            .map(|t| match t {
-                Type::ArrayOf(elem_type) => Ok(*elem_type),
-                _ => Err(Error::ExpectedArray { actual_type: t }),
-            })
-            .transpose()?,
-        C::FieldOf { target_type, path } => todo!(),
-        C::WithFieldOverrides {
-            target_type,
-            fields,
-        } => todo!(),
-    };
-    Ok(solution)
 }
 
 fn simplify_constraint_pair(
@@ -326,3 +301,4 @@ fn solve_scalar(a: BsonScalarType, b: BsonScalarType) -> Simplified<TypeConstrai
         Simplified::Both((C::Scalar(a), C::Scalar(b)))
     }
 }
+
