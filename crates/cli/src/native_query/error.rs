@@ -3,7 +3,7 @@ use mongodb::bson::{self, Bson, Document};
 use ndc_models::{FieldName, ObjectTypeName};
 use thiserror::Error;
 
-use super::type_constraint::TypeConstraint;
+use super::type_constraint::{TypeConstraint, TypeVariable};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -28,6 +28,11 @@ pub enum Error {
 
     #[error("Expected a path for the $unwind stage")]
     ExpectedStringPath(Bson),
+
+    #[error("Failed to unify")]
+    FailedToUnify {
+        unsolved_variables: Vec<TypeVariable>,
+    },
 
     #[error(
         "Cannot infer a result document type for pipeline because it does not produce documents"

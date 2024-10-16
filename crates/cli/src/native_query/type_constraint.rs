@@ -51,6 +51,8 @@ pub enum TypeConstraint {
         target_type: Box<TypeConstraint>,
         fields: BTreeMap<FieldName, TypeConstraint>,
     },
+
+    // TODO: Add Non-nullable constraint?
 }
 
 impl TypeConstraint {

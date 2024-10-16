@@ -128,6 +128,10 @@ fn with_field_overrides(
                     },
                 );
             }
+            // TODO: We might end up back-tracking in which case this will register an object type
+            // that isn't referenced. BUT once solving is complete we should get here again with
+            // the same augmented_object_type_name, overwrite the old definition with an identical
+            // one, and then it will be referenced.
             object_types.insert(augmented_object_type_name.clone(), new_object_type);
             Ok(Type::Object(augmented_object_type_name.to_string()))
         }
