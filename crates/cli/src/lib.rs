@@ -61,7 +61,7 @@ async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
     let connector_state = try_init_state_from_uri(context.connection_uri.as_ref()).await?;
 
     let configuration_options =
-        configuration::parse_configuration_options_file(&context.path).await;
+        configuration::parse_configuration_options_file(&context.path).await?;
     // Prefer arguments passed to cli, and fallback to the configuration file
     let sample_size = match args.sample_size {
         Some(size) => size,

@@ -1,15 +1,15 @@
 use std::collections::BTreeMap;
 
 use itertools::Itertools as _;
-use mongodb::bson::{doc, Bson, Document};
+use mongodb::bson::{doc, Document};
 use mongodb_support::aggregate::{Pipeline, Stage};
 use ndc_query_plan::Scope;
 
 use crate::mongo_query_plan::{MongoConfiguration, Query, QueryPlan};
-use crate::mongodb::sanitize::safe_name;
 use crate::query::column_ref::name_from_scope;
 use crate::{interface_types::MongoAgentError, mongodb::sanitize::variable};
 
+use super::column_ref::ColumnRef;
 use super::pipeline::pipeline_for_non_foreach;
 use super::query_level::QueryLevel;
 
@@ -44,13 +44,13 @@ pub fn pipeline_for_relations(
                 QueryLevel::Relationship,
             )?;
 
-            make_lookup_stage(
+            Ok(make_lookup_stage(
                 relationship.target_collection.clone(),
                 &relationship.column_mapping,
                 name.to_owned(),
                 lookup_pipeline,
                 scope.as_ref(),
-            )
+            )) as Result<_>
         })
         .try_collect()?;
 
@@ -63,38 +63,60 @@ fn make_lookup_stage(
     r#as: ndc_models::RelationshipName,
     lookup_pipeline: Pipeline,
     scope: Option<&Scope>,
-) -> Result<Stage> {
-    // If we are mapping a single field in the source collection to a single field in the target
-    // collection then we can use the correlated subquery syntax.
-    if column_mapping.len() == 1 {
+) -> Stage {
+    // If there is a single column mapping, and the source and target field references can be
+    // expressed as match keys (we don't need to escape field names), then we can use a concise
+    // correlated subquery. Otherwise we need to fall back to an uncorrelated subquery.
+    let safe_single_column_mapping = if column_mapping.len() == 1 {
         // Safe to unwrap because we just checked the hashmap size
         let (source_selector, target_selector) = column_mapping.iter().next().unwrap();
-        single_column_mapping_lookup(
-            from,
-            source_selector,
-            target_selector,
-            r#as,
-            lookup_pipeline,
-            scope,
-        )
+
+        let source_ref = ColumnRef::from_field(source_selector);
+        let target_ref = ColumnRef::from_field(target_selector);
+
+        match (source_ref, target_ref) {
+            (ColumnRef::MatchKey(source_key), ColumnRef::MatchKey(target_key)) => {
+                Some((source_key.to_string(), target_key.to_string()))
+            }
+
+            // If the source and target refs cannot be expressed in required syntax then we need to
+            // fall back to a lookup pipeline that con compare arbitrary expressions.
+            // [multiple_column_mapping_lookup] does this.
+            _ => None,
+        }
     } else {
-        multiple_column_mapping_lookup(from, column_mapping, r#as, lookup_pipeline, scope)
+        None
+    };
+
+    match safe_single_column_mapping {
+        Some((source_selector_key, target_selector_key)) => {
+            lookup_with_concise_correlated_subquery(
+                from,
+                source_selector_key,
+                target_selector_key,
+                r#as,
+                lookup_pipeline,
+                scope,
+            )
+        }
+        None => {
+            lookup_with_uncorrelated_subquery(from, column_mapping, r#as, lookup_pipeline, scope)
+        }
     }
 }
 
-// TODO: ENG-973 Replace uses of [safe_name] with [ColumnRef].
-fn single_column_mapping_lookup(
+fn lookup_with_concise_correlated_subquery(
     from: ndc_models::CollectionName,
-    source_selector: &ndc_models::FieldName,
-    target_selector: &ndc_models::FieldName,
+    source_selector_key: String,
+    target_selector_key: String,
     r#as: ndc_models::RelationshipName,
     lookup_pipeline: Pipeline,
     scope: Option<&Scope>,
-) -> Result<Stage> {
-    Ok(Stage::Lookup {
+) -> Stage {
+    Stage::Lookup {
         from: Some(from.to_string()),
-        local_field: Some(safe_name(source_selector.as_str())?.into_owned()),
-        foreign_field: Some(safe_name(target_selector.as_str())?.into_owned()),
+        local_field: Some(source_selector_key),
+        foreign_field: Some(target_selector_key),
         r#let: scope.map(|scope| {
             doc! {
                 name_from_scope(scope): "$$ROOT"
@@ -106,28 +128,30 @@ fn single_column_mapping_lookup(
             Some(lookup_pipeline)
         },
         r#as: r#as.to_string(),
-    })
+    }
 }
 
-fn multiple_column_mapping_lookup(
+/// The concise correlated subquery syntax with `localField` and `foreignField` only works when
+/// joining on one field. To join on multiple fields it is necessary to bind variables to fields on
+/// the left side of the join, and to emit a custom `$match` stage to filter the right side of the
+/// join. This version also allows comparing arbitrary expressions for the join which we need for
+/// cases like joining on field names that require escaping.
+fn lookup_with_uncorrelated_subquery(
     from: ndc_models::CollectionName,
     column_mapping: &BTreeMap<ndc_models::FieldName, ndc_models::FieldName>,
     r#as: ndc_models::RelationshipName,
     lookup_pipeline: Pipeline,
     scope: Option<&Scope>,
-) -> Result<Stage> {
+) -> Stage {
     let mut let_bindings: Document = column_mapping
         .keys()
         .map(|local_field| {
-            Ok((
+            (
                 variable(local_field.as_str()),
-                Bson::String(format!(
-                    "${}",
-                    safe_name(local_field.as_str())?.into_owned()
-                )),
-            ))
+                ColumnRef::from_field(local_field).into_aggregate_expression(),
+            )
         })
-        .collect::<Result<_>>()?;
+        .collect();
 
     if let Some(scope) = scope {
         let_bindings.insert(name_from_scope(scope), "$$ROOT");
@@ -143,17 +167,13 @@ fn multiple_column_mapping_lookup(
     let matchers: Vec<Document> = column_pairs
         .into_iter()
         .map(|(local_field, remote_field)| {
-            Ok(doc! { "$eq": [
-                format!("$${}", variable(local_field.as_str())),
-                format!("${}", safe_name(remote_field.as_str())?)
-            ] })
+            doc! { "$eq": [
+                ColumnRef::variable(variable(local_field.as_str())).into_aggregate_expression(),
+                ColumnRef::from_field(remote_field).into_aggregate_expression(),
+            ] }
         })
-        .collect::<Result<_>>()?;
+        .collect();
 
-    // Match only documents on the right side of the join that match the column-mapping
-    // criteria. In the case where we have only one column mapping using the $lookup stage's
-    // `local_field` and `foreign_field` shorthand would give better performance (~10%), but that
-    // locks us into MongoDB v5.0 or later.
     let mut pipeline = Pipeline::from_iter([Stage::Match(if matchers.len() == 1 {
         doc! { "$expr": matchers.into_iter().next().unwrap() }
     } else {
@@ -162,22 +182,23 @@ fn multiple_column_mapping_lookup(
     pipeline.append(lookup_pipeline);
     let pipeline: Option<Pipeline> = pipeline.into();
 
-    Ok(Stage::Lookup {
+    Stage::Lookup {
         from: Some(from.to_string()),
         local_field: None,
         foreign_field: None,
         r#let: let_bindings.into(),
         pipeline,
         r#as: r#as.to_string(),
-    })
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use configuration::Configuration;
     use mongodb::bson::{bson, Bson};
+    use ndc_models::{FieldName, QueryResponse};
     use ndc_test_helpers::{
-        binop, collection, exists, field, named_type, object_type, query, query_request,
+        binop, collection, exists, field, named_type, object, object_type, query, query_request,
         relation_field, relationship, row_set, star_count_aggregate, target, value,
     };
     use pretty_assertions::assert_eq;
@@ -452,6 +473,77 @@ mod tests {
 
         let result = execute_query_request(db, &students_config(), query_request).await?;
         assert_eq!(expected_response, result);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn escapes_column_mappings_names_if_necessary() -> Result<(), anyhow::Error> {
+        let query_request = query_request()
+            .collection("weird_field_names")
+            .query(query().fields([
+                field!("invalid_name" => "$invalid.name"),
+                relation_field!("join" => "join", query().fields([
+                  field!("invalid_name" => "$invalid.name")
+                ])),
+            ]))
+            .relationships([(
+                "join",
+                relationship("weird_field_names", [("$invalid.name", "$invalid.name")]),
+            )])
+            .into();
+
+        let expected_pipeline = bson!([
+            {
+                "$lookup": {
+                    "from": "weird_field_names",
+                    "let": {
+                        "v_·24invalid·2ename": { "$getField": { "$literal": "$invalid.name" } },
+                        "scope_root": "$$ROOT",
+                    },
+                    "pipeline": [
+                        {
+                            "$match": { "$expr": {
+                                "$eq": [
+                                    "$$v_·24invalid·2ename",
+                                    { "$getField": { "$literal": "$invalid.name" } }
+                                ]
+                            } },
+                        },
+                        {
+                            "$replaceWith": {
+                                "invalid_name": { "$ifNull": [{ "$getField": { "$literal": "$invalid.name" } }, null] },
+                            },
+                        },
+                    ],
+                    "as": "join",
+                },
+            },
+            {
+                "$replaceWith": {
+                    "invalid_name": { "$ifNull": [{ "$getField": { "$literal": "$invalid.name" } }, null] },
+                    "join": {
+                        "rows": {
+                            "$map": {
+                                "input": { "$getField": { "$literal": "join" } },
+                                "in": {
+                                    "invalid_name": "$$this.invalid_name",
+                                }
+                            }
+                        }
+                    },
+                },
+            },
+        ]);
+
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "weird_field_names",
+            expected_pipeline,
+            bson!([]),
+        );
+
+        execute_query_request(db, &test_cases_config(), query_request).await?;
+        // assert_eq!(expected_response, result);
 
         Ok(())
     }
@@ -801,114 +893,125 @@ mod tests {
         Ok(())
     }
 
-    // TODO: This test requires updated ndc_models that add `field_path` to
-    // [ndc::ComparisonTarget::Column]
-    // #[tokio::test]
-    // async fn filters_by_field_nested_in_object_in_related_collection() -> Result<(), anyhow::Error>
-    // {
-    //     let query_request = query_request()
-    //         .collection("comments")
-    //         .query(
-    //             query()
-    //                 .fields([relation_field!("movie" => "movie", query().fields([
-    //                     field!("credits" => "credits", object!([
-    //                         field!("director"),
-    //                     ])),
-    //                 ]))])
-    //                 .limit(50)
-    //                 .predicate(exists(
-    //                     ndc_models::ExistsInCollection::Related {
-    //                         relationship: "movie".into(),
-    //                         arguments: Default::default(),
-    //                     },
-    //                     binop(
-    //                         "_eq",
-    //                         target!("credits", field_path: ["director"]),
-    //                         value!("Martin Scorsese"),
-    //                     ),
-    //                 )),
-    //         )
-    //         .relationships([("movie", relationship("movies", [("movie_id", "_id")]))])
-    //         .into();
-    //
-    //     let expected_response = row_set()
-    //         .row([
-    //             ("name", "Beric Dondarrion"),
-    //             (
-    //                 "movie",
-    //                 json!({ "rows": [{
-    //                     "credits": {
-    //                         "director": "Martin Scorsese",
-    //                     }
-    //                 }]}),
-    //             ),
-    //         ])
-    //         .into();
-    //
-    //     let expected_pipeline = bson!([
-    //         {
-    //             "$lookup": {
-    //                 "from": "movies",
-    //                 "localField": "movie_id",
-    //                 "foreignField": "_id",
-    //                 "pipeline": [
-    //                     {
-    //                         "$replaceWith": {
-    //                             "credits": {
-    //                                 "$cond": {
-    //                                     "if": "$credits",
-    //                                     "then": { "director": { "$ifNull": ["$credits.director", null] } },
-    //                                     "else": null,
-    //                                 }
-    //                             },
-    //                         }
-    //                     }
-    //                 ],
-    //                 "as": "movie"
-    //             }
-    //         },
-    //         {
-    //             "$match": {
-    //                 "movie.credits.director": {
-    //                     "$eq": "Martin Scorsese"
-    //                 }
-    //             }
-    //         },
-    //         {
-    //             "$limit": Bson::Int64(50),
-    //         },
-    //         {
-    //             "$replaceWith": {
-    //                 "name": { "$ifNull": ["$name", null] },
-    //                 "movie": {
-    //                     "rows": {
-    //                         "$getField": {
-    //                             "$literal": "movie"
-    //                         }
-    //                     }
-    //                 },
-    //             }
-    //         },
-    //     ]);
-    //
-    //     let db = mock_collection_aggregate_response_for_pipeline(
-    //         "comments",
-    //         expected_pipeline,
-    //         bson!([{
-    //             "name": "Beric Dondarrion",
-    //             "movie": { "rows": [{
-    //                 "credits": {
-    //                     "director": "Martin Scorsese"
-    //                 }
-    //             }] },
-    //         }]),
-    //     );
-    //
-    //     let result = execute_query_request(db, &mflix_config(), query_request).await?;
-    //     assert_eq!(expected_response, result);
-    //
-    //     Ok(())
-    // }
+    #[tokio::test]
+    async fn filters_by_field_nested_in_object_in_related_collection() -> Result<(), anyhow::Error>
+    {
+        let query_request = query_request()
+            .collection("comments")
+            .query(
+                query()
+                    .fields([
+                        field!("name"),
+                        relation_field!("movie" => "movie", query().fields([
+                            field!("credits" => "credits", object!([
+                                field!("director"),
+                            ])),
+                        ])),
+                    ])
+                    .limit(50)
+                    .predicate(exists(
+                        ndc_models::ExistsInCollection::Related {
+                            relationship: "movie".into(),
+                            arguments: Default::default(),
+                        },
+                        binop(
+                            "_eq",
+                            target!("credits", field_path: [Some(FieldName::from("director"))]),
+                            value!("Martin Scorsese"),
+                        ),
+                    )),
+            )
+            .relationships([("movie", relationship("movies", [("movie_id", "_id")]))])
+            .into();
+
+        let expected_response: QueryResponse = row_set()
+            .row([
+                ("name", json!("Beric Dondarrion")),
+                (
+                    "movie",
+                    json!({ "rows": [{
+                        "credits": {
+                            "director": "Martin Scorsese",
+                        }
+                    }]}),
+                ),
+            ])
+            .into();
+
+        let expected_pipeline = bson!([
+            {
+                "$lookup": {
+                    "from": "movies",
+                    "localField": "movie_id",
+                    "foreignField": "_id",
+                    "let": {
+                        "scope_root": "$$ROOT",
+                    },
+                    "pipeline": [
+                        {
+                            "$replaceWith": {
+                                "credits": {
+                                    "$cond": {
+                                        "if": "$credits",
+                                        "then": { "director": { "$ifNull": ["$credits.director", null] } },
+                                        "else": null,
+                                    }
+                                },
+                            }
+                        }
+                    ],
+                    "as": "movie"
+                }
+            },
+            {
+                "$match": {
+                    "movie": {
+                        "$elemMatch": {
+                            "credits.director": {
+                                "$eq": "Martin Scorsese"
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                "$limit": Bson::Int64(50),
+            },
+            {
+                "$replaceWith": {
+                    "name": { "$ifNull": ["$name", null] },
+                    "movie": {
+                        "rows": {
+                            "$map": {
+                                "input": { "$getField": { "$literal": "movie" } },
+                                "in": {
+                                    "credits": "$$this.credits",
+                                }
+                            }
+                        }
+                    },
+                }
+            },
+        ]);
+
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "comments",
+            expected_pipeline,
+            bson!([{
+                "name": "Beric Dondarrion",
+                "movie": { "rows": [{
+                    "credits": {
+                        "director": "Martin Scorsese"
+                    }
+                }] },
+            }]),
+        );
+
+        let result = execute_query_request(db, &mflix_config(), query_request).await?;
+        assert_eq!(expected_response, result);
+
+        Ok(())
+    }
 
     fn students_config() -> MongoConfiguration {
         MongoConfiguration(Configuration {
@@ -946,6 +1049,25 @@ mod tests {
                     ]),
                 ),
             ]
+            .into(),
+            functions: Default::default(),
+            procedures: Default::default(),
+            native_mutations: Default::default(),
+            native_queries: Default::default(),
+            options: Default::default(),
+        })
+    }
+
+    fn test_cases_config() -> MongoConfiguration {
+        MongoConfiguration(Configuration {
+            collections: [collection("weird_field_names")].into(),
+            object_types: [(
+                "weird_field_names".into(),
+                object_type([
+                    ("_id", named_type("ObjectId")),
+                    ("$invalid.name", named_type("Int")),
+                ]),
+            )]
             .into(),
             functions: Default::default(),
             procedures: Default::default(),
