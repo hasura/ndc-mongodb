@@ -6,16 +6,12 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use configuration::schema::Type;
 use itertools::Itertools;
-use mongodb_support::BsonScalarType;
 use ndc_models::ObjectTypeName;
 use simplify::simplify_constraints;
 use substitute::substitute;
 
-use crate::introspection::type_unification::is_supertype;
-
 use super::{
     error::{Error, Result},
-    pipeline_type_context::PipelineTypeContext,
     type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable},
 };
 
@@ -25,16 +21,6 @@ fn unify(
     object_types: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     mut type_variables: HashMap<TypeVariable, HashSet<TypeConstraint>>,
 ) -> Result<HashMap<TypeVariable, Type>> {
-    // let variables: Vec<TypeVariable> = type_variables.keys().copied().collect();
-
-    // let mut complexities: HashMap<TypeVariable, usize> = type_variables
-    //     .iter()
-    //     .map(|(variable, constraints)| {
-    //         let complexity = constraints.iter().map(TypeConstraint::complexity).sum();
-    //         (*variable, complexity)
-    //     })
-    //     .collect();
-
     let mut solutions = HashMap::new();
     let is_solved = |variable: TypeVariable| solutions.contains_key(&variable);
 

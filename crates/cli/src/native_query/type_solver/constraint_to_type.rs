@@ -5,57 +5,98 @@ use ndc_models::{FieldName, ObjectTypeName};
 
 use crate::native_query::{
     error::{Error, Result},
-    type_constraint::TypeConstraint,
+    type_constraint::{ObjectTypeConstraint, TypeConstraint},
 };
 
 use TypeConstraint as C;
 
-/// In cases where there is enough information present in the constraint itself to infer a concrete
+/// In cases where there is enough information present in one constraint itself to infer a concrete
 /// type, do that. Returns None if there is not enough information present.
 pub fn constraint_to_type(
-    object_types: &mut BTreeMap<ObjectTypeName, ObjectType>,
+    object_types: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     constraint: &TypeConstraint,
-) -> Result<Option<Type>> {
-    let solution = match constraint {
-        C::ExtendedJSON => Some(Type::ExtendedJSON),
-        C::Scalar(s) => Some(Type::Scalar(s.clone())),
-        C::Object(name) => Some(Type::Object(name.to_string())),
-        C::ArrayOf(c) => constraint_to_type(object_types, c)?.map(|t| Type::ArrayOf(Box::new(t))),
-        C::Nullable(c) => constraint_to_type(object_types, c)?.map(|t| Type::Nullable(Box::new(t))),
-        C::Predicate { object_type_name } => Some(Type::Predicate {
-            object_type_name: object_type_name.clone(),
-        }),
-        C::Variable(_) => None,
-        C::ElementOf(c) => constraint_to_type(object_types, c)?
-            .map(element_of)
-            .transpose()?,
-        C::FieldOf { target_type, path } => constraint_to_type(object_types, target_type)?
-            .map(|t| field_of(object_types, t, path))
-            .transpose()?,
-        C::WithFieldOverrides {
-            augmented_object_type_name,
-            target_type,
-            fields,
-        } => {
-            let resolved_object_type = constraint_to_type(object_types, target_type)?;
-            let resolved_field_types: Option<Vec<(FieldName, Type)>> = fields
-                .iter()
-                .map(|(field_name, t)| {
-                    Ok(constraint_to_type(object_types, t)?.map(|t| (field_name.clone(), t)))
-                })
-                .collect::<Result<_>>()?;
-            match (resolved_object_type, resolved_field_types) {
-                (Some(object_type), Some(fields)) => Some(with_field_overrides(
-                    object_types,
-                    object_type,
-                    augmented_object_type_name.clone(),
-                    fields,
-                )?),
-                _ => None,
+) -> Result<Option<(Type, BTreeMap<ObjectTypeName, ObjectType>)>> {
+    let solution =
+        match constraint {
+            C::ExtendedJSON => Some((Type::ExtendedJSON, Default::default())),
+            C::Scalar(s) => Some((Type::Scalar(s.clone()), Default::default())),
+            // C::Object(name) => Some(Type::Object(name.to_string())),
+            C::Object(name) => object_constraint_to_type(object_types, name),
+            C::ArrayOf(c) => constraint_to_type(object_types, c)?
+                .map(|(t, ots)| (Type::ArrayOf(Box::new(t)), ots)),
+            C::Nullable(c) => constraint_to_type(object_types, c)?
+                .map(|(t, ots)| (Type::Nullable(Box::new(t)), ots)),
+            // TODO: recurse into object type
+            C::Predicate { object_type_name } => Some(Type::Predicate {
+                object_type_name: object_type_name.clone(),
+            }),
+            C::Variable(_) => None,
+            C::ElementOf(c) => constraint_to_type(object_types, c)?
+                .map(|(t, ots)| element_of(t).map(|t| (t, ots)))
+                .transpose()?,
+            C::FieldOf { target_type, path } => constraint_to_type(object_types, target_type)?
+                .map(|(t, ots)| field_of(object_types, t, path).map(|t| (t, ots)))
+                .transpose()?,
+            C::WithFieldOverrides {
+                augmented_object_type_name,
+                target_type,
+                fields,
+            } => {
+                let resolved_object_type = constraint_to_type(object_types, target_type)?;
+                let resolved_field_types: Option<Vec<(FieldName, Type)>> = fields
+                    .iter()
+                    .map(|(field_name, t)| {
+                        Ok(constraint_to_type(object_types, t)?.map(|t| (field_name.clone(), t)))
+                    })
+                    .collect::<Result<_>>()?;
+                match (resolved_object_type, resolved_field_types) {
+                    (Some(object_type), Some(fields)) => Some(with_field_overrides(
+                        object_types,
+                        object_type,
+                        augmented_object_type_name.clone(),
+                        fields,
+                    )?),
+                    _ => None,
+                }
             }
-        }
-    };
+        };
     Ok(solution)
+}
+
+fn object_constraint_to_type(
+    object_types: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+    name: &ObjectTypeName,
+) -> Result<Option<(ObjectType, BTreeMap<ObjectTypeName, ObjectType>)>> {
+    let Some(object_type_constraint) = object_types.get(name).cloned() else {
+        return Err(Error::UnknownObjectType(name.to_string()));
+    };
+
+    let mut fields = BTreeMap::new();
+    let mut solved_object_types = BTreeMap::new();
+
+    for (field_name, field_constraint) in object_type_constraint.fields.iter() {
+        match constraint_to_type(object_types, field_constraint)? {
+            Some((solved_field_type, object_types)) => {
+                fields.insert(
+                    field_name.clone(),
+                    ObjectField {
+                        r#type: solved_field_type,
+                        description: None,
+                    },
+                );
+                solved_object_types.extend(object_types);
+            }
+            None => return Ok(None),
+        };
+    }
+
+    Ok(Some((
+        ObjectType {
+            fields,
+            description: None,
+        },
+        solved_object_types,
+    )))
 }
 
 fn element_of(array_type: Type) -> Result<Type> {
@@ -107,7 +148,7 @@ fn field_of<'a>(
 }
 
 fn with_field_overrides(
-    object_types: &mut BTreeMap<ObjectTypeName, ObjectType>,
+    object_types: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     object_type: Type,
     augmented_object_type_name: ObjectTypeName,
     fields: impl IntoIterator<Item = (FieldName, Type)>,
