@@ -1,9 +1,12 @@
+use std::{borrow::Cow, collections::BTreeMap};
+
 use configuration::{schema::Type, Configuration};
 use ndc_models::{CollectionInfo, CollectionName, FieldName, ObjectTypeName};
 
 use super::{
     error::{Error, Result},
-    pipeline_type_context::PipelineTypeContext, type_constraint::TypeConstraint,
+    pipeline_type_context::PipelineTypeContext,
+    type_constraint::{ObjectTypeConstraint, TypeConstraint},
 };
 
 fn find_collection<'a>(

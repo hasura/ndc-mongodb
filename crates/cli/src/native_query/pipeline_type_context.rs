@@ -137,7 +137,9 @@ impl PipelineTypeContext<'_> {
     }
 
     pub fn get_input_document_type(&self) -> Result<&TypeConstraint> {
-        self.input_doc_type.as_ref().ok_or(Error::IncompletePipeline)
+        self.input_doc_type
+            .as_ref()
+            .ok_or(Error::IncompletePipeline)
     }
 
     // /// Get the input document type for the next stage. Forces to a concrete type, and returns an

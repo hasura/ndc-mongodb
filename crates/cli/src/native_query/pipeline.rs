@@ -76,6 +76,7 @@ fn infer_stage_output_type<'a, 'b>(
     stage: &Stage,
 ) -> Result<Option<TypeConstraint>> {
     let output_type = match stage {
+        Stage::AddFields(_) => todo!("add fields stage"),
         Stage::Documents(docs) => {
             let doc_constraints = docs
                 .iter()
