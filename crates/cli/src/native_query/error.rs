@@ -1,6 +1,6 @@
 use configuration::schema::Type;
 use mongodb::bson::{self, Bson, Document};
-use ndc_models::{FieldName, ObjectTypeName};
+use ndc_models::{ArgumentName, FieldName, ObjectTypeName};
 use thiserror::Error;
 
 use super::type_constraint::{TypeConstraint, TypeVariable};
@@ -29,6 +29,8 @@ pub enum Error {
     #[error("Expected a path for the $unwind stage")]
     ExpectedStringPath(Bson),
 
+    // This variant is not intended to be returned to the user - it is transformed with more
+    // context in [super::PipelineTypeContext::into_types].
     #[error("Failed to unify")]
     FailedToUnify {
         unsolved_variables: Vec<TypeVariable>,
@@ -55,8 +57,14 @@ pub enum Error {
         b: TypeConstraint,
     },
 
-    #[error("Cannot infer a result type for this pipeline. But you can create a native query by writing the configuration file by hand.")]
-    UnableToInferResultType,
+    #[error(
+        "{}",
+        unable_to_infer_types_message(*could_not_infer_return_type, problem_parameter_types)
+    )]
+    UnableToInferTypes {
+        problem_parameter_types: Vec<ArgumentName>,
+        could_not_infer_return_type: bool,
+    },
 
     #[error("Error parsing a string in the aggregation pipeline: {0}")]
     UnableToParseReferenceShorthand(String),
@@ -75,4 +83,27 @@ pub enum Error {
 
     #[error("Unknown object type, \"{0}\"")]
     UnknownObjectType(String),
+}
+
+fn unable_to_infer_types_message(
+    could_not_infer_return_type: bool,
+    problem_parameter_types: &[ArgumentName],
+) -> String {
+    let mut message = String::new();
+    message += "Cannot infer types for this pipeline.\n";
+    if problem_parameter_types.len() > 0 {
+        message += "\nCould not infer types for these parameters:\n";
+        for name in problem_parameter_types {
+            message += &format!("- {name}\n");
+        }
+        message += "\nTry adding type annotations of the form: {{parameter_name|[int!]!}}\n";
+    }
+    if could_not_infer_return_type {
+        message += "\nUnable to infer return type.";
+        if problem_parameter_types.len() > 0 {
+            message += " Adding type annotations to parameters may help.";
+        }
+        message += "\n";
+    }
+    message
 }

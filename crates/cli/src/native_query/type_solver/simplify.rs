@@ -86,6 +86,7 @@ fn simplify_constraint_pair(
             C::WithFieldOverrides {
                 target_type,
                 fields,
+                ..
             },
         ) => todo!(),
         (C::Object(_), C::Scalar(_)) => todo!(),
@@ -101,6 +102,7 @@ fn simplify_constraint_pair(
             C::WithFieldOverrides {
                 target_type,
                 fields,
+                ..
             },
         ) => todo!(),
         (C::ArrayOf(_), C::Scalar(_)) => todo!(),
@@ -116,13 +118,21 @@ fn simplify_constraint_pair(
             C::WithFieldOverrides {
                 target_type,
                 fields,
+                ..
             },
         ) => todo!(),
         (C::Predicate { object_type_name }, C::Scalar(_)) => todo!(),
         (C::Predicate { object_type_name }, C::Object(_)) => todo!(),
         (C::Predicate { object_type_name }, C::ArrayOf(_)) => todo!(),
         (C::Predicate { object_type_name }, C::Nullable(_)) => todo!(),
-        (C::Predicate { object_type_name }, C::Predicate { object_type_name }) => todo!(),
+        (
+            C::Predicate {
+                object_type_name: a,
+            },
+            C::Predicate {
+                object_type_name: b,
+            },
+        ) => todo!(),
         (C::Predicate { object_type_name }, C::Variable(_)) => todo!(),
         (C::Predicate { object_type_name }, C::ElementOf(_)) => todo!(),
         (C::Predicate { object_type_name }, C::FieldOf { target_type, path }) => todo!(),
@@ -131,6 +141,7 @@ fn simplify_constraint_pair(
             C::WithFieldOverrides {
                 target_type,
                 fields,
+                ..
             },
         ) => todo!(),
         (C::Variable(_), C::Scalar(_)) => todo!(),
@@ -146,6 +157,7 @@ fn simplify_constraint_pair(
             C::WithFieldOverrides {
                 target_type,
                 fields,
+                ..
             },
         ) => todo!(),
         (C::ElementOf(_), C::Scalar(_)) => todo!(),
@@ -161,6 +173,7 @@ fn simplify_constraint_pair(
             C::WithFieldOverrides {
                 target_type,
                 fields,
+                ..
             },
         ) => todo!(),
         (C::FieldOf { target_type, path }, C::Scalar(_)) => todo!(),
@@ -170,18 +183,29 @@ fn simplify_constraint_pair(
         (C::FieldOf { target_type, path }, C::Predicate { object_type_name }) => todo!(),
         (C::FieldOf { target_type, path }, C::Variable(_)) => todo!(),
         (C::FieldOf { target_type, path }, C::ElementOf(_)) => todo!(),
-        (C::FieldOf { target_type, path }, C::FieldOf { target_type, path }) => todo!(),
         (
-            C::FieldOf { target_type, path },
-            C::WithFieldOverrides {
-                target_type,
-                fields,
+            C::FieldOf {
+                target_type: target_type_a,
+                path: path_a,
+            },
+            C::FieldOf {
+                target_type: target_type_b,
+                path: path_b,
             },
         ) => todo!(),
+        // (
+        //     C::FieldOf { target_type, path },
+        //     C::WithFieldOverrides {
+        //         target_type,
+        //         fields,
+        //         ..
+        //     },
+        // ) => todo!(),
         (
             C::WithFieldOverrides {
                 target_type,
                 fields,
+                ..
             },
             C::Scalar(_),
         ) => todo!(),
@@ -189,6 +213,7 @@ fn simplify_constraint_pair(
             C::WithFieldOverrides {
                 target_type,
                 fields,
+                ..
             },
             C::Object(_),
         ) => todo!(),
@@ -196,6 +221,7 @@ fn simplify_constraint_pair(
             C::WithFieldOverrides {
                 target_type,
                 fields,
+                ..
             },
             C::ArrayOf(_),
         ) => todo!(),
@@ -203,6 +229,7 @@ fn simplify_constraint_pair(
             C::WithFieldOverrides {
                 target_type,
                 fields,
+                ..
             },
             C::Nullable(_),
         ) => todo!(),
@@ -210,6 +237,7 @@ fn simplify_constraint_pair(
             C::WithFieldOverrides {
                 target_type,
                 fields,
+                ..
             },
             C::Predicate { object_type_name },
         ) => todo!(),
@@ -217,6 +245,7 @@ fn simplify_constraint_pair(
             C::WithFieldOverrides {
                 target_type,
                 fields,
+                ..
             },
             C::Variable(_),
         ) => todo!(),
@@ -224,26 +253,34 @@ fn simplify_constraint_pair(
             C::WithFieldOverrides {
                 target_type,
                 fields,
+                ..
             },
             C::ElementOf(_),
         ) => todo!(),
         (
             C::WithFieldOverrides {
-                target_type,
+                target_type: target_type_a,
                 fields,
+                ..
             },
-            C::FieldOf { target_type, path },
+            C::FieldOf {
+                target_type: target_type_b,
+                path,
+            },
         ) => todo!(),
         (
             C::WithFieldOverrides {
-                target_type,
-                fields,
+                target_type: target_type_a,
+                fields: fields_a,
+                ..
             },
             C::WithFieldOverrides {
-                target_type,
-                fields,
+                target_type: target_type_b,
+                fields: fields_b,
+                ..
             },
         ) => todo!(),
+        _ => todo!("other simplify branch"),
     }
 }
 

@@ -51,7 +51,6 @@ pub enum TypeConstraint {
         target_type: Box<TypeConstraint>,
         fields: BTreeMap<FieldName, TypeConstraint>,
     },
-
     // TODO: Add Non-nullable constraint?
 }
 
@@ -73,6 +72,7 @@ impl TypeConstraint {
             TypeConstraint::WithFieldOverrides {
                 target_type,
                 fields,
+                ..
             } => {
                 let overridden_field_complexity: usize = fields
                     .values()

@@ -5,32 +5,26 @@ use std::{
     collections::{BTreeMap, HashMap, HashSet},
 };
 
-use configuration::{schema::ObjectType, Configuration};
-use ndc_models::ObjectTypeName;
+use configuration::{
+    schema::{ObjectType, Type},
+    Configuration,
+};
+use itertools::Itertools as _;
+use ndc_models::{ArgumentName, ObjectTypeName};
 
 use super::{
     error::{Error, Result},
     type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable},
+    type_solver::unify,
 };
 
 /// Information exported from [PipelineTypeContext] after type inference is complete.
 #[derive(Clone, Debug)]
 pub struct PipelineTypes {
     pub result_document_type: ObjectTypeName,
-    pub object_types: BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+    pub parameter_types: BTreeMap<ArgumentName, Type>,
+    pub object_types: BTreeMap<ObjectTypeName, ObjectType>,
     pub warnings: Vec<Error>,
-}
-
-impl<'a> TryFrom<PipelineTypeContext<'a>> for PipelineTypes {
-    type Error = Error;
-
-    fn try_from(context: PipelineTypeContext<'a>) -> Result<Self> {
-        Ok(Self {
-            result_document_type: context.get_input_document_type()?,
-            object_types: context.object_types.clone(),
-            warnings: context.warnings,
-        })
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -39,7 +33,9 @@ pub struct PipelineTypeContext<'a> {
 
     /// Document type for inputs to the pipeline stage being evaluated. At the start of the
     /// pipeline this is the document type for the input collection, if there is one.
-    input_doc_type: Option<TypeConstraint>,
+    input_doc_type: Option<TypeVariable>,
+
+    parameter_types: BTreeMap<ArgumentName, TypeVariable>,
 
     /// Object types defined in the process of type inference. [self.input_doc_type] may refer to
     /// to a type here, or in [self.configuration.object_types]
@@ -59,6 +55,7 @@ impl PipelineTypeContext<'_> {
         let mut context = PipelineTypeContext {
             configuration,
             input_doc_type: None,
+            parameter_types: Default::default(),
             object_types: Default::default(),
             type_variables: Default::default(),
             next_type_variable: 0,
@@ -66,10 +63,74 @@ impl PipelineTypeContext<'_> {
         };
 
         if let Some(type_name) = input_collection_document_type {
-            context.set_stage_doc_type(type_name)
+            context.set_stage_doc_type(TypeConstraint::Object(type_name))
         }
 
         context
+    }
+
+    pub fn into_types(self) -> Result<PipelineTypes> {
+        let result_document_type_variable = self.input_doc_type.ok_or(Error::IncompletePipeline)?;
+        let required_type_variables = self
+            .parameter_types
+            .values()
+            .copied()
+            .chain([result_document_type_variable])
+            .collect_vec();
+
+        let mut object_type_constraints = self.object_types;
+        let (variable_types, added_object_types) = unify(
+            &self.configuration,
+            &required_type_variables,
+            &mut object_type_constraints,
+            self.type_variables,
+        )
+        .map_err(|err| match err {
+            Error::FailedToUnify { unsolved_variables } => Error::UnableToInferTypes {
+                could_not_infer_return_type: unsolved_variables
+                    .contains(&result_document_type_variable),
+                problem_parameter_types: self
+                    .parameter_types
+                    .iter()
+                    .filter_map(|(name, variable)| {
+                        if unsolved_variables.contains(variable) {
+                            Some(name.clone())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect(),
+            },
+            e => e,
+        })?;
+
+        let result_document_type = variable_types
+            .get(&result_document_type_variable)
+            .expect("missing result type variable is missing");
+        let result_document_type_name = match result_document_type {
+            Type::Object(type_name) => type_name.clone().into(),
+            t => Err(Error::ExpectedObject {
+                actual_type: t.clone(),
+            })?,
+        };
+
+        let parameter_types = self
+            .parameter_types
+            .into_iter()
+            .map(|(parameter_name, type_variable)| {
+                let param_type = variable_types
+                    .get(&type_variable)
+                    .expect("parameter type variable is missing");
+                (parameter_name, param_type.clone())
+            })
+            .collect();
+
+        Ok(PipelineTypes {
+            result_document_type: result_document_type_name,
+            parameter_types,
+            object_types: added_object_types,
+            warnings: self.warnings,
+        })
     }
 
     pub fn new_type_variable(
@@ -112,18 +173,13 @@ impl PipelineTypeContext<'_> {
     }
 
     pub fn set_stage_doc_type(&mut self, doc_type: TypeConstraint) {
-        self.input_doc_type = Some(doc_type);
+        let variable = self.new_type_variable([doc_type]);
+        self.input_doc_type = Some(variable);
     }
 
     pub fn add_warning(&mut self, warning: Error) {
         self.warnings.push(warning);
     }
-
-    // pub fn set_unknown_stage_doc_type(&mut self, warning: Error) {
-    //     let type_variable = self.new_type_variable([]);
-    //     self.input_doc_type = Some(TypeConstraint::Variable(type_variable));
-    //     self.warnings.push(warning);
-    // }
 
     pub fn get_object_type(&self, name: &ObjectTypeName) -> Option<Cow<'_, ObjectTypeConstraint>> {
         if let Some(object_type) = self.configuration.object_types.get(name) {
@@ -136,36 +192,11 @@ impl PipelineTypeContext<'_> {
         None
     }
 
-    pub fn get_input_document_type(&self) -> Result<&TypeConstraint> {
-        self.input_doc_type
+    pub fn get_input_document_type(&self) -> Result<TypeConstraint> {
+        let variable = self
+            .input_doc_type
             .as_ref()
-            .ok_or(Error::IncompletePipeline)
+            .ok_or(Error::IncompletePipeline)?;
+        Ok(TypeConstraint::Variable(*variable))
     }
-
-    // /// Get the input document type for the next stage. Forces to a concrete type, and returns an
-    // /// error if a concrete type cannot be inferred.
-    // pub fn get_input_document_type_name(&self) -> Result<&ObjectTypeName> {
-    //     match self
-    //         .input_doc_type
-    //         .and_then(|var| self.type_variables.get(&var))
-    //     {
-    //         None => Err(Error::IncompletePipeline),
-    //         Some(constraints) => {
-    //             let len = constraints.len();
-    //             let first_constraint = constraints.iter().next();
-    //             if let (1, Some(TypeConstraint::Object(t))) = (len, first_constraint) {
-    //                 Ok(t)
-    //             } else {
-    //                 Err(Error::UnableToInferResultType)
-    //             }
-    //         }
-    //     }
-    // }
-
-    // pub fn get_input_document_type(&self) -> Result<Cow<'_, ObjectType>> {
-    //     let document_type_name = self.get_input_document_type_name()?;
-    //     Ok(self
-    //         .get_object_type(&document_type_name)
-    //         .expect("if we have an input document type name we should have the object type"))
-    // }
 }

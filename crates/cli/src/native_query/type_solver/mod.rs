@@ -20,8 +20,9 @@ use super::{
 
 use self::constraint_to_type::constraint_to_type;
 
-fn unify(
+pub fn unify(
     configuration: &Configuration,
+    required_type_variables: &[TypeVariable],
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     mut type_variables: HashMap<TypeVariable, HashSet<TypeConstraint>>,
 ) -> Result<(
@@ -68,8 +69,8 @@ fn unify(
             }
         }
 
-        if type_variables
-            .keys()
+        if required_type_variables
+            .iter()
             .copied()
             .all(|v| is_solved(&solutions, v))
         {

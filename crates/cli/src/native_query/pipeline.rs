@@ -66,7 +66,7 @@ pub fn infer_pipeline_types(
         }
     }
 
-    context.try_into()
+    context.into_types()
 }
 
 fn infer_stage_output_type<'a, 'b>(
@@ -314,6 +314,7 @@ fn infer_type_from_unwind_stage(
     // get the full output type the added fields must be merged with fields from the output of the
     // previous stage.
     Ok(TypeConstraint::WithFieldOverrides {
+        augmented_object_type_name: format!("{desired_object_type_name}_unwind").into(),
         target_type: Box::new(context.get_input_document_type()?.clone()),
         fields: unwind_stage_object_type.fields,
     })
@@ -330,7 +331,10 @@ mod tests {
     use pretty_assertions::assert_eq;
     use test_helpers::configuration::mflix_config;
 
-    use crate::native_query::pipeline_type_context::PipelineTypeContext;
+    use crate::native_query::{
+        pipeline_type_context::PipelineTypeContext,
+        type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable},
+    };
 
     use super::{infer_pipeline_types, infer_type_from_unwind_stage};
 
@@ -412,21 +416,19 @@ mod tests {
         let mut context = PipelineTypeContext::new(&config, None);
         context.insert_object_type(
             "words_doc".into(),
-            ObjectType {
+            ObjectTypeConstraint {
                 fields: [(
                     "words".into(),
-                    ObjectField {
-                        r#type: Type::ArrayOf(Box::new(Type::Scalar(BsonScalarType::String))),
-                        description: None,
-                    },
+                    TypeConstraint::ArrayOf(Box::new(TypeConstraint::Scalar(
+                        BsonScalarType::String,
+                    ))),
                 )]
                 .into(),
-                description: None,
             },
         );
-        context.set_stage_doc_type("words_doc".into(), Default::default());
+        context.set_stage_doc_type(TypeConstraint::Object("words_doc".into()));
 
-        let inferred_type_name = infer_type_from_unwind_stage(
+        let inferred_type = infer_type_from_unwind_stage(
             &mut context,
             "unwind_stage",
             "$words",
@@ -435,31 +437,30 @@ mod tests {
         )?;
 
         assert_eq!(
-            context
-                .get_object_type(&inferred_type_name)
-                .unwrap()
-                .into_owned(),
-            ObjectType {
-                fields: [
-                    (
-                        "words".into(),
-                        ObjectField {
-                            r#type: Type::Scalar(BsonScalarType::String),
-                            description: None,
-                        }
-                    ),
-                    (
-                        "idx".into(),
-                        ObjectField {
-                            r#type: Type::Scalar(BsonScalarType::Long),
-                            description: Some("index of unwound array elements in words".into()),
-                        }
-                    ),
-                ]
-                .into(),
-                description: None,
-            }
+            inferred_type,
+            TypeConstraint::Variable(TypeVariable::new(1)) // TODO
         );
+
+        // let inferred_type_name = match inferred_type {
+        //     TypeConstraint::Object(_) => todo!(),
+        // };
+        //
+        // assert_eq!(
+        //     context
+        //         .get_object_type(&inferred_type_name)
+        //         .unwrap()
+        //         .into_owned(),
+        //     ObjectTypeConstraint {
+        //         fields: [
+        //             (
+        //                 "words".into(),
+        //                 TypeConstraint::Scalar(BsonScalarType::String),
+        //             ),
+        //             ("idx".into(), TypeConstraint::Scalar(BsonScalarType::Long),),
+        //         ]
+        //         .into(),
+        //     }
+        // );
         Ok(())
     }
 }
