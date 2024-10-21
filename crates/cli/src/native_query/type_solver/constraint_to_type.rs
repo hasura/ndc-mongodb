@@ -15,22 +15,22 @@ use TypeConstraint as C;
 
 /// In cases where there is enough information present in one constraint itself to infer a concrete
 /// type, do that. Returns None if there is not enough information present.
-pub fn constraint_to_type(
-    configuration: &Configuration,
-    object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
-    constraint: &TypeConstraint,
-) -> Result<Option<(Type, BTreeMap<ObjectTypeName, ObjectType>)>> {
-    let mut solved_object_types = BTreeMap::new();
-    let solved_type = constraint_to_type_helper(
-        configuration,
-        &mut solved_object_types,
-        object_type_constraints,
-        constraint,
-    )?;
-    Ok(solved_type.map(|t| (t, solved_object_types)))
-}
+// pub fn constraint_to_type(
+//     configuration: &Configuration,
+//     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+//     constraint: &TypeConstraint,
+// ) -> Result<Option<(Type, BTreeMap<ObjectTypeName, ObjectType>)>> {
+//     let mut solved_object_types = BTreeMap::new();
+//     let solved_type = constraint_to_type_helper(
+//         configuration,
+//         &mut solved_object_types,
+//         object_type_constraints,
+//         constraint,
+//     )?;
+//     Ok(solved_type.map(|t| (t, solved_object_types)))
+// }
 
-fn constraint_to_type_helper(
+pub fn constraint_to_type(
     configuration: &Configuration,
     added_object_types: &mut BTreeMap<ObjectTypeName, ObjectType>,
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
@@ -39,7 +39,7 @@ fn constraint_to_type_helper(
     let solution = match constraint {
         C::ExtendedJSON => Some(Type::ExtendedJSON),
         C::Scalar(s) => Some(Type::Scalar(s.clone())),
-        C::ArrayOf(c) => constraint_to_type_helper(
+        C::ArrayOf(c) => constraint_to_type(
             configuration,
             added_object_types,
             object_type_constraints,
@@ -62,7 +62,7 @@ fn constraint_to_type_helper(
         .map(|_| Type::Predicate {
             object_type_name: object_type_name.clone(),
         }),
-        C::Nullable(c) => constraint_to_type_helper(
+        C::Nullable(c) => constraint_to_type(
             configuration,
             added_object_types,
             object_type_constraints,
@@ -70,7 +70,7 @@ fn constraint_to_type_helper(
         )?
         .map(|t| Type::Nullable(Box::new(t))),
         C::Variable(_) => None,
-        C::ElementOf(c) => constraint_to_type_helper(
+        C::ElementOf(c) => constraint_to_type(
             configuration,
             added_object_types,
             object_type_constraints,
@@ -78,7 +78,7 @@ fn constraint_to_type_helper(
         )?
         .map(|t| element_of(t))
         .transpose()?,
-        C::FieldOf { target_type, path } => constraint_to_type_helper(
+        C::FieldOf { target_type, path } => constraint_to_type(
             configuration,
             added_object_types,
             object_type_constraints,
@@ -100,7 +100,7 @@ fn constraint_to_type_helper(
             target_type,
             fields,
         } => {
-            let resolved_object_type = constraint_to_type_helper(
+            let resolved_object_type = constraint_to_type(
                 configuration,
                 added_object_types,
                 object_type_constraints,
@@ -109,7 +109,7 @@ fn constraint_to_type_helper(
             let resolved_field_types: Option<Vec<(FieldName, Type)>> = fields
                 .iter()
                 .map(|(field_name, t)| {
-                    Ok(constraint_to_type_helper(
+                    Ok(constraint_to_type(
                         configuration,
                         added_object_types,
                         object_type_constraints,
@@ -157,7 +157,7 @@ fn object_constraint_to_type(
     // let mut solved_object_types = BTreeMap::new();
 
     for (field_name, field_constraint) in object_type_constraint.fields.iter() {
-        match constraint_to_type_helper(
+        match constraint_to_type(
             configuration,
             added_object_types,
             object_type_constraints,

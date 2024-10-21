@@ -4,7 +4,10 @@ mod substitute;
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use configuration::schema::Type;
+use configuration::{
+    schema::{ObjectType, Type},
+    Configuration,
+};
 use itertools::Itertools;
 use ndc_models::ObjectTypeName;
 use simplify::simplify_constraints;
@@ -18,46 +21,67 @@ use super::{
 use self::constraint_to_type::constraint_to_type;
 
 fn unify(
-    object_types: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+    configuration: &Configuration,
+    object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     mut type_variables: HashMap<TypeVariable, HashSet<TypeConstraint>>,
-) -> Result<HashMap<TypeVariable, Type>> {
+) -> Result<(
+    HashMap<TypeVariable, Type>,
+    BTreeMap<ObjectTypeName, ObjectType>,
+)> {
+    let mut added_object_types = BTreeMap::new();
     let mut solutions = HashMap::new();
-    let is_solved = |variable: TypeVariable| solutions.contains_key(&variable);
+    // let is_solved = |variable: TypeVariable| solutions.contains_key(&variable);
+    fn is_solved(solutions: &HashMap<TypeVariable, Type>, variable: TypeVariable) -> bool {
+        solutions.contains_key(&variable)
+    }
 
     loop {
         let prev_type_variables = type_variables.clone();
 
-        let variables = type_variables_by_complexity(&type_variables);
-
-        for variable in variables {
-            if let Some(variable_constraints) = type_variables.get(&variable).cloned() {
-                substitute(&mut type_variables, variable, &variable_constraints);
-            }
-        }
+        // TODO: check for mismatches, e.g. constraint list contains scalar & array
 
         for (variable, constraints) in type_variables.iter_mut() {
-            let simplified = simplify_constraints(object_types, constraints.iter().cloned());
+            let simplified =
+                simplify_constraints(object_type_constraints, constraints.iter().cloned());
             *constraints = simplified;
         }
 
-        // TODO: check for mismatches, e.g. constraint list contains scalar & array
-
-        for (variable, constraints) in type_variables {
-            if !is_solved(variable) && constraints.len() == 1 {
+        for (variable, constraints) in &type_variables {
+            if !is_solved(&solutions, *variable) && constraints.len() == 1 {
                 let constraint = constraints.iter().next().unwrap();
-                if let Some(solved_type) = constraint_to_type(object_types, constraint)? {
-                    solutions.insert(variable, solved_type);
+                if let Some(solved_type) = constraint_to_type(
+                    configuration,
+                    &mut added_object_types,
+                    object_type_constraints,
+                    constraint,
+                )? {
+                    solutions.insert(*variable, solved_type);
                 }
             }
         }
 
-        if type_variables.keys().copied().all(is_solved) {
-            return Ok(solutions);
+        let variables = type_variables_by_complexity(&type_variables);
+
+        for variable in &variables {
+            if let Some(variable_constraints) = type_variables.get(&variable).cloned() {
+                substitute(&mut type_variables, *variable, &variable_constraints);
+            }
+        }
+
+        if type_variables
+            .keys()
+            .copied()
+            .all(|v| is_solved(&solutions, v))
+        {
+            return Ok((solutions, added_object_types));
         }
 
         if type_variables == prev_type_variables {
             return Err(Error::FailedToUnify {
-                unsolved_variables: variables.into_iter().filter(|v| !is_solved(*v)).collect(),
+                unsolved_variables: variables
+                    .into_iter()
+                    .filter(|v| !is_solved(&solutions, *v))
+                    .collect(),
             });
         }
     }
