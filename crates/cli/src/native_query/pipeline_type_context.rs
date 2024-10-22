@@ -80,10 +80,10 @@ impl PipelineTypeContext<'_> {
 
         let mut object_type_constraints = self.object_types;
         let (variable_types, added_object_types) = unify(
-            &self.configuration,
+            self.configuration,
             &required_type_variables,
             &mut object_type_constraints,
-            self.type_variables,
+            self.type_variables.clone(),
         )
         .map_err(|err| match err {
             Error::FailedToUnify { unsolved_variables } => Error::UnableToInferTypes {
@@ -100,6 +100,8 @@ impl PipelineTypeContext<'_> {
                         }
                     })
                     .collect(),
+                type_variables: self.type_variables,
+                object_type_constraints,
             },
             e => e,
         })?;

@@ -1,9 +1,11 @@
+use std::collections::{BTreeMap, HashMap, HashSet};
+
 use configuration::schema::Type;
 use mongodb::bson::{self, Bson, Document};
 use ndc_models::{ArgumentName, FieldName, ObjectTypeName};
 use thiserror::Error;
 
-use super::type_constraint::{TypeConstraint, TypeVariable};
+use super::type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -64,6 +66,10 @@ pub enum Error {
     UnableToInferTypes {
         problem_parameter_types: Vec<ArgumentName>,
         could_not_infer_return_type: bool,
+
+        // These fields are included here for internal debugging
+        type_variables: HashMap<TypeVariable, HashSet<TypeConstraint>>,
+        object_type_constraints: BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     },
 
     #[error("Error parsing a string in the aggregation pipeline: {0}")]
@@ -91,7 +97,7 @@ fn unable_to_infer_types_message(
 ) -> String {
     let mut message = String::new();
     message += "Cannot infer types for this pipeline.\n";
-    if problem_parameter_types.len() > 0 {
+    if !problem_parameter_types.is_empty() {
         message += "\nCould not infer types for these parameters:\n";
         for name in problem_parameter_types {
             message += &format!("- {name}\n");
@@ -100,7 +106,7 @@ fn unable_to_infer_types_message(
     }
     if could_not_infer_return_type {
         message += "\nUnable to infer return type.";
-        if problem_parameter_types.len() > 0 {
+        if !problem_parameter_types.is_empty() {
             message += " Adding type annotations to parameters may help.";
         }
         message += "\n";

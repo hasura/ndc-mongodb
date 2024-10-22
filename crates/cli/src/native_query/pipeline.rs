@@ -1,10 +1,6 @@
 use std::{collections::BTreeMap, iter::once};
 
-use configuration::{
-    schema::{ObjectType, Type},
-    Configuration,
-};
-use itertools::Itertools as _;
+use configuration::{schema::ObjectType, Configuration};
 use mongodb::bson::{Bson, Document};
 use mongodb_support::{
     aggregate::{Accumulator, Pipeline, Stage},
@@ -328,6 +324,7 @@ mod tests {
         aggregate::{Pipeline, Selection, Stage},
         BsonScalarType,
     };
+    use nonempty::nonempty;
     use pretty_assertions::assert_eq;
     use test_helpers::configuration::mflix_config;
 
@@ -438,29 +435,22 @@ mod tests {
 
         assert_eq!(
             inferred_type,
-            TypeConstraint::Variable(TypeVariable::new(1)) // TODO
+            TypeConstraint::WithFieldOverrides {
+                augmented_object_type_name: "unwind_stage_unwind".into(),
+                target_type: Box::new(TypeConstraint::Variable(TypeVariable::new(0))),
+                fields: [
+                    ("idx".into(), TypeConstraint::Scalar(BsonScalarType::Long)),
+                    (
+                        "words".into(),
+                        TypeConstraint::ElementOf(Box::new(TypeConstraint::FieldOf {
+                            target_type: Box::new(TypeConstraint::Variable(TypeVariable::new(0))),
+                            path: nonempty!["words".into()],
+                        }))
+                    )
+                ]
+                .into(),
+            }
         );
-
-        // let inferred_type_name = match inferred_type {
-        //     TypeConstraint::Object(_) => todo!(),
-        // };
-        //
-        // assert_eq!(
-        //     context
-        //         .get_object_type(&inferred_type_name)
-        //         .unwrap()
-        //         .into_owned(),
-        //     ObjectTypeConstraint {
-        //         fields: [
-        //             (
-        //                 "words".into(),
-        //                 TypeConstraint::Scalar(BsonScalarType::String),
-        //             ),
-        //             ("idx".into(), TypeConstraint::Scalar(BsonScalarType::Long),),
-        //         ]
-        //         .into(),
-        //     }
-        // );
         Ok(())
     }
 }

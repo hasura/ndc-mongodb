@@ -41,7 +41,7 @@ pub fn unify(
 
         // TODO: check for mismatches, e.g. constraint list contains scalar & array
 
-        for (variable, constraints) in type_variables.iter_mut() {
+        for (_, constraints) in type_variables.iter_mut() {
             let simplified =
                 simplify_constraints(object_type_constraints, constraints.iter().cloned());
             *constraints = simplified;
@@ -64,7 +64,7 @@ pub fn unify(
         let variables = type_variables_by_complexity(&type_variables);
 
         for variable in &variables {
-            if let Some(variable_constraints) = type_variables.get(&variable).cloned() {
+            if let Some(variable_constraints) = type_variables.get(variable).cloned() {
                 substitute(&mut type_variables, *variable, &variable_constraints);
             }
         }
@@ -126,3 +126,43 @@ fn type_variables_by_complexity(
 //         simplify_constraint_pair(object_types, type_variables, accum, next_constraint)
 //     })
 // }
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+    use configuration::schema::Type;
+    use pretty_assertions::assert_eq;
+    use test_helpers::configuration::mflix_config;
+
+    use crate::native_query::type_constraint::{TypeConstraint, TypeVariable};
+
+    use super::unify;
+
+    #[test]
+    fn solves_object_type() -> Result<()> {
+        let configuration = mflix_config();
+        let type_variable = TypeVariable::new(0);
+        let required_type_variables = [type_variable];
+        let mut object_type_constraints = Default::default();
+
+        let type_variables = [(
+            type_variable,
+            [TypeConstraint::Object("movies".into())].into(),
+        )]
+        .into();
+
+        let (solved_variables, _) = unify(
+            &configuration,
+            &required_type_variables,
+            &mut object_type_constraints,
+            type_variables,
+        )?;
+
+        assert_eq!(
+            solved_variables,
+            [(type_variable, Type::Object("movies".into()))].into()
+        );
+
+        Ok(())
+    }
+}
