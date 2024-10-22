@@ -15,21 +15,6 @@ use TypeConstraint as C;
 
 /// In cases where there is enough information present in one constraint itself to infer a concrete
 /// type, do that. Returns None if there is not enough information present.
-// pub fn constraint_to_type(
-//     configuration: &Configuration,
-//     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
-//     constraint: &TypeConstraint,
-// ) -> Result<Option<(Type, BTreeMap<ObjectTypeName, ObjectType>)>> {
-//     let mut solved_object_types = BTreeMap::new();
-//     let solved_type = constraint_to_type_helper(
-//         configuration,
-//         &mut solved_object_types,
-//         object_type_constraints,
-//         constraint,
-//     )?;
-//     Ok(solved_type.map(|t| (t, solved_object_types)))
-// }
-
 pub fn constraint_to_type(
     configuration: &Configuration,
     added_object_types: &mut BTreeMap<ObjectTypeName, ObjectType>,
@@ -38,7 +23,7 @@ pub fn constraint_to_type(
 ) -> Result<Option<Type>> {
     let solution = match constraint {
         C::ExtendedJSON => Some(Type::ExtendedJSON),
-        C::Scalar(s) => Some(Type::Scalar(s.clone())),
+        C::Scalar(s) => Some(Type::Scalar(*s)),
         C::ArrayOf(c) => constraint_to_type(
             configuration,
             added_object_types,
@@ -76,7 +61,7 @@ pub fn constraint_to_type(
             object_type_constraints,
             c,
         )?
-        .map(|t| element_of(t))
+        .map(element_of)
         .transpose()?,
         C::FieldOf { target_type, path } => constraint_to_type(
             configuration,
@@ -299,4 +284,62 @@ fn with_field_overrides(
         t => Err(Error::ExpectedObject { actual_type: t })?,
     };
     Ok(augmented_object_type.map(Type::normalize_type))
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+    use configuration::schema::{ObjectField, ObjectType, Type};
+    use mongodb_support::BsonScalarType;
+    use pretty_assertions::assert_eq;
+    use test_helpers::configuration::mflix_config;
+
+    use crate::native_query::type_constraint::{ObjectTypeConstraint, TypeConstraint};
+
+    use super::constraint_to_type;
+
+    #[test]
+    fn converts_object_type_constraint_to_object_type() -> Result<()> {
+        let configuration = mflix_config();
+        let mut added_object_types = Default::default();
+
+        let input = TypeConstraint::Object("new_object_type".into());
+
+        let mut object_type_constraints = [(
+            "new_object_type".into(),
+            ObjectTypeConstraint {
+                fields: [("foo".into(), TypeConstraint::Scalar(BsonScalarType::Int))].into(),
+            },
+        )]
+        .into();
+
+        let solved_type = constraint_to_type(
+            &configuration,
+            &mut added_object_types,
+            &mut object_type_constraints,
+            &input,
+        )?;
+
+        assert_eq!(solved_type, Some(Type::Object("new_object_type".into())));
+        assert_eq!(
+            added_object_types,
+            [(
+                "new_object_type".into(),
+                ObjectType {
+                    fields: [(
+                        "foo".into(),
+                        ObjectField {
+                            r#type: Type::Scalar(BsonScalarType::Int),
+                            description: None,
+                        }
+                    )]
+                    .into(),
+                    description: None,
+                }
+            ),]
+            .into()
+        );
+
+        Ok(())
+    }
 }

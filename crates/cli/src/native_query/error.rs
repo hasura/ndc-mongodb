@@ -33,7 +33,7 @@ pub enum Error {
 
     // This variant is not intended to be returned to the user - it is transformed with more
     // context in [super::PipelineTypeContext::into_types].
-    #[error("Failed to unify")]
+    #[error("Failed to unify: {unsolved_variables:?}")]
     FailedToUnify {
         unsolved_variables: Vec<TypeVariable>,
     },

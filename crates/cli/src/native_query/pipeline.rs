@@ -1,14 +1,12 @@
 use std::{collections::BTreeMap, iter::once};
 
-use configuration::{schema::ObjectType, Configuration};
+use configuration::Configuration;
 use mongodb::bson::{Bson, Document};
 use mongodb_support::{
     aggregate::{Accumulator, Pipeline, Stage},
     BsonScalarType,
 };
 use ndc_models::{CollectionName, FieldName, ObjectTypeName};
-
-use crate::introspection::{sampling::make_object_type, type_unification::unify_object_types};
 
 use super::{
     aggregation_expression::{
@@ -20,8 +18,6 @@ use super::{
     reference_shorthand::{parse_reference_shorthand, Reference},
     type_constraint::{ObjectTypeConstraint, TypeConstraint},
 };
-
-type ObjectTypes = BTreeMap<ObjectTypeName, ObjectType>;
 
 pub fn infer_pipeline_types(
     configuration: &Configuration,
@@ -65,8 +61,8 @@ pub fn infer_pipeline_types(
     context.into_types()
 }
 
-fn infer_stage_output_type<'a, 'b>(
-    context: &mut PipelineTypeContext<'a>,
+fn infer_stage_output_type(
+    context: &mut PipelineTypeContext<'_>,
     desired_object_type_name: &str,
     stage_index: usize,
     stage: &Stage,
@@ -139,25 +135,6 @@ fn infer_stage_output_type<'a, 'b>(
         }
     };
     Ok(output_type)
-}
-
-pub fn infer_type_from_documents(
-    object_type_name: &ObjectTypeName,
-    documents: &[Document],
-) -> ObjectTypes {
-    let mut collected_object_types = vec![];
-    for document in documents {
-        let object_types = make_object_type(object_type_name, document, false, false);
-        collected_object_types = if collected_object_types.is_empty() {
-            object_types
-        } else {
-            unify_object_types(collected_object_types, object_types)
-        };
-    }
-    collected_object_types
-        .into_iter()
-        .map(|type_with_name| (type_with_name.name, type_with_name.value))
-        .collect()
 }
 
 fn infer_type_from_group_stage(
@@ -285,7 +262,7 @@ fn infer_type_from_unwind_stage(
                 context.insert_object_type(object_type_name.clone(), object_type);
                 parent_object_type
                     .fields
-                    .insert(field_name, TypeConstraint::Object(object_type_name.into()));
+                    .insert(field_name, TypeConstraint::Object(object_type_name));
             }
             None => {
                 parent_object_type

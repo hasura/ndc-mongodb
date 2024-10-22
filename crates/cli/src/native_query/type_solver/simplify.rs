@@ -1,4 +1,6 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+#![allow(warnings)]
+
+use std::collections::{BTreeMap, HashSet};
 
 use configuration::schema::Type;
 use itertools::Itertools;

@@ -11,7 +11,6 @@ pub fn substitute(
     variable: TypeVariable,
     variable_constraints: &HashSet<TypeConstraint>,
 ) {
-    // let mut substitution_made = false;
     for (v, target_constraints) in type_variables.iter_mut() {
         if *v == variable {
             continue;
@@ -38,12 +37,7 @@ pub fn substitute(
             substituted_constraints = substituted_constraints
                 .into_iter()
                 .map(|target_constraint| {
-                    let substitution =
-                        substitute_in_constraint(variable, &variable_constraint, target_constraint);
-                    // if &substitution != target_constraint {
-                    //     substitution_made = true
-                    // }
-                    substitution
+                    substitute_in_constraint(variable, variable_constraint, target_constraint)
                 })
                 .collect();
         }

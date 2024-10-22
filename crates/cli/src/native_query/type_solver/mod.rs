@@ -130,11 +130,15 @@ fn type_variables_by_complexity(
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
-    use configuration::schema::Type;
+    use configuration::schema::{ObjectField, ObjectType, Type};
+    use mongodb_support::BsonScalarType;
+    use nonempty::nonempty;
     use pretty_assertions::assert_eq;
     use test_helpers::configuration::mflix_config;
 
-    use crate::native_query::type_constraint::{TypeConstraint, TypeVariable};
+    use crate::native_query::type_constraint::{
+        ObjectTypeConstraint, TypeConstraint, TypeVariable,
+    };
 
     use super::unify;
 
@@ -161,6 +165,105 @@ mod tests {
         assert_eq!(
             solved_variables,
             [(type_variable, Type::Object("movies".into()))].into()
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn solves_added_object_type_based_on_object_type_constraint() -> Result<()> {
+        let configuration = mflix_config();
+        let type_variable = TypeVariable::new(0);
+        let required_type_variables = [type_variable];
+
+        let mut object_type_constraints = [(
+            "new_object_type".into(),
+            ObjectTypeConstraint {
+                fields: [("foo".into(), TypeConstraint::Scalar(BsonScalarType::Int))].into(),
+            },
+        )]
+        .into();
+
+        let type_variables = [(
+            type_variable,
+            [TypeConstraint::Object("new_object_type".into())].into(),
+        )]
+        .into();
+
+        let (solved_variables, added_object_types) = unify(
+            &configuration,
+            &required_type_variables,
+            &mut object_type_constraints,
+            type_variables,
+        )?;
+
+        assert_eq!(
+            solved_variables,
+            [(type_variable, Type::Object("new_object_type".into()))].into()
+        );
+        assert_eq!(
+            added_object_types,
+            [(
+                "new_object_type".into(),
+                ObjectType {
+                    fields: [(
+                        "foo".into(),
+                        ObjectField {
+                            r#type: Type::Scalar(BsonScalarType::Int),
+                            description: None
+                        }
+                    )]
+                    .into(),
+                    description: None
+                }
+            )]
+            .into(),
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn produces_object_type_based_on_field_type_of_another_object_type() -> Result<()> {
+        let configuration = mflix_config();
+        let var0 = TypeVariable::new(0);
+        let var1 = TypeVariable::new(1);
+        let required_type_variables = [var0, var1];
+
+        let mut object_type_constraints = [(
+            "movies_selection_stage0".into(),
+            ObjectTypeConstraint {
+                fields: [(
+                    "selected_title".into(),
+                    TypeConstraint::FieldOf {
+                        target_type: Box::new(TypeConstraint::Variable(var0)),
+                        path: nonempty!["title".into()],
+                    },
+                )]
+                .into(),
+            },
+        )]
+        .into();
+
+        let type_variables = [
+            (var0, [TypeConstraint::Object("movies".into())].into()),
+            (
+                var1,
+                [TypeConstraint::Object("movies_selection_stage0".into())].into(),
+            ),
+        ]
+        .into();
+
+        let (solved_variables, _) = unify(
+            &configuration,
+            &required_type_variables,
+            &mut object_type_constraints,
+            type_variables,
+        )?;
+
+        assert_eq!(
+            solved_variables,
+            [(var1, Type::Object("movies".into()))].into()
         );
 
         Ok(())

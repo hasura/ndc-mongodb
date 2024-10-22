@@ -107,7 +107,7 @@ fn infer_type_from_document(
         .collect::<Result<BTreeMap<_, _>>>()?;
     let object_type = ObjectTypeConstraint { fields };
     context.insert_object_type(object_type_name.clone(), object_type);
-    Ok(TypeConstraint::Object(object_type_name.into()))
+    Ok(TypeConstraint::Object(object_type_name))
 }
 
 pub fn infer_type_from_reference_shorthand(
