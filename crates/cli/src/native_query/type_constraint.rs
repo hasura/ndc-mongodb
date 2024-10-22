@@ -82,6 +82,17 @@ impl TypeConstraint {
             }
         }
     }
+
+    pub fn make_nullable(self) -> Self {
+        match self {
+            TypeConstraint::ExtendedJSON => TypeConstraint::ExtendedJSON,
+            TypeConstraint::Nullable(t) => TypeConstraint::Nullable(t),
+            TypeConstraint::Scalar(BsonScalarType::Null) => {
+                TypeConstraint::Scalar(BsonScalarType::Null)
+            }
+            t => TypeConstraint::Nullable(Box::new(t)),
+        }
+    }
 }
 
 impl From<ndc_models::Type> for TypeConstraint {

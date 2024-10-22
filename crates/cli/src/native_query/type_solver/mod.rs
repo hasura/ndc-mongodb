@@ -31,10 +31,12 @@ pub fn unify(
 )> {
     let mut added_object_types = BTreeMap::new();
     let mut solutions = HashMap::new();
-    // let is_solved = |variable: TypeVariable| solutions.contains_key(&variable);
     fn is_solved(solutions: &HashMap<TypeVariable, Type>, variable: TypeVariable) -> bool {
         solutions.contains_key(&variable)
     }
+
+    #[cfg(test)]
+    println!("begin unify:\n  type_variables: {type_variables:?}\n  object_type_constraints: {object_type_constraints:?}\n");
 
     loop {
         let prev_type_variables = type_variables.clone();
@@ -43,8 +45,11 @@ pub fn unify(
         // TODO: check for mismatches, e.g. constraint list contains scalar & array
 
         for (_, constraints) in type_variables.iter_mut() {
-            let simplified =
-                simplify_constraints(object_type_constraints, constraints.iter().cloned());
+            let simplified = simplify_constraints(
+                configuration,
+                object_type_constraints,
+                constraints.iter().cloned(),
+            );
             *constraints = simplified;
         }
 
@@ -113,30 +118,6 @@ fn type_variables_by_complexity(
         .copied()
         .collect_vec()
 }
-
-// TODO: Replace occurences of:
-//
-//     a1 : [ ElementOf(a2) ]
-//     b1 : [ FieldOf(b2, path) ]
-//
-// with:
-//
-//     a1: [ ]
-//     a2: [ ArrayOf(a1) ]
-//     b1: [ ]
-//     b2: [ Object { path: b1 } ]
-//
-// fn top_down_substitution() {}
-
-// fn solve_variable(
-//     variable: TypeVariable,
-//     constraints: &HashSet<TypeConstraint>,
-//     type_variables: &HashMap<TypeVariable, HashSet<TypeConstraint>>,
-// ) -> TypeConstraint {
-//     constraints.iter().fold(None, |accum, next_constraint| {
-//         simplify_constraint_pair(object_types, type_variables, accum, next_constraint)
-//     })
-// }
 
 #[cfg(test)]
 mod tests {
