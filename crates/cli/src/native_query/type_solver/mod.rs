@@ -38,6 +38,7 @@ pub fn unify(
 
     loop {
         let prev_type_variables = type_variables.clone();
+        let prev_solutions = solutions.clone();
 
         // TODO: check for mismatches, e.g. constraint list contains scalar & array
 
@@ -47,11 +48,15 @@ pub fn unify(
             *constraints = simplified;
         }
 
+        #[cfg(test)]
+        println!("simplify:\n  type_variables: {type_variables:?}\n  object_type_constraints: {object_type_constraints:?}\n");
+
         for (variable, constraints) in &type_variables {
             if !is_solved(&solutions, *variable) && constraints.len() == 1 {
                 let constraint = constraints.iter().next().unwrap();
                 if let Some(solved_type) = constraint_to_type(
                     configuration,
+                    &solutions,
                     &mut added_object_types,
                     object_type_constraints,
                     constraint,
@@ -61,6 +66,9 @@ pub fn unify(
             }
         }
 
+        #[cfg(test)]
+        println!("check solutions:\n  solutions: {solutions:?}\n  added_object_types: {added_object_types:?}\n");
+
         let variables = type_variables_by_complexity(&type_variables);
 
         for variable in &variables {
@@ -68,6 +76,9 @@ pub fn unify(
                 substitute(&mut type_variables, *variable, &variable_constraints);
             }
         }
+
+        #[cfg(test)]
+        println!("substitute: {type_variables:?}\n");
 
         if required_type_variables
             .iter()
@@ -77,7 +88,7 @@ pub fn unify(
             return Ok((solutions, added_object_types));
         }
 
-        if type_variables == prev_type_variables {
+        if type_variables == prev_type_variables && solutions == prev_solutions {
             return Err(Error::FailedToUnify {
                 unsolved_variables: variables
                     .into_iter()
@@ -254,7 +265,7 @@ mod tests {
         ]
         .into();
 
-        let (solved_variables, _) = unify(
+        let (solved_variables, added_object_types) = unify(
             &configuration,
             &required_type_variables,
             &mut object_type_constraints,
@@ -262,8 +273,22 @@ mod tests {
         )?;
 
         assert_eq!(
-            solved_variables,
-            [(var1, Type::Object("movies".into()))].into()
+            solved_variables.get(&var1),
+            Some(&Type::Object("movies_selection_stage0".into()))
+        );
+        assert_eq!(
+            added_object_types.get("movies_selection_stage0"),
+            Some(&ObjectType {
+                fields: [(
+                    "selected_title".into(),
+                    ObjectField {
+                        r#type: Type::Scalar(BsonScalarType::String),
+                        description: None
+                    }
+                )]
+                .into(),
+                description: None
+            })
         );
 
         Ok(())

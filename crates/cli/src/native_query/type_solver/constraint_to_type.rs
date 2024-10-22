@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use configuration::{
     schema::{ObjectField, ObjectType, Type},
@@ -8,7 +8,7 @@ use ndc_models::{FieldName, ObjectTypeName};
 
 use crate::native_query::{
     error::{Error, Result},
-    type_constraint::{ObjectTypeConstraint, TypeConstraint},
+    type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable},
 };
 
 use TypeConstraint as C;
@@ -17,6 +17,7 @@ use TypeConstraint as C;
 /// type, do that. Returns None if there is not enough information present.
 pub fn constraint_to_type(
     configuration: &Configuration,
+    solutions: &HashMap<TypeVariable, Type>,
     added_object_types: &mut BTreeMap<ObjectTypeName, ObjectType>,
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     constraint: &TypeConstraint,
@@ -26,6 +27,7 @@ pub fn constraint_to_type(
         C::Scalar(s) => Some(Type::Scalar(*s)),
         C::ArrayOf(c) => constraint_to_type(
             configuration,
+            solutions,
             added_object_types,
             object_type_constraints,
             c,
@@ -33,6 +35,7 @@ pub fn constraint_to_type(
         .map(|t| Type::ArrayOf(Box::new(t))),
         C::Object(name) => object_constraint_to_type(
             configuration,
+            solutions,
             added_object_types,
             object_type_constraints,
             name,
@@ -40,6 +43,7 @@ pub fn constraint_to_type(
         .map(|_| Type::Object(name.to_string())),
         C::Predicate { object_type_name } => object_constraint_to_type(
             configuration,
+            solutions,
             added_object_types,
             object_type_constraints,
             object_type_name,
@@ -49,14 +53,16 @@ pub fn constraint_to_type(
         }),
         C::Nullable(c) => constraint_to_type(
             configuration,
+            solutions,
             added_object_types,
             object_type_constraints,
             c,
         )?
         .map(|t| Type::Nullable(Box::new(t))),
-        C::Variable(_) => None,
+        C::Variable(variable) => solutions.get(variable).cloned(),
         C::ElementOf(c) => constraint_to_type(
             configuration,
+            solutions,
             added_object_types,
             object_type_constraints,
             c,
@@ -65,6 +71,7 @@ pub fn constraint_to_type(
         .transpose()?,
         C::FieldOf { target_type, path } => constraint_to_type(
             configuration,
+            solutions,
             added_object_types,
             object_type_constraints,
             target_type,
@@ -72,6 +79,7 @@ pub fn constraint_to_type(
         .and_then(|t| {
             field_of(
                 configuration,
+                solutions,
                 added_object_types,
                 object_type_constraints,
                 t,
@@ -87,6 +95,7 @@ pub fn constraint_to_type(
         } => {
             let resolved_object_type = constraint_to_type(
                 configuration,
+                solutions,
                 added_object_types,
                 object_type_constraints,
                 target_type,
@@ -96,6 +105,7 @@ pub fn constraint_to_type(
                 .map(|(field_name, t)| {
                     Ok(constraint_to_type(
                         configuration,
+                        solutions,
                         added_object_types,
                         object_type_constraints,
                         t,
@@ -106,6 +116,7 @@ pub fn constraint_to_type(
             match (resolved_object_type, resolved_field_types) {
                 (Some(object_type), Some(fields)) => with_field_overrides(
                     configuration,
+                    solutions,
                     added_object_types,
                     object_type_constraints,
                     object_type,
@@ -121,6 +132,7 @@ pub fn constraint_to_type(
 
 fn object_constraint_to_type(
     configuration: &Configuration,
+    solutions: &HashMap<TypeVariable, Type>,
     added_object_types: &mut BTreeMap<ObjectTypeName, ObjectType>,
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     name: &ObjectTypeName,
@@ -144,6 +156,7 @@ fn object_constraint_to_type(
     for (field_name, field_constraint) in object_type_constraint.fields.iter() {
         match constraint_to_type(
             configuration,
+            solutions,
             added_object_types,
             object_type_constraints,
             field_constraint,
@@ -184,6 +197,7 @@ fn element_of(array_type: Type) -> Result<Type> {
 
 fn field_of<'a>(
     configuration: &Configuration,
+    solutions: &HashMap<TypeVariable, Type>,
     added_object_types: &mut BTreeMap<ObjectTypeName, ObjectType>,
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     object_type: Type,
@@ -194,6 +208,7 @@ fn field_of<'a>(
         Type::Object(type_name) => {
             let Some(object_type) = object_constraint_to_type(
                 configuration,
+                solutions,
                 added_object_types,
                 object_type_constraints,
                 &type_name.clone().into(),
@@ -221,6 +236,7 @@ fn field_of<'a>(
         Type::Nullable(t) => {
             let underlying_type = field_of(
                 configuration,
+                solutions,
                 added_object_types,
                 object_type_constraints,
                 *t,
@@ -235,6 +251,7 @@ fn field_of<'a>(
 
 fn with_field_overrides(
     configuration: &Configuration,
+    solutions: &HashMap<TypeVariable, Type>,
     added_object_types: &mut BTreeMap<ObjectTypeName, ObjectType>,
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     object_type: Type,
@@ -246,6 +263,7 @@ fn with_field_overrides(
         Type::Object(type_name) => {
             let Some(object_type) = object_constraint_to_type(
                 configuration,
+                solutions,
                 added_object_types,
                 object_type_constraints,
                 &type_name.clone().into(),
@@ -273,6 +291,7 @@ fn with_field_overrides(
         Type::Nullable(t) => {
             let underlying_type = with_field_overrides(
                 configuration,
+                solutions,
                 added_object_types,
                 object_type_constraints,
                 *t,
@@ -301,6 +320,7 @@ mod tests {
     #[test]
     fn converts_object_type_constraint_to_object_type() -> Result<()> {
         let configuration = mflix_config();
+        let solutions = Default::default();
         let mut added_object_types = Default::default();
 
         let input = TypeConstraint::Object("new_object_type".into());
@@ -315,6 +335,7 @@ mod tests {
 
         let solved_type = constraint_to_type(
             &configuration,
+            &solutions,
             &mut added_object_types,
             &mut object_type_constraints,
             &input,

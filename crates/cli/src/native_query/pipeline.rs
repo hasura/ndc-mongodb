@@ -365,7 +365,7 @@ mod tests {
         )
         .unwrap();
         let expected = [(
-            "movies_selection".into(),
+            "movies_selection_stage0".into(),
             ObjectType {
                 fields: [(
                     "selected_title".into(),
