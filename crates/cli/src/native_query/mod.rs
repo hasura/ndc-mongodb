@@ -164,6 +164,7 @@ mod tests {
         serialized::NativeQuery,
         Configuration,
     };
+    use googletest::prelude::*;
     use mongodb::bson::doc;
     use mongodb_support::{
         aggregate::{Accumulator, Pipeline, Selection, Stage},
@@ -171,6 +172,7 @@ mod tests {
     };
     use ndc_models::ObjectTypeName;
     use pretty_assertions::assert_eq;
+    use test_helpers::configuration::mflix_config;
 
     use super::native_query_from_pipeline;
 
@@ -283,6 +285,34 @@ mod tests {
                 .into(),
                 description: None,
             })
+        );
+        Ok(())
+    }
+
+    #[googletest::test]
+    fn infers_native_query_from_pipeline_with_unannotated_parameter() -> googletest::Result<()> {
+        let config = mflix_config();
+
+        let pipeline = Pipeline::new(vec![Stage::Match(doc! {
+            "title": { "$eq": "{{ title }}" },
+        })]);
+
+        let native_query = native_query_from_pipeline(
+            &config,
+            "movies_by_title",
+            Some("movies".into()),
+            pipeline,
+        )?;
+
+        expect_that!(
+            native_query.arguments,
+            unordered_elements_are![(
+                displays_as(eq("title")),
+                field!(
+                    ObjectField.r#type,
+                    eq(&Type::Scalar(BsonScalarType::String))
+                )
+            )]
         );
         Ok(())
     }

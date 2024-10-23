@@ -1846,6 +1846,7 @@ dependencies = [
  "configuration",
  "deriving_via",
  "futures-util",
+ "googletest",
  "indexmap 2.2.6",
  "itertools",
  "mongodb",
