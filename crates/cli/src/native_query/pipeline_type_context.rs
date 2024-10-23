@@ -162,6 +162,27 @@ impl PipelineTypeContext<'_> {
         self.object_types.insert(name, object_type);
     }
 
+    /// Add a parameter to be written to the native query configuration. Implicitly registers
+    /// a corresponding type variable. If the parameter name has already been registered then
+    /// returns a reference to the already-registered type variable.
+    pub fn register_parameter(
+        &mut self,
+        name: ArgumentName,
+        constraints: impl IntoIterator<Item = TypeConstraint>,
+    ) -> TypeConstraint {
+        let variable = if let Some(variable) = self.parameter_types.get(&name) {
+            *variable
+        } else {
+            let variable = self.new_type_variable([]);
+            self.parameter_types.insert(name, variable);
+            variable
+        };
+        for constraint in constraints {
+            self.set_type_variable_constraint(variable, constraint)
+        }
+        TypeConstraint::Variable(variable)
+    }
+
     pub fn unique_type_name(&self, desired_type_name: &str) -> ObjectTypeName {
         let mut counter = 0;
         let mut type_name: ObjectTypeName = desired_type_name.into();

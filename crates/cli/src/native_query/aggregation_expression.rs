@@ -116,7 +116,14 @@ pub fn infer_type_from_reference_shorthand(
 ) -> Result<TypeConstraint> {
     let reference = parse_reference_shorthand(input)?;
     let t = match reference {
-        Reference::NativeQueryVariable { .. } => todo!(),
+        Reference::NativeQueryVariable {
+            name,
+            type_annotation: _,
+        } => {
+            // TODO: read type annotation
+            // TODO: set constraint based on expected type here like we do in match_stage.rs
+            context.register_parameter(name.into(), [])
+        }
         Reference::PipelineVariable { .. } => todo!(),
         Reference::InputDocumentField { name, nested_path } => {
             let doc_type = context.get_input_document_type()?;
@@ -129,7 +136,17 @@ pub fn infer_type_from_reference_shorthand(
                 path,
             }
         }
-        Reference::String => TypeConstraint::Scalar(BsonScalarType::String),
+        Reference::String {
+            native_query_variables,
+        } => {
+            for variable in native_query_variables {
+                context.register_parameter(
+                    variable.into(),
+                    [TypeConstraint::Scalar(BsonScalarType::String)],
+                );
+            }
+            TypeConstraint::Scalar(BsonScalarType::String)
+        }
     };
     Ok(t)
 }

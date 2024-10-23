@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use std::process::exit;
 
 use clap::Subcommand;
+use configuration::schema::ObjectField;
 use configuration::{
     native_query::NativeQueryRepresentation::Collection, serialized::NativeQuery, Configuration,
 };
@@ -139,6 +140,21 @@ pub fn native_query_from_pipeline(
 ) -> Result<NativeQuery> {
     let pipeline_types =
         infer_pipeline_types(configuration, name, input_collection.as_ref(), &pipeline)?;
+
+    let arguments = pipeline_types
+        .parameter_types
+        .into_iter()
+        .map(|(name, parameter_type)| {
+            (
+                name,
+                ObjectField {
+                    r#type: parameter_type,
+                    description: None,
+                },
+            )
+        })
+        .collect();
+
     // TODO: move warnings to `run` function
     for warning in pipeline_types.warnings {
         println!("warning: {warning}");
@@ -146,7 +162,7 @@ pub fn native_query_from_pipeline(
     Ok(NativeQuery {
         representation: Collection,
         input_collection,
-        arguments: Default::default(), // TODO: infer arguments
+        arguments,
         result_document_type: pipeline_types.result_document_type,
         object_types: pipeline_types.object_types,
         pipeline: pipeline.into(),

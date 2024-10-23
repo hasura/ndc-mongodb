@@ -1,3 +1,5 @@
+mod match_stage;
+
 use std::{collections::BTreeMap, iter::once};
 
 use configuration::Configuration;
@@ -80,7 +82,14 @@ fn infer_stage_output_type(
             let type_variable = context.new_type_variable(doc_constraints);
             Some(TypeConstraint::Variable(type_variable))
         }
-        Stage::Match(_) => None,
+        Stage::Match(match_doc) => {
+            match_stage::check_match_doc_for_parameters(
+                context,
+                &format!("{desired_object_type_name}_match"),
+                match_doc.clone(),
+            )?;
+            None
+        }
         Stage::Sort(_) => None,
         Stage::Limit(_) => None,
         Stage::Lookup { .. } => todo!("lookup stage"),

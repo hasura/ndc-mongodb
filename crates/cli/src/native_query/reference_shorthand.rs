@@ -34,8 +34,9 @@ pub enum Reference {
         nested_path: Vec<FieldName>,
     },
 
-    /// The expression evaluates to a string - that's all we need to know
-    String,
+    /// The expression evaluates to a string. The string may contain native query variable
+    /// references which implicitly have type String.
+    String { native_query_variables: Vec<String> },
 }
 
 pub fn parse_reference_shorthand(input: &str) -> Result<Reference> {
@@ -126,5 +127,11 @@ fn is_non_ascii(char: char) -> bool {
 }
 
 fn plain_string(_input: &str) -> IResult<&str, Reference> {
-    Ok(("", Reference::String))
+    // TODO: parse variable references embedded in strings
+    Ok((
+        "",
+        Reference::String {
+            native_query_variables: Default::default(),
+        },
+    ))
 }

@@ -75,6 +75,9 @@ pub enum Error {
     #[error("Error parsing a string in the aggregation pipeline: {0}")]
     UnableToParseReferenceShorthand(String),
 
+    #[error("Unknown match document operator: {0}")]
+    UnknownMatchDocumentOperator(String),
+
     #[error("Unknown aggregation operator: {0}")]
     UnknownAggregationOperator(String),
 
