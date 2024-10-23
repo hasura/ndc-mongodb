@@ -39,12 +39,9 @@ pub fn infer_pipeline_types(
     let object_type_name = context.unique_type_name(desired_object_type_name);
 
     for (stage_index, stage) in pipeline.iter().enumerate() {
-        if let Some(output_type) = infer_stage_output_type(
-            &mut context,
-            &format!("{desired_object_type_name}_stage{stage_index}"),
-            stage_index,
-            stage,
-        )? {
+        if let Some(output_type) =
+            infer_stage_output_type(&mut context, desired_object_type_name, stage_index, stage)?
+        {
             context.set_stage_doc_type(output_type);
         };
     }
@@ -75,7 +72,7 @@ fn infer_stage_output_type(
                 .map(|doc| {
                     infer_type_from_aggregation_expression(
                         context,
-                        &format!("{desired_object_type_name}_document"),
+                        &format!("{desired_object_type_name}_documents"),
                         doc.into(),
                     )
                 })
@@ -94,7 +91,7 @@ fn infer_stage_output_type(
         } => {
             let object_type_name = infer_type_from_group_stage(
                 context,
-                desired_object_type_name,
+                &format!("{desired_object_type_name}_group"),
                 key_expression,
                 accumulators,
             )?;
@@ -107,7 +104,7 @@ fn infer_stage_output_type(
             Some(
                 aggregation_expression::infer_type_from_aggregation_expression(
                     context,
-                    desired_object_type_name,
+                    &format!("{desired_object_type_name}_replaceWith"),
                     selection.clone().into(),
                 )?,
             )
@@ -118,7 +115,7 @@ fn infer_stage_output_type(
             preserve_null_and_empty_arrays,
         } => Some(infer_type_from_unwind_stage(
             context,
-            desired_object_type_name,
+            &format!("{desired_object_type_name}_unwind"),
             path,
             include_array_index.as_deref(),
             *preserve_null_and_empty_arrays,
@@ -323,7 +320,7 @@ mod tests {
         let config = mflix_config();
         let pipeline_types = infer_pipeline_types(&config, "documents", None, &pipeline).unwrap();
         let expected = [(
-            "documents_stage0_document_2".into(),
+            "documents_documents_2".into(),
             ObjectType {
                 fields: [
                     (
@@ -357,15 +354,10 @@ mod tests {
             "selected_title": "$title"
         }))]);
         let config = mflix_config();
-        let pipeline_types = infer_pipeline_types(
-            &config,
-            "movies_selection",
-            Some(&("movies".into())),
-            &pipeline,
-        )
-        .unwrap();
+        let pipeline_types =
+            infer_pipeline_types(&config, "movies", Some(&("movies".into())), &pipeline).unwrap();
         let expected = [(
-            "movies_selection_stage0".into(),
+            "movies_replaceWith".into(),
             ObjectType {
                 fields: [(
                     "selected_title".into(),
