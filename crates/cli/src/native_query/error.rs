@@ -1,7 +1,11 @@
+use std::collections::{BTreeMap, HashMap, HashSet};
+
 use configuration::schema::Type;
 use mongodb::bson::{self, Bson, Document};
-use ndc_models::{FieldName, ObjectTypeName};
+use ndc_models::{ArgumentName, FieldName, ObjectTypeName};
 use thiserror::Error;
+
+use super::type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -18,11 +22,21 @@ pub enum Error {
         referenced_type: Type,
     },
 
+    #[error("Expected an array type, but got: {actual_type:?}")]
+    ExpectedArray { actual_type: Type },
+
     #[error("Expected an object type, but got: {actual_type:?}")]
     ExpectedObject { actual_type: Type },
 
     #[error("Expected a path for the $unwind stage")]
     ExpectedStringPath(Bson),
+
+    // This variant is not intended to be returned to the user - it is transformed with more
+    // context in [super::PipelineTypeContext::into_types].
+    #[error("Failed to unify: {unsolved_variables:?}")]
+    FailedToUnify {
+        unsolved_variables: Vec<TypeVariable>,
+    },
 
     #[error(
         "Cannot infer a result document type for pipeline because it does not produce documents"
@@ -38,18 +52,31 @@ pub enum Error {
         field_name: FieldName,
     },
 
-    #[error("Type mismatch in {context}: expected {expected:?}, but got {actual:?}")]
+    #[error("Type mismatch in {context}: {a:?} is not compatible with {b:?}")]
     TypeMismatch {
         context: String,
-        expected: String,
-        actual: Bson,
+        a: TypeConstraint,
+        b: TypeConstraint,
     },
 
-    #[error("Cannot infer a result type for this pipeline. But you can create a native query by writing the configuration file by hand.")]
-    UnableToInferResultType,
+    #[error(
+        "{}",
+        unable_to_infer_types_message(*could_not_infer_return_type, problem_parameter_types)
+    )]
+    UnableToInferTypes {
+        problem_parameter_types: Vec<ArgumentName>,
+        could_not_infer_return_type: bool,
+
+        // These fields are included here for internal debugging
+        type_variables: HashMap<TypeVariable, HashSet<TypeConstraint>>,
+        object_type_constraints: BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+    },
 
     #[error("Error parsing a string in the aggregation pipeline: {0}")]
     UnableToParseReferenceShorthand(String),
+
+    #[error("Unknown match document operator: {0}")]
+    UnknownMatchDocumentOperator(String),
 
     #[error("Unknown aggregation operator: {0}")]
     UnknownAggregationOperator(String),
@@ -65,4 +92,27 @@ pub enum Error {
 
     #[error("Unknown object type, \"{0}\"")]
     UnknownObjectType(String),
+}
+
+fn unable_to_infer_types_message(
+    could_not_infer_return_type: bool,
+    problem_parameter_types: &[ArgumentName],
+) -> String {
+    let mut message = String::new();
+    message += "Cannot infer types for this pipeline.\n";
+    if !problem_parameter_types.is_empty() {
+        message += "\nCould not infer types for these parameters:\n";
+        for name in problem_parameter_types {
+            message += &format!("- {name}\n");
+        }
+        message += "\nTry adding type annotations of the form: {{parameter_name|[int!]!}}\n";
+    }
+    if could_not_infer_return_type {
+        message += "\nUnable to infer return type.";
+        if !problem_parameter_types.is_empty() {
+            message += " Adding type annotations to parameters may help.";
+        }
+        message += "\n";
+    }
+    message
 }
