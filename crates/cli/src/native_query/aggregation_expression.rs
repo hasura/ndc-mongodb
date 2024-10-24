@@ -120,8 +120,8 @@ pub fn infer_type_from_reference_shorthand(
             name,
             type_annotation: _,
         } => {
-            // TODO: read type annotation
-            // TODO: set constraint based on expected type here like we do in match_stage.rs
+            // TODO: read type annotation ENG-1249
+            // TODO: set constraint based on expected type here like we do in match_stage.rs NDC-1251
             context.register_parameter(name.into(), [])
         }
         Reference::PipelineVariable { .. } => todo!(),

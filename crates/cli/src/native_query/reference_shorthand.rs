@@ -127,7 +127,7 @@ fn is_non_ascii(char: char) -> bool {
 }
 
 fn plain_string(_input: &str) -> IResult<&str, Reference> {
-    // TODO: parse variable references embedded in strings
+    // TODO: parse variable references embedded in strings ENG-1250
     Ok((
         "",
         Reference::String {

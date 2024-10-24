@@ -38,11 +38,16 @@ pub fn unify(
     #[cfg(test)]
     println!("begin unify:\n  type_variables: {type_variables:?}\n  object_type_constraints: {object_type_constraints:?}\n");
 
+    // TODO: This could be simplified. Instead of mutating constraints using `simplify_constraints`
+    // we might be able to roll all constraints into one and pass that to `constraint_to_type` in
+    // one step, but leave the original constraints unchanged if any part of that fails. That could
+    // make it simpler to keep track of source locations for when we want to report type mismatch
+    // errors between constraints.
     loop {
         let prev_type_variables = type_variables.clone();
         let prev_solutions = solutions.clone();
 
-        // TODO: check for mismatches, e.g. constraint list contains scalar & array
+        // TODO: check for mismatches, e.g. constraint list contains scalar & array ENG-1252
 
         for (_, constraints) in type_variables.iter_mut() {
             let simplified = simplify_constraints(

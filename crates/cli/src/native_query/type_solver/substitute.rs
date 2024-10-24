@@ -47,7 +47,6 @@ pub fn substitute(
     // substitution_made
 }
 
-// TODO: Need to recurse into object types
 fn substitute_in_constraint(
     variable: TypeVariable,
     variable_constraint: &TypeConstraint,
