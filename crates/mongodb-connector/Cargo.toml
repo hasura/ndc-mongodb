@@ -19,8 +19,8 @@ itertools = { workspace = true }
 mongodb = { workspace = true }
 ndc-sdk = { workspace = true }
 prometheus = "*" # share version from ndc-sdk
-serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0", features = ["preserve_order"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
 thiserror = "1"
 tokio = { version = "1.28.1", features = ["full"] }
 tracing = "0.1"
