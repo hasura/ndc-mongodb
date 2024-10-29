@@ -3,6 +3,7 @@ pub mod error;
 mod helpers;
 mod pipeline;
 mod pipeline_type_context;
+mod prune_object_types;
 mod reference_shorthand;
 mod type_constraint;
 mod type_solver;

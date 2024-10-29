@@ -14,6 +14,7 @@ use ndc_models::{ArgumentName, ObjectTypeName};
 
 use super::{
     error::{Error, Result},
+    prune_object_types::prune_object_types,
     type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable, Variance},
     type_solver::unify,
 };
@@ -116,7 +117,7 @@ impl PipelineTypeContext<'_> {
             })?,
         };
 
-        let parameter_types = self
+        let parameter_types: BTreeMap<ArgumentName, Type> = self
             .parameter_types
             .into_iter()
             .map(|(parameter_name, type_variable)| {
@@ -127,10 +128,19 @@ impl PipelineTypeContext<'_> {
             })
             .collect();
 
+        // Prune added object types to remove types that are not referenced by the return type or
+        // by parameter types, and therefore don't need to be included in the native query
+        // configuration.
+        let object_types = {
+            let reference_types =
+                std::iter::once(result_document_type).chain(parameter_types.values());
+            prune_object_types(reference_types, added_object_types)?
+        };
+
         Ok(PipelineTypes {
             result_document_type: result_document_type_name,
             parameter_types,
-            object_types: added_object_types,
+            object_types,
             warnings: self.warnings,
         })
     }
