@@ -1,46 +1,49 @@
 use std::collections::BTreeMap;
-use std::iter::once;
 
-use configuration::schema::{ObjectField, ObjectType, Type};
 use itertools::Itertools as _;
 use mongodb::bson::{Bson, Document};
 use mongodb_support::BsonScalarType;
+use nonempty::NonEmpty;
 
-use super::helpers::nested_field_type;
 use super::pipeline_type_context::PipelineTypeContext;
 
 use super::error::{Error, Result};
 use super::reference_shorthand::{parse_reference_shorthand, Reference};
+use super::type_constraint::{ObjectTypeConstraint, TypeConstraint, Variance};
 
 pub fn infer_type_from_aggregation_expression(
     context: &mut PipelineTypeContext<'_>,
     desired_object_type_name: &str,
     bson: Bson,
-) -> Result<Type> {
+) -> Result<TypeConstraint> {
     let t = match bson {
-        Bson::Double(_) => Type::Scalar(BsonScalarType::Double),
+        Bson::Double(_) => TypeConstraint::Scalar(BsonScalarType::Double),
         Bson::String(string) => infer_type_from_reference_shorthand(context, &string)?,
         Bson::Array(_) => todo!("array type"),
         Bson::Document(doc) => {
             infer_type_from_aggregation_expression_document(context, desired_object_type_name, doc)?
         }
-        Bson::Boolean(_) => todo!(),
-        Bson::Null => todo!(),
-        Bson::RegularExpression(_) => todo!(),
-        Bson::JavaScriptCode(_) => todo!(),
-        Bson::JavaScriptCodeWithScope(_) => todo!(),
-        Bson::Int32(_) => todo!(),
-        Bson::Int64(_) => todo!(),
-        Bson::Timestamp(_) => todo!(),
-        Bson::Binary(_) => todo!(),
-        Bson::ObjectId(_) => todo!(),
-        Bson::DateTime(_) => todo!(),
-        Bson::Symbol(_) => todo!(),
-        Bson::Decimal128(_) => todo!(),
-        Bson::Undefined => todo!(),
-        Bson::MaxKey => todo!(),
-        Bson::MinKey => todo!(),
-        Bson::DbPointer(_) => todo!(),
+        Bson::Boolean(_) => TypeConstraint::Scalar(BsonScalarType::Bool),
+        Bson::Null | Bson::Undefined => {
+            let type_variable = context.new_type_variable(Variance::Covariant, []);
+            TypeConstraint::Nullable(Box::new(TypeConstraint::Variable(type_variable)))
+        }
+        Bson::RegularExpression(_) => TypeConstraint::Scalar(BsonScalarType::Regex),
+        Bson::JavaScriptCode(_) => TypeConstraint::Scalar(BsonScalarType::Javascript),
+        Bson::JavaScriptCodeWithScope(_) => {
+            TypeConstraint::Scalar(BsonScalarType::JavascriptWithScope)
+        }
+        Bson::Int32(_) => TypeConstraint::Scalar(BsonScalarType::Int),
+        Bson::Int64(_) => TypeConstraint::Scalar(BsonScalarType::Long),
+        Bson::Timestamp(_) => TypeConstraint::Scalar(BsonScalarType::Timestamp),
+        Bson::Binary(_) => TypeConstraint::Scalar(BsonScalarType::BinData),
+        Bson::ObjectId(_) => TypeConstraint::Scalar(BsonScalarType::ObjectId),
+        Bson::DateTime(_) => TypeConstraint::Scalar(BsonScalarType::Date),
+        Bson::Symbol(_) => TypeConstraint::Scalar(BsonScalarType::Symbol),
+        Bson::Decimal128(_) => TypeConstraint::Scalar(BsonScalarType::Decimal),
+        Bson::MaxKey => TypeConstraint::Scalar(BsonScalarType::MaxKey),
+        Bson::MinKey => TypeConstraint::Scalar(BsonScalarType::MinKey),
+        Bson::DbPointer(_) => TypeConstraint::Scalar(BsonScalarType::DbPointer),
     };
     Ok(t)
 }
@@ -49,7 +52,7 @@ fn infer_type_from_aggregation_expression_document(
     context: &mut PipelineTypeContext<'_>,
     desired_object_type_name: &str,
     mut document: Document,
-) -> Result<Type> {
+) -> Result<TypeConstraint> {
     let mut expression_operators = document
         .keys()
         .filter(|key| key.starts_with("$"))
@@ -76,9 +79,11 @@ fn infer_type_from_operator_expression(
     _desired_object_type_name: &str,
     operator: &str,
     operands: Bson,
-) -> Result<Type> {
+) -> Result<TypeConstraint> {
     let t = match (operator, operands) {
-        ("$split", _) => Type::ArrayOf(Box::new(Type::Scalar(BsonScalarType::String))),
+        ("$split", _) => {
+            TypeConstraint::ArrayOf(Box::new(TypeConstraint::Scalar(BsonScalarType::String)))
+        }
         (op, _) => Err(Error::UnknownAggregationOperator(op.to_string()))?,
     };
     Ok(t)
@@ -89,7 +94,7 @@ fn infer_type_from_document(
     context: &mut PipelineTypeContext<'_>,
     desired_object_type_name: &str,
     document: Document,
-) -> Result<Type> {
+) -> Result<TypeConstraint> {
     let object_type_name = context.unique_type_name(desired_object_type_name);
     let fields = document
         .into_iter()
@@ -97,35 +102,51 @@ fn infer_type_from_document(
             let field_object_type_name = format!("{desired_object_type_name}_{field_name}");
             let object_field_type =
                 infer_type_from_aggregation_expression(context, &field_object_type_name, bson)?;
-            let object_field = ObjectField {
-                r#type: object_field_type,
-                description: None,
-            };
-            Ok((field_name.into(), object_field))
+            Ok((field_name.into(), object_field_type))
         })
         .collect::<Result<BTreeMap<_, _>>>()?;
-    let object_type = ObjectType {
-        fields,
-        description: None,
-    };
+    let object_type = ObjectTypeConstraint { fields };
     context.insert_object_type(object_type_name.clone(), object_type);
-    Ok(Type::Object(object_type_name.into()))
+    Ok(TypeConstraint::Object(object_type_name))
 }
 
 pub fn infer_type_from_reference_shorthand(
     context: &mut PipelineTypeContext<'_>,
     input: &str,
-) -> Result<Type> {
+) -> Result<TypeConstraint> {
     let reference = parse_reference_shorthand(input)?;
     let t = match reference {
-        Reference::NativeQueryVariable { .. } => todo!(),
+        Reference::NativeQueryVariable {
+            name,
+            type_annotation: _,
+        } => {
+            // TODO: read type annotation ENG-1249
+            // TODO: set constraint based on expected type here like we do in match_stage.rs NDC-1251
+            context.register_parameter(name.into(), [])
+        }
         Reference::PipelineVariable { .. } => todo!(),
         Reference::InputDocumentField { name, nested_path } => {
-            let doc_type = context.get_input_document_type_name()?;
-            let path = once(&name).chain(&nested_path);
-            nested_field_type(context, doc_type.to_string(), path)?
+            let doc_type = context.get_input_document_type()?;
+            let path = NonEmpty {
+                head: name,
+                tail: nested_path,
+            };
+            TypeConstraint::FieldOf {
+                target_type: Box::new(doc_type.clone()),
+                path,
+            }
         }
-        Reference::String => Type::Scalar(BsonScalarType::String),
+        Reference::String {
+            native_query_variables,
+        } => {
+            for variable in native_query_variables {
+                context.register_parameter(
+                    variable.into(),
+                    [TypeConstraint::Scalar(BsonScalarType::String)],
+                );
+            }
+            TypeConstraint::Scalar(BsonScalarType::String)
+        }
     };
     Ok(t)
 }
