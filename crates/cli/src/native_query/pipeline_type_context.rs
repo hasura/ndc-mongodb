@@ -14,7 +14,7 @@ use ndc_models::{ArgumentName, ObjectTypeName};
 
 use super::{
     error::{Error, Result},
-    type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable},
+    type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable, Variance},
     type_solver::unify,
 };
 
@@ -137,9 +137,10 @@ impl PipelineTypeContext<'_> {
 
     pub fn new_type_variable(
         &mut self,
+        variance: Variance,
         constraints: impl IntoIterator<Item = TypeConstraint>,
     ) -> TypeVariable {
-        let variable = TypeVariable::new(self.next_type_variable);
+        let variable = TypeVariable::new(self.next_type_variable, variance);
         self.next_type_variable += 1;
         self.type_variables
             .insert(variable, constraints.into_iter().collect());
@@ -173,7 +174,7 @@ impl PipelineTypeContext<'_> {
         let variable = if let Some(variable) = self.parameter_types.get(&name) {
             *variable
         } else {
-            let variable = self.new_type_variable([]);
+            let variable = self.new_type_variable(Variance::Contravariant, []);
             self.parameter_types.insert(name, variable);
             variable
         };
@@ -196,7 +197,7 @@ impl PipelineTypeContext<'_> {
     }
 
     pub fn set_stage_doc_type(&mut self, doc_type: TypeConstraint) {
-        let variable = self.new_type_variable([doc_type]);
+        let variable = self.new_type_variable(Variance::Covariant, [doc_type]);
         self.input_doc_type = Some(variable);
     }
 

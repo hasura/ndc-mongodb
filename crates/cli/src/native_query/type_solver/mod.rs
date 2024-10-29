@@ -49,10 +49,11 @@ pub fn unify(
 
         // TODO: check for mismatches, e.g. constraint list contains scalar & array ENG-1252
 
-        for (_, constraints) in type_variables.iter_mut() {
+        for (variable, constraints) in type_variables.iter_mut() {
             let simplified = simplify_constraints(
                 configuration,
                 object_type_constraints,
+                variable.variance,
                 constraints.iter().cloned(),
             );
             *constraints = simplified;
@@ -134,7 +135,7 @@ mod tests {
     use test_helpers::configuration::mflix_config;
 
     use crate::native_query::type_constraint::{
-        ObjectTypeConstraint, TypeConstraint, TypeVariable,
+        ObjectTypeConstraint, TypeConstraint, TypeVariable, Variance,
     };
 
     use super::unify;
@@ -142,7 +143,7 @@ mod tests {
     #[test]
     fn solves_object_type() -> Result<()> {
         let configuration = mflix_config();
-        let type_variable = TypeVariable::new(0);
+        let type_variable = TypeVariable::new(0, Variance::Covariant);
         let required_type_variables = [type_variable];
         let mut object_type_constraints = Default::default();
 
@@ -170,7 +171,7 @@ mod tests {
     #[test]
     fn solves_added_object_type_based_on_object_type_constraint() -> Result<()> {
         let configuration = mflix_config();
-        let type_variable = TypeVariable::new(0);
+        let type_variable = TypeVariable::new(0, Variance::Covariant);
         let required_type_variables = [type_variable];
 
         let mut object_type_constraints = [(
@@ -223,8 +224,8 @@ mod tests {
     #[test]
     fn produces_object_type_based_on_field_type_of_another_object_type() -> Result<()> {
         let configuration = mflix_config();
-        let var0 = TypeVariable::new(0);
-        let var1 = TypeVariable::new(1);
+        let var0 = TypeVariable::new(0, Variance::Covariant);
+        let var1 = TypeVariable::new(1, Variance::Covariant);
         let required_type_variables = [var0, var1];
 
         let mut object_type_constraints = [(

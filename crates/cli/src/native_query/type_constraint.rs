@@ -1,20 +1,27 @@
 use std::collections::BTreeMap;
 
 use configuration::MongoScalarType;
-use deriving_via::DerivingVia;
 use mongodb_support::BsonScalarType;
 use ndc_models::{FieldName, ObjectTypeName};
 use nonempty::NonEmpty;
 use ref_cast::RefCast as _;
 
-#[derive(DerivingVia)]
-#[deriving(Copy, Debug, Eq, Hash)]
-pub struct TypeVariable(u32);
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct TypeVariable {
+    id: u32,
+    pub variance: Variance,
+}
 
 impl TypeVariable {
-    pub fn new(id: u32) -> Self {
-        TypeVariable(id)
+    pub fn new(id: u32, variance: Variance) -> Self {
+        TypeVariable { id, variance }
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Variance {
+    Covariant,
+    Contravariant,
 }
 
 /// A TypeConstraint is almost identical to a [configuration::schema::Type], except that

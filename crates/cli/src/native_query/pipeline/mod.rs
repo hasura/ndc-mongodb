@@ -18,7 +18,7 @@ use super::{
     helpers::find_collection_object_type,
     pipeline_type_context::{PipelineTypeContext, PipelineTypes},
     reference_shorthand::{parse_reference_shorthand, Reference},
-    type_constraint::{ObjectTypeConstraint, TypeConstraint},
+    type_constraint::{ObjectTypeConstraint, TypeConstraint, Variance},
 };
 
 pub fn infer_pipeline_types(
@@ -79,7 +79,7 @@ fn infer_stage_output_type(
                     )
                 })
                 .collect::<Result<Vec<_>>>()?;
-            let type_variable = context.new_type_variable(doc_constraints);
+            let type_variable = context.new_type_variable(Variance::Covariant, doc_constraints);
             Some(TypeConstraint::Variable(type_variable))
         }
         Stage::Match(match_doc) => {
@@ -136,7 +136,7 @@ fn infer_stage_output_type(
             });
             // We don't know what the type is here so we represent it with an unconstrained type
             // variable.
-            let type_variable = context.new_type_variable([]);
+            let type_variable = context.new_type_variable(Variance::Covariant, []);
             Some(TypeConstraint::Variable(type_variable))
         }
     };
@@ -313,7 +313,7 @@ mod tests {
 
     use crate::native_query::{
         pipeline_type_context::PipelineTypeContext,
-        type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable},
+        type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable, Variance},
     };
 
     use super::{infer_pipeline_types, infer_type_from_unwind_stage};
@@ -411,17 +411,19 @@ mod tests {
             Some(false),
         )?;
 
+        let input_doc_variable = TypeVariable::new(0, Variance::Covariant);
+
         assert_eq!(
             inferred_type,
             TypeConstraint::WithFieldOverrides {
                 augmented_object_type_name: "unwind_stage_unwind".into(),
-                target_type: Box::new(TypeConstraint::Variable(TypeVariable::new(0))),
+                target_type: Box::new(TypeConstraint::Variable(input_doc_variable)),
                 fields: [
                     ("idx".into(), TypeConstraint::Scalar(BsonScalarType::Long)),
                     (
                         "words".into(),
                         TypeConstraint::ElementOf(Box::new(TypeConstraint::FieldOf {
-                            target_type: Box::new(TypeConstraint::Variable(TypeVariable::new(0))),
+                            target_type: Box::new(TypeConstraint::Variable(input_doc_variable)),
                             path: nonempty!["words".into()],
                         }))
                     )

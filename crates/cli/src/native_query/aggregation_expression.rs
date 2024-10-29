@@ -9,7 +9,7 @@ use super::pipeline_type_context::PipelineTypeContext;
 
 use super::error::{Error, Result};
 use super::reference_shorthand::{parse_reference_shorthand, Reference};
-use super::type_constraint::{ObjectTypeConstraint, TypeConstraint};
+use super::type_constraint::{ObjectTypeConstraint, TypeConstraint, Variance};
 
 pub fn infer_type_from_aggregation_expression(
     context: &mut PipelineTypeContext<'_>,
@@ -25,7 +25,7 @@ pub fn infer_type_from_aggregation_expression(
         }
         Bson::Boolean(_) => TypeConstraint::Scalar(BsonScalarType::Bool),
         Bson::Null | Bson::Undefined => {
-            let type_variable = context.new_type_variable([]);
+            let type_variable = context.new_type_variable(Variance::Covariant, []);
             TypeConstraint::Nullable(Box::new(TypeConstraint::Variable(type_variable)))
         }
         Bson::RegularExpression(_) => TypeConstraint::Scalar(BsonScalarType::Regex),

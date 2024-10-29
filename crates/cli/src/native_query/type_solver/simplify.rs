@@ -11,6 +11,7 @@ use ndc_models::{FieldName, ObjectTypeName};
 
 use crate::introspection::type_unification::is_supertype;
 
+use crate::native_query::type_constraint::Variance;
 use crate::native_query::{
     error::Error,
     pipeline_type_context::PipelineTypeContext,
@@ -27,6 +28,7 @@ type Simplified<T> = std::result::Result<T, (T, T)>;
 pub fn simplify_constraints(
     configuration: &Configuration,
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+    variance: Variance,
     constraints: impl IntoIterator<Item = TypeConstraint>,
 ) -> HashSet<TypeConstraint> {
     constraints
@@ -35,6 +37,7 @@ pub fn simplify_constraints(
             simplify_constraint_pair(
                 configuration,
                 object_type_constraints,
+                variance,
                 constraint_a,
                 constraint_b,
             )
@@ -45,24 +48,24 @@ pub fn simplify_constraints(
 fn simplify_constraint_pair(
     configuration: &Configuration,
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+    variance: Variance,
     a: TypeConstraint,
     b: TypeConstraint,
 ) -> Simplified<TypeConstraint> {
     match (a, b) {
         (C::ExtendedJSON, _) | (_, C::ExtendedJSON) => Ok(C::ExtendedJSON),
-        (C::Scalar(a), C::Scalar(b)) => solve_scalar(a, b),
+        (C::Scalar(a), C::Scalar(b)) => solve_scalar(variance, a, b),
 
-        (C::Nullable(a), b) => {
-            simplify_constraint_pair(
-                configuration,
-                object_type_constraints,
-                /*type_variables,*/ *a,
-                b,
-            )
-            .map(|constraint| C::Nullable(Box::new(constraint)))
+        (C::Nullable(a), C::Nullable(b)) => {
+            simplify_constraint_pair(configuration, object_type_constraints, variance, *a, *b)
+                .map(|constraint| C::Nullable(Box::new(constraint)))
+        }
+        (C::Nullable(a), b) if variance == Variance::Covariant => {
+            simplify_constraint_pair(configuration, object_type_constraints, variance, *a, b)
+                .map(|constraint| C::Nullable(Box::new(constraint)))
         }
         (a, b @ C::Nullable(_)) => {
-            simplify_constraint_pair(configuration, object_type_constraints, b, a)
+            simplify_constraint_pair(configuration, object_type_constraints, variance, b, a)
         }
 
         (C::Variable(a), C::Variable(b)) if a == b => Ok(C::Variable(a)),
@@ -80,7 +83,7 @@ fn simplify_constraint_pair(
         ) => todo!(),
         // (C::Object(_), C::Scalar(_)) => todo!(),
         (C::Object(a), C::Object(b)) => {
-            merge_object_type_constraints(configuration, object_type_constraints, a, b)
+            merge_object_type_constraints(configuration, object_type_constraints, variance, a, b)
         }
         // (C::Object(_), C::ArrayOf(_)) => todo!(),
         // (C::Object(_), C::Nullable(_)) => todo!(),
@@ -275,7 +278,15 @@ fn simplify_constraint_pair(
     }
 }
 
-fn solve_scalar(a: BsonScalarType, b: BsonScalarType) -> Simplified<TypeConstraint> {
+fn solve_scalar(
+    variance: Variance,
+    a: BsonScalarType,
+    b: BsonScalarType,
+) -> Simplified<TypeConstraint> {
+    if variance == Variance::Contravariant {
+        return solve_scalar(Variance::Covariant, b, a);
+    }
+
     if a == b || is_supertype(&a, &b) {
         Ok(C::Scalar(a))
     } else if is_supertype(&b, &a) {
@@ -288,6 +299,7 @@ fn solve_scalar(a: BsonScalarType, b: BsonScalarType) -> Simplified<TypeConstrai
 fn merge_object_type_constraints(
     configuration: &Configuration,
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+    variance: Variance,
     name_a: ObjectTypeName,
     name_b: ObjectTypeName,
 ) -> Simplified<TypeConstraint> {
@@ -304,7 +316,13 @@ fn merge_object_type_constraints(
         always_ok(TypeConstraint::make_nullable),
         always_ok(TypeConstraint::make_nullable),
         |field_a, field_b| {
-            unify_object_field(configuration, object_type_constraints, field_a, field_b)
+            unify_object_field(
+                configuration,
+                object_type_constraints,
+                variance,
+                field_a,
+                field_b,
+            )
         },
     );
 
@@ -327,12 +345,14 @@ fn merge_object_type_constraints(
 fn unify_object_field(
     configuration: &Configuration,
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+    variance: Variance,
     field_type_a: TypeConstraint,
     field_type_b: TypeConstraint,
 ) -> Result<TypeConstraint, ()> {
     simplify_constraint_pair(
         configuration,
         object_type_constraints,
+        variance,
         field_type_a,
         field_type_b,
     )
