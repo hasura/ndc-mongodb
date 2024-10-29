@@ -1,9 +1,0 @@
----
-source: crates/integration-tests/src/tests/expressions.rs
-expression: "graphql_query(r#\"\n                query Filtering {\n                  extendedJsonTestData(where: { value: { _regex: \"hello\" } }) {\n                    type\n                    value\n                  }\n                }\n            \"#).run().await?"
----
-data:
-  extendedJsonTestData:
-    - type: string
-      value: "hello, world!"
-errors: ~

@@ -1,0 +1,11 @@
+---
+source: crates/integration-tests/src/tests/expressions.rs
+expression: "run_connector_query(Connector::TestCases,\n            query_request().collection(\"nested_collection\").query(query().predicate(Expression::Exists {\n                                in_collection: ExistsInCollection::NestedCollection {\n                                    column_name: \"staff\".into(),\n                                    arguments: Default::default(),\n                                    field_path: Default::default(),\n                                },\n                                predicate: None,\n                            }).fields([field!(\"_id\"),\n                                field!(\"institution\")]).order_by([asc!(\"institution\")]))).await?"
+---
+- rows:
+    - _id: 6705a1cec2df58ace3e67807
+      institution: Aperture Science
+    - _id: 6705a1c2c2df58ace3e67806
+      institution: Black Mesa
+    - _id: 6705a1d7c2df58ace3e67808
+      institution: City 17
