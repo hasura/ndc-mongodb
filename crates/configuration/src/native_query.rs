@@ -15,7 +15,7 @@ use crate::serialized;
 /// Note: this type excludes `name` and `object_types` from the serialized type. Object types are
 /// intended to be merged into one big map so should not be accessed through values of this type.
 /// Native query values are stored in maps so names should be taken from map keys.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct NativeQuery {
     pub representation: NativeQueryRepresentation,
     pub input_collection: Option<ndc::CollectionName>,

@@ -42,24 +42,34 @@ const YAML: FileFormat = FileFormat::Yaml;
 pub async fn read_directory(
     configuration_dir: impl AsRef<Path> + Send,
 ) -> anyhow::Result<Configuration> {
+    read_directory_with_ignored_configs(configuration_dir, &[]).await
+}
+
+/// Read configuration from a directory
+pub async fn read_directory_with_ignored_configs(
+    configuration_dir: impl AsRef<Path> + Send,
+    ignored_configs: &[PathBuf],
+) -> anyhow::Result<Configuration> {
     let dir = configuration_dir.as_ref();
 
-    let schemas = read_subdir_configs::<String, Schema>(&dir.join(SCHEMA_DIRNAME))
+    let schemas = read_subdir_configs::<String, Schema>(&dir.join(SCHEMA_DIRNAME), ignored_configs)
         .await?
         .unwrap_or_default();
     let schema = schemas.into_values().fold(Schema::default(), Schema::merge);
 
     // Deprecated see message above at NATIVE_PROCEDURES_DIRNAME
-    let native_procedures = read_subdir_configs(&dir.join(NATIVE_PROCEDURES_DIRNAME))
-        .await?
-        .unwrap_or_default();
+    let native_procedures =
+        read_subdir_configs(&dir.join(NATIVE_PROCEDURES_DIRNAME), ignored_configs)
+            .await?
+            .unwrap_or_default();
 
     // TODO: Once we fully remove `native_procedures` after a deprecation period we can remove `mut`
-    let mut native_mutations = read_subdir_configs(&dir.join(NATIVE_MUTATIONS_DIRNAME))
-        .await?
-        .unwrap_or_default();
+    let mut native_mutations =
+        read_subdir_configs(&dir.join(NATIVE_MUTATIONS_DIRNAME), ignored_configs)
+            .await?
+            .unwrap_or_default();
 
-    let native_queries = read_subdir_configs(&dir.join(NATIVE_QUERIES_DIRNAME))
+    let native_queries = read_subdir_configs(&dir.join(NATIVE_QUERIES_DIRNAME), ignored_configs)
         .await?
         .unwrap_or_default();
 
@@ -75,7 +85,10 @@ pub async fn read_directory(
 /// json and yaml files in the given directory should be parsed as native mutation configurations.
 ///
 /// Assumes that every configuration file has a `name` field.
-async fn read_subdir_configs<N, T>(subdir: &Path) -> anyhow::Result<Option<BTreeMap<N, T>>>
+async fn read_subdir_configs<N, T>(
+    subdir: &Path,
+    ignored_configs: &[PathBuf],
+) -> anyhow::Result<Option<BTreeMap<N, T>>>
 where
     for<'a> T: Deserialize<'a>,
     for<'a> N: Ord + ToString + Deserialize<'a>,
@@ -96,6 +109,13 @@ where
 
             let path = dir_entry.path();
             let extension = path.extension().and_then(|ext| ext.to_str());
+
+            if ignored_configs
+                .iter()
+                .any(|ignored| path.ends_with(ignored))
+            {
+                return Ok(None);
+            }
 
             let format_option = extension
                 .and_then(|ext| {
@@ -240,7 +260,7 @@ pub async fn list_existing_schemas(
     let dir = configuration_dir.as_ref();
 
     // TODO: we don't really need to read and parse all the schema files here, just get their names.
-    let schemas = read_subdir_configs::<_, Schema>(&dir.join(SCHEMA_DIRNAME))
+    let schemas = read_subdir_configs::<_, Schema>(&dir.join(SCHEMA_DIRNAME), &[])
         .await?
         .unwrap_or_default();
 
@@ -290,10 +310,21 @@ pub async fn get_config_file_changed(dir: impl AsRef<Path>) -> anyhow::Result<bo
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use async_tempfile::TempDir;
     use googletest::prelude::*;
+    use mongodb_support::BsonScalarType;
+    use ndc_models::FunctionName;
     use serde_json::json;
     use tokio::fs;
+
+    use crate::{
+        native_query::NativeQuery,
+        read_directory_with_ignored_configs,
+        schema::{ObjectField, ObjectType, Type},
+        serialized, WithName, NATIVE_QUERIES_DIRNAME,
+    };
 
     use super::{read_directory, CONFIGURATION_OPTIONS_BASENAME};
 
@@ -325,6 +356,62 @@ mod tests {
                 .to_string()
                 .contains("unknown variant `no-such-mode`")))
         );
+
+        Ok(())
+    }
+
+    #[googletest::test]
+    #[tokio::test]
+    async fn ignores_specified_config_files() -> anyhow::Result<()> {
+        let native_query = WithName {
+            name: "hello".to_string(),
+            value: serialized::NativeQuery {
+                representation: crate::native_query::NativeQueryRepresentation::Function,
+                input_collection: None,
+                arguments: Default::default(),
+                result_document_type: "Hello".into(),
+                object_types: [(
+                    "Hello".into(),
+                    ObjectType {
+                        fields: [(
+                            "__value".into(),
+                            ObjectField {
+                                r#type: Type::Scalar(BsonScalarType::String),
+                                description: None,
+                            },
+                        )]
+                        .into(),
+                        description: None,
+                    },
+                )]
+                .into(),
+                pipeline: [].into(),
+                description: None,
+            },
+        };
+
+        let config_dir = TempDir::new().await?;
+        tokio::fs::create_dir(config_dir.join(NATIVE_QUERIES_DIRNAME)).await?;
+        let native_query_path = PathBuf::from(NATIVE_QUERIES_DIRNAME).join("hello.json");
+        fs::write(
+            config_dir.join(&native_query_path),
+            serde_json::to_vec(&native_query)?,
+        )
+        .await?;
+
+        let parsed_config = read_directory(&config_dir).await?;
+        let parsed_config_ignoring_native_query =
+            read_directory_with_ignored_configs(config_dir, &[native_query_path]).await?;
+
+        expect_that!(
+            parsed_config.native_queries,
+            unordered_elements_are!(eq((
+                &FunctionName::from("hello"),
+                &NativeQuery::from_serialized(&Default::default(), native_query.value)?
+            ))),
+        );
+
+        expect_that!(parsed_config_ignoring_native_query.native_queries, empty());
 
         Ok(())
     }

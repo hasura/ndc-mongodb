@@ -35,6 +35,7 @@ pub struct NativeQuery {
 
     /// Use `input_collection` when you want to start an aggregation pipeline off of the specified
     /// `input_collection` db.<input_collection>.aggregate.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub input_collection: Option<ndc_models::CollectionName>,
 
     /// Arguments to be supplied for each query invocation. These will be available to the given
