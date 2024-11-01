@@ -329,7 +329,7 @@ mod tests {
         let config = mflix_config();
         let pipeline_types = infer_pipeline_types(&config, "documents", None, &pipeline).unwrap();
         let expected = [(
-            "documents_documents_2".into(),
+            "documents_documents".into(),
             ObjectType {
                 fields: [
                     (

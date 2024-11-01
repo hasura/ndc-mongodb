@@ -21,6 +21,7 @@ ndc-models = { workspace = true }
 nom = "^7.1.3"
 nonempty = "^0.10.0"
 ref-cast = { workspace = true }
+regex = "^1.11.1"
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = "1.0.57"
