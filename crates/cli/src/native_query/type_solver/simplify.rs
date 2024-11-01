@@ -53,7 +53,12 @@ fn simplify_constraint_pair(
     b: TypeConstraint,
 ) -> Simplified<TypeConstraint> {
     match (a, b) {
-        (C::ExtendedJSON, _) | (_, C::ExtendedJSON) => Ok(C::ExtendedJSON), // TODO: Do we want this in contravariant case?
+        (C::ExtendedJSON, _) | (_, C::ExtendedJSON) if variance == Variance::Covariant => {
+            Ok(C::ExtendedJSON)
+        }
+        (C::ExtendedJSON, b) if variance == Variance::Contravariant => Ok(b),
+        (a, C::ExtendedJSON) if variance == Variance::Contravariant => Ok(a),
+
         (C::Scalar(a), C::Scalar(b)) => solve_scalar(variance, a, b),
 
         // TODO: We need to make sure we aren't putting multiple layers of Nullable on constraints
@@ -72,55 +77,20 @@ fn simplify_constraint_pair(
 
         (C::Variable(a), C::Variable(b)) if a == b => Ok(C::Variable(a)),
 
-        // (C::Scalar(_), C::Variable(_)) => todo!(),
-        // (C::Scalar(_), C::ElementOf(_)) => todo!(),
-        (C::Scalar(_), C::FieldOf { target_type, path }) => todo!(),
-        (
-            C::Scalar(_),
-            C::WithFieldOverrides {
-                target_type,
-                fields,
-                ..
-            },
-        ) => todo!(),
-        // (C::Object(_), C::Scalar(_)) => todo!(),
+        (C::Object(a), C::Object(b)) if a == b => Ok(C::Object(a)),
         (C::Object(a), C::Object(b)) => {
-            merge_object_type_constraints(configuration, object_type_constraints, variance, a, b)
+            match merge_object_type_constraints(
+                configuration,
+                object_type_constraints,
+                variance,
+                &a,
+                &b,
+            ) {
+                Some(merged_name) => Ok(C::Object(merged_name)),
+                None => Err((C::Object(a), C::Object(b))),
+            }
         }
-        // (C::Object(_), C::ArrayOf(_)) => todo!(),
-        // (C::Object(_), C::Nullable(_)) => todo!(),
-        // (C::Object(_), C::Predicate { object_type_name }) => todo!(),
-        // (C::Object(_), C::Variable(_)) => todo!(),
-        (C::Object(_), C::ElementOf(_)) => todo!(),
-        (C::Object(_), C::FieldOf { target_type, path }) => todo!(),
-        (
-            C::Object(_),
-            C::WithFieldOverrides {
-                target_type,
-                fields,
-                ..
-            },
-        ) => todo!(),
-        // (C::ArrayOf(_), C::Scalar(_)) => todo!(),
-        // (C::ArrayOf(_), C::Object(_)) => todo!(),
-        // (C::ArrayOf(_), C::ArrayOf(_)) => todo!(),
-        // (C::ArrayOf(_), C::Nullable(_)) => todo!(),
-        // (C::ArrayOf(_), C::Predicate { object_type_name }) => todo!(),
-        // (C::ArrayOf(_), C::Variable(_)) => todo!(),
-        // (C::ArrayOf(_), C::ElementOf(_)) => todo!(),
-        (C::ArrayOf(_), C::FieldOf { target_type, path }) => todo!(),
-        (
-            C::ArrayOf(_),
-            C::WithFieldOverrides {
-                target_type,
-                fields,
-                ..
-            },
-        ) => todo!(),
-        (C::Predicate { object_type_name }, C::Scalar(_)) => todo!(),
-        (C::Predicate { object_type_name }, C::Object(_)) => todo!(),
-        (C::Predicate { object_type_name }, C::ArrayOf(_)) => todo!(),
-        (C::Predicate { object_type_name }, C::Nullable(_)) => todo!(),
+
         (
             C::Predicate {
                 object_type_name: a,
@@ -128,155 +98,79 @@ fn simplify_constraint_pair(
             C::Predicate {
                 object_type_name: b,
             },
-        ) => todo!(),
-        (C::Predicate { object_type_name }, C::Variable(_)) => todo!(),
-        (C::Predicate { object_type_name }, C::ElementOf(_)) => todo!(),
-        (C::Predicate { object_type_name }, C::FieldOf { target_type, path }) => todo!(),
+        ) if a == b => Ok(C::Predicate {
+            object_type_name: a,
+        }),
         (
-            C::Predicate { object_type_name },
-            C::WithFieldOverrides {
-                target_type,
-                fields,
-                ..
+            C::Predicate {
+                object_type_name: a,
             },
-        ) => todo!(),
-        (C::Variable(_), C::Scalar(_)) => todo!(),
-        (C::Variable(_), C::Object(_)) => todo!(),
-        (C::Variable(_), C::ArrayOf(_)) => todo!(),
-        (C::Variable(_), C::Nullable(_)) => todo!(),
-        (C::Variable(_), C::Predicate { object_type_name }) => todo!(),
-        (C::Variable(_), C::Variable(_)) => todo!(),
-        (C::Variable(_), C::ElementOf(_)) => todo!(),
-        (C::Variable(_), C::FieldOf { target_type, path }) => todo!(),
-        (
-            C::Variable(_),
-            C::WithFieldOverrides {
-                target_type,
-                fields,
-                ..
+            C::Predicate {
+                object_type_name: b,
             },
-        ) => todo!(),
-        (C::ElementOf(_), C::Scalar(_)) => todo!(),
-        (C::ElementOf(_), C::Object(_)) => todo!(),
-        (C::ElementOf(_), C::ArrayOf(_)) => todo!(),
-        (C::ElementOf(_), C::Nullable(_)) => todo!(),
-        (C::ElementOf(_), C::Predicate { object_type_name }) => todo!(),
-        (C::ElementOf(_), C::Variable(_)) => todo!(),
-        (C::ElementOf(_), C::ElementOf(_)) => todo!(),
-        (C::ElementOf(_), C::FieldOf { target_type, path }) => todo!(),
-        (
-            C::ElementOf(_),
-            C::WithFieldOverrides {
-                target_type,
-                fields,
-                ..
-            },
-        ) => todo!(),
-        (C::FieldOf { target_type, path }, C::Scalar(_)) => todo!(),
-        (C::FieldOf { target_type, path }, C::Object(_)) => todo!(),
-        (C::FieldOf { target_type, path }, C::ArrayOf(_)) => todo!(),
-        (C::FieldOf { target_type, path }, C::Nullable(_)) => todo!(),
-        (C::FieldOf { target_type, path }, C::Predicate { object_type_name }) => todo!(),
-        (C::FieldOf { target_type, path }, C::Variable(_)) => todo!(),
-        (C::FieldOf { target_type, path }, C::ElementOf(_)) => todo!(),
-        (
-            C::FieldOf {
-                target_type: target_type_a,
-                path: path_a,
-            },
-            C::FieldOf {
-                target_type: target_type_b,
-                path: path_b,
-            },
-        ) => todo!(),
+        ) if a == b => match merge_object_type_constraints(
+            configuration,
+            object_type_constraints,
+            variance,
+            &a,
+            &b,
+        ) {
+            Some(merged_name) => Ok(C::Predicate {
+                object_type_name: merged_name,
+            }),
+            None => Err((
+                C::Predicate {
+                    object_type_name: a,
+                },
+                C::Predicate {
+                    object_type_name: b,
+                },
+            )),
+        },
+
+        // TODO: We probably want a separate step that swaps ElementOf and FieldOf constraints with
+        // constraint of the targeted structure. We might do a similar thing with
+        // WithFieldOverrides.
+
+        // (C::ElementOf(a), b) => {
+        //     if let TypeConstraint::ArrayOf(elem_type) = *a {
+        //         simplify_constraint_pair(
+        //             configuration,
+        //             object_type_constraints,
+        //             variance,
+        //             *elem_type,
+        //             b,
+        //         )
+        //     } else {
+        //         Err((C::ElementOf(a), b))
+        //     }
+        // }
+        //
+        // (C::FieldOf { target_type, path }, b) => {
+        //     if let TypeConstraint::Object(type_name) = *target_type {
+        //         let object_type = object_type_constraints
+        //     } else {
+        //         Err((C::FieldOf { target_type, path }, b))
+        //     }
+        // }
+
         // (
-        //     C::FieldOf { target_type, path },
+        //     C::Object(_),
         //     C::WithFieldOverrides {
         //         target_type,
         //         fields,
         //         ..
         //     },
         // ) => todo!(),
-        (
-            C::WithFieldOverrides {
-                target_type,
-                fields,
-                ..
-            },
-            C::Scalar(_),
-        ) => todo!(),
-        (
-            C::WithFieldOverrides {
-                target_type,
-                fields,
-                ..
-            },
-            C::Object(_),
-        ) => todo!(),
-        (
-            C::WithFieldOverrides {
-                target_type,
-                fields,
-                ..
-            },
-            C::ArrayOf(_),
-        ) => todo!(),
-        (
-            C::WithFieldOverrides {
-                target_type,
-                fields,
-                ..
-            },
-            C::Nullable(_),
-        ) => todo!(),
-        (
-            C::WithFieldOverrides {
-                target_type,
-                fields,
-                ..
-            },
-            C::Predicate { object_type_name },
-        ) => todo!(),
-        (
-            C::WithFieldOverrides {
-                target_type,
-                fields,
-                ..
-            },
-            C::Variable(_),
-        ) => todo!(),
-        (
-            C::WithFieldOverrides {
-                target_type,
-                fields,
-                ..
-            },
-            C::ElementOf(_),
-        ) => todo!(),
-        (
-            C::WithFieldOverrides {
-                target_type: target_type_a,
-                fields,
-                ..
-            },
-            C::FieldOf {
-                target_type: target_type_b,
-                path,
-            },
-        ) => todo!(),
-        (
-            C::WithFieldOverrides {
-                target_type: target_type_a,
-                fields: fields_a,
-                ..
-            },
-            C::WithFieldOverrides {
-                target_type: target_type_b,
-                fields: fields_b,
-                ..
-            },
-        ) => todo!(),
-        _ => todo!("other simplify branch"),
+        (C::ArrayOf(a), C::ArrayOf(b)) => {
+            match simplify_constraint_pair(configuration, object_type_constraints, variance, *a, *b)
+            {
+                Ok(ab) => Ok(C::ArrayOf(Box::new(ab))),
+                Err((a, b)) => Err((C::ArrayOf(Box::new(a)), C::ArrayOf(Box::new(b)))),
+            }
+        }
+
+        (a, b) => Err((a, b)),
     }
 }
 
@@ -302,15 +196,15 @@ fn merge_object_type_constraints(
     configuration: &Configuration,
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     variance: Variance,
-    name_a: ObjectTypeName,
-    name_b: ObjectTypeName,
-) -> Simplified<TypeConstraint> {
+    name_a: &ObjectTypeName,
+    name_b: &ObjectTypeName,
+) -> Option<ObjectTypeName> {
     // Pick from the two input names according to sort order to get a deterministic outcome.
-    let preferred_name = if name_a <= name_b { &name_a } else { &name_b };
+    let preferred_name = if name_a <= name_b { name_a } else { name_b };
     let merged_name = unique_type_name(configuration, object_type_constraints, preferred_name);
 
-    let a = look_up_object_type_constraint(configuration, object_type_constraints, &name_a);
-    let b = look_up_object_type_constraint(configuration, object_type_constraints, &name_b);
+    let a = look_up_object_type_constraint(configuration, object_type_constraints, name_a);
+    let b = look_up_object_type_constraint(configuration, object_type_constraints, name_b);
 
     let merged_fields_result = try_align(
         a.fields.clone().into_iter().collect(),
@@ -331,17 +225,14 @@ fn merge_object_type_constraints(
     let fields = match merged_fields_result {
         Ok(merged_fields) => merged_fields.into_iter().collect(),
         Err(_) => {
-            return Err((
-                TypeConstraint::Object(name_a),
-                TypeConstraint::Object(name_b),
-            ))
+            return None;
         }
     };
 
     let merged_object_type = ObjectTypeConstraint { fields };
     object_type_constraints.insert(merged_name.clone(), merged_object_type);
 
-    Ok(TypeConstraint::Object(merged_name))
+    Some(merged_name)
 }
 
 fn unify_object_field(
