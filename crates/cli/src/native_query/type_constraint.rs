@@ -38,6 +38,10 @@ pub enum TypeConstraint {
         object_type_name: ObjectTypeName,
     },
 
+    // Categories of types
+    Numeric,
+    Union(Vec<TypeConstraint>),
+
     /// Indicates a type that is the same as the type of the given variable.
     Variable(TypeVariable),
 

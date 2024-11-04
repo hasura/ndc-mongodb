@@ -75,13 +75,13 @@ pub enum Error {
     #[error("Error parsing a string in the aggregation pipeline: {0}")]
     UnableToParseReferenceShorthand(String),
 
-    #[error("Unknown match document operator: {0}")]
+    #[error("Type inference is not currently implemented for the query document operator, {0}. Please file a bug report, and declare types for your native query by hand for the time being.")]
     UnknownMatchDocumentOperator(String),
 
-    #[error("Unknown aggregation operator: {0}")]
+    #[error("Type inference is not currently implemented for the aggregation expression operator, {0}. Please file a bug report, and declare types for your native query by hand for the time being.")]
     UnknownAggregationOperator(String),
 
-    #[error("Type inference is not currently implemented for stage {stage_index} in the aggregation pipeline. Please file a bug report, and declare types for your native query by hand.\n\n{stage}")]
+    #[error("Type inference is not currently implemented for {stage}, stage number {} in your aggregation pipeline. Please file a bug report, and declare types for your native query by hand for the time being.", stage_index + 1)]
     UnknownAggregationStage {
         stage_index: usize,
         stage: bson::Document,
