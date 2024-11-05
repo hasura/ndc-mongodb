@@ -236,19 +236,21 @@ fn infer_type_from_operator_expression(
         )?),
         "$eq" => {
             let (a, b) = two_paramater_operand(operator, operand)?;
-            let variable = C::Variable(context.new_type_variable(Variance::Covariant, []));
-            infer_type_from_aggregation_expression(
+            let variable = context.new_type_variable(Variance::Covariant, []);
+            let type_a = infer_type_from_aggregation_expression(
                 context,
                 desired_object_type_name,
-                Some(&variable),
+                Some(&C::Variable(variable)),
                 a,
             )?;
-            infer_type_from_aggregation_expression(
+            let type_b = infer_type_from_aggregation_expression(
                 context,
                 desired_object_type_name,
-                Some(&variable),
+                Some(&C::Variable(variable)),
                 b,
             )?;
+            context.set_type_variable_constraint(variable, type_a);
+            context.set_type_variable_constraint(variable, type_b);
             C::Scalar(BsonScalarType::Bool)
         }
         "$split" => {
@@ -352,4 +354,57 @@ pub fn infer_type_from_reference_shorthand(
         }
     };
     Ok(t)
+}
+
+#[cfg(test)]
+mod tests {
+    use googletest::prelude::*;
+    use mongodb::bson::bson;
+    use mongodb_support::BsonScalarType;
+    use test_helpers::configuration::mflix_config;
+
+    use crate::native_query::{
+        pipeline_type_context::PipelineTypeContext,
+        type_constraint::{TypeConstraint, TypeVariable},
+    };
+
+    use super::infer_type_from_operator_expression;
+
+    use TypeConstraint as C;
+
+    #[googletest::test]
+    fn infers_constrants_on_equality() -> Result<()> {
+        let config = mflix_config();
+        let mut context = PipelineTypeContext::new(&config, None);
+
+        let (var0, var1) = (
+            TypeVariable::new(0, crate::native_query::type_constraint::Variance::Covariant),
+            TypeVariable::new(
+                1,
+                crate::native_query::type_constraint::Variance::Contravariant,
+            ),
+        );
+
+        infer_type_from_operator_expression(
+            &mut context,
+            "test",
+            None,
+            "$eq",
+            bson!(["{{ parameter }}", 1]),
+        )?;
+
+        expect_eq!(
+            context.type_variables(),
+            &[
+                (
+                    var0,
+                    [C::Scalar(BsonScalarType::Int), C::Variable(var1)].into()
+                ),
+                (var1, [C::Variable(var0)].into())
+            ]
+            .into()
+        );
+
+        Ok(())
+    }
 }

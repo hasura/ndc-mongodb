@@ -71,6 +71,11 @@ impl PipelineTypeContext<'_> {
         context
     }
 
+    #[cfg(test)]
+    pub fn type_variables(&self) -> &HashMap<TypeVariable, BTreeSet<TypeConstraint>> {
+        &self.type_variables
+    }
+
     pub fn into_types(self) -> Result<PipelineTypes> {
         let result_document_type_variable = self.input_doc_type.ok_or(Error::IncompletePipeline)?;
         let required_type_variables = self

@@ -127,8 +127,11 @@ fn type_variables_by_complexity(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use anyhow::Result;
     use configuration::schema::{ObjectField, ObjectType, Type};
+    use googletest::prelude::*;
     use mongodb_support::BsonScalarType;
     use nonempty::nonempty;
     use pretty_assertions::assert_eq;
@@ -139,6 +142,8 @@ mod tests {
     };
 
     use super::unify;
+
+    use TypeConstraint as C;
 
     #[test]
     fn solves_object_type() -> Result<()> {
@@ -276,6 +281,43 @@ mod tests {
                 .into(),
                 description: None
             })
+        );
+
+        Ok(())
+    }
+
+    #[googletest::test]
+    fn solves_variable_based_on_constraints_on_another_variable() -> Result<()> {
+        let configuration = mflix_config();
+        let var0 = TypeVariable::new(0, Variance::Covariant);
+        let var1 = TypeVariable::new(1, Variance::Covariant);
+        let required_type_variables = [var1];
+
+        let mut object_type_constraints = Default::default();
+
+        // These are the constraints we get from:
+        //
+        //     { $eq: ["{{ parameter }}", 1] }
+        //
+        let type_variables = [
+            (
+                var0,
+                [C::Scalar(BsonScalarType::Int), C::Variable(var1)].into(),
+            ),
+            (var1, [C::Variable(var0)].into()),
+        ]
+        .into();
+
+        let (solved_variables, _) = unify(
+            &configuration,
+            &required_type_variables,
+            &mut object_type_constraints,
+            type_variables,
+        )?;
+
+        expect_eq!(
+            solved_variables.get(&var1),
+            Some(&Type::Scalar(BsonScalarType::Int))
         );
 
         Ok(())
