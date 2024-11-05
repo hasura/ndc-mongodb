@@ -184,12 +184,7 @@ pub fn unify_object_types(
 /// then in addition to comparing ints to doubles, and doubles to decimals, we also need to compare
 /// decimals to ints.
 pub fn is_supertype(a: &BsonScalarType, b: &BsonScalarType) -> bool {
-    match a {
-        Decimal => matches!(b, Double | Long | Int),
-        Double => matches!(b, Int),
-        Long => matches!(b, Int),
-        _ => false,
-    }
+    matches!((a, b), (Double, Int))
 }
 
 #[cfg(test)]
