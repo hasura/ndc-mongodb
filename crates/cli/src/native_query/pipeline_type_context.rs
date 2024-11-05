@@ -2,7 +2,7 @@
 
 use std::{
     borrow::Cow,
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
 };
 
 use configuration::{
@@ -43,7 +43,7 @@ pub struct PipelineTypeContext<'a> {
     /// to a type here, or in [self.configuration.object_types]
     object_types: BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
 
-    type_variables: HashMap<TypeVariable, HashSet<TypeConstraint>>,
+    type_variables: HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
     next_type_variable: u32,
 
     warnings: Vec<Error>,

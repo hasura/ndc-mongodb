@@ -2,7 +2,7 @@ mod constraint_to_type;
 mod simplify;
 mod substitute;
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use configuration::{
     schema::{ObjectType, Type},
@@ -24,7 +24,7 @@ pub fn unify(
     configuration: &Configuration,
     required_type_variables: &[TypeVariable],
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
-    mut type_variables: HashMap<TypeVariable, HashSet<TypeConstraint>>,
+    mut type_variables: HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
 ) -> Result<(
     HashMap<TypeVariable, Type>,
     BTreeMap<ObjectTypeName, ObjectType>,
@@ -112,7 +112,7 @@ pub fn unify(
 
 /// List type variables ordered according to increasing complexity of their constraints.
 fn type_variables_by_complexity(
-    type_variables: &HashMap<TypeVariable, HashSet<TypeConstraint>>,
+    type_variables: &HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
 ) -> Vec<TypeVariable> {
     type_variables
         .iter()

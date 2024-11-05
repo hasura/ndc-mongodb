@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 
 use itertools::Either;
 
@@ -7,9 +7,9 @@ use crate::native_query::type_constraint::{TypeConstraint, TypeVariable};
 /// Given a type variable that has been reduced to a single type constraint, replace occurrences if
 /// the variable in
 pub fn substitute(
-    type_variables: &mut HashMap<TypeVariable, HashSet<TypeConstraint>>,
+    type_variables: &mut HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
     variable: TypeVariable,
-    variable_constraints: &HashSet<TypeConstraint>,
+    variable_constraints: &BTreeSet<TypeConstraint>,
 ) {
     for (v, target_constraints) in type_variables.iter_mut() {
         if *v == variable {
@@ -18,7 +18,7 @@ pub fn substitute(
 
         // Replace top-level variable references with the list of constraints assigned to the
         // variable being substituted.
-        let mut substituted_constraints: HashSet<TypeConstraint> = target_constraints
+        let mut substituted_constraints: BTreeSet<TypeConstraint> = target_constraints
             .iter()
             .cloned()
             .flat_map(|target_constraint| match target_constraint {
@@ -68,9 +68,12 @@ fn substitute_in_constraint(
             variable_constraint,
             *t,
         ))),
-        TypeConstraint::Nullable(t) => TypeConstraint::Nullable(Box::new(
-            substitute_in_constraint(variable, variable_constraint, *t),
-        )),
+        TypeConstraint::Union(constraints) => TypeConstraint::Union(
+            constraints
+                .into_iter()
+                .map(|t| substitute_in_constraint(variable, variable_constraint, t))
+                .collect(),
+        ),
         t @ TypeConstraint::Predicate { .. } => t,
         TypeConstraint::ElementOf(t) => TypeConstraint::ElementOf(Box::new(
             substitute_in_constraint(variable, variable_constraint, *t),

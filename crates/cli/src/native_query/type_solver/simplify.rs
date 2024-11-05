@@ -1,6 +1,6 @@
 #![allow(warnings)]
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use configuration::schema::{ObjectType, Type};
 use configuration::Configuration;
@@ -30,7 +30,7 @@ pub fn simplify_constraints(
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     variance: Variance,
     constraints: impl IntoIterator<Item = TypeConstraint>,
-) -> HashSet<TypeConstraint> {
+) -> BTreeSet<TypeConstraint> {
     constraints
         .into_iter()
         .coalesce(|constraint_a, constraint_b| {
@@ -61,17 +61,39 @@ fn simplify_constraint_pair(
 
         (C::Scalar(a), C::Scalar(b)) => solve_scalar(variance, a, b),
 
-        // TODO: We need to make sure we aren't putting multiple layers of Nullable on constraints
-        // - if a and b have mismatched levels of Nullable they won't unify
-        (C::Nullable(a), C::Nullable(b)) => {
-            simplify_constraint_pair(configuration, object_type_constraints, variance, *a, *b)
-                .map(|constraint| C::Nullable(Box::new(constraint)))
+        (C::Union(mut a), C::Union(mut b)) if variance == Variance::Covariant => {
+            a.append(&mut b);
+            let union = a
+                .into_iter()
+                .coalesce(|x, y| {
+                    simplify_constraint_pair(configuration, object_type_constraints, variance, x, y)
+                })
+                .collect();
+            Ok(C::Union(union))
         }
-        (C::Nullable(a), b) if variance == Variance::Covariant => {
-            simplify_constraint_pair(configuration, object_type_constraints, variance, *a, b)
-                .map(|constraint| C::Nullable(Box::new(constraint)))
+
+        (C::Union(mut a), C::Union(mut b)) if variance == Variance::Contravariant => {
+            let intersection: BTreeSet<_> = a.intersection(&b).cloned().collect();
+            if intersection.is_empty() {
+                Err((C::Union(a), C::Union(b)))
+            } else if intersection.len() == 1 {
+                Ok(intersection.into_iter().next().unwrap())
+            } else {
+                Ok(C::Union(intersection))
+            }
         }
-        (a, b @ C::Nullable(_)) => {
+
+        (C::Union(mut constraints), b) if variance == Variance::Covariant => {
+            constraints.insert(b);
+            let union = constraints
+                .into_iter()
+                .coalesce(|x, y| {
+                    simplify_constraint_pair(configuration, object_type_constraints, variance, x, y)
+                })
+                .collect();
+            Ok(C::Union(union))
+        }
+        (b, a @ C::Union(_)) => {
             simplify_constraint_pair(configuration, object_type_constraints, variance, b, a)
         }
 

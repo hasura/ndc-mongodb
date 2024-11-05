@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use configuration::MongoScalarType;
 use mongodb_support::BsonScalarType;
@@ -6,7 +6,7 @@ use ndc_models::{FieldName, ObjectTypeName};
 use nonempty::NonEmpty;
 use ref_cast::RefCast as _;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TypeVariable {
     id: u32,
     pub variance: Variance,
@@ -18,7 +18,7 @@ impl TypeVariable {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Variance {
     Covariant,
     Contravariant,
@@ -26,21 +26,19 @@ pub enum Variance {
 
 /// A TypeConstraint is almost identical to a [configuration::schema::Type], except that
 /// a TypeConstraint may reference type variables.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TypeConstraint {
     // Normal type stuff - except that composite types might include variables in their structure.
     ExtendedJSON,
     Scalar(BsonScalarType),
     Object(ObjectTypeName),
     ArrayOf(Box<TypeConstraint>),
-    Nullable(Box<TypeConstraint>),
     Predicate {
         object_type_name: ObjectTypeName,
     },
 
-    // Categories of types
-    Numeric,
-    Union(Vec<TypeConstraint>),
+    // Complex types
+    Union(BTreeSet<TypeConstraint>),
 
     /// Indicates a type that is the same as the type of the given variable.
     Variable(TypeVariable),
@@ -62,7 +60,6 @@ pub enum TypeConstraint {
         target_type: Box<TypeConstraint>,
         fields: BTreeMap<FieldName, TypeConstraint>,
     },
-    // TODO: Add Non-nullable constraint?
 }
 
 impl TypeConstraint {
@@ -75,7 +72,12 @@ impl TypeConstraint {
             TypeConstraint::Object(_) => 1,
             TypeConstraint::Predicate { .. } => 1,
             TypeConstraint::ArrayOf(constraint) => 1 + constraint.complexity(),
-            TypeConstraint::Nullable(constraint) => 1 + constraint.complexity(),
+            TypeConstraint::Union(constraints) => {
+                1 + constraints
+                    .iter()
+                    .map(TypeConstraint::complexity)
+                    .sum::<usize>()
+            }
             TypeConstraint::ElementOf(constraint) => 2 + constraint.complexity(),
             TypeConstraint::FieldOf { target_type, path } => {
                 2 + target_type.complexity() + path.len()
@@ -97,11 +99,75 @@ impl TypeConstraint {
     pub fn make_nullable(self) -> Self {
         match self {
             TypeConstraint::ExtendedJSON => TypeConstraint::ExtendedJSON,
-            TypeConstraint::Nullable(t) => TypeConstraint::Nullable(t),
-            TypeConstraint::Scalar(BsonScalarType::Null) => {
-                TypeConstraint::Scalar(BsonScalarType::Null)
+            t @ TypeConstraint::Scalar(BsonScalarType::Null) => t,
+            t => TypeConstraint::union(t, TypeConstraint::Scalar(BsonScalarType::Null)),
+        }
+    }
+
+    pub fn null() -> Self {
+        TypeConstraint::Scalar(BsonScalarType::Null)
+    }
+
+    pub fn is_nullable(&self) -> bool {
+        match self {
+            TypeConstraint::Union(types) => types
+                .iter()
+                .any(|t| matches!(t, TypeConstraint::Scalar(BsonScalarType::Null))),
+            _ => false,
+        }
+    }
+
+    pub fn map_nullable<F>(self, callback: F) -> TypeConstraint
+    where
+        F: FnOnce(TypeConstraint) -> TypeConstraint,
+    {
+        match self {
+            Self::Union(types) => {
+                let non_null_types: BTreeSet<_> =
+                    types.into_iter().filter(|t| t != &Self::null()).collect();
+                let single_non_null_type = if non_null_types.len() == 1 {
+                    non_null_types.into_iter().next().unwrap()
+                } else {
+                    Self::Union(non_null_types)
+                };
+                let mapped = callback(single_non_null_type);
+                Self::union(mapped, Self::null())
             }
-            t => TypeConstraint::Nullable(Box::new(t)),
+            t => callback(t),
+        }
+    }
+
+    pub fn numeric() -> TypeConstraint {
+        let numeric_types = enum_iterator::all::<BsonScalarType>()
+            .filter(|t| BsonScalarType::is_numeric(*t))
+            .map(TypeConstraint::Scalar)
+            .collect();
+        TypeConstraint::Union(numeric_types)
+    }
+
+    pub fn is_numeric(&self) -> bool {
+        match self {
+            TypeConstraint::Scalar(scalar_type) => BsonScalarType::is_numeric(*scalar_type),
+            TypeConstraint::Union(types) => types.iter().all(|t| t.is_numeric()),
+            _ => false,
+        }
+    }
+
+    pub fn union(a: TypeConstraint, b: TypeConstraint) -> Self {
+        match (a, b) {
+            (TypeConstraint::Union(mut types_a), TypeConstraint::Union(mut types_b)) => {
+                types_a.append(&mut types_b);
+                TypeConstraint::Union(types_a)
+            }
+            (TypeConstraint::Union(mut types), b) => {
+                types.insert(b);
+                TypeConstraint::Union(types)
+            }
+            (a, TypeConstraint::Union(mut types)) => {
+                types.insert(a);
+                TypeConstraint::Union(types)
+            }
+            (a, b) => TypeConstraint::Union([a, b].into()),
         }
     }
 }
@@ -118,7 +184,7 @@ impl From<ndc_models::Type> for TypeConstraint {
                 }
             }
             ndc_models::Type::Nullable { underlying_type } => {
-                TypeConstraint::Nullable(Box::new(Self::from(*underlying_type)))
+                Self::from(*underlying_type).make_nullable()
             }
             ndc_models::Type::Array { element_type } => {
                 TypeConstraint::ArrayOf(Box::new(Self::from(*element_type)))

@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use configuration::schema::Type;
 use mongodb::bson::{self, Bson, Document};
@@ -24,6 +24,9 @@ pub enum Error {
 
     #[error("Expected an array type, but got: {actual_type:?}")]
     ExpectedArray { actual_type: Type },
+
+    #[error("Expected an array, but got: {actual_argument}")]
+    ExpectedArrayExpressionArgument { actual_argument: Bson },
 
     #[error("Expected an object type, but got: {actual_type:?}")]
     ExpectedObject { actual_type: Type },
@@ -68,7 +71,7 @@ pub enum Error {
         could_not_infer_return_type: bool,
 
         // These fields are included here for internal debugging
-        type_variables: HashMap<TypeVariable, HashSet<TypeConstraint>>,
+        type_variables: HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
         object_type_constraints: BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     },
 
@@ -92,6 +95,9 @@ pub enum Error {
 
     #[error("Unknown object type, \"{0}\"")]
     UnknownObjectType(String),
+
+    #[error("{0}")]
+    Other(String),
 }
 
 fn unable_to_infer_types_message(
