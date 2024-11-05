@@ -18,6 +18,12 @@ impl TypeVariable {
     }
 }
 
+impl std::fmt::Display for TypeVariable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "${}", self.id)
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Variance {
     Covariant,
@@ -66,7 +72,7 @@ impl TypeConstraint {
     /// Order constraints by complexity to help with type unification
     pub fn complexity(&self) -> usize {
         match self {
-            TypeConstraint::Variable(_) => 0,
+            TypeConstraint::Variable(_) => 2,
             TypeConstraint::ExtendedJSON => 0,
             TypeConstraint::Scalar(_) => 0,
             TypeConstraint::Object(_) => 1,
@@ -196,14 +202,28 @@ impl From<ndc_models::Type> for TypeConstraint {
     }
 }
 
-// /// Order constraints by complexity to help with type unification
-// impl PartialOrd for TypeConstraint {
-//     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-//         let a = self.complexity();
-//         let b = other.complexity();
-//         a.partial_cmp(&b)
-//     }
-// }
+impl From<configuration::schema::Type> for TypeConstraint {
+    fn from(t: configuration::schema::Type) -> Self {
+        match t {
+            configuration::schema::Type::ExtendedJSON => TypeConstraint::ExtendedJSON,
+            configuration::schema::Type::Scalar(s) => TypeConstraint::Scalar(s),
+            configuration::schema::Type::Object(name) => TypeConstraint::Object(name.into()),
+            configuration::schema::Type::ArrayOf(t) => {
+                TypeConstraint::ArrayOf(Box::new(TypeConstraint::from(*t)))
+            }
+            configuration::schema::Type::Nullable(t) => TypeConstraint::from(*t).make_nullable(),
+            configuration::schema::Type::Predicate { object_type_name } => {
+                TypeConstraint::Predicate { object_type_name }
+            }
+        }
+    }
+}
+
+impl From<&configuration::schema::Type> for TypeConstraint {
+    fn from(t: &configuration::schema::Type) -> Self {
+        t.clone().into()
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ObjectTypeConstraint {

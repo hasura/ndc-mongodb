@@ -1,6 +1,5 @@
 mod constraint_to_type;
 mod simplify;
-mod substitute;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
@@ -11,7 +10,6 @@ use configuration::{
 use itertools::Itertools;
 use ndc_models::ObjectTypeName;
 use simplify::simplify_constraints;
-use substitute::substitute;
 
 use super::{
     error::{Error, Result},
@@ -24,7 +22,7 @@ pub fn unify(
     configuration: &Configuration,
     required_type_variables: &[TypeVariable],
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
-    mut type_variables: HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
+    type_variables: HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
 ) -> Result<(
     HashMap<TypeVariable, Type>,
     BTreeMap<ObjectTypeName, ObjectType>,
@@ -38,32 +36,29 @@ pub fn unify(
     #[cfg(test)]
     println!("begin unify:\n  type_variables: {type_variables:?}\n  object_type_constraints: {object_type_constraints:?}\n");
 
-    // TODO: This could be simplified. Instead of mutating constraints using `simplify_constraints`
-    // we might be able to roll all constraints into one and pass that to `constraint_to_type` in
-    // one step, but leave the original constraints unchanged if any part of that fails. That could
-    // make it simpler to keep track of source locations for when we want to report type mismatch
-    // errors between constraints.
     loop {
         let prev_type_variables = type_variables.clone();
         let prev_solutions = solutions.clone();
 
         // TODO: check for mismatches, e.g. constraint list contains scalar & array ENG-1252
 
-        for (variable, constraints) in type_variables.iter_mut() {
+        for (variable, constraints) in type_variables.iter() {
+            if is_solved(&solutions, *variable) {
+                continue;
+            }
+
             let simplified = simplify_constraints(
                 configuration,
+                &solutions,
                 object_type_constraints,
-                variable.variance,
+                *variable,
                 constraints.iter().cloned(),
             );
-            *constraints = simplified;
-        }
-
-        #[cfg(test)]
-        println!("simplify:\n  type_variables: {type_variables:?}\n  object_type_constraints: {object_type_constraints:?}\n");
-
-        for (variable, constraints) in &type_variables {
-            if !is_solved(&solutions, *variable) && constraints.len() == 1 {
+            #[cfg(test)]
+            if simplified != *constraints {
+                println!("simplified {variable}: {constraints:?} -> {simplified:?}");
+            }
+            if simplified.len() == 1 {
                 let constraint = constraints.iter().next().unwrap();
                 if let Some(solved_type) = constraint_to_type(
                     configuration,
@@ -81,15 +76,6 @@ pub fn unify(
         println!("check solutions:\n  solutions: {solutions:?}\n  added_object_types: {added_object_types:?}\n");
 
         let variables = type_variables_by_complexity(&type_variables);
-
-        for variable in &variables {
-            if let Some(variable_constraints) = type_variables.get(variable).cloned() {
-                substitute(&mut type_variables, *variable, &variable_constraints);
-            }
-        }
-
-        #[cfg(test)]
-        println!("substitute: {type_variables:?}\n");
 
         if required_type_variables
             .iter()
@@ -127,8 +113,6 @@ fn type_variables_by_complexity(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
-
     use anyhow::Result;
     use configuration::schema::{ObjectField, ObjectType, Type};
     use googletest::prelude::*;
