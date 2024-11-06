@@ -29,6 +29,7 @@ pub fn unify(
 )> {
     let mut added_object_types = BTreeMap::new();
     let mut solutions = HashMap::new();
+    let mut substitutions = HashMap::new();
     fn is_solved(solutions: &HashMap<TypeVariable, Type>, variable: TypeVariable) -> bool {
         solutions.contains_key(&variable)
     }
@@ -39,6 +40,7 @@ pub fn unify(
     loop {
         let prev_type_variables = type_variables.clone();
         let prev_solutions = solutions.clone();
+        let prev_substitutions = substitutions.clone();
 
         // TODO: check for mismatches, e.g. constraint list contains scalar & array ENG-1252
 
@@ -49,7 +51,7 @@ pub fn unify(
 
             let simplified = simplify_constraints(
                 configuration,
-                &solutions,
+                &substitutions,
                 object_type_constraints,
                 *variable,
                 constraints.iter().cloned(),
@@ -59,7 +61,7 @@ pub fn unify(
                 println!("simplified {variable}: {constraints:?} -> {simplified:?}");
             }
             if simplified.len() == 1 {
-                let constraint = constraints.iter().next().unwrap();
+                let constraint = simplified.iter().next().unwrap();
                 if let Some(solved_type) = constraint_to_type(
                     configuration,
                     &solutions,
@@ -67,15 +69,21 @@ pub fn unify(
                     object_type_constraints,
                     constraint,
                 )? {
-                    solutions.insert(*variable, solved_type);
+                    #[cfg(test)]
+                    println!("solved {variable}: {solved_type:?}");
+                    solutions.insert(*variable, solved_type.clone());
+                    substitutions.insert(*variable, [solved_type.into()].into());
                 }
             }
         }
 
         #[cfg(test)]
-        println!("check solutions:\n  solutions: {solutions:?}\n  added_object_types: {added_object_types:?}\n");
+        println!("added_object_types: {added_object_types:?}\n");
 
         let variables = type_variables_by_complexity(&type_variables);
+        // if let Some(v) = variables.iter().find(|v| !substitutions.contains_key(*v)) {
+        //     substitutions.insert(*v, type_variables[v].clone());
+        // }
 
         if required_type_variables
             .iter()
@@ -85,7 +93,10 @@ pub fn unify(
             return Ok((solutions, added_object_types));
         }
 
-        if type_variables == prev_type_variables && solutions == prev_solutions {
+        if type_variables == prev_type_variables
+            && solutions == prev_solutions
+            && substitutions == prev_substitutions
+        {
             return Err(Error::FailedToUnify {
                 unsolved_variables: variables
                     .into_iter()
@@ -265,43 +276,6 @@ mod tests {
                 .into(),
                 description: None
             })
-        );
-
-        Ok(())
-    }
-
-    #[googletest::test]
-    fn solves_variable_based_on_constraints_on_another_variable() -> Result<()> {
-        let configuration = mflix_config();
-        let var0 = TypeVariable::new(0, Variance::Covariant);
-        let var1 = TypeVariable::new(1, Variance::Covariant);
-        let required_type_variables = [var1];
-
-        let mut object_type_constraints = Default::default();
-
-        // These are the constraints we get from:
-        //
-        //     { $eq: ["{{ parameter }}", 1] }
-        //
-        let type_variables = [
-            (
-                var0,
-                [C::Scalar(BsonScalarType::Int), C::Variable(var1)].into(),
-            ),
-            (var1, [C::Variable(var0)].into()),
-        ]
-        .into();
-
-        let (solved_variables, _) = unify(
-            &configuration,
-            &required_type_variables,
-            &mut object_type_constraints,
-            type_variables,
-        )?;
-
-        expect_eq!(
-            solved_variables.get(&var1),
-            Some(&Type::Scalar(BsonScalarType::Int))
         );
 
         Ok(())

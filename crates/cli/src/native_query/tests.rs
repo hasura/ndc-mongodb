@@ -53,11 +53,11 @@ async fn infers_native_query_from_pipeline() -> Result<()> {
                     },
                 ),
             ]
-                .into(),
+            .into(),
             description: None,
         },
     )]
-        .into();
+    .into();
 
     let expected = NativeQuery {
         representation: Collection,
@@ -80,7 +80,7 @@ async fn infers_native_query_from_non_trivial_pipeline() -> Result<()> {
         Stage::ReplaceWith(Selection::new(doc! {
             "title": "$title",
             "title_words": { "$split": ["$title", " "] }
-    })),
+        })),
         Stage::Unwind {
             path: "$title_words".to_string(),
             include_array_index: None,
@@ -124,7 +124,7 @@ async fn infers_native_query_from_non_trivial_pipeline() -> Result<()> {
                     },
                 ),
             ]
-                .into(),
+            .into(),
             description: None,
         })
     );
@@ -137,14 +137,34 @@ fn infers_native_query_from_pipeline_with_unannotated_parameter() -> googletest:
 
     let pipeline = Pipeline::new(vec![Stage::Match(doc! {
         "title": { "$eq": "{{ title }}" },
-})]);
+    })]);
 
-    let native_query = native_query_from_pipeline(
-        &config,
-        "movies_by_title",
-        Some("movies".into()),
-        pipeline,
-    )?;
+    let native_query =
+        native_query_from_pipeline(&config, "movies_by_title", Some("movies".into()), pipeline)?;
+
+    expect_that!(
+        native_query.arguments,
+        unordered_elements_are![(
+            displays_as(eq("title")),
+            field!(
+                ObjectField.r#type,
+                eq(&Type::Scalar(BsonScalarType::String))
+            )
+        )]
+    );
+    Ok(())
+}
+
+#[googletest::test]
+fn infers_parameter_type_from_binary_comparison() -> googletest::Result<()> {
+    let config = mflix_config();
+
+    let pipeline = Pipeline::new(vec![Stage::Match(doc! {
+        "$expr": { "$eq": ["{{ title }}", "$title"] }
+    })]);
+
+    let native_query =
+        native_query_from_pipeline(&config, "movies_by_title", Some("movies".into()), pipeline)?;
 
     expect_that!(
         native_query.arguments,
@@ -162,4 +182,3 @@ fn infers_native_query_from_pipeline_with_unannotated_parameter() -> googletest:
 async fn read_configuration() -> Result<Configuration> {
     read_directory("../../fixtures/hasura/sample_mflix/connector").await
 }
-

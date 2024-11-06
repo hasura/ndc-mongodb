@@ -249,8 +249,13 @@ fn infer_type_from_operator_expression(
                 Some(&C::Variable(variable)),
                 b,
             )?;
-            context.set_type_variable_constraint(variable, type_a);
-            context.set_type_variable_constraint(variable, type_b);
+            // Avoid cycles of type variable references
+            if !context.constraint_references_variable(&type_a, variable) {
+                context.set_type_variable_constraint(variable, type_a);
+            }
+            if !context.constraint_references_variable(&type_b, variable) {
+                context.set_type_variable_constraint(variable, type_b);
+            }
             C::Scalar(BsonScalarType::Bool)
         }
         "$split" => {
@@ -396,10 +401,7 @@ mod tests {
         expect_eq!(
             context.type_variables(),
             &[
-                (
-                    var0,
-                    [C::Scalar(BsonScalarType::Int), C::Variable(var1)].into()
-                ),
+                (var0, [C::Scalar(BsonScalarType::Int)].into()),
                 (var1, [C::Variable(var0)].into())
             ]
             .into()

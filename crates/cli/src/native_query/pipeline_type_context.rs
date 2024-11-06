@@ -182,6 +182,57 @@ impl PipelineTypeContext<'_> {
         entry.insert(constraint);
     }
 
+    pub fn constraint_references_variable(
+        &self,
+        constraint: &TypeConstraint,
+        variable: TypeVariable,
+    ) -> bool {
+        let object_constraint_references_variable = |name: &ObjectTypeName| -> bool {
+            if let Some(object_type) = self.object_types.get(name) {
+                object_type.fields.iter().any(|(_, field_type)| {
+                    self.constraint_references_variable(field_type, variable)
+                })
+            } else {
+                false
+            }
+        };
+
+        match constraint {
+            TypeConstraint::ExtendedJSON => false,
+            TypeConstraint::Scalar(_) => false,
+            TypeConstraint::Object(name) => object_constraint_references_variable(name),
+            TypeConstraint::ArrayOf(t) => self.constraint_references_variable(t, variable),
+            TypeConstraint::Predicate { object_type_name } => {
+                object_constraint_references_variable(object_type_name)
+            }
+            TypeConstraint::Union(ts) => ts
+                .iter()
+                .any(|t| self.constraint_references_variable(t, variable)),
+            TypeConstraint::Variable(v2) if *v2 == variable => true,
+            TypeConstraint::Variable(v2) => {
+                let constraints = self.type_variables.get(v2);
+                constraints
+                    .iter()
+                    .flat_map(|m| *m)
+                    .any(|t| self.constraint_references_variable(t, variable))
+            }
+            TypeConstraint::ElementOf(t) => self.constraint_references_variable(t, variable),
+            TypeConstraint::FieldOf { target_type, .. } => {
+                self.constraint_references_variable(target_type, variable)
+            }
+            TypeConstraint::WithFieldOverrides {
+                target_type,
+                fields,
+                ..
+            } => {
+                self.constraint_references_variable(target_type, variable)
+                    || fields
+                        .iter()
+                        .any(|(_, t)| self.constraint_references_variable(t, variable))
+            }
+        }
+    }
+
     pub fn insert_object_type(&mut self, name: ObjectTypeName, object_type: ObjectTypeConstraint) {
         self.object_types.insert(name, object_type);
     }

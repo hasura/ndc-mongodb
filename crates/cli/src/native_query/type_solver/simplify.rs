@@ -27,7 +27,7 @@ type Simplified<T> = std::result::Result<T, (T, T)>;
 // guaranteed to produce a list that is equal or smaller in length compared to the input.
 pub fn simplify_constraints(
     configuration: &Configuration,
-    solutions: &HashMap<TypeVariable, Type>,
+    substitutions: &HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     variable: TypeVariable,
     constraints: impl IntoIterator<Item = TypeConstraint>,
@@ -37,7 +37,7 @@ pub fn simplify_constraints(
         .flat_map(|constraint| {
             simplify_single_constraint(
                 configuration,
-                solutions,
+                substitutions,
                 object_type_constraints,
                 variable,
                 constraint,
@@ -61,31 +61,31 @@ pub fn simplify_constraints(
 
 fn simplify_single_constraint(
     configuration: &Configuration,
-    solutions: &HashMap<TypeVariable, Type>,
+    substitutions: &HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     variable: TypeVariable,
     constraint: TypeConstraint,
-) -> Option<TypeConstraint> {
+) -> Vec<TypeConstraint> {
     match constraint {
-        C::Variable(v) if v == variable => None,
+        C::Variable(v) if v == variable => vec![],
 
-        C::Variable(v) => match solutions.get(&v) {
-            Some(solved) => Some(solved.into()),
-            None => Some(C::Variable(v)),
+        C::Variable(v) => match substitutions.get(&v) {
+            Some(constraints) => constraints.iter().cloned().collect(),
+            None => vec![C::Variable(v)],
         },
 
         C::Union(constraints) => {
             let simplified_constraints = simplify_constraints(
                 configuration,
-                solutions,
+                substitutions,
                 object_type_constraints,
                 variable,
                 constraints,
             );
-            Some(C::Union(simplified_constraints))
+            vec![C::Union(simplified_constraints)]
         }
 
-        _ => Some(constraint),
+        _ => vec![constraint],
     }
 }
 
@@ -98,13 +98,6 @@ fn simplify_constraint_pair(
 ) -> Simplified<TypeConstraint> {
     match (a, b) {
         (C::Variable(a), C::Variable(b)) if a == b => Ok(C::Variable(a)),
-
-        // See if we have enough information to get to a concrete type by ignoring variables that
-        // don't have solutions yet. The problem is that this could produce solutions that should
-        // have been rejected due to type mismatches - if we stick with this approach we'll need to
-        // add in a mismatch check.
-        (C::Variable(_), b) => Ok(b),
-        (a, C::Variable(_)) => Ok(a),
 
         (C::ExtendedJSON, _) | (_, C::ExtendedJSON) if v.variance == Variance::Covariant => {
             Ok(C::ExtendedJSON)
