@@ -23,8 +23,8 @@ use TypeConstraint as C;
 type Simplified<T> = std::result::Result<T, (T, T)>;
 
 // Attempts to reduce the number of type constraints from the input by combining redundant
-// constraints, and by merging constraints into more specific ones where possible. This is
-// guaranteed to produce a list that is equal or smaller in length compared to the input.
+// constraints, merging constraints into more specific ones where possible, and applying
+// accumulated variable substitutions.
 pub fn simplify_constraints(
     configuration: &Configuration,
     substitutions: &HashMap<TypeVariable, BTreeSet<TypeConstraint>>,

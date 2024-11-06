@@ -81,9 +81,11 @@ pub fn unify(
         println!("added_object_types: {added_object_types:?}\n");
 
         let variables = type_variables_by_complexity(&type_variables);
-        // if let Some(v) = variables.iter().find(|v| !substitutions.contains_key(*v)) {
-        //     substitutions.insert(*v, type_variables[v].clone());
-        // }
+        if let Some(v) = variables.iter().find(|v| !substitutions.contains_key(*v)) {
+            // TODO: We should do some recursion to substitute variable references within
+            // substituted constraints to existing substitutions.
+            substitutions.insert(*v, type_variables[v].clone());
+        }
 
         if required_type_variables
             .iter()

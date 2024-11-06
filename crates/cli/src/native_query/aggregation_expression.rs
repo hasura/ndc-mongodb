@@ -153,33 +153,23 @@ fn infer_type_from_operator_expression(
             type_hint.or(Some(&C::numeric())),
             operand,
         )?,
-        "$acos" => type_for_trig_operator(infer_type_from_aggregation_expression(
-            context,
-            desired_object_type_name,
-            Some(&C::numeric()),
-            operand,
-        )?),
-        "$acosh" => type_for_trig_operator(infer_type_from_aggregation_expression(
-            context,
-            desired_object_type_name,
-            Some(&C::numeric()),
-            operand,
-        )?),
+        "$sin" | "$cos" | "$tan" | "$asin" | "$acos" | "$atan" | "$asinh" | "$acosh" | "$atanh"
+        | "$sinh" | "$cosh" | "$tanh" => {
+            type_for_trig_operator(infer_type_from_aggregation_expression(
+                context,
+                desired_object_type_name,
+                Some(&C::numeric()),
+                operand,
+            )?)
+        }
         "$add" => {
             let operand_types = infer_types_from_aggregation_expression_tuple(
                 context,
                 desired_object_type_name,
-                Some(&C::union(C::numeric(), C::Scalar(BsonScalarType::Date))),
+                Some(&C::numeric()),
                 operand,
             )?;
-            if operand_types
-                .iter()
-                .any(|t| matches!(t, &C::Scalar(BsonScalarType::Date)))
-            {
-                C::Scalar(BsonScalarType::Date)
-            } else {
-                operand_types.into_iter().next().unwrap()
-            }
+            operand_types.into_iter().next().unwrap()
         }
         // "$addToSet" => todo!(),
         "$allElementsTrue" => {
