@@ -1,10 +1,7 @@
-#![allow(warnings)]
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-
-use configuration::schema::{ObjectType, Type};
 use configuration::Configuration;
-use itertools::{Either, Itertools};
+use itertools::Itertools as _;
 use mongodb_support::align::try_align;
 use mongodb_support::BsonScalarType;
 use ndc_models::{FieldName, ObjectTypeName};
@@ -16,14 +13,19 @@ use crate::native_query::helpers::get_object_field_type;
 use crate::native_query::type_constraint::Variance;
 use crate::native_query::{
     error::Error,
-    pipeline_type_context::PipelineTypeContext,
     type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable},
 };
 
 use TypeConstraint as C;
-use TypeVariable as V;
 
 type Simplified<T> = std::result::Result<T, (T, T)>;
+
+struct SimplifyContext<'a> {
+    configuration: &'a Configuration,
+    substitutions: &'a HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
+    object_type_constraints: &'a mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+    errors: &'a mut Vec<Error>,
+}
 
 // Attempts to reduce the number of type constraints from the input by combining redundant
 // constraints, merging constraints into more specific ones where possible, and applying
@@ -34,92 +36,75 @@ pub fn simplify_constraints(
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     variable: Option<TypeVariable>,
     constraints: impl IntoIterator<Item = TypeConstraint>,
+) -> Result<BTreeSet<TypeConstraint>, Vec<Error>> {
+    let mut errors = vec![];
+    let mut context = SimplifyContext {
+        configuration,
+        substitutions,
+        object_type_constraints,
+        errors: &mut errors,
+    };
+    let constraints = simplify_constraints_internal(&mut context, variable, constraints);
+    if errors.is_empty() {
+        Ok(constraints)
+    } else {
+        Err(errors)
+    }
+}
+
+fn simplify_constraints_internal(
+    context: &mut SimplifyContext,
+    variable: Option<TypeVariable>,
+    constraints: impl IntoIterator<Item = TypeConstraint>,
 ) -> BTreeSet<TypeConstraint> {
     let constraints: BTreeSet<_> = constraints
         .into_iter()
-        .flat_map(|constraint| {
-            simplify_single_constraint(
-                configuration,
-                substitutions,
-                object_type_constraints,
-                variable,
-                constraint,
-            )
-        })
+        .flat_map(|constraint| simplify_single_constraint(context, variable, constraint))
         .collect();
 
     constraints
         .into_iter()
         .coalesce(|constraint_a, constraint_b| {
-            simplify_constraint_pair(
-                configuration,
-                substitutions,
-                object_type_constraints,
-                variable,
-                constraint_a,
-                constraint_b,
-            )
+            simplify_constraint_pair(context, variable, constraint_a, constraint_b)
         })
         .collect()
 }
 
 fn simplify_single_constraint(
-    configuration: &Configuration,
-    substitutions: &HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
-    object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+    context: &mut SimplifyContext,
     variable: Option<TypeVariable>,
     constraint: TypeConstraint,
 ) -> Vec<TypeConstraint> {
     match constraint {
         C::Variable(v) if Some(v) == variable => vec![],
 
-        C::Variable(v) => match substitutions.get(&v) {
+        C::Variable(v) => match context.substitutions.get(&v) {
             Some(constraints) => constraints.iter().cloned().collect(),
             None => vec![C::Variable(v)],
         },
 
         C::FieldOf { target_type, path } => {
-            let object_type = simplify_single_constraint(
-                configuration,
-                substitutions,
-                object_type_constraints,
-                variable,
-                *target_type.clone(),
-            );
+            let object_type = simplify_single_constraint(context, variable, *target_type.clone());
             if object_type.len() == 1 {
                 let object_type = object_type.into_iter().next().unwrap();
-                if let Ok(t) = expand_field_of(
-                    configuration,
-                    substitutions,
-                    object_type_constraints,
-                    object_type,
-                    path.clone(),
-                ) {
-                    return t;
+                match expand_field_of(context, object_type, path.clone()) {
+                    Ok(Some(t)) => return t,
+                    Ok(None) => (),
+                    Err(e) => context.errors.push(e),
                 }
             }
             vec![C::FieldOf { target_type, path }]
         }
 
         C::Union(constraints) => {
-            let simplified_constraints = simplify_constraints(
-                configuration,
-                substitutions,
-                object_type_constraints,
-                variable,
-                constraints,
-            );
+            let simplified_constraints =
+                simplify_constraints_internal(context, variable, constraints);
             vec![C::Union(simplified_constraints)]
         }
 
         C::OneOf(constraints) => {
-            let simplified_constraints = simplify_constraints(
-                configuration,
-                substitutions,
-                object_type_constraints,
-                variable,
-                constraints,
-            );
+            let simplified_constraints =
+                simplify_constraints_internal(context, variable, constraints);
             vec![C::OneOf(simplified_constraints)]
         }
 
@@ -128,9 +113,7 @@ fn simplify_single_constraint(
 }
 
 fn simplify_constraint_pair(
-    configuration: &Configuration,
-    substitutions: &HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
-    object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+    context: &mut SimplifyContext,
     variable: Option<TypeVariable>,
     a: TypeConstraint,
     b: TypeConstraint,
@@ -151,17 +134,11 @@ fn simplify_constraint_pair(
 
         (C::Union(mut a), C::Union(mut b)) if variance == Variance::Covariant => {
             a.append(&mut b);
-            let union = simplify_constraints(
-                configuration,
-                substitutions,
-                object_type_constraints,
-                variable,
-                a,
-            );
+            let union = simplify_constraints_internal(context, variable, a);
             Ok(C::Union(union))
         }
 
-        (C::Union(mut a), C::Union(mut b)) if variance == Variance::Contravariant => {
+        (C::Union(a), C::Union(b)) if variance == Variance::Contravariant => {
             let intersection: BTreeSet<_> = a.intersection(&b).cloned().collect();
             if intersection.is_empty() {
                 Err((C::Union(a), C::Union(b)))
@@ -174,23 +151,10 @@ fn simplify_constraint_pair(
 
         (C::Union(mut a), b) if variance == Variance::Covariant => {
             a.insert(b);
-            let union = simplify_constraints(
-                configuration,
-                substitutions,
-                object_type_constraints,
-                variable,
-                a,
-            );
+            let union = simplify_constraints_internal(context, variable, a);
             Ok(C::Union(union))
         }
-        (b, a @ C::Union(_)) => simplify_constraint_pair(
-            configuration,
-            substitutions,
-            object_type_constraints,
-            variable,
-            b,
-            a,
-        ),
+        (b, a @ C::Union(_)) => simplify_constraint_pair(context, variable, b, a),
 
         (C::OneOf(mut a), C::OneOf(mut b)) => {
             a.append(&mut b);
@@ -201,49 +165,28 @@ fn simplify_constraint_pair(
             let matches: BTreeSet<_> = constraints
                 .clone()
                 .into_iter()
-                .filter_map(|c| {
-                    match simplify_constraint_pair(
-                        configuration,
-                        substitutions,
-                        object_type_constraints,
-                        variable,
-                        c,
-                        b.clone(),
-                    ) {
+                .filter_map(
+                    |c| match simplify_constraint_pair(context, variable, c, b.clone()) {
                         Ok(c) => Some(c),
                         Err(_) => None,
-                    }
-                })
+                    },
+                )
                 .collect();
 
             if matches.len() == 1 {
                 Ok(matches.into_iter().next().unwrap())
-            } else if matches.len() == 0 {
+            } else if matches.is_empty() {
                 // TODO: record type mismatch
                 Err((C::OneOf(constraints), b))
             } else {
                 Ok(C::OneOf(matches))
             }
         }
-        (a, b @ C::OneOf(_)) => simplify_constraint_pair(
-            configuration,
-            substitutions,
-            object_type_constraints,
-            variable,
-            b,
-            a,
-        ),
+        (a, b @ C::OneOf(_)) => simplify_constraint_pair(context, variable, b, a),
 
         (C::Object(a), C::Object(b)) if a == b => Ok(C::Object(a)),
         (C::Object(a), C::Object(b)) => {
-            match merge_object_type_constraints(
-                configuration,
-                substitutions,
-                object_type_constraints,
-                variable,
-                &a,
-                &b,
-            ) {
+            match merge_object_type_constraints(context, variable, &a, &b) {
                 Some(merged_name) => Ok(C::Object(merged_name)),
                 None => Err((C::Object(a), C::Object(b))),
             }
@@ -266,28 +209,19 @@ fn simplify_constraint_pair(
             C::Predicate {
                 object_type_name: b,
             },
-        ) if a == b => {
-            match merge_object_type_constraints(
-                configuration,
-                substitutions,
-                object_type_constraints,
-                variable,
-                &a,
-                &b,
-            ) {
-                Some(merged_name) => Ok(C::Predicate {
-                    object_type_name: merged_name,
-                }),
-                None => Err((
-                    C::Predicate {
-                        object_type_name: a,
-                    },
-                    C::Predicate {
-                        object_type_name: b,
-                    },
-                )),
-            }
-        }
+        ) if a == b => match merge_object_type_constraints(context, variable, &a, &b) {
+            Some(merged_name) => Ok(C::Predicate {
+                object_type_name: merged_name,
+            }),
+            None => Err((
+                C::Predicate {
+                    object_type_name: a,
+                },
+                C::Predicate {
+                    object_type_name: b,
+                },
+            )),
+        },
 
         // TODO: We probably want a separate step that swaps ElementOf and FieldOf constraints with
         // constraint of the targeted structure. We might do a similar thing with
@@ -324,14 +258,7 @@ fn simplify_constraint_pair(
         //     },
         // ) => todo!(),
         (C::ArrayOf(a), C::ArrayOf(b)) => {
-            match simplify_constraint_pair(
-                configuration,
-                substitutions,
-                object_type_constraints,
-                variable,
-                *a,
-                *b,
-            ) {
+            match simplify_constraint_pair(context, variable, *a, *b) {
                 Ok(ab) => Ok(C::ArrayOf(Box::new(ab))),
                 Err((a, b)) => Err((C::ArrayOf(Box::new(a)), C::ArrayOf(Box::new(b)))),
             }
@@ -360,35 +287,28 @@ fn solve_scalar(
 }
 
 fn merge_object_type_constraints(
-    configuration: &Configuration,
-    substitutions: &HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
-    object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+    context: &mut SimplifyContext,
     variable: Option<TypeVariable>,
     name_a: &ObjectTypeName,
     name_b: &ObjectTypeName,
 ) -> Option<ObjectTypeName> {
     // Pick from the two input names according to sort order to get a deterministic outcome.
     let preferred_name = if name_a <= name_b { name_a } else { name_b };
-    let merged_name = unique_type_name(configuration, object_type_constraints, preferred_name);
+    let merged_name = unique_type_name(
+        context.configuration,
+        context.object_type_constraints,
+        preferred_name,
+    );
 
-    let a = look_up_object_type_constraint(configuration, object_type_constraints, name_a);
-    let b = look_up_object_type_constraint(configuration, object_type_constraints, name_b);
+    let a = look_up_object_type_constraint(context, name_a);
+    let b = look_up_object_type_constraint(context, name_b);
 
     let merged_fields_result = try_align(
         a.fields.clone().into_iter().collect(),
         b.fields.clone().into_iter().collect(),
         always_ok(TypeConstraint::make_nullable),
         always_ok(TypeConstraint::make_nullable),
-        |field_a, field_b| {
-            unify_object_field(
-                configuration,
-                substitutions,
-                object_type_constraints,
-                variable,
-                field_a,
-                field_b,
-            )
-        },
+        |field_a, field_b| unify_object_field(context, variable, field_a, field_b),
     );
 
     let fields = match merged_fields_result {
@@ -399,28 +319,20 @@ fn merge_object_type_constraints(
     };
 
     let merged_object_type = ObjectTypeConstraint { fields };
-    object_type_constraints.insert(merged_name.clone(), merged_object_type);
+    context
+        .object_type_constraints
+        .insert(merged_name.clone(), merged_object_type);
 
     Some(merged_name)
 }
 
 fn unify_object_field(
-    configuration: &Configuration,
-    substitutions: &HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
-    object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+    context: &mut SimplifyContext,
     variable: Option<TypeVariable>,
     field_type_a: TypeConstraint,
     field_type_b: TypeConstraint,
 ) -> Result<TypeConstraint, ()> {
-    simplify_constraint_pair(
-        configuration,
-        substitutions,
-        object_type_constraints,
-        variable,
-        field_type_a,
-        field_type_b,
-    )
-    .map_err(|_| ())
+    simplify_constraint_pair(context, variable, field_type_a, field_type_b).map_err(|_| ())
 }
 
 fn always_ok<A, B, E, F>(mut f: F) -> impl FnMut(A) -> Result<B, E>
@@ -431,13 +343,12 @@ where
 }
 
 fn look_up_object_type_constraint(
-    configuration: &Configuration,
-    object_type_constraints: &BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+    context: &SimplifyContext,
     name: &ObjectTypeName,
 ) -> ObjectTypeConstraint {
-    if let Some(object_type) = configuration.object_types.get(name) {
+    if let Some(object_type) = context.configuration.object_types.get(name) {
         object_type.clone().into()
-    } else if let Some(object_type) = object_type_constraints.get(name) {
+    } else if let Some(object_type) = context.object_type_constraints.get(name) {
         object_type.clone()
     } else {
         unreachable!("look_up_object_type_constraint")
@@ -460,99 +371,79 @@ fn unique_type_name(
     type_name
 }
 
-fn expand_field_of<'a>(
-    configuration: &Configuration,
-    substitutions: &HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
-    object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+fn expand_field_of(
+    context: &mut SimplifyContext,
     object_type: TypeConstraint,
     path: NonEmpty<FieldName>,
-) -> Result<Vec<TypeConstraint>, Error> {
+) -> Result<Option<Vec<TypeConstraint>>, Error> {
     let field_type = match object_type {
-        C::ExtendedJSON => vec![C::ExtendedJSON],
-        C::Object(type_name) => get_object_constraint_field_type(
-            configuration,
-            substitutions,
-            object_type_constraints,
-            &type_name,
-            path,
-        )?,
+        C::ExtendedJSON => Some(vec![C::ExtendedJSON]),
+        C::Object(type_name) => get_object_constraint_field_type(context, &type_name, path)?,
         C::Union(constraints) => {
             let variants: BTreeSet<TypeConstraint> = constraints
                 .into_iter()
-                .flat_map(|t| {
-                    let maybe_expanded = expand_field_of(
-                        configuration,
-                        substitutions,
-                        object_type_constraints,
-                        t.clone(),
-                        path.clone(),
-                    );
+                .map(|t| {
+                    let maybe_expanded = expand_field_of(context, t.clone(), path.clone())?;
 
                     // TODO: if variant has more than one element that should be interpreted as an
                     // intersection, which we haven't implemented yet
-                    match maybe_expanded {
-                        Ok(variant) if variant.len() <= 1 => variant,
+                    Ok(match maybe_expanded {
+                        Some(variant) if variant.len() <= 1 => variant,
                         _ => vec![t],
-                    }
+                    })
                 })
-                .collect();
-            vec![(C::Union(variants))]
+                .flatten_ok()
+                .collect::<Result<_, Error>>()?;
+            Some(vec![(C::Union(variants))])
         }
         C::OneOf(constraints) => {
             // The difference between the Union and OneOf cases is that in OneOf we want to prune
             // variants that don't expand, while in Union we want to preserve unexpanded variants.
             let expanded_variants: BTreeSet<TypeConstraint> = constraints
                 .into_iter()
-                .flat_map(|t| {
-                    let maybe_expanded = expand_field_of(
-                        configuration,
-                        substitutions,
-                        object_type_constraints,
-                        t,
-                        path.clone(),
-                    );
+                .map(|t| {
+                    let maybe_expanded = expand_field_of(context, t, path.clone())?;
 
                     // TODO: if variant has more than one element that should be interpreted as an
                     // intersection, which we haven't implemented yet
-                    match maybe_expanded {
-                        Ok(variant) if variant.len() <= 1 => variant,
+                    Ok(match maybe_expanded {
+                        Some(variant) if variant.len() <= 1 => variant,
                         _ => vec![],
-                    }
+                    })
                 })
-                .collect();
+                .flatten_ok()
+                .collect::<Result<_, Error>>()?;
             if expanded_variants.len() == 1 {
-                vec![expanded_variants.into_iter().next().unwrap()]
-            } else if expanded_variants.len() > 0 {
-                vec![C::Union(expanded_variants)]
+                Some(vec![expanded_variants.into_iter().next().unwrap()])
+            } else if !expanded_variants.is_empty() {
+                Some(vec![C::Union(expanded_variants)])
             } else {
                 Err(Error::Other(format!(
                     "no variant matched object field path {path:?}"
                 )))?
             }
         }
-        t => Err(Error::Other(format!("expected object type, but got {t:?}")))?,
+        _ => None,
     };
     Ok(field_type)
 }
 
 fn get_object_constraint_field_type(
-    configuration: &Configuration,
-    substitutions: &HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
-    object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+    context: &mut SimplifyContext,
     object_type_name: &ObjectTypeName,
     path: NonEmpty<FieldName>,
-) -> Result<Vec<TypeConstraint>, Error> {
-    if let Some(object_type) = configuration.object_types.get(object_type_name) {
+) -> Result<Option<Vec<TypeConstraint>>, Error> {
+    if let Some(object_type) = context.configuration.object_types.get(object_type_name) {
         let t = get_object_field_type(
-            &configuration.object_types,
+            &context.configuration.object_types,
             object_type_name,
             object_type,
             path,
         )?;
-        return Ok(vec![t.clone().into()]);
+        return Ok(Some(vec![t.clone().into()]));
     }
 
-    let Some(object_type_constraint) = object_type_constraints.get(object_type_name) else {
+    let Some(object_type_constraint) = context.object_type_constraints.get(object_type_name) else {
         return Err(Error::UnknownObjectType(object_type_name.to_string()));
     };
 
@@ -568,39 +459,20 @@ fn get_object_constraint_field_type(
         })?
         .clone();
 
-    let field_type = simplify_single_constraint(
-        configuration,
-        substitutions,
-        object_type_constraints,
-        None,
-        field_type,
-    );
+    let field_type = simplify_single_constraint(context, None, field_type);
 
     match rest {
-        None => Ok(field_type),
+        None => Ok(Some(field_type)),
         Some(rest) if field_type.len() == 1 => match field_type.into_iter().next().unwrap() {
-            C::Object(type_name) => {
-                let inner_object_type = object_type_constraints
-                    .get(&type_name)
-                    .ok_or_else(|| Error::UnknownObjectType(type_name.to_string()))?;
-                get_object_constraint_field_type(
-                    configuration,
-                    substitutions,
-                    object_type_constraints,
-                    &type_name,
-                    rest,
-                )
-            }
+            C::Object(type_name) => get_object_constraint_field_type(context, &type_name, rest),
             _ => Err(Error::ObjectMissingField {
                 object_type: object_type_name.clone(),
                 field_name: field_name.clone(),
             }),
         },
-        _ if field_type.len() == 0 => Err(Error::Other(
+        _ if field_type.is_empty() => Err(Error::Other(
             "could not resolve object field to a type".to_string(),
         )),
-        _ => Err(Error::Other(
-            "object type is not sufficiently resolved to get field type".to_string(),
-        )), // field_type len > 1
+        _ => Ok(None), // field_type len > 1
     }
 }

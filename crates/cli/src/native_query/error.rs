@@ -98,6 +98,9 @@ pub enum Error {
 
     #[error("{0}")]
     Other(String),
+
+    #[error("Errors processing pipeline:\n\n{}", multiple_errors(.0))]
+    Multiple(Vec<Error>),
 }
 
 fn unable_to_infer_types_message(
@@ -121,4 +124,12 @@ fn unable_to_infer_types_message(
         message += "\n";
     }
     message
+}
+
+fn multiple_errors(errors: &[Error]) -> String {
+    let mut output = String::new();
+    for error in errors {
+        output += &format!("- {}\n", error);
+    }
+    output
 }

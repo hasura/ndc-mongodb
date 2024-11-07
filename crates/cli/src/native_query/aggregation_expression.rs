@@ -9,7 +9,7 @@ use super::pipeline_type_context::PipelineTypeContext;
 
 use super::error::{Error, Result};
 use super::reference_shorthand::{parse_reference_shorthand, Reference};
-use super::type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable, Variance};
+use super::type_constraint::{ObjectTypeConstraint, TypeConstraint, Variance};
 
 use TypeConstraint as C;
 

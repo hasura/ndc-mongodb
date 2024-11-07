@@ -85,6 +85,15 @@ impl PipelineTypeContext<'_> {
             .chain([result_document_type_variable])
             .collect_vec();
 
+        #[cfg(test)]
+        {
+            println!("variable mappings:");
+            for (parameter, variable) in self.parameter_types.iter() {
+                println!("  {variable}: {parameter}");
+            }
+            println!("  {result_document_type_variable}: result type\n");
+        }
+
         let mut object_type_constraints = self.object_types;
         let (variable_types, added_object_types) = unify(
             self.configuration,
@@ -93,34 +102,23 @@ impl PipelineTypeContext<'_> {
             self.type_variables.clone(),
         )
         .map_err(|err| match err {
-            Error::FailedToUnify { unsolved_variables } => {
-                #[cfg(test)]
-                {
-                    println!("variable mappings:");
-                    for (parameter, variable) in self.parameter_types.iter() {
-                        println!("  {variable}: {parameter}");
-                    }
-                    println!("  {result_document_type_variable}: result type\n");
-                }
-
-                Error::UnableToInferTypes {
-                    could_not_infer_return_type: unsolved_variables
-                        .contains(&result_document_type_variable),
-                    problem_parameter_types: self
-                        .parameter_types
-                        .iter()
-                        .filter_map(|(name, variable)| {
-                            if unsolved_variables.contains(variable) {
-                                Some(name.clone())
-                            } else {
-                                None
-                            }
-                        })
-                        .collect(),
-                    type_variables: self.type_variables,
-                    object_type_constraints,
-                }
-            }
+            Error::FailedToUnify { unsolved_variables } => Error::UnableToInferTypes {
+                could_not_infer_return_type: unsolved_variables
+                    .contains(&result_document_type_variable),
+                problem_parameter_types: self
+                    .parameter_types
+                    .iter()
+                    .filter_map(|(name, variable)| {
+                        if unsolved_variables.contains(variable) {
+                            Some(name.clone())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect(),
+                type_variables: self.type_variables,
+                object_type_constraints,
+            },
             e => e,
         })?;
 

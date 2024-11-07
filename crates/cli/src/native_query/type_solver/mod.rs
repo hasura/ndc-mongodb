@@ -55,7 +55,8 @@ pub fn unify(
                 object_type_constraints,
                 Some(*variable),
                 constraints.iter().cloned(),
-            );
+            )
+            .map_err(Error::Multiple)?;
             #[cfg(test)]
             if simplified != *constraints {
                 println!("simplified {variable}: {constraints:?} -> {simplified:?}");
