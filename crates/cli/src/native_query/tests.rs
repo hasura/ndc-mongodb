@@ -192,6 +192,7 @@ fn supports_various_aggregation_operators() -> googletest::Result<()> {
                     { "$eq": ["{{ title }}", "$title"] },
                     { "$or": [null, 1] },
                     { "$not": "{{ bool_param }}" },
+                    { "$gt": ["$imdb.votes", "{{ votes }}"] },
                 ]
             }
         }),
@@ -214,6 +215,7 @@ fn supports_various_aggregation_operators() -> googletest::Result<()> {
         object_fields([
             ("title", Type::Scalar(BsonScalarType::String)),
             ("bool_param", Type::Scalar(BsonScalarType::Bool)),
+            ("votes", Type::Scalar(BsonScalarType::Int)),
             ("rating_inc", Type::Scalar(BsonScalarType::Double)),
             ("rating_div", Type::Scalar(BsonScalarType::Double)),
             ("rating_mult", Type::Scalar(BsonScalarType::Double)),

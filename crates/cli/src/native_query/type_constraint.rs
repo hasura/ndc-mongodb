@@ -158,12 +158,20 @@ impl TypeConstraint {
         }
     }
 
-    pub fn numeric() -> TypeConstraint {
-        let numeric_types = enum_iterator::all::<BsonScalarType>()
-            .filter(|t| BsonScalarType::is_numeric(*t))
+    fn scalar_one_of_by_predicate(f: impl Fn(BsonScalarType) -> bool) -> TypeConstraint {
+        let matching_types = enum_iterator::all::<BsonScalarType>()
+            .filter(|t| f(*t))
             .map(TypeConstraint::Scalar)
             .collect();
-        TypeConstraint::OneOf(numeric_types)
+        TypeConstraint::OneOf(matching_types)
+    }
+
+    pub fn comparable() -> TypeConstraint {
+        Self::scalar_one_of_by_predicate(BsonScalarType::is_comparable)
+    }
+
+    pub fn numeric() -> TypeConstraint {
+        Self::scalar_one_of_by_predicate(BsonScalarType::is_numeric)
     }
 
     pub fn is_numeric(&self) -> bool {

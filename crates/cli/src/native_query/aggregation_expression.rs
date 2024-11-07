@@ -179,11 +179,21 @@ fn infer_type_from_operator_expression(
             )?;
             C::Scalar(BsonScalarType::Bool)
         }
-        "$eq" => {
+        "$eq" | "$ne" => {
             homogeneous_binary_operator_operand_type(
                 context,
                 desired_object_type_name,
                 None,
+                operator,
+                operand,
+            )?;
+            C::Scalar(BsonScalarType::Bool)
+        }
+        "$gt" | "$gte" | "$lt" | "$lte" => {
+            homogeneous_binary_operator_operand_type(
+                context,
+                desired_object_type_name,
+                Some(C::comparable()),
                 operator,
                 operand,
             )?;
