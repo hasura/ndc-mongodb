@@ -25,6 +25,23 @@ pub fn mflix_config() -> Configuration {
                     ("credits", named_type("credits")),
                     ("title", named_type("String")),
                     ("year", named_type("Int")),
+                    ("tomatoes", named_type("Tomatoes")),
+                ]),
+            ),
+            (
+                "Tomatoes".into(),
+                object_type([
+                    ("critic", named_type("TomatoesCriticViewer")),
+                    ("viewer", named_type("TomatoesCriticViewer")),
+                    ("lastUpdated", named_type("Date")),
+                ]),
+            ),
+            (
+                "TomatoesCriticViewer".into(),
+                object_type([
+                    ("rating", named_type("Double")),
+                    ("numReviews", named_type("Int")),
+                    ("meter", named_type("Int")),
                 ]),
             ),
         ]

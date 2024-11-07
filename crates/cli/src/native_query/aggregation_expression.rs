@@ -162,15 +162,13 @@ fn infer_type_from_operator_expression(
                 operand,
             )?)
         }
-        "$add" => {
-            let operand_types = infer_types_from_aggregation_expression_tuple(
-                context,
-                desired_object_type_name,
-                Some(&C::numeric()),
-                operand,
-            )?;
-            operand_types.into_iter().next().unwrap()
-        }
+        "$add" => homogeneous_binary_operator_operand_type(
+            context,
+            desired_object_type_name,
+            Some(C::numeric()),
+            operator,
+            operand,
+        )?,
         // "$addToSet" => todo!(),
         "$allElementsTrue" => {
             infer_type_from_aggregation_expression(
@@ -200,7 +198,7 @@ fn infer_type_from_operator_expression(
             C::Scalar(BsonScalarType::Bool)
         }
         "$arrayElemAt" => {
-            let (array_ref, idx) = two_paramater_operand(operator, operand)?;
+            let (array_ref, idx) = two_parameter_operand(operator, operand)?;
             let array_type = infer_type_from_aggregation_expression(
                 context,
                 &format!("{desired_object_type_name}_arrayElemAt_array"),
@@ -217,35 +215,14 @@ fn infer_type_from_operator_expression(
                 .cloned()
                 .unwrap_or_else(|| C::ElementOf(Box::new(array_type)))
         }
-        // "$arrayToObject" => todo!(),
-        "$asin" => type_for_trig_operator(infer_type_from_aggregation_expression(
-            context,
-            desired_object_type_name,
-            Some(&C::numeric()),
-            operand,
-        )?),
         "$eq" => {
-            let (a, b) = two_paramater_operand(operator, operand)?;
-            let variable = context.new_type_variable(Variance::Covariant, []);
-            let type_a = infer_type_from_aggregation_expression(
+            homogeneous_binary_operator_operand_type(
                 context,
                 desired_object_type_name,
-                Some(&C::Variable(variable)),
-                a,
+                None,
+                operator,
+                operand,
             )?;
-            let type_b = infer_type_from_aggregation_expression(
-                context,
-                desired_object_type_name,
-                Some(&C::Variable(variable)),
-                b,
-            )?;
-            // Avoid cycles of type variable references
-            if !context.constraint_references_variable(&type_a, variable) {
-                context.set_type_variable_constraint(variable, type_a);
-            }
-            if !context.constraint_references_variable(&type_b, variable) {
-                context.set_type_variable_constraint(variable, type_b);
-            }
             C::Scalar(BsonScalarType::Bool)
         }
         "$split" => {
@@ -262,7 +239,7 @@ fn infer_type_from_operator_expression(
     Ok(t)
 }
 
-fn two_paramater_operand(operator: &str, operand: Bson) -> Result<(Bson, Bson)> {
+fn two_parameter_operand(operator: &str, operand: Bson) -> Result<(Bson, Bson)> {
     match operand {
         Bson::Array(operands) => {
             if operands.len() != 2 {
@@ -279,6 +256,37 @@ fn two_paramater_operand(operator: &str, operand: Bson) -> Result<(Bson, Bson)> 
             actual_argument: other_bson,
         })?,
     }
+}
+
+fn homogeneous_binary_operator_operand_type(
+    context: &mut PipelineTypeContext<'_>,
+    desired_object_type_name: &str,
+    operand_type_hint: Option<TypeConstraint>,
+    operator: &str,
+    operand: Bson,
+) -> Result<TypeConstraint> {
+    let (a, b) = two_parameter_operand(operator, operand)?;
+    let variable = context.new_type_variable(Variance::Covariant, operand_type_hint);
+    let type_a = infer_type_from_aggregation_expression(
+        context,
+        desired_object_type_name,
+        Some(&C::Variable(variable)),
+        a,
+    )?;
+    let type_b = infer_type_from_aggregation_expression(
+        context,
+        desired_object_type_name,
+        Some(&C::Variable(variable)),
+        b,
+    )?;
+    // Avoid cycles of type variable references
+    if !context.constraint_references_variable(&type_a, variable) {
+        context.set_type_variable_constraint(variable, type_a);
+    }
+    if !context.constraint_references_variable(&type_b, variable) {
+        context.set_type_variable_constraint(variable, type_b);
+    }
+    Ok(C::Variable(variable))
 }
 
 pub fn type_for_trig_operator(operand_type: TypeConstraint) -> TypeConstraint {

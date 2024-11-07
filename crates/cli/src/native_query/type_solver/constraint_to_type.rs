@@ -102,13 +102,15 @@ pub fn constraint_to_type(
             .map(|t| Type::Nullable(Box::new(t)))
         }
 
-        t @ C::Union(_) if t.is_numeric() => {
+        C::Union(_) => Some(Type::ExtendedJSON),
+
+        t @ C::OneOf(_) if t.is_numeric() => {
             // We know it's a number, but we don't know exactly which numeric type. Double should
             // be good enough for anybody, right?
             Some(Type::Scalar(mongodb_support::BsonScalarType::Double))
         }
 
-        C::Union(_) => Some(Type::ExtendedJSON),
+        C::OneOf(_) => Some(Type::ExtendedJSON),
 
         C::WithFieldOverrides {
             augmented_object_type_name,

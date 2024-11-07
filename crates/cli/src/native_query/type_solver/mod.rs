@@ -53,7 +53,7 @@ pub fn unify(
                 configuration,
                 &substitutions,
                 object_type_constraints,
-                *variable,
+                Some(*variable),
                 constraints.iter().cloned(),
             );
             #[cfg(test)]
@@ -128,7 +128,6 @@ fn type_variables_by_complexity(
 mod tests {
     use anyhow::Result;
     use configuration::schema::{ObjectField, ObjectType, Type};
-    use googletest::prelude::*;
     use mongodb_support::BsonScalarType;
     use nonempty::nonempty;
     use pretty_assertions::assert_eq;
@@ -139,8 +138,6 @@ mod tests {
     };
 
     use super::unify;
-
-    use TypeConstraint as C;
 
     #[test]
     fn solves_object_type() -> Result<()> {

@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use anyhow::Result;
 use configuration::{
     native_query::NativeQueryRepresentation::Collection,
@@ -177,6 +179,72 @@ fn infers_parameter_type_from_binary_comparison() -> googletest::Result<()> {
         )]
     );
     Ok(())
+}
+
+#[googletest::test]
+fn supports_various_aggregation_operators() -> googletest::Result<()> {
+    let config = mflix_config();
+
+    let pipeline = Pipeline::new(vec![
+        Stage::Match(doc! {
+            "$expr": {
+                "$eq": ["{{ title }}", "$title"],
+            }
+        }),
+        Stage::ReplaceWith(Selection::new(doc! {
+            "abs": { "$abs": "$year" },
+            "add": { "$add": ["$tomatoes.viewer.rating", "{{ rating_inc }}"] },
+            "title_words": { "$split": ["$title", " "] }
+        })),
+    ]);
+
+    let native_query =
+        native_query_from_pipeline(&config, "operators_test", Some("movies".into()), pipeline)?;
+
+    expect_eq!(
+        native_query.arguments,
+        object_fields([
+            ("title", Type::Scalar(BsonScalarType::String)),
+            ("rating_inc", Type::Scalar(BsonScalarType::Double)),
+        ])
+    );
+
+    let result_type = native_query.result_document_type;
+    expect_eq!(
+        native_query.object_types[&result_type],
+        ObjectType {
+            fields: object_fields([
+                ("abs", Type::Scalar(BsonScalarType::Int)),
+                ("add", Type::Scalar(BsonScalarType::Double)),
+                (
+                    "title_words",
+                    Type::ArrayOf(Box::new(Type::Scalar(BsonScalarType::String)))
+                ),
+            ]),
+            description: None,
+        }
+    );
+
+    Ok(())
+}
+
+fn object_fields<S, K>(types: impl IntoIterator<Item = (S, Type)>) -> BTreeMap<K, ObjectField>
+where
+    S: Into<K>,
+    K: Ord,
+{
+    types
+        .into_iter()
+        .map(|(name, r#type)| {
+            (
+                name.into(),
+                ObjectField {
+                    r#type,
+                    description: None,
+                },
+            )
+        })
+        .collect()
 }
 
 async fn read_configuration() -> Result<Configuration> {

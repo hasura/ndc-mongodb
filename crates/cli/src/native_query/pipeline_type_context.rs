@@ -208,6 +208,9 @@ impl PipelineTypeContext<'_> {
             TypeConstraint::Union(ts) => ts
                 .iter()
                 .any(|t| self.constraint_references_variable(t, variable)),
+            TypeConstraint::OneOf(ts) => ts
+                .iter()
+                .any(|t| self.constraint_references_variable(t, variable)),
             TypeConstraint::Variable(v2) if *v2 == variable => true,
             TypeConstraint::Variable(v2) => {
                 let constraints = self.type_variables.get(v2);

@@ -49,7 +49,7 @@ Bitwise Operators
 
 Boolean Expression Operators
 
-- [ ] $and - Returns true only when all its expressions evaluate to true. Accepts any number of argument expressions.
+- [x] $and - Returns true only when all its expressions evaluate to true. Accepts any number of argument expressions.
 - [ ] $not - Returns the boolean value that is the opposite of its argument expression. Accepts a single argument expression.
 - [ ] $or - Returns true when any of its expressions evaluates to true. Accepts any number of argument expressions.
 
@@ -150,7 +150,7 @@ String Expression Operators
 - [ ] $replaceOne - Replaces the first instance of a matched string in a given input.
 - [ ] $replaceAll - Replaces all instances of a matched string in a given input.
 - [ ] $rtrim - Removes whitespace or the specified characters from the end of a string.
-- [ ] $split - Splits a string into substrings based on a delimiter. Returns an array of substrings. If the delimiter is not found within the string, returns an array containing the original string.
+- [x] $split - Splits a string into substrings based on a delimiter. Returns an array of substrings. If the delimiter is not found within the string, returns an array containing the original string.
 - [ ] $strLenBytes - Returns the number of UTF-8 encoded bytes in a string.
 - [ ] $strLenCP - Returns the number of UTF-8 code points in a string.
 - [ ] $strcasecmp - Performs case-insensitive string comparison and returns: 0 if two strings are equivalent, 1 if the first string is greater than the second, and -1 if the first string is less than the second.

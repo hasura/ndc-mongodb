@@ -16,6 +16,14 @@ impl TypeVariable {
     pub fn new(id: u32, variance: Variance) -> Self {
         TypeVariable { id, variance }
     }
+
+    pub fn is_covariant(self) -> bool {
+        matches!(self.variance, Variance::Covariant)
+    }
+
+    pub fn is_contravariant(self) -> bool {
+        matches!(self.variance, Variance::Contravariant)
+    }
 }
 
 impl std::fmt::Display for TypeVariable {
@@ -45,6 +53,7 @@ pub enum TypeConstraint {
 
     // Complex types
     Union(BTreeSet<TypeConstraint>),
+    OneOf(BTreeSet<TypeConstraint>), // unlike union type should be only one of these, but we don't know which one
 
     /// Indicates a type that is the same as the type of the given variable.
     Variable(TypeVariable),
@@ -79,6 +88,12 @@ impl TypeConstraint {
             TypeConstraint::Predicate { .. } => 1,
             TypeConstraint::ArrayOf(constraint) => 1 + constraint.complexity(),
             TypeConstraint::Union(constraints) => {
+                1 + constraints
+                    .iter()
+                    .map(TypeConstraint::complexity)
+                    .sum::<usize>()
+            }
+            TypeConstraint::OneOf(constraints) => {
                 1 + constraints
                     .iter()
                     .map(TypeConstraint::complexity)
@@ -148,12 +163,13 @@ impl TypeConstraint {
             .filter(|t| BsonScalarType::is_numeric(*t))
             .map(TypeConstraint::Scalar)
             .collect();
-        TypeConstraint::Union(numeric_types)
+        TypeConstraint::OneOf(numeric_types)
     }
 
     pub fn is_numeric(&self) -> bool {
         match self {
             TypeConstraint::Scalar(scalar_type) => BsonScalarType::is_numeric(*scalar_type),
+            TypeConstraint::OneOf(types) => types.iter().all(|t| t.is_numeric()),
             TypeConstraint::Union(types) => types.iter().all(|t| t.is_numeric()),
             _ => false,
         }
