@@ -118,7 +118,7 @@ fn simplify_constraint_pair(
     a: TypeConstraint,
     b: TypeConstraint,
 ) -> Simplified<TypeConstraint> {
-    let variance = variable.map(|v| v.variance).unwrap_or(Variance::Covariant);
+    let variance = variable.map(|v| v.variance).unwrap_or(Variance::Invariant);
     match (a, b) {
         (a, b) if a == b => Ok(a),
 
@@ -273,16 +273,24 @@ fn solve_scalar(
     a: BsonScalarType,
     b: BsonScalarType,
 ) -> Simplified<TypeConstraint> {
-    if variance == Variance::Contravariant {
-        return solve_scalar(Variance::Covariant, b, a);
-    }
-
-    if a == b || is_supertype(&a, &b) {
-        Ok(C::Scalar(a))
-    } else if is_supertype(&b, &a) {
-        Ok(C::Scalar(b))
-    } else {
-        Err((C::Scalar(a), C::Scalar(b)))
+    match variance {
+        Variance::Covariant => {
+            if a == b || is_supertype(&a, &b) {
+                Ok(C::Scalar(a))
+            } else if is_supertype(&b, &a) {
+                Ok(C::Scalar(b))
+            } else {
+                Err((C::Scalar(a), C::Scalar(b)))
+            }
+        }
+        Variance::Contravariant => solve_scalar(Variance::Covariant, b, a),
+        Variance::Invariant => {
+            if a == b {
+                Ok(C::Scalar(a))
+            } else {
+                Err((C::Scalar(a), C::Scalar(b)))
+            }
+        }
     }
 }
 

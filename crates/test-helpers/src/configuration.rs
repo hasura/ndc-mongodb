@@ -24,9 +24,18 @@ pub fn mflix_config() -> Configuration {
                     ("_id", named_type("ObjectId")),
                     ("credits", named_type("credits")),
                     ("genres", array_of(named_type("String"))),
+                    ("imdb", named_type("Imdb")),
                     ("title", named_type("String")),
                     ("year", named_type("Int")),
                     ("tomatoes", named_type("Tomatoes")),
+                ]),
+            ),
+            (
+                "Imdb".into(),
+                object_type([
+                    ("rating", named_type("Double")),
+                    ("votes", named_type("Int")),
+                    ("id", named_type("Int")),
                 ]),
             ),
             (

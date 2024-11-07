@@ -277,7 +277,7 @@ fn homogeneous_binary_operator_operand_type(
     operand: Bson,
 ) -> Result<TypeConstraint> {
     let (a, b) = two_parameter_operand(operator, operand)?;
-    let variable = context.new_type_variable(Variance::Covariant, operand_type_hint);
+    let variable = context.new_type_variable(Variance::Invariant, operand_type_hint);
     let type_a = infer_type_from_aggregation_expression(
         context,
         desired_object_type_name,
@@ -378,7 +378,7 @@ mod tests {
 
     use crate::native_query::{
         pipeline_type_context::PipelineTypeContext,
-        type_constraint::{TypeConstraint, TypeVariable},
+        type_constraint::{TypeConstraint, TypeVariable, Variance},
     };
 
     use super::infer_type_from_operator_expression;
@@ -391,11 +391,8 @@ mod tests {
         let mut context = PipelineTypeContext::new(&config, None);
 
         let (var0, var1) = (
-            TypeVariable::new(0, crate::native_query::type_constraint::Variance::Covariant),
-            TypeVariable::new(
-                1,
-                crate::native_query::type_constraint::Variance::Contravariant,
-            ),
+            TypeVariable::new(0, Variance::Invariant),
+            TypeVariable::new(1, Variance::Contravariant),
         );
 
         infer_type_from_operator_expression(

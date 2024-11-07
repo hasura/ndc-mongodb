@@ -36,6 +36,7 @@ impl std::fmt::Display for TypeVariable {
 pub enum Variance {
     Covariant,
     Contravariant,
+    Invariant,
 }
 
 /// A TypeConstraint is almost identical to a [configuration::schema::Type], except that
