@@ -9,7 +9,7 @@ use super::pipeline_type_context::PipelineTypeContext;
 
 use super::error::{Error, Result};
 use super::reference_shorthand::{parse_reference_shorthand, Reference};
-use super::type_constraint::{ObjectTypeConstraint, TypeConstraint, Variance};
+use super::type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable, Variance};
 
 use TypeConstraint as C;
 
@@ -69,15 +69,7 @@ pub fn infer_types_from_aggregation_expression_tuple(
                 )
             })
             .collect::<Result<Vec<_>>>()?,
-        expr => {
-            let t = infer_type_from_aggregation_expression(
-                context,
-                desired_object_type_name,
-                None,
-                expr,
-            )?;
-            vec![t]
-        }
+        expr => Err(Error::Other(format!("expected array, but got {expr}")))?,
     };
     Ok(tuple)
 }
@@ -169,21 +161,39 @@ fn infer_type_from_operator_expression(
             operator,
             operand,
         )?,
-        // "$addToSet" => todo!(),
+        "$and" | "$or" => {
+            infer_types_from_aggregation_expression_tuple(
+                context,
+                desired_object_type_name,
+                None,
+                operand,
+            )?;
+            C::Scalar(BsonScalarType::Bool)
+        }
+        "$not" => {
+            infer_type_from_aggregation_expression(
+                context,
+                desired_object_type_name,
+                Some(&C::Scalar(BsonScalarType::Bool)),
+                operand,
+            )?;
+            C::Scalar(BsonScalarType::Bool)
+        }
+        "$eq" => {
+            homogeneous_binary_operator_operand_type(
+                context,
+                desired_object_type_name,
+                None,
+                operator,
+                operand,
+            )?;
+            C::Scalar(BsonScalarType::Bool)
+        }
         "$allElementsTrue" => {
             infer_type_from_aggregation_expression(
                 context,
                 desired_object_type_name,
                 Some(&C::ArrayOf(Box::new(C::Scalar(BsonScalarType::Bool)))),
-                operand,
-            )?;
-            C::Scalar(BsonScalarType::Bool)
-        }
-        "$and" => {
-            infer_type_from_aggregation_expression(
-                context,
-                desired_object_type_name,
-                None,
                 operand,
             )?;
             C::Scalar(BsonScalarType::Bool)
@@ -215,16 +225,6 @@ fn infer_type_from_operator_expression(
                 .cloned()
                 .unwrap_or_else(|| C::ElementOf(Box::new(array_type)))
                 .make_nullable()
-        }
-        "$eq" => {
-            homogeneous_binary_operator_operand_type(
-                context,
-                desired_object_type_name,
-                None,
-                operator,
-                operand,
-            )?;
-            C::Scalar(BsonScalarType::Bool)
         }
         "$split" => {
             infer_types_from_aggregation_expression_tuple(
@@ -280,12 +280,11 @@ fn homogeneous_binary_operator_operand_type(
         Some(&C::Variable(variable)),
         b,
     )?;
-    // Avoid cycles of type variable references
-    if !context.constraint_references_variable(&type_a, variable) {
-        context.set_type_variable_constraint(variable, type_a);
-    }
-    if !context.constraint_references_variable(&type_b, variable) {
-        context.set_type_variable_constraint(variable, type_b);
+    for t in [type_a, type_b] {
+        // Avoid cycles of type variable references
+        if !context.constraint_references_variable(&t, variable) {
+            context.set_type_variable_constraint(variable, t);
+        }
     }
     Ok(C::Variable(variable))
 }

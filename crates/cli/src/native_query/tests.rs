@@ -188,7 +188,11 @@ fn supports_various_aggregation_operators() -> googletest::Result<()> {
     let pipeline = Pipeline::new(vec![
         Stage::Match(doc! {
             "$expr": {
-                "$eq": ["{{ title }}", "$title"],
+                "$and": [
+                    { "$eq": ["{{ title }}", "$title"] },
+                    { "$or": [null, 1] },
+                    { "$not": "{{ bool_param }}" },
+                ]
             }
         }),
         Stage::ReplaceWith(Selection::new(doc! {
@@ -209,6 +213,7 @@ fn supports_various_aggregation_operators() -> googletest::Result<()> {
         native_query.arguments,
         object_fields([
             ("title", Type::Scalar(BsonScalarType::String)),
+            ("bool_param", Type::Scalar(BsonScalarType::Bool)),
             ("rating_inc", Type::Scalar(BsonScalarType::Double)),
             ("rating_div", Type::Scalar(BsonScalarType::Double)),
             ("rating_mult", Type::Scalar(BsonScalarType::Double)),
