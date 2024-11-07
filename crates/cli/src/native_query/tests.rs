@@ -194,6 +194,10 @@ fn supports_various_aggregation_operators() -> googletest::Result<()> {
         Stage::ReplaceWith(Selection::new(doc! {
             "abs": { "$abs": "$year" },
             "add": { "$add": ["$tomatoes.viewer.rating", "{{ rating_inc }}"] },
+            "divide": { "$divide": ["$tomatoes.viewer.rating", "{{ rating_div }}"] },
+            "multiply": { "$multiply": ["$tomatoes.viewer.rating", "{{ rating_mult }}"] },
+            "subtract": { "$subtract": ["$tomatoes.viewer.rating", "{{ rating_sub }}"] },
+            "arrayElemAt": { "$arrayElemAt": ["$genres", "{{ idx }}"] },
             "title_words": { "$split": ["$title", " "] }
         })),
     ]);
@@ -206,6 +210,10 @@ fn supports_various_aggregation_operators() -> googletest::Result<()> {
         object_fields([
             ("title", Type::Scalar(BsonScalarType::String)),
             ("rating_inc", Type::Scalar(BsonScalarType::Double)),
+            ("rating_div", Type::Scalar(BsonScalarType::Double)),
+            ("rating_mult", Type::Scalar(BsonScalarType::Double)),
+            ("rating_sub", Type::Scalar(BsonScalarType::Double)),
+            ("idx", Type::Scalar(BsonScalarType::Int)),
         ])
     );
 
@@ -216,6 +224,13 @@ fn supports_various_aggregation_operators() -> googletest::Result<()> {
             fields: object_fields([
                 ("abs", Type::Scalar(BsonScalarType::Int)),
                 ("add", Type::Scalar(BsonScalarType::Double)),
+                ("divide", Type::Scalar(BsonScalarType::Double)),
+                ("multiply", Type::Scalar(BsonScalarType::Double)),
+                ("subtract", Type::Scalar(BsonScalarType::Double)),
+                (
+                    "arrayElemAt",
+                    Type::Nullable(Box::new(Type::Scalar(BsonScalarType::String)))
+                ),
                 (
                     "title_words",
                     Type::ArrayOf(Box::new(Type::Scalar(BsonScalarType::String)))

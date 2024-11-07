@@ -162,7 +162,7 @@ fn infer_type_from_operator_expression(
                 operand,
             )?)
         }
-        "$add" => homogeneous_binary_operator_operand_type(
+        "$add" | "$divide" | "$multiply" | "$subtract" => homogeneous_binary_operator_operand_type(
             context,
             desired_object_type_name,
             Some(C::numeric()),
@@ -214,6 +214,7 @@ fn infer_type_from_operator_expression(
             type_hint
                 .cloned()
                 .unwrap_or_else(|| C::ElementOf(Box::new(array_type)))
+                .make_nullable()
         }
         "$eq" => {
             homogeneous_binary_operator_operand_type(

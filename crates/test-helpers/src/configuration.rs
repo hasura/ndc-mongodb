@@ -1,5 +1,5 @@
 use configuration::Configuration;
-use ndc_test_helpers::{collection, named_type, object_type};
+use ndc_test_helpers::{array_of, collection, named_type, object_type};
 
 /// Configuration for a MongoDB database that resembles MongoDB's sample_mflix test data set.
 pub fn mflix_config() -> Configuration {
@@ -23,6 +23,7 @@ pub fn mflix_config() -> Configuration {
                 object_type([
                     ("_id", named_type("ObjectId")),
                     ("credits", named_type("credits")),
+                    ("genres", array_of(named_type("String"))),
                     ("title", named_type("String")),
                     ("year", named_type("Int")),
                     ("tomatoes", named_type("Tomatoes")),
