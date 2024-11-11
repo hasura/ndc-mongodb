@@ -193,7 +193,6 @@ fn supports_various_query_predicate_operators() -> googletest::Result<()> {
         "num_mflix_comments": { "$in": "{{ num_comments_options }}" },
         "$not": { "runtime": { "$lt": "{{ runtime }}" } },
         "tomatoes.critic": { "$exists": "{{ critic_exists }}" },
-        "lastUpdated": { "$type": "date" },
         "released": { "$type": ["date", "{{ other_type }}"] },
         "$or": [
             { "$and": [

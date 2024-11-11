@@ -162,18 +162,13 @@ fn analyze_match_operator(
             &TypeConstraint::Scalar(BsonScalarType::Bool),
             match_expression,
         )?,
+        // In MongoDB $type accepts either a number, a string, an array of numbers, or an array of
+        // strings - for simplicity we're only accepting an array of strings since this form can
+        // express all comparisons that can be expressed with the other forms.
         "$type" => analyze_match_expression(
             context,
             desired_object_type_name,
-            &TypeConstraint::OneOf(
-                [
-                    TypeConstraint::Scalar(BsonScalarType::String),
-                    TypeConstraint::ArrayOf(Box::new(TypeConstraint::Scalar(
-                        BsonScalarType::String,
-                    ))),
-                ]
-                .into(),
-            ),
+            &TypeConstraint::ArrayOf(Box::new(TypeConstraint::Scalar(BsonScalarType::String))),
             match_expression,
         )?,
         "$mod" => match match_expression {

@@ -29,6 +29,7 @@ pub fn mflix_config() -> Configuration {
                     ("num_mflix_comments", named_type("Int")),
                     ("rated", named_type("String")),
                     ("released", named_type("Date")),
+                    ("runtime", named_type("Int")),
                     ("title", named_type("String")),
                     ("writers", array_of(named_type("String"))),
                     ("year", named_type("Int")),
