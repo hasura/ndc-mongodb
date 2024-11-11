@@ -113,6 +113,36 @@ fn analyze_match_operator(
                 )))?;
             }
         }
+        "$not" => {
+            match match_expression {
+                Bson::Document(match_doc) => check_match_doc_for_parameters_helper(
+                    context,
+                    desired_object_type_name,
+                    field_type,
+                    match_doc,
+                )?,
+                _ => Err(Error::Other(format!(
+                    "{operator} operator requires a document",
+                )))?,
+            };
+        }
+        "$elemMatch" => {
+            let element_type = field_type.clone().map_nullable(|ft| match ft {
+                TypeConstraint::ArrayOf(t) => *t,
+                other => TypeConstraint::ElementOf(Box::new(other)),
+            });
+            match match_expression {
+                Bson::Document(match_doc) => check_match_doc_for_parameters_helper(
+                    context,
+                    desired_object_type_name,
+                    &element_type,
+                    match_doc,
+                )?,
+                _ => Err(Error::Other(format!(
+                    "{operator} operator requires a document",
+                )))?,
+            };
+        }
         "$eq" | "$ne" | "$gt" | "$lt" | "$gte" | "$lte" => analyze_match_expression(
             context,
             desired_object_type_name,
@@ -187,23 +217,12 @@ fn analyze_match_operator(
                 match_expression,
             )?;
         }
-        "$elemMatch" => {
-            let element_type = field_type.clone().map_nullable(|ft| match ft {
-                TypeConstraint::ArrayOf(t) => *t,
-                other => TypeConstraint::ElementOf(Box::new(other)),
-            });
-            match match_expression {
-                Bson::Document(match_doc) => check_match_doc_for_parameters_helper(
-                    context,
-                    desired_object_type_name,
-                    &element_type,
-                    match_doc,
-                )?,
-                _ => Err(Error::Other(format!(
-                    "{operator} operator requires a document",
-                )))?,
-            };
-        }
+        "$size" => analyze_match_expression(
+            context,
+            desired_object_type_name,
+            &TypeConstraint::Scalar(BsonScalarType::Int),
+            match_expression,
+        )?,
         _ => Err(Error::UnknownMatchDocumentOperator(operator))?,
     }
     Ok(())
