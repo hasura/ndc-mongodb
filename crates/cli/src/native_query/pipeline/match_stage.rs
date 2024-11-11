@@ -1,6 +1,6 @@
 use mongodb::bson::{Bson, Document};
 use mongodb_support::BsonScalarType;
-use nonempty::nonempty;
+use nonempty::NonEmpty;
 
 use crate::native_query::{
     aggregation_expression::infer_type_from_aggregation_expression,
@@ -72,7 +72,8 @@ fn analyze_input_doc_field(
 ) -> Result<()> {
     let field_type = TypeConstraint::FieldOf {
         target_type: Box::new(input_document_type.clone()),
-        path: nonempty![field_name.into()],
+        path: NonEmpty::from_vec(field_name.split(".").map(Into::into).collect())
+            .ok_or_else(|| Error::Other("object field reference is an empty string".to_string()))?,
     };
     analyze_match_expression(
         context,
