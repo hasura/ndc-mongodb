@@ -110,7 +110,10 @@ fn infer_stage_output_type(
         }
         Stage::Facet(_) => todo!("facet stage"),
         Stage::Count(_) => todo!("count stage"),
-        Stage::ReplaceWith(selection) => {
+        Stage::ReplaceRoot {
+            new_root: selection,
+        }
+        | Stage::ReplaceWith(selection) => {
             let selection: &Document = selection.into();
             Some(
                 aggregation_expression::infer_type_from_aggregation_expression(
