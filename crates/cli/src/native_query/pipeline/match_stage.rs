@@ -41,168 +41,170 @@ fn check_match_doc_for_parameters_helper(
     input_document_type: &TypeConstraint,
     match_doc: Document,
 ) -> Result<()> {
-    if match_doc.keys().any(|key| key.starts_with("$")) {
-        analyze_document_with_match_operators(
-            context,
-            desired_object_type_name,
-            input_document_type,
-            match_doc,
-        )
-    } else {
-        analyze_document_with_field_name_keys(
-            context,
-            desired_object_type_name,
-            input_document_type,
-            match_doc,
-        )
-    }
-}
-
-fn analyze_document_with_field_name_keys(
-    context: &mut PipelineTypeContext<'_>,
-    desired_object_type_name: &str,
-    input_document_type: &TypeConstraint,
-    match_doc: Document,
-) -> Result<()> {
-    for (field_name, match_expression) in match_doc {
-        let field_type = TypeConstraint::FieldOf {
-            target_type: Box::new(input_document_type.clone()),
-            path: nonempty![field_name.into()],
-        };
-        analyze_match_expression(
-            context,
-            desired_object_type_name,
-            &field_type,
-            match_expression,
-        )?;
+    for (key, value) in match_doc {
+        if key.starts_with("$") {
+            analyze_match_operator(
+                context,
+                desired_object_type_name,
+                input_document_type,
+                key,
+                value,
+            )?;
+        } else {
+            analyze_input_doc_field(
+                context,
+                desired_object_type_name,
+                input_document_type,
+                key,
+                value,
+            )?;
+        }
     }
     Ok(())
 }
 
-fn analyze_document_with_match_operators(
+fn analyze_input_doc_field(
+    context: &mut PipelineTypeContext<'_>,
+    desired_object_type_name: &str,
+    input_document_type: &TypeConstraint,
+    field_name: String,
+    match_expression: Bson,
+) -> Result<()> {
+    let field_type = TypeConstraint::FieldOf {
+        target_type: Box::new(input_document_type.clone()),
+        path: nonempty![field_name.into()],
+    };
+    analyze_match_expression(
+        context,
+        desired_object_type_name,
+        &field_type,
+        match_expression,
+    )
+}
+
+fn analyze_match_operator(
     context: &mut PipelineTypeContext<'_>,
     desired_object_type_name: &str,
     field_type: &TypeConstraint,
-    match_doc: Document,
+    operator: String,
+    match_expression: Bson,
 ) -> Result<()> {
-    for (operator, match_expression) in match_doc {
-        match operator.as_ref() {
-            "$and" | "$or" | "$nor" => {
-                if let Bson::Array(array) = match_expression {
-                    for expression in array {
-                        check_match_doc_for_parameters_helper(
-                            context,
-                            desired_object_type_name,
-                            field_type,
-                            expression
-                                .as_document()
-                                .ok_or_else(|| {
-                                    Error::Other(format!(
-                                        "expected argument to {operator} to be an array of objects"
-                                    ))
-                                })?
-                                .clone(),
-                        )?;
-                    }
-                } else {
-                    Err(Error::Other(format!(
-                        "expected argument to {operator} to be an array of objects"
-                    )))?;
-                }
-            }
-            "$eq" | "$ne" | "$gt" | "$lt" | "$gte" | "$lte" => analyze_match_expression(
-                context,
-                desired_object_type_name,
-                field_type,
-                match_expression,
-            )?,
-            "$in" | "$nin" => analyze_match_expression(
-                context,
-                desired_object_type_name,
-                &TypeConstraint::ArrayOf(Box::new(field_type.clone())),
-                match_expression,
-            )?,
-            "$exists" => analyze_match_expression(
-                context,
-                desired_object_type_name,
-                &TypeConstraint::Scalar(BsonScalarType::Bool),
-                match_expression,
-            )?,
-            "$type" => analyze_match_expression(
-                context,
-                desired_object_type_name,
-                &TypeConstraint::OneOf(
-                    [
-                        TypeConstraint::Scalar(BsonScalarType::String),
-                        TypeConstraint::ArrayOf(Box::new(TypeConstraint::Scalar(
-                            BsonScalarType::String,
-                        ))),
-                    ]
-                    .into(),
-                ),
-                match_expression,
-            )?,
-            "$mod" => match match_expression {
-                Bson::Array(xs) => {
-                    if xs.len() != 2 {
-                        Err(Error::Other(format!(
-                            "{operator} operator requires exactly two arguments",
-                            operator = operator
-                        )))?;
-                    }
-                    for divisor_or_remainder in xs {
-                        analyze_match_expression(
-                            context,
-                            desired_object_type_name,
-                            &TypeConstraint::Scalar(BsonScalarType::Int),
-                            divisor_or_remainder,
-                        )?;
-                    }
-                }
-                _ => Err(Error::Other(format!(
-                    "{operator} operator requires an array of two elements",
-                )))?,
-            },
-            "$regex" => analyze_match_expression(
-                context,
-                desired_object_type_name,
-                &TypeConstraint::Scalar(BsonScalarType::Regex),
-                match_expression,
-            )?,
-            "$all" => {
-                let element_type = field_type.clone().map_nullable(|ft| match ft {
-                    TypeConstraint::ArrayOf(t) => *t,
-                    other => TypeConstraint::ElementOf(Box::new(other)),
-                });
-                // It's like passing field_type through directly, except that we move out of
-                // a possible nullable type, and we enforce an array type.
-                let argument_type = TypeConstraint::ArrayOf(Box::new(element_type));
-                analyze_match_expression(
-                    context,
-                    desired_object_type_name,
-                    &argument_type,
-                    match_expression,
-                )?;
-            }
-            "$elemMatch" => {
-                let element_type = field_type.clone().map_nullable(|ft| match ft {
-                    TypeConstraint::ArrayOf(t) => *t,
-                    other => TypeConstraint::ElementOf(Box::new(other)),
-                });
-                match match_expression {
-                    Bson::Document(match_doc) => check_match_doc_for_parameters_helper(
+    match operator.as_ref() {
+        "$and" | "$or" | "$nor" => {
+            if let Bson::Array(array) = match_expression {
+                for expression in array {
+                    check_match_doc_for_parameters_helper(
                         context,
                         desired_object_type_name,
-                        &element_type,
-                        match_doc,
-                    )?,
-                    _ => Err(Error::Other(format!(
-                        "{operator} operator requires a document",
-                    )))?,
-                };
+                        field_type,
+                        expression
+                            .as_document()
+                            .ok_or_else(|| {
+                                Error::Other(format!(
+                                    "expected argument to {operator} to be an array of objects"
+                                ))
+                            })?
+                            .clone(),
+                    )?;
+                }
+            } else {
+                Err(Error::Other(format!(
+                    "expected argument to {operator} to be an array of objects"
+                )))?;
             }
-            _ => Err(Error::UnknownMatchDocumentOperator(operator))?,
         }
+        "$eq" | "$ne" | "$gt" | "$lt" | "$gte" | "$lte" => analyze_match_expression(
+            context,
+            desired_object_type_name,
+            field_type,
+            match_expression,
+        )?,
+        "$in" | "$nin" => analyze_match_expression(
+            context,
+            desired_object_type_name,
+            &TypeConstraint::ArrayOf(Box::new(field_type.clone())),
+            match_expression,
+        )?,
+        "$exists" => analyze_match_expression(
+            context,
+            desired_object_type_name,
+            &TypeConstraint::Scalar(BsonScalarType::Bool),
+            match_expression,
+        )?,
+        "$type" => analyze_match_expression(
+            context,
+            desired_object_type_name,
+            &TypeConstraint::OneOf(
+                [
+                    TypeConstraint::Scalar(BsonScalarType::String),
+                    TypeConstraint::ArrayOf(Box::new(TypeConstraint::Scalar(
+                        BsonScalarType::String,
+                    ))),
+                ]
+                .into(),
+            ),
+            match_expression,
+        )?,
+        "$mod" => match match_expression {
+            Bson::Array(xs) => {
+                if xs.len() != 2 {
+                    Err(Error::Other(format!(
+                        "{operator} operator requires exactly two arguments",
+                        operator = operator
+                    )))?;
+                }
+                for divisor_or_remainder in xs {
+                    analyze_match_expression(
+                        context,
+                        desired_object_type_name,
+                        &TypeConstraint::Scalar(BsonScalarType::Int),
+                        divisor_or_remainder,
+                    )?;
+                }
+            }
+            _ => Err(Error::Other(format!(
+                "{operator} operator requires an array of two elements",
+            )))?,
+        },
+        "$regex" => analyze_match_expression(
+            context,
+            desired_object_type_name,
+            &TypeConstraint::Scalar(BsonScalarType::Regex),
+            match_expression,
+        )?,
+        "$all" => {
+            let element_type = field_type.clone().map_nullable(|ft| match ft {
+                TypeConstraint::ArrayOf(t) => *t,
+                other => TypeConstraint::ElementOf(Box::new(other)),
+            });
+            // It's like passing field_type through directly, except that we move out of
+            // a possible nullable type, and we enforce an array type.
+            let argument_type = TypeConstraint::ArrayOf(Box::new(element_type));
+            analyze_match_expression(
+                context,
+                desired_object_type_name,
+                &argument_type,
+                match_expression,
+            )?;
+        }
+        "$elemMatch" => {
+            let element_type = field_type.clone().map_nullable(|ft| match ft {
+                TypeConstraint::ArrayOf(t) => *t,
+                other => TypeConstraint::ElementOf(Box::new(other)),
+            });
+            match match_expression {
+                Bson::Document(match_doc) => check_match_doc_for_parameters_helper(
+                    context,
+                    desired_object_type_name,
+                    &element_type,
+                    match_doc,
+                )?,
+                _ => Err(Error::Other(format!(
+                    "{operator} operator requires a document",
+                )))?,
+            };
+        }
+        _ => Err(Error::UnknownMatchDocumentOperator(operator))?,
     }
     Ok(())
 }
