@@ -78,7 +78,7 @@ pub fn pipeline_for_non_foreach(
         .map(make_sort_stages)
         .flatten_ok()
         .collect::<Result<Vec<_>, _>>()?;
-    let skip_stage = offset.map(Stage::Skip);
+    let skip_stage = offset.map(Into::into).map(Stage::Skip);
 
     match_stage
         .into_iter()
@@ -132,7 +132,7 @@ pub fn pipeline_for_fields_facet(
         }
     }
 
-    let limit_stage = limit.map(Stage::Limit);
+    let limit_stage = limit.map(Into::into).map(Stage::Limit);
     let replace_with_stage: Stage = Stage::ReplaceWith(selection);
 
     Ok(Pipeline::from_iter(
@@ -245,7 +245,7 @@ fn pipeline_for_aggregate(
                 Some(Stage::Match(
                     bson::doc! { column.as_str(): { "$exists": true, "$ne": null } },
                 )),
-                limit.map(Stage::Limit),
+                limit.map(Into::into).map(Stage::Limit),
                 Some(Stage::Group {
                     key_expression: field_ref(column.as_str()),
                     accumulators: [].into(),
@@ -261,7 +261,7 @@ fn pipeline_for_aggregate(
                 Some(Stage::Match(
                     bson::doc! { column.as_str(): { "$exists": true, "$ne": null } },
                 )),
-                limit.map(Stage::Limit),
+                limit.map(Into::into).map(Stage::Limit),
                 Some(Stage::Count(RESULT_FIELD.to_string())),
             ]
             .into_iter()
@@ -285,7 +285,7 @@ fn pipeline_for_aggregate(
                     Some(Stage::Match(
                         bson::doc! { column: { "$exists": true, "$ne": null } },
                     )),
-                    limit.map(Stage::Limit),
+                    limit.map(Into::into).map(Stage::Limit),
                     Some(Stage::Group {
                         key_expression: Bson::Null,
                         accumulators: [(RESULT_FIELD.to_string(), accumulator)].into(),
@@ -298,7 +298,7 @@ fn pipeline_for_aggregate(
 
         Aggregate::StarCount {} => Pipeline::from_iter(
             [
-                limit.map(Stage::Limit),
+                limit.map(Into::into).map(Stage::Limit),
                 Some(Stage::Count(RESULT_FIELD.to_string())),
             ]
             .into_iter()

@@ -110,6 +110,7 @@ fn infer_stage_output_type(
         }
         Stage::Facet(_) => todo!("facet stage"),
         Stage::Count(_) => todo!("count stage"),
+        Stage::Project(doc) => todo!("project stage"),
         Stage::ReplaceRoot {
             new_root: selection,
         }
