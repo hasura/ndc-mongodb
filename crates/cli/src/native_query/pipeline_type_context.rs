@@ -284,9 +284,10 @@ impl PipelineTypeContext<'_> {
         )
     }
 
-    pub fn set_stage_doc_type(&mut self, doc_type: TypeConstraint) {
+    pub fn set_stage_doc_type(&mut self, doc_type: TypeConstraint) -> TypeConstraint {
         let variable = self.new_type_variable(Variance::Covariant, [doc_type]);
         self.input_doc_type = Some(variable);
+        TypeConstraint::Variable(variable)
     }
 
     pub fn add_warning(&mut self, warning: Error) {

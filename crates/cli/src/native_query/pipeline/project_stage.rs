@@ -66,7 +66,7 @@ fn exclusion_projection_type(
     let input_type = context.get_input_document_type()?;
     let augmented_type = TypeConstraint::WithFieldOverrides {
         augmented_object_type_name: desired_object_type_name.into(),
-        target_type: Box::new(input_type),
+        target_type: Box::new(input_type.clone()),
         fields: subtracted_fields,
     };
     Ok(augmented_type)
@@ -230,20 +230,14 @@ mod tests {
 
     use crate::native_query::{
         pipeline_type_context::PipelineTypeContext,
-        type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable, Variance},
+        type_constraint::{ObjectTypeConstraint, TypeConstraint},
     };
 
     #[test]
     fn infers_type_of_projection_in_inclusion_mode() -> anyhow::Result<()> {
         let config = mflix_config();
         let mut context = PipelineTypeContext::new(&config, None);
-        context.set_stage_doc_type(TypeConstraint::Object("movies".into()));
-        let input_type = || {
-            Box::new(TypeConstraint::Variable(TypeVariable::new(
-                0,
-                Variance::Covariant,
-            )))
-        };
+        let input_type = context.set_stage_doc_type(TypeConstraint::Object("movies".into()));
 
         let input = doc! {
             "title": 1,
@@ -274,7 +268,7 @@ mod tests {
                         (
                             "title".into(),
                             TypeConstraint::FieldOf {
-                                target_type: input_type(),
+                                target_type: Box::new(input_type.clone()),
                                 path: nonempty!["title".into()],
                             },
                         ),
@@ -285,7 +279,7 @@ mod tests {
                         (
                             "releaseDate".into(),
                             TypeConstraint::FieldOf {
-                                target_type: input_type(),
+                                target_type: Box::new(input_type.clone()),
                                 path: nonempty!["released".into()],
                             },
                         ),
@@ -304,7 +298,7 @@ mod tests {
                         (
                             "lastUpdated".into(),
                             TypeConstraint::FieldOf {
-                                target_type: input_type(),
+                                target_type: Box::new(input_type.clone()),
                                 path: nonempty!["tomatoes".into(), "lastUpdated".into()],
                             },
                         ),
@@ -319,7 +313,7 @@ mod tests {
                         (
                             "rating".into(),
                             TypeConstraint::FieldOf {
-                                target_type: input_type(),
+                                target_type: Box::new(input_type.clone()),
                                 path: nonempty![
                                     "tomatoes".into(),
                                     "critic".into(),
@@ -330,7 +324,124 @@ mod tests {
                         (
                             "meter".into(),
                             TypeConstraint::FieldOf {
-                                target_type: input_type(),
+                                target_type: Box::new(input_type.clone()),
+                                path: nonempty!["tomatoes".into(), "critic".into(), "meter".into()],
+                            },
+                        ),
+                    ]
+                    .into(),
+                },
+            ),
+        ]
+        .into();
+
+        assert_eq!(object_types, &expected_object_types);
+
+        Ok(())
+    }
+
+    #[test]
+    fn infers_type_of_projection_in_exclusion_mode() -> anyhow::Result<()> {
+        let config = mflix_config();
+        let mut context = PipelineTypeContext::new(&config, None);
+        let input_type = context.set_stage_doc_type(TypeConstraint::Object("movies".into()));
+
+        let input = doc! {
+            "title": 0,
+            "tomatoes.critic.rating": false,
+            "tomatoes.critic.meter": false,
+            "tomatoes.lastUpdated": false,
+        };
+
+        let inferred_type =
+            super::infer_type_from_project_stage(&mut context, "Movie_project", &input)?;
+
+        assert_eq!(
+            inferred_type,
+            TypeConstraint::WithFieldOverrides {
+                augmented_object_type_name: "Movie_project".into(),
+                target_type: Box::new(input_type.clone()),
+                fields: [
+                    ("title".into(), None),
+                    (
+                        "tomatoes".into(),
+                        Some(TypeConstraint::Object("Movie_project_tomatoes".into()))
+                    ),
+                ]
+                .into(),
+            }
+        );
+
+        let object_types = context.object_types();
+        let expected_object_types = [
+            (
+                "Movie_project".into(),
+                ObjectTypeConstraint {
+                    fields: [
+                        (
+                            "_id".into(),
+                            TypeConstraint::Scalar(BsonScalarType::ObjectId),
+                        ),
+                        (
+                            "title".into(),
+                            TypeConstraint::FieldOf {
+                                target_type: Box::new(input_type.clone()),
+                                path: nonempty!["title".into()],
+                            },
+                        ),
+                        (
+                            "tomatoes".into(),
+                            TypeConstraint::Object("Movie_project_tomatoes".into()),
+                        ),
+                        (
+                            "releaseDate".into(),
+                            TypeConstraint::FieldOf {
+                                target_type: Box::new(input_type.clone()),
+                                path: nonempty!["released".into()],
+                            },
+                        ),
+                    ]
+                    .into(),
+                },
+            ),
+            (
+                "Movie_project_tomatoes".into(),
+                ObjectTypeConstraint {
+                    fields: [
+                        (
+                            "critic".into(),
+                            TypeConstraint::Object("Movie_project_tomatoes_critic".into()),
+                        ),
+                        (
+                            "lastUpdated".into(),
+                            TypeConstraint::FieldOf {
+                                target_type: Box::new(input_type.clone()),
+                                path: nonempty!["tomatoes".into(), "lastUpdated".into()],
+                            },
+                        ),
+                    ]
+                    .into(),
+                },
+            ),
+            (
+                "Movie_project_tomatoes_critic".into(),
+                ObjectTypeConstraint {
+                    fields: [
+                        (
+                            "rating".into(),
+                            TypeConstraint::FieldOf {
+                                target_type: Box::new(input_type.clone()),
+                                path: nonempty![
+                                    "tomatoes".into(),
+                                    "critic".into(),
+                                    "rating".into()
+                                ],
+                            },
+                        ),
+                        (
+                            "meter".into(),
+                            TypeConstraint::FieldOf {
+                                target_type: Box::new(input_type.clone()),
                                 path: nonempty!["tomatoes".into(), "critic".into(), "meter".into()],
                             },
                         ),
