@@ -1,4 +1,5 @@
 mod match_stage;
+mod project_stage;
 
 use std::{collections::BTreeMap, iter::once};
 
@@ -92,10 +93,26 @@ fn infer_stage_output_type(
             )?;
             None
         }
-        Stage::Sort(_) => None,
-        Stage::Limit(_) => None,
+        Stage::Sort(_) => None, // TODO: need to analyze arguments to find parameters
+        Stage::Skip(expression) => {
+            infer_type_from_aggregation_expression(
+                context,
+                desired_object_type_name,
+                Some(&TypeConstraint::Scalar(BsonScalarType::Int)),
+                expression.clone(),
+            )?;
+            None
+        }
+        Stage::Limit(expression) => {
+            infer_type_from_aggregation_expression(
+                context,
+                desired_object_type_name,
+                Some(&TypeConstraint::Scalar(BsonScalarType::Int)),
+                expression.clone(),
+            )?;
+            None
+        }
         Stage::Lookup { .. } => todo!("lookup stage"),
-        Stage::Skip(_) => None,
         Stage::Group {
             key_expression,
             accumulators,
@@ -110,7 +127,14 @@ fn infer_stage_output_type(
         }
         Stage::Facet(_) => todo!("facet stage"),
         Stage::Count(_) => todo!("count stage"),
-        Stage::Project(doc) => todo!("project stage"),
+        Stage::Project(doc) => {
+            let augmented_type = project_stage::infer_type_from_project_stage(
+                context,
+                &format!("{desired_object_type_name}_project"),
+                doc,
+            )?;
+            Some(augmented_type)
+        }
         Stage::ReplaceRoot {
             new_root: selection,
         }
@@ -295,7 +319,11 @@ fn infer_type_from_unwind_stage(
     Ok(TypeConstraint::WithFieldOverrides {
         augmented_object_type_name: format!("{desired_object_type_name}_unwind").into(),
         target_type: Box::new(context.get_input_document_type()?.clone()),
-        fields: unwind_stage_object_type.fields,
+        fields: unwind_stage_object_type
+            .fields
+            .into_iter()
+            .map(|(k, t)| (k, Some(t)))
+            .collect(),
     })
 }
 
@@ -419,13 +447,18 @@ mod tests {
                 augmented_object_type_name: "unwind_stage_unwind".into(),
                 target_type: Box::new(TypeConstraint::Variable(input_doc_variable)),
                 fields: [
-                    ("idx".into(), TypeConstraint::Scalar(BsonScalarType::Long)),
+                    (
+                        "idx".into(),
+                        Some(TypeConstraint::Scalar(BsonScalarType::Long))
+                    ),
                     (
                         "words".into(),
-                        TypeConstraint::ElementOf(Box::new(TypeConstraint::FieldOf {
-                            target_type: Box::new(TypeConstraint::Variable(input_doc_variable)),
-                            path: nonempty!["words".into()],
-                        }))
+                        Some(TypeConstraint::ElementOf(Box::new(
+                            TypeConstraint::FieldOf {
+                                target_type: Box::new(TypeConstraint::Variable(input_doc_variable)),
+                                path: nonempty!["words".into()],
+                            }
+                        )))
                     )
                 ]
                 .into(),

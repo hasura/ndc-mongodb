@@ -81,11 +81,11 @@ pub enum TypeConstraint {
         path: NonEmpty<FieldName>,
     },
 
-    /// A type that modifies another type by adding or replacing object fields.
+    /// A type that modifies another type by adding, replacing, or subtracting object fields.
     WithFieldOverrides {
         augmented_object_type_name: ObjectTypeName,
         target_type: Box<TypeConstraint>,
-        fields: BTreeMap<FieldName, TypeConstraint>,
+        fields: BTreeMap<FieldName, Option<TypeConstraint>>,
     },
 }
 
@@ -122,6 +122,7 @@ impl TypeConstraint {
             } => {
                 let overridden_field_complexity: usize = fields
                     .values()
+                    .flatten()
                     .map(|constraint| constraint.complexity())
                     .sum();
                 2 + target_type.complexity() + overridden_field_complexity

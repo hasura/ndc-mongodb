@@ -72,6 +72,11 @@ impl PipelineTypeContext<'_> {
     }
 
     #[cfg(test)]
+    pub fn object_types(&self) -> &BTreeMap<ObjectTypeName, ObjectTypeConstraint> {
+        &self.object_types
+    }
+
+    #[cfg(test)]
     pub fn type_variables(&self) -> &HashMap<TypeVariable, BTreeSet<TypeConstraint>> {
         &self.type_variables
     }
@@ -240,7 +245,8 @@ impl PipelineTypeContext<'_> {
                 self.constraint_references_variable(target_type, variable)
                     || fields
                         .iter()
-                        .any(|(_, t)| self.constraint_references_variable(t, variable))
+                        .flat_map(|(_, t)| t)
+                        .any(|t| self.constraint_references_variable(t, variable))
             }
         }
     }
