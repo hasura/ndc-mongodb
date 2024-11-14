@@ -44,7 +44,9 @@ Below, you'll find a matrix of all supported features for the MongoDB data conne
 | Collection Relationships                        | ✅        |       |
 | Remote Relationships                            | ✅        |       |
 | Relationships Keyed by Fields of Nested Objects | ❌        |       |
-| Mutations                                       | ✅        | Provided by custom [Native Mutations](TODO) - predefined basic mutations are also planned |
+| Mutations                                       | ✅        | Provided by custom [Native Mutations][] - predefined basic mutations are also planned |
+
+[Native Mutations]: https://hasura.io/docs/3.0/connectors/mongodb/native-operations/native-mutations
 
 ## Before you get Started
 
