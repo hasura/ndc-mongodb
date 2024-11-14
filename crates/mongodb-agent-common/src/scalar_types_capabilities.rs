@@ -116,6 +116,7 @@ fn bson_comparison_operators(
             let fn_name = comparison_fn.graphql_name().into();
             match comparison_fn {
                 ComparisonFunction::Equal => (fn_name, ComparisonOperatorDefinition::Equal),
+                ComparisonFunction::In => (fn_name, ComparisonOperatorDefinition::In),
                 _ => (
                     fn_name,
                     ComparisonOperatorDefinition::Custom { argument_type },

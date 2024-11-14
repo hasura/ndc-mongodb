@@ -22,12 +22,7 @@ definition:
             _eq:
               type: equal
             _in:
-              type: custom
-              argument_type:
-                type: array
-                element_type:
-                  type: named
-                  name: BinData
+              type: in
             _neq:
               type: custom
               argument_type:
@@ -52,12 +47,7 @@ definition:
             _eq:
               type: equal
             _in:
-              type: custom
-              argument_type:
-                type: array
-                element_type:
-                  type: named
-                  name: Bool
+              type: in
             _neq:
               type: custom
               argument_type:
@@ -100,12 +90,7 @@ definition:
                 type: named
                 name: Date
             _in:
-              type: custom
-              argument_type:
-                type: array
-                element_type:
-                  type: named
-                  name: Date
+              type: in
             _lt:
               type: custom
               argument_type:
@@ -138,12 +123,7 @@ definition:
             _eq:
               type: equal
             _in:
-              type: custom
-              argument_type:
-                type: array
-                element_type:
-                  type: named
-                  name: DbPointer
+              type: in
             _neq:
               type: custom
               argument_type:
@@ -194,12 +174,7 @@ definition:
                 type: named
                 name: Decimal
             _in:
-              type: custom
-              argument_type:
-                type: array
-                element_type:
-                  type: named
-                  name: Decimal
+              type: in
             _lt:
               type: custom
               argument_type:
@@ -260,12 +235,7 @@ definition:
                 type: named
                 name: Double
             _in:
-              type: custom
-              argument_type:
-                type: array
-                element_type:
-                  type: named
-                  name: Double
+              type: in
             _lt:
               type: custom
               argument_type:
@@ -398,12 +368,7 @@ definition:
                 type: named
                 name: Int
             _in:
-              type: custom
-              argument_type:
-                type: array
-                element_type:
-                  type: named
-                  name: Int
+              type: in
             _lt:
               type: custom
               argument_type:
@@ -478,12 +443,7 @@ definition:
                 type: named
                 name: Long
             _in:
-              type: custom
-              argument_type:
-                type: array
-                element_type:
-                  type: named
-                  name: Long
+              type: in
             _lt:
               type: custom
               argument_type:
@@ -516,12 +476,7 @@ definition:
             _eq:
               type: equal
             _in:
-              type: custom
-              argument_type:
-                type: array
-                element_type:
-                  type: named
-                  name: MaxKey
+              type: in
             _neq:
               type: custom
               argument_type:
@@ -544,12 +499,7 @@ definition:
             _eq:
               type: equal
             _in:
-              type: custom
-              argument_type:
-                type: array
-                element_type:
-                  type: named
-                  name: MinKey
+              type: in
             _neq:
               type: custom
               argument_type:
@@ -572,12 +522,7 @@ definition:
             _eq:
               type: equal
             _in:
-              type: custom
-              argument_type:
-                type: array
-                element_type:
-                  type: named
-                  name: "Null"
+              type: in
             _neq:
               type: custom
               argument_type:
@@ -602,12 +547,7 @@ definition:
             _eq:
               type: equal
             _in:
-              type: custom
-              argument_type:
-                type: array
-                element_type:
-                  type: named
-                  name: ObjectId
+              type: in
             _neq:
               type: custom
               argument_type:
@@ -657,12 +597,7 @@ definition:
                 type: named
                 name: String
             _in:
-              type: custom
-              argument_type:
-                type: array
-                element_type:
-                  type: named
-                  name: String
+              type: in
             _iregex:
               type: custom
               argument_type:
@@ -705,12 +640,7 @@ definition:
             _eq:
               type: equal
             _in:
-              type: custom
-              argument_type:
-                type: array
-                element_type:
-                  type: named
-                  name: Symbol
+              type: in
             _neq:
               type: custom
               argument_type:
@@ -751,12 +681,7 @@ definition:
                 type: named
                 name: Timestamp
             _in:
-              type: custom
-              argument_type:
-                type: array
-                element_type:
-                  type: named
-                  name: Timestamp
+              type: in
             _lt:
               type: custom
               argument_type:
@@ -789,12 +714,7 @@ definition:
             _eq:
               type: equal
             _in:
-              type: custom
-              argument_type:
-                type: array
-                element_type:
-                  type: named
-                  name: Undefined
+              type: in
             _neq:
               type: custom
               argument_type:
