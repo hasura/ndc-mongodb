@@ -4,6 +4,29 @@ use ndc_test_helpers::{binop, field, query, query_request, target, variable};
 use crate::{connector::Connector, graphql_query, run_connector_query};
 
 #[tokio::test]
+async fn filters_using_in_operator() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+            query {
+              movies(
+                where: { rated: { _in: ["G", "TV-G"] } }
+                order_by: { id: Asc }
+                limit: 5
+              ) {
+                title
+                rated
+              }
+            }
+            "#
+        )
+        .run()
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn filters_on_extended_json_using_string_comparison() -> anyhow::Result<()> {
     assert_yaml_snapshot!(
         graphql_query(
