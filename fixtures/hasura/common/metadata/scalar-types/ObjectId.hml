@@ -43,22 +43,32 @@ definition:
           argumentType: ObjectId
         - name: _neq
           argumentType: ObjectId
+        - name: _in
+          argumentType: "[ObjectId!]!"
+        - name: _nin
+          argumentType: "[ObjectId!]!"
       dataConnectorOperatorMapping:
         - dataConnectorName: chinook
           dataConnectorScalarType: ObjectId
           operatorMapping:
             _eq: _eq
             _neq: _neq
+            _in: _in
+            _nin: _nin
         - dataConnectorName: sample_mflix
           dataConnectorScalarType: ObjectId
           operatorMapping:
             _eq: _eq
             _neq: _neq
+            _in: _in
+            _nin: _nin
         - dataConnectorName: test_cases
           dataConnectorScalarType: ObjectId
           operatorMapping:
             _eq: _eq
             _neq: _neq
+            _in: _in
+            _nin: _nin
   logicalOperators:
     enable: true
   isNull:

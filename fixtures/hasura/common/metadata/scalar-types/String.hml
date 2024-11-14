@@ -35,6 +35,10 @@ definition:
           argumentType: String
         - name: _neq
           argumentType: String
+        - name: _in
+          argumentType: "[String!]!"
+        - name: _nin
+          argumentType: "[String!]!"
         - name: _gt
           argumentType: String
         - name: _gte
@@ -53,6 +57,8 @@ definition:
           operatorMapping:
             _eq: _eq
             _neq: _neq
+            _in: _in
+            _nin: _nin
             _gt: _gt
             _gte: _gte
             _lt: _lt
@@ -64,6 +70,8 @@ definition:
           operatorMapping:
             _eq: _eq
             _neq: _neq
+            _in: _in
+            _nin: _nin
             _gt: _gt
             _gte: _gte
             _lt: _lt
@@ -75,6 +83,8 @@ definition:
           operatorMapping:
             _eq: _eq
             _neq: _neq
+            _in: _in
+            _nin: _nin
             _gt: _gt
             _gte: _gte
             _lt: _lt

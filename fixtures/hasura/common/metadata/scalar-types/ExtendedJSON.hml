@@ -43,6 +43,10 @@ definition:
           argumentType: ExtendedJSON
         - name: _neq
           argumentType: ExtendedJSON
+        - name: _in
+          argumentType: "[ExtendedJSON!]!"
+        - name: _nin
+          argumentType: "[ExtendedJSON!]!"
         - name: _gt
           argumentType: ExtendedJSON
         - name: _gte
@@ -61,6 +65,8 @@ definition:
           operatorMapping:
             _eq: _eq
             _neq: _neq
+            _in: _in
+            _nin: _nin
             _gt: _gt
             _gte: _gte
             _lt: _lt
@@ -72,6 +78,8 @@ definition:
           operatorMapping:
             _eq: _eq
             _neq: _neq
+            _in: _in
+            _nin: _nin
             _gt: _gt
             _gte: _gte
             _lt: _lt
@@ -83,6 +91,8 @@ definition:
           operatorMapping:
             _eq: _eq
             _neq: _neq
+            _in: _in
+            _nin: _nin
             _gt: _gt
             _gte: _gte
             _lt: _lt
