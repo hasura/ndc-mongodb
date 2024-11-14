@@ -112,15 +112,14 @@ fn bson_comparison_operators(
     bson_scalar_type: BsonScalarType,
 ) -> BTreeMap<ComparisonOperatorName, ComparisonOperatorDefinition> {
     comparison_operators(bson_scalar_type)
-        .map(|(comparison_fn, arg_type)| {
+        .map(|(comparison_fn, argument_type)| {
             let fn_name = comparison_fn.graphql_name().into();
             match comparison_fn {
                 ComparisonFunction::Equal => (fn_name, ComparisonOperatorDefinition::Equal),
+                ComparisonFunction::In => (fn_name, ComparisonOperatorDefinition::In),
                 _ => (
                     fn_name,
-                    ComparisonOperatorDefinition::Custom {
-                        argument_type: bson_to_named_type(arg_type),
-                    },
+                    ComparisonOperatorDefinition::Custom { argument_type },
                 ),
             }
         })
@@ -167,10 +166,27 @@ pub fn aggregate_functions(
 
 pub fn comparison_operators(
     scalar_type: BsonScalarType,
-) -> impl Iterator<Item = (ComparisonFunction, BsonScalarType)> {
+) -> impl Iterator<Item = (ComparisonFunction, Type)> {
     iter_if(
         scalar_type.is_comparable(),
-        [(C::Equal, scalar_type), (C::NotEqual, scalar_type)].into_iter(),
+        [
+            (C::Equal, bson_to_named_type(scalar_type)),
+            (C::NotEqual, bson_to_named_type(scalar_type)),
+            (
+                C::In,
+                Type::Array {
+                    element_type: Box::new(bson_to_named_type(scalar_type)),
+                },
+            ),
+            (
+                C::NotIn,
+                Type::Array {
+                    element_type: Box::new(bson_to_named_type(scalar_type)),
+                },
+            ),
+            (C::NotEqual, bson_to_named_type(scalar_type)),
+        ]
+        .into_iter(),
     )
     .chain(iter_if(
         scalar_type.is_orderable(),
@@ -181,11 +197,17 @@ pub fn comparison_operators(
             C::GreaterThanOrEqual,
         ]
         .into_iter()
-        .map(move |op| (op, scalar_type)),
+        .map(move |op| (op, bson_to_named_type(scalar_type))),
     ))
     .chain(match scalar_type {
-        S::String => Box::new([(C::Regex, S::String), (C::IRegex, S::String)].into_iter()),
-        _ => Box::new(std::iter::empty()) as Box<dyn Iterator<Item = (C, S)>>,
+        S::String => Box::new(
+            [
+                (C::Regex, bson_to_named_type(S::String)),
+                (C::IRegex, bson_to_named_type(S::String)),
+            ]
+            .into_iter(),
+        ),
+        _ => Box::new(std::iter::empty()) as Box<dyn Iterator<Item = (C, Type)>>,
     })
 }
 
