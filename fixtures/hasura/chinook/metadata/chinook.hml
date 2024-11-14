@@ -21,11 +21,25 @@ definition:
           comparison_operators:
             _eq:
               type: equal
+            _in:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: BinData
             _neq:
               type: custom
               argument_type:
                 type: named
                 name: BinData
+            _nin:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: BinData
         Bool:
           representation:
             type: boolean
@@ -37,11 +51,25 @@ definition:
           comparison_operators:
             _eq:
               type: equal
+            _in:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Bool
             _neq:
               type: custom
               argument_type:
                 type: named
                 name: Bool
+            _nin:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Bool
         Date:
           representation:
             type: timestamp
@@ -71,6 +99,13 @@ definition:
               argument_type:
                 type: named
                 name: Date
+            _in:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Date
             _lt:
               type: custom
               argument_type:
@@ -86,6 +121,13 @@ definition:
               argument_type:
                 type: named
                 name: Date
+            _nin:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Date
         DbPointer:
           aggregate_functions:
             count:
@@ -95,11 +137,25 @@ definition:
           comparison_operators:
             _eq:
               type: equal
+            _in:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: DbPointer
             _neq:
               type: custom
               argument_type:
                 type: named
                 name: DbPointer
+            _nin:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: DbPointer
         Decimal:
           representation:
             type: bigdecimal
@@ -137,6 +193,13 @@ definition:
               argument_type:
                 type: named
                 name: Decimal
+            _in:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Decimal
             _lt:
               type: custom
               argument_type:
@@ -152,6 +215,13 @@ definition:
               argument_type:
                 type: named
                 name: Decimal
+            _nin:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Decimal
         Double:
           representation:
             type: float64
@@ -189,6 +259,13 @@ definition:
               argument_type:
                 type: named
                 name: Double
+            _in:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Double
             _lt:
               type: custom
               argument_type:
@@ -204,6 +281,13 @@ definition:
               argument_type:
                 type: named
                 name: Double
+            _nin:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Double
         ExtendedJSON:
           representation:
             type: json
@@ -241,6 +325,11 @@ definition:
               argument_type:
                 type: named
                 name: ExtendedJSON
+            _in:
+              type: custom
+              argument_type:
+                type: named
+                name: ExtendedJSON
             _iregex:
               type: custom
               argument_type:
@@ -257,6 +346,11 @@ definition:
                 type: named
                 name: ExtendedJSON
             _neq:
+              type: custom
+              argument_type:
+                type: named
+                name: ExtendedJSON
+            _nin:
               type: custom
               argument_type:
                 type: named
@@ -303,6 +397,13 @@ definition:
               argument_type:
                 type: named
                 name: Int
+            _in:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Int
             _lt:
               type: custom
               argument_type:
@@ -318,6 +419,13 @@ definition:
               argument_type:
                 type: named
                 name: Int
+            _nin:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Int
         Javascript:
           aggregate_functions:
             count:
@@ -369,6 +477,13 @@ definition:
               argument_type:
                 type: named
                 name: Long
+            _in:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Long
             _lt:
               type: custom
               argument_type:
@@ -384,6 +499,13 @@ definition:
               argument_type:
                 type: named
                 name: Long
+            _nin:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Long
         MaxKey:
           aggregate_functions:
             count:
@@ -393,11 +515,25 @@ definition:
           comparison_operators:
             _eq:
               type: equal
+            _in:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: MaxKey
             _neq:
               type: custom
               argument_type:
                 type: named
                 name: MaxKey
+            _nin:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: MaxKey
         MinKey:
           aggregate_functions:
             count:
@@ -407,11 +543,25 @@ definition:
           comparison_operators:
             _eq:
               type: equal
+            _in:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: MinKey
             _neq:
               type: custom
               argument_type:
                 type: named
                 name: MinKey
+            _nin:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: MinKey
         "Null":
           aggregate_functions:
             count:
@@ -421,11 +571,25 @@ definition:
           comparison_operators:
             _eq:
               type: equal
+            _in:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: "Null"
             _neq:
               type: custom
               argument_type:
                 type: named
                 name: "Null"
+            _nin:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: "Null"
         ObjectId:
           representation:
             type: string
@@ -437,11 +601,25 @@ definition:
           comparison_operators:
             _eq:
               type: equal
+            _in:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: ObjectId
             _neq:
               type: custom
               argument_type:
                 type: named
                 name: ObjectId
+            _nin:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: ObjectId
         Regex:
           aggregate_functions:
             count:
@@ -478,6 +656,13 @@ definition:
               argument_type:
                 type: named
                 name: String
+            _in:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: String
             _iregex:
               type: custom
               argument_type:
@@ -498,6 +683,13 @@ definition:
               argument_type:
                 type: named
                 name: String
+            _nin:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: String
             _regex:
               type: custom
               argument_type:
@@ -512,11 +704,25 @@ definition:
           comparison_operators:
             _eq:
               type: equal
+            _in:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Symbol
             _neq:
               type: custom
               argument_type:
                 type: named
                 name: Symbol
+            _nin:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Symbol
         Timestamp:
           aggregate_functions:
             count:
@@ -544,6 +750,13 @@ definition:
               argument_type:
                 type: named
                 name: Timestamp
+            _in:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Timestamp
             _lt:
               type: custom
               argument_type:
@@ -559,6 +772,13 @@ definition:
               argument_type:
                 type: named
                 name: Timestamp
+            _nin:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Timestamp
         Undefined:
           aggregate_functions:
             count:
@@ -568,11 +788,25 @@ definition:
           comparison_operators:
             _eq:
               type: equal
+            _in:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Undefined
             _neq:
               type: custom
               argument_type:
                 type: named
                 name: Undefined
+            _nin:
+              type: custom
+              argument_type:
+                type: array
+                element_type:
+                  type: named
+                  name: Undefined
       object_types:
         Album:
           description: Object type for collection Album
@@ -1146,7 +1380,7 @@ definition:
             type: named
             name: InsertArtist
     capabilities:
-      version: 0.1.5
+      version: 0.1.6
       capabilities:
         query:
           aggregates: {}
