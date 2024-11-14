@@ -6,7 +6,7 @@ This changelog documents the changes between release versions.
 
 ### Added
 
-- Adds `_in` and `_nin` operators
+- Adds `_in` and `_nin` operators ([#122](https://github.com/hasura/ndc-mongodb/pull/122))
 
 ### Changed
 
