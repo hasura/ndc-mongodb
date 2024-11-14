@@ -6,6 +6,8 @@ This changelog documents the changes between release versions.
 
 ### Added
 
+- Adds `_in` and `_nin` operators
+
 ### Changed
 
 - **BREAKING:** If `configuration.json` cannot be parsed the connector will fail to start. This change also prohibits unknown keys in that file. These changes will help to prevent typos configuration being silently ignored. ([#115](https://github.com/hasura/ndc-mongodb/pull/115))
@@ -14,6 +16,26 @@ This changelog documents the changes between release versions.
 
 - Fixes for filtering by complex predicate that references variables, or field names that require escaping ([#111](https://github.com/hasura/ndc-mongodb/pull/111))
 - Escape names if necessary instead of failing when joining relationship on field names with special characters ([#113](https://github.com/hasura/ndc-mongodb/pull/113))
+
+#### `_in` and `_nin`
+
+These operators compare document values for equality against a given set of
+options. `_in` matches documents where one of the given values matches, `_nin` matches
+documents where none of the given values matches. For example this query selects
+movies that are rated either "G" or "TV-G":
+
+```graphql
+query {
+  movies(
+    where: { rated: { _in: ["G", "TV-G"] } }
+    order_by: { id: Asc }
+    limit: 5
+  ) {
+    title
+    rated
+  }
+}
+```
 
 ## [1.3.0] - 2024-10-01
 
