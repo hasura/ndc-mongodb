@@ -22,7 +22,7 @@ pub async fn get_metadata_from_validation_schema(
     state: &ConnectorState,
 ) -> Result<BTreeMap<String, Schema>, MongoAgentError> {
     let db = state.database();
-    let mut collections_cursor = db.list_collections(None, None).await?;
+    let mut collections_cursor = db.list_collections().await?;
 
     let mut schemas: Vec<WithName<String, Schema>> = vec![];
 
