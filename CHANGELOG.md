@@ -4,6 +4,8 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+## [1.4.0] - 2024-11-14
+
 ### Added
 
 - Adds `_in` and `_nin` operators ([#122](https://github.com/hasura/ndc-mongodb/pull/122))
