@@ -7,7 +7,7 @@ use itertools::Itertools as _;
 use mongodb::bson::{Bson, Decimal128, Document};
 use mongodb_support::BsonScalarType;
 use ndc_models::{FieldName, ObjectTypeName};
-use nonempty::NonEmpty;
+use nonempty::{nonempty, NonEmpty};
 
 use crate::native_query::{
     aggregation_expression::infer_type_from_aggregation_expression,
@@ -53,23 +53,61 @@ pub fn infer_type_from_project_stage(
     }
 }
 
-// TODO: Handle keys with dots
 fn exclusion_projection_type(
     context: &mut PipelineTypeContext<'_>,
     desired_object_type_name: &str,
     projection: &Document,
 ) -> Result<TypeConstraint> {
-    let subtracted_fields = projection
-        .keys()
-        .map(|k| (k.clone().into(), None))
-        .collect();
+    // Projection keys can be dot-separated paths to nested fields. In this case a single
+    // object-type output field might be specified by multiple project keys. We collect sets of
+    // each top-level key (the first component of a dot-separated path), and then merge
+    // constraints.
+    let mut specifications: HashMap<FieldName, ProjectionTree<()>> = Default::default();
+
+    for (field_name, _) in projection {
+        let path = field_name.split(".").map(|s| s.into()).collect_vec();
+        ProjectionTree::insert_specification(&mut specifications, &path, ())?;
+    }
+
     let input_type = context.get_input_document_type()?;
-    let augmented_type = TypeConstraint::WithFieldOverrides {
+    Ok(projection_tree_into_field_overrides(
+        input_type,
+        desired_object_type_name,
+        specifications,
+    ))
+}
+
+fn projection_tree_into_field_overrides(
+    input_type: TypeConstraint,
+    desired_object_type_name: &str,
+    specifications: HashMap<FieldName, ProjectionTree<()>>,
+) -> TypeConstraint {
+    let overrides = specifications
+        .into_iter()
+        .map(|(name, spec)| {
+            let field_override = match spec {
+                ProjectionTree::Object(sub_specs) => {
+                    let original_field_type = TypeConstraint::FieldOf {
+                        target_type: Box::new(input_type.clone()),
+                        path: nonempty![name.clone()],
+                    };
+                    Some(projection_tree_into_field_overrides(
+                        original_field_type,
+                        &format!("{desired_object_type_name}_{name}"),
+                        sub_specs,
+                    ))
+                }
+                ProjectionTree::Field(_) => None,
+            };
+            (name, field_override)
+        })
+        .collect();
+
+    TypeConstraint::WithFieldOverrides {
         augmented_object_type_name: desired_object_type_name.into(),
-        target_type: Box::new(input_type.clone()),
-        fields: subtracted_fields,
-    };
-    Ok(augmented_type)
+        target_type: Box::new(input_type),
+        fields: overrides,
+    }
 }
 
 fn inclusion_projection_type(
@@ -83,7 +121,7 @@ fn inclusion_projection_type(
     // object-type output field might be specified by multiple project keys. We collect sets of
     // each top-level key (the first component of a dot-separated path), and then merge
     // constraints.
-    let mut specifications: HashMap<FieldName, ProjectionTree> = Default::default();
+    let mut specifications: HashMap<FieldName, ProjectionTree<TypeConstraint>> = Default::default();
 
     let added_fields = projection
         .iter()
@@ -120,21 +158,51 @@ fn inclusion_projection_type(
     }
 
     let object_type_name =
-        ProjectionTree::into_object_type(context, desired_object_type_name, specifications);
+        projection_tree_into_object_type(context, desired_object_type_name, specifications);
 
     Ok(TypeConstraint::Object(object_type_name))
 }
 
-enum ProjectionTree {
-    Object(HashMap<FieldName, ProjectionTree>),
-    Field(TypeConstraint),
+fn projection_tree_into_object_type(
+    context: &mut PipelineTypeContext<'_>,
+    desired_object_type_name: &str,
+    specifications: HashMap<FieldName, ProjectionTree<TypeConstraint>>,
+) -> ObjectTypeName {
+    let fields = specifications
+        .into_iter()
+        .map(|(field_name, spec)| {
+            let field_type = match spec {
+                ProjectionTree::Field(field_type) => field_type,
+                ProjectionTree::Object(sub_specs) => {
+                    let desired_object_type_name =
+                        format!("{desired_object_type_name}_{field_name}");
+                    let nested_object_name = projection_tree_into_object_type(
+                        context,
+                        &desired_object_type_name,
+                        sub_specs,
+                    );
+                    TypeConstraint::Object(nested_object_name)
+                }
+            };
+            (field_name, field_type)
+        })
+        .collect();
+    let object_type = ObjectTypeConstraint { fields };
+    let object_type_name = context.unique_type_name(desired_object_type_name);
+    context.insert_object_type(object_type_name.clone(), object_type);
+    object_type_name
 }
 
-impl ProjectionTree {
+enum ProjectionTree<T> {
+    Object(HashMap<FieldName, ProjectionTree<T>>),
+    Field(T),
+}
+
+impl<T> ProjectionTree<T> {
     fn insert_specification(
-        specifications: &mut HashMap<FieldName, ProjectionTree>,
+        specifications: &mut HashMap<FieldName, ProjectionTree<T>>,
         path: &[FieldName],
-        field_type: TypeConstraint,
+        field_type: T,
     ) -> Result<()> {
         match path {
             [] => Err(Error::Other(
@@ -165,33 +233,6 @@ impl ProjectionTree {
             }
         }
         Ok(())
-    }
-
-    fn into_object_type(
-        context: &mut PipelineTypeContext<'_>,
-        desired_object_type_name: &str,
-        specifications: HashMap<FieldName, ProjectionTree>,
-    ) -> ObjectTypeName {
-        let fields = specifications
-            .into_iter()
-            .map(|(field_name, spec)| {
-                let field_type = match spec {
-                    ProjectionTree::Field(field_type) => field_type,
-                    ProjectionTree::Object(sub_specs) => {
-                        let desired_object_type_name =
-                            format!("{desired_object_type_name}_{field_name}");
-                        let nested_object_name =
-                            Self::into_object_type(context, &desired_object_type_name, sub_specs);
-                        TypeConstraint::Object(nested_object_name)
-                    }
-                };
-                (field_name, field_type)
-            })
-            .collect();
-        let object_type = ObjectTypeConstraint { fields };
-        let object_type_name = context.unique_type_name(desired_object_type_name);
-        context.insert_object_type(object_type_name.clone(), object_type);
-        object_type_name
     }
 }
 
@@ -367,7 +408,10 @@ mod tests {
                         "tomatoes".into(),
                         Some(TypeConstraint::WithFieldOverrides {
                             augmented_object_type_name: "Movie_project_tomatoes".into(),
-                            target_type: Box::new(TypeConstraint::Object("Tomatoes".into())),
+                            target_type: Box::new(TypeConstraint::FieldOf {
+                                target_type: Box::new(input_type.clone()),
+                                path: nonempty!["tomatoes".into()],
+                            }),
                             fields: [
                                 ("lastUpdated".into(), None),
                                 (
@@ -375,9 +419,13 @@ mod tests {
                                     Some(TypeConstraint::WithFieldOverrides {
                                         augmented_object_type_name: "Movie_project_tomatoes_critic"
                                             .into(),
-                                        target_type: Box::new(TypeConstraint::Object(
-                                            "TomatoesCritic".into()
-                                        )),
+                                        target_type: Box::new(TypeConstraint::FieldOf {
+                                            target_type: Box::new(TypeConstraint::FieldOf {
+                                                target_type: Box::new(input_type.clone()),
+                                                path: nonempty!["tomatoes".into()],
+                                            }),
+                                            path: nonempty!["critic".into()],
+                                        }),
                                         fields: [("rating".into(), None), ("meter".into(), None),]
                                             .into(),
                                     })
