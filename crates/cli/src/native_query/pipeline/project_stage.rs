@@ -365,94 +365,31 @@ mod tests {
                     ("title".into(), None),
                     (
                         "tomatoes".into(),
-                        Some(TypeConstraint::Object("Movie_project_tomatoes".into()))
+                        Some(TypeConstraint::WithFieldOverrides {
+                            augmented_object_type_name: "Movie_project_tomatoes".into(),
+                            target_type: Box::new(TypeConstraint::Object("Tomatoes".into())),
+                            fields: [
+                                ("lastUpdated".into(), None),
+                                (
+                                    "critic".into(),
+                                    Some(TypeConstraint::WithFieldOverrides {
+                                        augmented_object_type_name: "Movie_project_tomatoes_critic"
+                                            .into(),
+                                        target_type: Box::new(TypeConstraint::Object(
+                                            "TomatoesCritic".into()
+                                        )),
+                                        fields: [("rating".into(), None), ("meter".into(), None),]
+                                            .into(),
+                                    })
+                                )
+                            ]
+                            .into(),
+                        })
                     ),
                 ]
                 .into(),
             }
         );
-
-        let object_types = context.object_types();
-        let expected_object_types = [
-            (
-                "Movie_project".into(),
-                ObjectTypeConstraint {
-                    fields: [
-                        (
-                            "_id".into(),
-                            TypeConstraint::Scalar(BsonScalarType::ObjectId),
-                        ),
-                        (
-                            "title".into(),
-                            TypeConstraint::FieldOf {
-                                target_type: Box::new(input_type.clone()),
-                                path: nonempty!["title".into()],
-                            },
-                        ),
-                        (
-                            "tomatoes".into(),
-                            TypeConstraint::Object("Movie_project_tomatoes".into()),
-                        ),
-                        (
-                            "releaseDate".into(),
-                            TypeConstraint::FieldOf {
-                                target_type: Box::new(input_type.clone()),
-                                path: nonempty!["released".into()],
-                            },
-                        ),
-                    ]
-                    .into(),
-                },
-            ),
-            (
-                "Movie_project_tomatoes".into(),
-                ObjectTypeConstraint {
-                    fields: [
-                        (
-                            "critic".into(),
-                            TypeConstraint::Object("Movie_project_tomatoes_critic".into()),
-                        ),
-                        (
-                            "lastUpdated".into(),
-                            TypeConstraint::FieldOf {
-                                target_type: Box::new(input_type.clone()),
-                                path: nonempty!["tomatoes".into(), "lastUpdated".into()],
-                            },
-                        ),
-                    ]
-                    .into(),
-                },
-            ),
-            (
-                "Movie_project_tomatoes_critic".into(),
-                ObjectTypeConstraint {
-                    fields: [
-                        (
-                            "rating".into(),
-                            TypeConstraint::FieldOf {
-                                target_type: Box::new(input_type.clone()),
-                                path: nonempty![
-                                    "tomatoes".into(),
-                                    "critic".into(),
-                                    "rating".into()
-                                ],
-                            },
-                        ),
-                        (
-                            "meter".into(),
-                            TypeConstraint::FieldOf {
-                                target_type: Box::new(input_type.clone()),
-                                path: nonempty!["tomatoes".into(), "critic".into(), "meter".into()],
-                            },
-                        ),
-                    ]
-                    .into(),
-                },
-            ),
-        ]
-        .into();
-
-        assert_eq!(object_types, &expected_object_types);
 
         Ok(())
     }
