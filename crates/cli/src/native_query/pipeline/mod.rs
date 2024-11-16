@@ -55,7 +55,7 @@ pub fn infer_pipeline_types(
     if let TypeConstraint::Object(stage_type_name) = last_stage_type {
         if let Some(object_type) = context.get_object_type(&stage_type_name) {
             context.insert_object_type(object_type_name.clone(), object_type.into_owned());
-            context.set_stage_doc_type(TypeConstraint::Object(object_type_name))
+            context.set_stage_doc_type(TypeConstraint::Object(object_type_name));
         }
     }
 

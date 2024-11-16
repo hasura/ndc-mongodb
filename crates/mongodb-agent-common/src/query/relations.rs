@@ -855,7 +855,7 @@ mod tests {
             }
           },
           {
-            "$limit": Bson::Int64(50),
+            "$limit": Bson::Int32(50),
           },
           {
             "$replaceWith": {
@@ -975,7 +975,7 @@ mod tests {
                 }
             },
             {
-                "$limit": Bson::Int64(50),
+                "$limit": Bson::Int32(50),
             },
             {
                 "$replaceWith": {

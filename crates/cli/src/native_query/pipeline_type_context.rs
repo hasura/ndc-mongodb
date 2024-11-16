@@ -65,7 +65,7 @@ impl PipelineTypeContext<'_> {
         };
 
         if let Some(type_name) = input_collection_document_type {
-            context.set_stage_doc_type(TypeConstraint::Object(type_name))
+            context.set_stage_doc_type(TypeConstraint::Object(type_name));
         }
 
         context
