@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 
 use configuration::{
     schema::{ObjectField, ObjectType, Type},
@@ -253,8 +253,8 @@ fn field_of<'a>(
                 return Ok(None);
             };
 
-            let mut path_iter = path.into_iter();
-            let Some(field_name) = path_iter.next() else {
+            let mut path: VecDeque<_> = path.into_iter().collect();
+            let Some(field_name) = path.pop_front() else {
                 return Ok(Some(Type::Object(type_name)));
             };
 
@@ -267,7 +267,18 @@ fn field_of<'a>(
                         field_name: field_name.clone(),
                     })?;
 
-            Ok(Some(field_type.r#type.clone()))
+            if path.is_empty() {
+                Ok(Some(field_type.r#type.clone()))
+            } else {
+                field_of(
+                    configuration,
+                    solutions,
+                    added_object_types,
+                    object_type_constraints,
+                    field_type.r#type.clone(),
+                    path,
+                )
+            }
         }
         Type::Nullable(t) => {
             let underlying_type = field_of(

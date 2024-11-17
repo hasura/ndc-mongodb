@@ -35,7 +35,24 @@ pub fn unify(
     }
 
     #[cfg(test)]
-    println!("begin unify:\n  type_variables: {type_variables:?}\n  object_type_constraints: {object_type_constraints:?}\n");
+    {
+        println!("begin unify:");
+        println!("  type_variables:");
+        for (var, constraints) in type_variables.iter() {
+            println!(
+                "  - {var}: {}",
+                constraints.iter().map(|c| format!("{c}")).join("; ")
+            );
+        }
+        println!(" object_type_constraints:");
+        for (name, ot) in object_type_constraints.iter() {
+            println!("  {name} ::",);
+            for (field_name, field_type) in ot.fields.iter() {
+                println!("    - {field_name}: {field_type}")
+            }
+        }
+        println!();
+    }
 
     loop {
         let prev_type_variables = type_variables.clone();

@@ -392,7 +392,7 @@ mod tests {
         }))]);
         let config = mflix_config();
         let pipeline_types =
-            infer_pipeline_types(&config, "movies", Some(&("movies".into())), &pipeline).unwrap();
+            infer_pipeline_types(&config, "movies", Some(&("movies".into())), &pipeline)?;
         let expected = [(
             "movies_replaceWith".into(),
             ObjectType {

@@ -130,6 +130,8 @@ fn simplify_constraint_pair(
         (C::ExtendedJSON, b) if variance == Variance::Contravariant => Ok(b),
         (a, C::ExtendedJSON) if variance == Variance::Contravariant => Ok(a),
 
+        // TODO: If we don't get a solution from solve_scalar, if the variable is covariant we want
+        // to make a union type
         (C::Scalar(a), C::Scalar(b)) => solve_scalar(variance, a, b),
 
         (C::Union(mut a), C::Union(mut b)) if variance == Variance::Covariant => {
@@ -498,10 +500,14 @@ fn get_object_constraint_field_type(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeSet;
+
     use googletest::prelude::*;
     use mongodb_support::BsonScalarType;
+    use nonempty::nonempty;
+    use test_helpers::configuration::mflix_config;
 
-    use crate::native_query::type_constraint::{TypeConstraint, Variance};
+    use crate::native_query::type_constraint::{TypeConstraint, TypeVariable, Variance};
 
     #[googletest::test]
     fn multiple_identical_scalar_constraints_resolve_one_constraint() {
@@ -545,5 +551,27 @@ mod tests {
             ),
             Ok(TypeConstraint::Scalar(BsonScalarType::Int))
         );
+    }
+
+    #[googletest::test]
+    fn simplifies_field_of() -> Result<()> {
+        let config = mflix_config();
+        let result = super::simplify_constraints(
+            &config,
+            &Default::default(),
+            &mut Default::default(),
+            Some(TypeVariable::new(1, Variance::Covariant)),
+            [TypeConstraint::FieldOf {
+                target_type: Box::new(TypeConstraint::Object("movies".into())),
+                path: nonempty!["title".into()],
+            }],
+        );
+        expect_that!(
+            result,
+            matches_pattern!(Ok(&BTreeSet::from_iter([TypeConstraint::Scalar(
+                BsonScalarType::String
+            )])))
+        );
+        Ok(())
     }
 }
