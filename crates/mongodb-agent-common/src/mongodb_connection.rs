@@ -10,7 +10,7 @@ const DRIVER_NAME: &str = "Hasura";
 pub async fn get_mongodb_client(database_uri: &str) -> Result<Client, MongoAgentError> {
     // An extra line of code to work around a DNS issue on Windows:
     let mut options =
-        ClientOptions::parse_with_resolver_config(database_uri, ResolverConfig::cloudflare())
+        ClientOptions::parse_with_resolver_config(database_uri)
             .await?;
 
     // Helps MongoDB to collect statistics on Hasura use
