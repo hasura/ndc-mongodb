@@ -3,6 +3,7 @@ pub mod error;
 mod helpers;
 mod pipeline;
 mod pipeline_type_context;
+mod prune_object_types;
 mod reference_shorthand;
 mod type_constraint;
 mod type_solver;
@@ -206,7 +207,7 @@ mod tests {
             pipeline.clone(),
         )?;
 
-        let expected_document_type_name: ObjectTypeName = "selected_title_documents_2".into();
+        let expected_document_type_name: ObjectTypeName = "selected_title_documents".into();
 
         let expected_object_types = [(
             expected_document_type_name.clone(),
