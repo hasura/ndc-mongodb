@@ -93,7 +93,7 @@ fn infer_stage_output_type(
             )?;
             None
         }
-        Stage::Sort(_) => None, // TODO: need to analyze arguments to find parameters
+        Stage::Sort(_) => None,
         Stage::Skip(expression) => {
             infer_type_from_aggregation_expression(
                 context,
