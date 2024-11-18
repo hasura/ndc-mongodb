@@ -1,0 +1,17 @@
+---
+source: crates/integration-tests/src/tests/filtering.rs
+expression: "graphql_query(r#\"\n            query {\n              movies(\n                where: { rated: { _in: [\"G\", \"TV-G\"] } }\n                order_by: { id: Asc }\n                limit: 5\n              ) {\n                title\n                rated\n              }\n            }\n            \"#).run().await?"
+---
+data:
+  movies:
+    - title: The Great Train Robbery
+      rated: TV-G
+    - title: A Corner in Wheat
+      rated: G
+    - title: From Hand to Mouth
+      rated: TV-G
+    - title: One Week
+      rated: TV-G
+    - title: The Devil to Pay!
+      rated: TV-G
+errors: ~
