@@ -14,6 +14,8 @@ use ndc_models::{ArgumentName, ObjectTypeName};
 
 use super::{
     error::{Error, Result},
+    helpers::unique_type_name,
+    prune_object_types::prune_object_types,
     type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable, Variance},
     type_solver::unify,
 };
@@ -106,17 +108,12 @@ impl PipelineTypeContext<'_> {
             e => e,
         })?;
 
-        let result_document_type = variable_types
+        let mut result_document_type = variable_types
             .get(&result_document_type_variable)
-            .expect("missing result type variable is missing");
-        let result_document_type_name = match result_document_type {
-            Type::Object(type_name) => type_name.clone().into(),
-            t => Err(Error::ExpectedObject {
-                actual_type: t.clone(),
-            })?,
-        };
+            .expect("missing result type variable is missing")
+            .clone();
 
-        let parameter_types = self
+        let mut parameter_types: BTreeMap<ArgumentName, Type> = self
             .parameter_types
             .into_iter()
             .map(|(parameter_name, type_variable)| {
@@ -127,10 +124,31 @@ impl PipelineTypeContext<'_> {
             })
             .collect();
 
+        // Prune added object types to remove types that are not referenced by the return type or
+        // by parameter types, and therefore don't need to be included in the native query
+        // configuration.
+        let object_types = {
+            let mut reference_types = std::iter::once(&mut result_document_type)
+                .chain(parameter_types.values_mut())
+                .collect_vec();
+            prune_object_types(
+                &mut reference_types,
+                &self.configuration.object_types,
+                added_object_types,
+            )?
+        };
+
+        let result_document_type_name = match result_document_type {
+            Type::Object(type_name) => type_name.clone().into(),
+            t => Err(Error::ExpectedObject {
+                actual_type: t.clone(),
+            })?,
+        };
+
         Ok(PipelineTypes {
             result_document_type: result_document_type_name,
             parameter_types,
-            object_types: added_object_types,
+            object_types,
             warnings: self.warnings,
         })
     }
@@ -185,15 +203,11 @@ impl PipelineTypeContext<'_> {
     }
 
     pub fn unique_type_name(&self, desired_type_name: &str) -> ObjectTypeName {
-        let mut counter = 0;
-        let mut type_name: ObjectTypeName = desired_type_name.into();
-        while self.configuration.object_types.contains_key(&type_name)
-            || self.object_types.contains_key(&type_name)
-        {
-            counter += 1;
-            type_name = format!("{desired_type_name}_{counter}").into();
-        }
-        type_name
+        unique_type_name(
+            &self.configuration.object_types,
+            &self.object_types,
+            desired_type_name,
+        )
     }
 
     pub fn set_stage_doc_type(&mut self, doc_type: TypeConstraint) {

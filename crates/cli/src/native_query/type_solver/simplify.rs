@@ -53,9 +53,11 @@ fn simplify_constraint_pair(
     b: TypeConstraint,
 ) -> Simplified<TypeConstraint> {
     match (a, b) {
-        (C::ExtendedJSON, _) | (_, C::ExtendedJSON) => Ok(C::ExtendedJSON),
+        (C::ExtendedJSON, _) | (_, C::ExtendedJSON) => Ok(C::ExtendedJSON), // TODO: Do we want this in contravariant case?
         (C::Scalar(a), C::Scalar(b)) => solve_scalar(variance, a, b),
 
+        // TODO: We need to make sure we aren't putting multiple layers of Nullable on constraints
+        // - if a and b have mismatched levels of Nullable they won't unify
         (C::Nullable(a), C::Nullable(b)) => {
             simplify_constraint_pair(configuration, object_type_constraints, variance, *a, *b)
                 .map(|constraint| C::Nullable(Box::new(constraint)))
