@@ -351,7 +351,6 @@ fn supports_project_stage_in_exclusion_mode() -> Result<()> {
         _ => panic!("tomatoes field does not have an object type"),
     };
     let tomatoes_type = &native_query.object_types[&tomatoes_type_name];
-    expect_false!(tomatoes_type.fields.contains_key("title"));
     expect_that!(
         tomatoes_type.fields.keys().collect_vec(),
         unordered_elements_are![&&FieldName::from("viewer"), &&FieldName::from("critic")]
