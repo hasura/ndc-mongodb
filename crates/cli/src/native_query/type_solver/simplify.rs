@@ -268,6 +268,9 @@ fn simplify_constraint_pair(
     }
 }
 
+/// Reconciles two scalar type constraints depending on variance of the context. In a covariant
+/// context the type of a type variable is determined to be the supertype of the two (if the types
+/// overlap). In a covariant context the variable type is the subtype of the two instead.
 fn solve_scalar(
     variance: Variance,
     a: BsonScalarType,
@@ -283,7 +286,15 @@ fn solve_scalar(
                 Err((C::Scalar(a), C::Scalar(b)))
             }
         }
-        Variance::Contravariant => solve_scalar(Variance::Covariant, b, a),
+        Variance::Contravariant => {
+            if a == b || is_supertype(&a, &b) {
+                Ok(C::Scalar(b))
+            } else if is_supertype(&b, &a) {
+                Ok(C::Scalar(a))
+            } else {
+                Err((C::Scalar(a), C::Scalar(b)))
+            }
+        }
         Variance::Invariant => {
             if a == b {
                 Ok(C::Scalar(a))
@@ -482,5 +493,57 @@ fn get_object_constraint_field_type(
             "could not resolve object field to a type".to_string(),
         )),
         _ => Ok(None), // field_type len > 1
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use googletest::prelude::*;
+    use mongodb_support::BsonScalarType;
+
+    use crate::native_query::type_constraint::{TypeConstraint, Variance};
+
+    #[googletest::test]
+    fn multiple_identical_scalar_constraints_resolve_one_constraint() {
+        expect_eq!(
+            super::solve_scalar(
+                Variance::Covariant,
+                BsonScalarType::String,
+                BsonScalarType::String,
+            ),
+            Ok(TypeConstraint::Scalar(BsonScalarType::String))
+        );
+        expect_eq!(
+            super::solve_scalar(
+                Variance::Contravariant,
+                BsonScalarType::String,
+                BsonScalarType::String,
+            ),
+            Ok(TypeConstraint::Scalar(BsonScalarType::String))
+        );
+    }
+
+    #[googletest::test]
+    fn multiple_scalar_constraints_resolve_to_supertype_in_covariant_context() {
+        expect_eq!(
+            super::solve_scalar(
+                Variance::Covariant,
+                BsonScalarType::Int,
+                BsonScalarType::Double,
+            ),
+            Ok(TypeConstraint::Scalar(BsonScalarType::Double))
+        );
+    }
+
+    #[googletest::test]
+    fn multiple_scalar_constraints_resolve_to_subtype_in_contravariant_context() {
+        expect_eq!(
+            super::solve_scalar(
+                Variance::Contravariant,
+                BsonScalarType::Int,
+                BsonScalarType::Double,
+            ),
+            Ok(TypeConstraint::Scalar(BsonScalarType::Int))
+        );
     }
 }
