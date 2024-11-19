@@ -16,7 +16,7 @@ use configuration::schema::ObjectField;
 use configuration::{
     native_query::NativeQueryRepresentation::Collection, serialized::NativeQuery, Configuration,
 };
-use configuration::{read_directory, WithName};
+use configuration::{read_directory_with_ignored_configs, WithName};
 use mongodb_support::aggregate::Pipeline;
 use ndc_models::CollectionName;
 use tokio::fs;
@@ -57,7 +57,25 @@ pub async fn run(context: &Context, command: Command) -> anyhow::Result<()> {
             force,
             pipeline_path,
         } => {
-            let configuration = match read_directory(&context.path).await {
+            let native_query_path = {
+                let path = get_native_query_path(context, &name);
+                if !force && fs::try_exists(&path).await? {
+                    eprintln!(
+                        "A native query named {name} already exists at {}.",
+                        path.to_string_lossy()
+                    );
+                    eprintln!("Re-run with --force to overwrite.");
+                    exit(ExitCode::RefusedToOverwrite.into())
+                }
+                path
+            };
+
+            let configuration = match read_directory_with_ignored_configs(
+                &context.path,
+                &[native_query_path.clone()],
+            )
+            .await
+            {
                 Ok(c) => c,
                 Err(err) => {
                     eprintln!("Could not read connector configuration - configuration must be initialized before creating native queries.\n\n{err:#}");
@@ -75,18 +93,6 @@ pub async fn run(context: &Context, command: Command) -> anyhow::Result<()> {
                     eprintln!("Could not read aggregation pipeline.\n\n{err}");
                     exit(ExitCode::CouldNotReadAggregationPipeline.into())
                 }
-            };
-            let native_query_path = {
-                let path = get_native_query_path(context, &name);
-                if !force && fs::try_exists(&path).await? {
-                    eprintln!(
-                        "A native query named {name} already exists at {}.",
-                        path.to_string_lossy()
-                    );
-                    eprintln!("Re-run with --force to overwrite.");
-                    exit(ExitCode::RefusedToOverwrite.into())
-                }
-                path
             };
             let native_query =
                 match native_query_from_pipeline(&configuration, &name, collection, pipeline) {
