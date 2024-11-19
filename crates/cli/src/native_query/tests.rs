@@ -182,6 +182,79 @@ fn infers_parameter_type_from_binary_comparison() -> googletest::Result<()> {
 }
 
 #[googletest::test]
+fn supports_various_query_predicate_operators() -> googletest::Result<()> {
+    let config = mflix_config();
+
+    let pipeline = Pipeline::new(vec![Stage::Match(doc! {
+        "title": { "$eq": "{{ title }}" },
+        "rated": { "$ne": "{{ rating }}" },
+        "year": "{{ year_1 }}",
+        "imdb.votes": { "$gt": "{{ votes }}" },
+        "num_mflix_comments": { "$in": "{{ num_comments_options }}" },
+        "$not": { "runtime": { "$lt": "{{ runtime }}" } },
+        "tomatoes.critic": { "$exists": "{{ critic_exists }}" },
+        "released": { "$type": ["date", "{{ other_type }}"] },
+        "$or": [
+            { "$and": [
+                { "writers": { "$eq": "{{ writers }}" } },
+                { "year": "{{ year_2 }}", }
+            ] },
+            {
+                "year": { "$mod": ["{{ divisor }}", "{{ expected_remainder }}"] },
+                "title": { "$regex": "{{ title_regex }}" },
+            },
+        ],
+        "$and": [
+            { "genres": { "$all": "{{ genres }}" } },
+            { "genres": { "$all": ["{{ genre_1 }}"] } },
+            { "genres": { "$elemMatch": {
+                "$gt": "{{ genre_start }}",
+                "$lt": "{{ genre_end }}",
+            }} },
+            { "genres": { "$size": "{{ genre_size }}" } },
+        ],
+    })]);
+
+    let native_query =
+        native_query_from_pipeline(&config, "operators_test", Some("movies".into()), pipeline)?;
+
+    expect_eq!(
+        native_query.arguments,
+        object_fields([
+            ("title", Type::Scalar(BsonScalarType::String)),
+            ("rating", Type::Scalar(BsonScalarType::String)),
+            ("year_1", Type::Scalar(BsonScalarType::Int)),
+            ("year_2", Type::Scalar(BsonScalarType::Int)),
+            ("votes", Type::Scalar(BsonScalarType::Int)),
+            (
+                "num_comments_options",
+                Type::ArrayOf(Box::new(Type::Scalar(BsonScalarType::Int)))
+            ),
+            ("runtime", Type::Scalar(BsonScalarType::Int)),
+            ("critic_exists", Type::Scalar(BsonScalarType::Bool)),
+            ("other_type", Type::Scalar(BsonScalarType::String)),
+            (
+                "writers",
+                Type::ArrayOf(Box::new(Type::Scalar(BsonScalarType::String)))
+            ),
+            ("divisor", Type::Scalar(BsonScalarType::Int)),
+            ("expected_remainder", Type::Scalar(BsonScalarType::Int)),
+            ("title_regex", Type::Scalar(BsonScalarType::Regex)),
+            (
+                "genres",
+                Type::ArrayOf(Box::new(Type::Scalar(BsonScalarType::String)))
+            ),
+            ("genre_1", Type::Scalar(BsonScalarType::String)),
+            ("genre_start", Type::Scalar(BsonScalarType::String)),
+            ("genre_end", Type::Scalar(BsonScalarType::String)),
+            ("genre_size", Type::Scalar(BsonScalarType::Int)),
+        ])
+    );
+
+    Ok(())
+}
+
+#[googletest::test]
 fn supports_various_aggregation_operators() -> googletest::Result<()> {
     let config = mflix_config();
 
