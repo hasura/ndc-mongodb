@@ -53,8 +53,19 @@ pub enum TypeConstraint {
     },
 
     // Complex types
+    
     Union(BTreeSet<TypeConstraint>),
-    OneOf(BTreeSet<TypeConstraint>), // unlike union type should be only one of these, but we don't know which one
+
+    /// Unlike Union we expect the solved concrete type for a variable with a OneOf constraint may
+    /// be one of the types in the set, but we don't know yet which one. This is useful for MongoDB
+    /// operators that expect an input of any numeric type. We use OneOf because we don't know
+    /// which numeric type to infer until we see more usage evidence of the same type variable.
+    ///
+    /// In other words with Union we have specific evidence that a variable occurs in contexts of
+    /// multiple concrete types, while with OneOf we **don't** have specific evidence that the
+    /// variable takes multiple types, but there are multiple possibilities of the type or types
+    /// that it does take.
+    OneOf(BTreeSet<TypeConstraint>),
 
     /// Indicates a type that is the same as the type of the given variable.
     Variable(TypeVariable),
