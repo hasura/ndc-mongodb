@@ -212,6 +212,7 @@ fn element_of(array_type: Type) -> Result<Type> {
     let element_type = match array_type {
         Type::ArrayOf(elem_type) => Ok(*elem_type),
         Type::Nullable(t) => element_of(*t).map(|t| Type::Nullable(Box::new(t))),
+        Type::ExtendedJSON => Ok(Type::ExtendedJSON),
         _ => Err(Error::ExpectedArray {
             actual_type: array_type,
         }),
