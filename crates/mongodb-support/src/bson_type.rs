@@ -80,7 +80,20 @@ impl<'de> Deserialize<'de> for BsonType {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Sequence, Serialize, Deserialize, JsonSchema)]
+#[derive(
+    Copy,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Hash,
+    PartialOrd,
+    Ord,
+    Sequence,
+    Serialize,
+    Deserialize,
+    JsonSchema,
+)]
 #[serde(try_from = "BsonType", rename_all = "camelCase")]
 pub enum BsonScalarType {
     // numeric

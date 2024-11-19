@@ -4,6 +4,7 @@ use configuration::{
     schema::{ObjectField, ObjectType, Type},
     Configuration,
 };
+use itertools::Itertools as _;
 use ndc_models::{FieldName, ObjectTypeName};
 
 use crate::native_query::{
@@ -51,14 +52,6 @@ pub fn constraint_to_type(
         .map(|_| Type::Predicate {
             object_type_name: object_type_name.clone(),
         }),
-        C::Nullable(c) => constraint_to_type(
-            configuration,
-            solutions,
-            added_object_types,
-            object_type_constraints,
-            c,
-        )?
-        .map(|t| Type::Nullable(Box::new(t))),
         C::Variable(variable) => solutions.get(variable).cloned(),
         C::ElementOf(c) => constraint_to_type(
             configuration,
@@ -88,6 +81,37 @@ pub fn constraint_to_type(
             .transpose()
         })
         .transpose()?,
+
+        t @ C::Union(constraints) if t.is_nullable() => {
+            let non_null_constraints = constraints
+                .iter()
+                .filter(|t| *t != &C::null())
+                .collect_vec();
+            let underlying_constraint = if non_null_constraints.len() == 1 {
+                non_null_constraints.into_iter().next().unwrap()
+            } else {
+                &C::Union(non_null_constraints.into_iter().cloned().collect())
+            };
+            constraint_to_type(
+                configuration,
+                solutions,
+                added_object_types,
+                object_type_constraints,
+                underlying_constraint,
+            )?
+            .map(|t| Type::Nullable(Box::new(t)))
+        }
+
+        C::Union(_) => Some(Type::ExtendedJSON),
+
+        t @ C::OneOf(_) if t.is_numeric() => {
+            // We know it's a number, but we don't know exactly which numeric type. Double should
+            // be good enough for anybody, right?
+            Some(Type::Scalar(mongodb_support::BsonScalarType::Double))
+        }
+
+        C::OneOf(_) => Some(Type::ExtendedJSON),
+
         C::WithFieldOverrides {
             augmented_object_type_name,
             target_type,

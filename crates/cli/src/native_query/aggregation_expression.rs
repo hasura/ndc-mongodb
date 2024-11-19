@@ -11,46 +11,98 @@ use super::error::{Error, Result};
 use super::reference_shorthand::{parse_reference_shorthand, Reference};
 use super::type_constraint::{ObjectTypeConstraint, TypeConstraint, Variance};
 
+use TypeConstraint as C;
+
 pub fn infer_type_from_aggregation_expression(
     context: &mut PipelineTypeContext<'_>,
     desired_object_type_name: &str,
-    bson: Bson,
+    type_hint: Option<&TypeConstraint>,
+    expression: Bson,
 ) -> Result<TypeConstraint> {
-    let t = match bson {
-        Bson::Double(_) => TypeConstraint::Scalar(BsonScalarType::Double),
-        Bson::String(string) => infer_type_from_reference_shorthand(context, &string)?,
-        Bson::Array(_) => todo!("array type"),
-        Bson::Document(doc) => {
-            infer_type_from_aggregation_expression_document(context, desired_object_type_name, doc)?
+    let t = match expression {
+        Bson::Double(_) => C::Scalar(BsonScalarType::Double),
+        Bson::String(string) => infer_type_from_reference_shorthand(context, type_hint, &string)?,
+        Bson::Array(elems) => {
+            infer_type_from_array(context, desired_object_type_name, type_hint, elems)?
         }
-        Bson::Boolean(_) => TypeConstraint::Scalar(BsonScalarType::Bool),
-        Bson::Null | Bson::Undefined => {
-            let type_variable = context.new_type_variable(Variance::Covariant, []);
-            TypeConstraint::Nullable(Box::new(TypeConstraint::Variable(type_variable)))
-        }
-        Bson::RegularExpression(_) => TypeConstraint::Scalar(BsonScalarType::Regex),
-        Bson::JavaScriptCode(_) => TypeConstraint::Scalar(BsonScalarType::Javascript),
-        Bson::JavaScriptCodeWithScope(_) => {
-            TypeConstraint::Scalar(BsonScalarType::JavascriptWithScope)
-        }
-        Bson::Int32(_) => TypeConstraint::Scalar(BsonScalarType::Int),
-        Bson::Int64(_) => TypeConstraint::Scalar(BsonScalarType::Long),
-        Bson::Timestamp(_) => TypeConstraint::Scalar(BsonScalarType::Timestamp),
-        Bson::Binary(_) => TypeConstraint::Scalar(BsonScalarType::BinData),
-        Bson::ObjectId(_) => TypeConstraint::Scalar(BsonScalarType::ObjectId),
-        Bson::DateTime(_) => TypeConstraint::Scalar(BsonScalarType::Date),
-        Bson::Symbol(_) => TypeConstraint::Scalar(BsonScalarType::Symbol),
-        Bson::Decimal128(_) => TypeConstraint::Scalar(BsonScalarType::Decimal),
-        Bson::MaxKey => TypeConstraint::Scalar(BsonScalarType::MaxKey),
-        Bson::MinKey => TypeConstraint::Scalar(BsonScalarType::MinKey),
-        Bson::DbPointer(_) => TypeConstraint::Scalar(BsonScalarType::DbPointer),
+        Bson::Document(doc) => infer_type_from_aggregation_expression_document(
+            context,
+            desired_object_type_name,
+            type_hint,
+            doc,
+        )?,
+        Bson::Boolean(_) => C::Scalar(BsonScalarType::Bool),
+        Bson::Null | Bson::Undefined => C::Scalar(BsonScalarType::Null),
+        Bson::RegularExpression(_) => C::Scalar(BsonScalarType::Regex),
+        Bson::JavaScriptCode(_) => C::Scalar(BsonScalarType::Javascript),
+        Bson::JavaScriptCodeWithScope(_) => C::Scalar(BsonScalarType::JavascriptWithScope),
+        Bson::Int32(_) => C::Scalar(BsonScalarType::Int),
+        Bson::Int64(_) => C::Scalar(BsonScalarType::Long),
+        Bson::Timestamp(_) => C::Scalar(BsonScalarType::Timestamp),
+        Bson::Binary(_) => C::Scalar(BsonScalarType::BinData),
+        Bson::ObjectId(_) => C::Scalar(BsonScalarType::ObjectId),
+        Bson::DateTime(_) => C::Scalar(BsonScalarType::Date),
+        Bson::Symbol(_) => C::Scalar(BsonScalarType::Symbol),
+        Bson::Decimal128(_) => C::Scalar(BsonScalarType::Decimal),
+        Bson::MaxKey => C::Scalar(BsonScalarType::MaxKey),
+        Bson::MinKey => C::Scalar(BsonScalarType::MinKey),
+        Bson::DbPointer(_) => C::Scalar(BsonScalarType::DbPointer),
     };
     Ok(t)
+}
+
+pub fn infer_types_from_aggregation_expression_tuple(
+    context: &mut PipelineTypeContext<'_>,
+    desired_object_type_name: &str,
+    type_hint_for_elements: Option<&TypeConstraint>,
+    bson: Bson,
+) -> Result<Vec<TypeConstraint>> {
+    let tuple = match bson {
+        Bson::Array(exprs) => exprs
+            .into_iter()
+            .map(|expr| {
+                infer_type_from_aggregation_expression(
+                    context,
+                    desired_object_type_name,
+                    type_hint_for_elements,
+                    expr,
+                )
+            })
+            .collect::<Result<Vec<_>>>()?,
+        expr => Err(Error::Other(format!("expected array, but got {expr}")))?,
+    };
+    Ok(tuple)
+}
+
+fn infer_type_from_array(
+    context: &mut PipelineTypeContext<'_>,
+    desired_object_type_name: &str,
+    type_hint_for_entire_array: Option<&TypeConstraint>,
+    elements: Vec<Bson>,
+) -> Result<TypeConstraint> {
+    let elem_type_hint = type_hint_for_entire_array.map(|hint| match hint {
+        C::ArrayOf(t) => *t.clone(),
+        t => C::ElementOf(Box::new(t.clone())),
+    });
+    Ok(C::Union(
+        elements
+            .into_iter()
+            .map(|elem| {
+                infer_type_from_aggregation_expression(
+                    context,
+                    desired_object_type_name,
+                    elem_type_hint.as_ref(),
+                    elem,
+                )
+            })
+            .collect::<Result<_>>()?,
+    ))
 }
 
 fn infer_type_from_aggregation_expression_document(
     context: &mut PipelineTypeContext<'_>,
     desired_object_type_name: &str,
+    type_hint_for_entire_object: Option<&TypeConstraint>,
     mut document: Document,
 ) -> Result<TypeConstraint> {
     let mut expression_operators = document
@@ -66,6 +118,7 @@ fn infer_type_from_aggregation_expression_document(
             infer_type_from_operator_expression(
                 context,
                 desired_object_type_name,
+                type_hint_for_entire_object,
                 &operator,
                 operands,
             )
@@ -74,19 +127,183 @@ fn infer_type_from_aggregation_expression_document(
     }
 }
 
+// TODO: propagate expected type based on operator used
 fn infer_type_from_operator_expression(
-    _context: &mut PipelineTypeContext<'_>,
-    _desired_object_type_name: &str,
+    context: &mut PipelineTypeContext<'_>,
+    desired_object_type_name: &str,
+    type_hint: Option<&TypeConstraint>,
     operator: &str,
-    operands: Bson,
+    operand: Bson,
 ) -> Result<TypeConstraint> {
-    let t = match (operator, operands) {
-        ("$split", _) => {
-            TypeConstraint::ArrayOf(Box::new(TypeConstraint::Scalar(BsonScalarType::String)))
+    // NOTE: It is important to run inference on `operand` in every match arm even if we don't read
+    // the result because we need to check for uses of parameters.
+    let t = match operator {
+        // technically $abs returns the same *numeric* type as its input, and fails on other types
+        "$abs" => infer_type_from_aggregation_expression(
+            context,
+            desired_object_type_name,
+            type_hint.or(Some(&C::numeric())),
+            operand,
+        )?,
+        "$sin" | "$cos" | "$tan" | "$asin" | "$acos" | "$atan" | "$asinh" | "$acosh" | "$atanh"
+        | "$sinh" | "$cosh" | "$tanh" => {
+            type_for_trig_operator(infer_type_from_aggregation_expression(
+                context,
+                desired_object_type_name,
+                Some(&C::numeric()),
+                operand,
+            )?)
         }
-        (op, _) => Err(Error::UnknownAggregationOperator(op.to_string()))?,
+        "$add" | "$divide" | "$multiply" | "$subtract" => homogeneous_binary_operator_operand_type(
+            context,
+            desired_object_type_name,
+            Some(C::numeric()),
+            operator,
+            operand,
+        )?,
+        "$and" | "$or" => {
+            infer_types_from_aggregation_expression_tuple(
+                context,
+                desired_object_type_name,
+                None,
+                operand,
+            )?;
+            C::Scalar(BsonScalarType::Bool)
+        }
+        "$not" => {
+            infer_type_from_aggregation_expression(
+                context,
+                desired_object_type_name,
+                Some(&C::Scalar(BsonScalarType::Bool)),
+                operand,
+            )?;
+            C::Scalar(BsonScalarType::Bool)
+        }
+        "$eq" | "$ne" => {
+            homogeneous_binary_operator_operand_type(
+                context,
+                desired_object_type_name,
+                None,
+                operator,
+                operand,
+            )?;
+            C::Scalar(BsonScalarType::Bool)
+        }
+        "$gt" | "$gte" | "$lt" | "$lte" => {
+            homogeneous_binary_operator_operand_type(
+                context,
+                desired_object_type_name,
+                Some(C::comparable()),
+                operator,
+                operand,
+            )?;
+            C::Scalar(BsonScalarType::Bool)
+        }
+        "$allElementsTrue" => {
+            infer_type_from_aggregation_expression(
+                context,
+                desired_object_type_name,
+                Some(&C::ArrayOf(Box::new(C::Scalar(BsonScalarType::Bool)))),
+                operand,
+            )?;
+            C::Scalar(BsonScalarType::Bool)
+        }
+        "$anyElementTrue" => {
+            infer_type_from_aggregation_expression(
+                context,
+                desired_object_type_name,
+                Some(&C::ArrayOf(Box::new(C::Scalar(BsonScalarType::Bool)))),
+                operand,
+            )?;
+            C::Scalar(BsonScalarType::Bool)
+        }
+        "$arrayElemAt" => {
+            let (array_ref, idx) = two_parameter_operand(operator, operand)?;
+            let array_type = infer_type_from_aggregation_expression(
+                context,
+                &format!("{desired_object_type_name}_arrayElemAt_array"),
+                type_hint.map(|t| C::ArrayOf(Box::new(t.clone()))).as_ref(),
+                array_ref,
+            )?;
+            infer_type_from_aggregation_expression(
+                context,
+                &format!("{desired_object_type_name}_arrayElemAt_idx"),
+                Some(&C::Scalar(BsonScalarType::Int)),
+                idx,
+            )?;
+            type_hint
+                .cloned()
+                .unwrap_or_else(|| C::ElementOf(Box::new(array_type)))
+                .make_nullable()
+        }
+        "$split" => {
+            infer_types_from_aggregation_expression_tuple(
+                context,
+                desired_object_type_name,
+                Some(&C::Scalar(BsonScalarType::String)),
+                operand,
+            )?;
+            C::ArrayOf(Box::new(C::Scalar(BsonScalarType::String)))
+        }
+        op => Err(Error::UnknownAggregationOperator(op.to_string()))?,
     };
     Ok(t)
+}
+
+fn two_parameter_operand(operator: &str, operand: Bson) -> Result<(Bson, Bson)> {
+    match operand {
+        Bson::Array(operands) => {
+            if operands.len() != 2 {
+                return Err(Error::Other(format!(
+                    "argument to {operator} must be a two-element array"
+                )));
+            }
+            let mut operands = operands.into_iter();
+            let a = operands.next().unwrap();
+            let b = operands.next().unwrap();
+            Ok((a, b))
+        }
+        other_bson => Err(Error::ExpectedArrayExpressionArgument {
+            actual_argument: other_bson,
+        })?,
+    }
+}
+
+fn homogeneous_binary_operator_operand_type(
+    context: &mut PipelineTypeContext<'_>,
+    desired_object_type_name: &str,
+    operand_type_hint: Option<TypeConstraint>,
+    operator: &str,
+    operand: Bson,
+) -> Result<TypeConstraint> {
+    let (a, b) = two_parameter_operand(operator, operand)?;
+    let variable = context.new_type_variable(Variance::Invariant, operand_type_hint);
+    let type_a = infer_type_from_aggregation_expression(
+        context,
+        desired_object_type_name,
+        Some(&C::Variable(variable)),
+        a,
+    )?;
+    let type_b = infer_type_from_aggregation_expression(
+        context,
+        desired_object_type_name,
+        Some(&C::Variable(variable)),
+        b,
+    )?;
+    for t in [type_a, type_b] {
+        // Avoid cycles of type variable references
+        if !context.constraint_references_variable(&t, variable) {
+            context.set_type_variable_constraint(variable, t);
+        }
+    }
+    Ok(C::Variable(variable))
+}
+
+pub fn type_for_trig_operator(operand_type: TypeConstraint) -> TypeConstraint {
+    operand_type.map_nullable(|t| match t {
+        t @ C::Scalar(BsonScalarType::Decimal) => t,
+        _ => C::Scalar(BsonScalarType::Double),
+    })
 }
 
 /// This is a document that is not evaluated as a plain value, not as an aggregation expression.
@@ -100,18 +317,23 @@ fn infer_type_from_document(
         .into_iter()
         .map(|(field_name, bson)| {
             let field_object_type_name = format!("{desired_object_type_name}_{field_name}");
-            let object_field_type =
-                infer_type_from_aggregation_expression(context, &field_object_type_name, bson)?;
+            let object_field_type = infer_type_from_aggregation_expression(
+                context,
+                &field_object_type_name,
+                None,
+                bson,
+            )?;
             Ok((field_name.into(), object_field_type))
         })
         .collect::<Result<BTreeMap<_, _>>>()?;
     let object_type = ObjectTypeConstraint { fields };
     context.insert_object_type(object_type_name.clone(), object_type);
-    Ok(TypeConstraint::Object(object_type_name))
+    Ok(C::Object(object_type_name))
 }
 
 pub fn infer_type_from_reference_shorthand(
     context: &mut PipelineTypeContext<'_>,
+    type_hint: Option<&TypeConstraint>,
     input: &str,
 ) -> Result<TypeConstraint> {
     let reference = parse_reference_shorthand(input)?;
@@ -121,17 +343,16 @@ pub fn infer_type_from_reference_shorthand(
             type_annotation: _,
         } => {
             // TODO: read type annotation ENG-1249
-            // TODO: set constraint based on expected type here like we do in match_stage.rs NDC-1251
-            context.register_parameter(name.into(), [])
+            context.register_parameter(name.into(), type_hint.into_iter().cloned())
         }
-        Reference::PipelineVariable { .. } => todo!(),
+        Reference::PipelineVariable { .. } => todo!("pipeline variable"),
         Reference::InputDocumentField { name, nested_path } => {
             let doc_type = context.get_input_document_type()?;
             let path = NonEmpty {
                 head: name,
                 tail: nested_path,
             };
-            TypeConstraint::FieldOf {
+            C::FieldOf {
                 target_type: Box::new(doc_type.clone()),
                 path,
             }
@@ -140,13 +361,57 @@ pub fn infer_type_from_reference_shorthand(
             native_query_variables,
         } => {
             for variable in native_query_variables {
-                context.register_parameter(
-                    variable.into(),
-                    [TypeConstraint::Scalar(BsonScalarType::String)],
-                );
+                context.register_parameter(variable.into(), [C::Scalar(BsonScalarType::String)]);
             }
-            TypeConstraint::Scalar(BsonScalarType::String)
+            C::Scalar(BsonScalarType::String)
         }
     };
     Ok(t)
+}
+
+#[cfg(test)]
+mod tests {
+    use googletest::prelude::*;
+    use mongodb::bson::bson;
+    use mongodb_support::BsonScalarType;
+    use test_helpers::configuration::mflix_config;
+
+    use crate::native_query::{
+        pipeline_type_context::PipelineTypeContext,
+        type_constraint::{TypeConstraint, TypeVariable, Variance},
+    };
+
+    use super::infer_type_from_operator_expression;
+
+    use TypeConstraint as C;
+
+    #[googletest::test]
+    fn infers_constrants_on_equality() -> Result<()> {
+        let config = mflix_config();
+        let mut context = PipelineTypeContext::new(&config, None);
+
+        let (var0, var1) = (
+            TypeVariable::new(0, Variance::Invariant),
+            TypeVariable::new(1, Variance::Contravariant),
+        );
+
+        infer_type_from_operator_expression(
+            &mut context,
+            "test",
+            None,
+            "$eq",
+            bson!(["{{ parameter }}", 1]),
+        )?;
+
+        expect_eq!(
+            context.type_variables(),
+            &[
+                (var0, [C::Scalar(BsonScalarType::Int)].into()),
+                (var1, [C::Variable(var0)].into())
+            ]
+            .into()
+        );
+
+        Ok(())
+    }
 }

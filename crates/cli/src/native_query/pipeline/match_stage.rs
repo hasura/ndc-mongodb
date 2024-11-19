@@ -1,4 +1,5 @@
 use mongodb::bson::{Bson, Document};
+use mongodb_support::BsonScalarType;
 use nonempty::nonempty;
 
 use crate::native_query::{
@@ -16,7 +17,13 @@ pub fn check_match_doc_for_parameters(
 ) -> Result<()> {
     let input_document_type = context.get_input_document_type()?;
     if let Some(expression) = match_doc.remove("$expr") {
-        infer_type_from_aggregation_expression(context, desired_object_type_name, expression)?;
+        let type_hint = TypeConstraint::Scalar(BsonScalarType::Bool);
+        infer_type_from_aggregation_expression(
+            context,
+            desired_object_type_name,
+            Some(&type_hint),
+            expression,
+        )?;
         Ok(())
     } else {
         check_match_doc_for_parameters_helper(
