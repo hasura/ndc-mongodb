@@ -41,7 +41,7 @@ pub async fn explain_query(
 
     tracing::debug!(explain_command = %serde_json::to_string(&explain_command).unwrap());
 
-    let explain_result = db.run_command(explain_command, None).await?;
+    let explain_result = db.run_command(explain_command).await?;
 
     let plan =
         serde_json::to_string_pretty(&explain_result).map_err(MongoAgentError::Serialization)?;

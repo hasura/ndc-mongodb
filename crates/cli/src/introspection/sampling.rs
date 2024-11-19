@@ -28,7 +28,7 @@ pub async fn sample_schema_from_db(
 ) -> anyhow::Result<BTreeMap<std::string::String, Schema>> {
     let mut schemas = BTreeMap::new();
     let db = state.database();
-    let mut collections_cursor = db.list_collections(None, None).await?;
+    let mut collections_cursor = db.list_collections().await?;
 
     while let Some(collection_spec) = collections_cursor.try_next().await? {
         let collection_name = collection_spec.name;
@@ -60,7 +60,8 @@ async fn sample_schema_from_collection(
     let options = None;
     let mut cursor = db
         .collection::<Document>(collection_name)
-        .aggregate(vec![doc! {"$sample": { "size": sample_size }}], options)
+        .aggregate(vec![doc! {"$sample": { "size": sample_size }}])
+        .with_options(options)
         .await?;
     let mut collected_object_types = vec![];
     let is_collection_type = true;

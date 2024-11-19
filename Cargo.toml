@@ -25,21 +25,11 @@ indexmap = { version = "2", features = [
   "serde",
 ] } # should match the version that ndc-models uses
 itertools = "^0.12.1"
-mongodb = { version = "2.8", features = ["tracing-unstable"] }
+mongodb = { version = "^3.1.0", features = ["tracing-unstable"] }
 schemars = "^0.8.12"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1.0", features = ["preserve_order", "raw_value"] }
 ref-cast = "1.0.23"
-
-# Connecting to MongoDB Atlas database with time series collections fails in the
-# latest released version of the MongoDB Rust driver. A fix has been merged, but
-# it has not been released yet: https://github.com/mongodb/mongo-rust-driver/pull/1077
-#
-# We are using a branch of the driver that cherry-picks that fix onto the v2.8.2
-# release.
-[patch.crates-io.mongodb]
-git = "https://github.com/hasura/mongo-rust-driver.git"
-branch = "upstream-time-series-fix"
 
 # Set opt levels according to recommendations in insta documentation
 [profile.dev.package]
