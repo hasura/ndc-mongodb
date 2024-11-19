@@ -1805,6 +1805,7 @@ dependencies = [
  "anyhow",
  "clap",
  "configuration",
+ "enum-iterator",
  "futures-util",
  "googletest",
  "indexmap 2.2.6",

@@ -13,6 +13,7 @@ use ndc_models::{CollectionName, FieldName, ObjectTypeName};
 use super::{
     aggregation_expression::{
         self, infer_type_from_aggregation_expression, infer_type_from_reference_shorthand,
+        type_for_trig_operator,
     },
     error::{Error, Result},
     helpers::find_collection_object_type,
@@ -75,6 +76,7 @@ fn infer_stage_output_type(
                     infer_type_from_aggregation_expression(
                         context,
                         &format!("{desired_object_type_name}_documents"),
+                        None,
                         doc.into(),
                     )
                 })
@@ -114,6 +116,7 @@ fn infer_stage_output_type(
                 aggregation_expression::infer_type_from_aggregation_expression(
                     context,
                     &format!("{desired_object_type_name}_replaceWith"),
+                    None,
                     selection.clone().into(),
                 )?,
             )
@@ -152,6 +155,7 @@ fn infer_type_from_group_stage(
     let group_key_expression_type = infer_type_from_aggregation_expression(
         context,
         &format!("{desired_object_type_name}_id"),
+        None,
         key_expression.clone(),
     )?;
 
@@ -164,17 +168,20 @@ fn infer_type_from_group_stage(
             Accumulator::Min(expr) => infer_type_from_aggregation_expression(
                 context,
                 &format!("{desired_object_type_name}_min"),
+                None,
                 expr.clone(),
             )?,
             Accumulator::Max(expr) => infer_type_from_aggregation_expression(
                 context,
                 &format!("{desired_object_type_name}_min"),
+                None,
                 expr.clone(),
             )?,
             Accumulator::Push(expr) => {
                 let t = infer_type_from_aggregation_expression(
                     context,
                     &format!("{desired_object_type_name}_push"),
+                    None,
                     expr.clone(),
                 )?;
                 TypeConstraint::ArrayOf(Box::new(t))
@@ -183,28 +190,17 @@ fn infer_type_from_group_stage(
                 let t = infer_type_from_aggregation_expression(
                     context,
                     &format!("{desired_object_type_name}_avg"),
+                    Some(&TypeConstraint::numeric()),
                     expr.clone(),
                 )?;
-                match t {
-                    TypeConstraint::ExtendedJSON => t,
-                    TypeConstraint::Scalar(scalar_type) if scalar_type.is_numeric() => t,
-                    _ => TypeConstraint::Nullable(Box::new(TypeConstraint::Scalar(
-                        BsonScalarType::Int,
-                    ))),
-                }
+                type_for_trig_operator(t).make_nullable()
             }
-            Accumulator::Sum(expr) => {
-                let t = infer_type_from_aggregation_expression(
-                    context,
-                    &format!("{desired_object_type_name}_push"),
-                    expr.clone(),
-                )?;
-                match t {
-                    TypeConstraint::ExtendedJSON => t,
-                    TypeConstraint::Scalar(scalar_type) if scalar_type.is_numeric() => t,
-                    _ => TypeConstraint::Scalar(BsonScalarType::Int),
-                }
-            }
+            Accumulator::Sum(expr) => infer_type_from_aggregation_expression(
+                context,
+                &format!("{desired_object_type_name}_push"),
+                Some(&TypeConstraint::numeric()),
+                expr.clone(),
+            )?,
         };
         Ok::<_, Error>((key.clone().into(), accumulator_type))
     });
@@ -229,7 +225,7 @@ fn infer_type_from_unwind_stage(
     let Reference::InputDocumentField { name, nested_path } = field_to_unwind else {
         return Err(Error::ExpectedStringPath(path.into()));
     };
-    let field_type = infer_type_from_reference_shorthand(context, path)?;
+    let field_type = infer_type_from_reference_shorthand(context, None, path)?;
 
     let mut unwind_stage_object_type = ObjectTypeConstraint {
         fields: Default::default(),
