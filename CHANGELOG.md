@@ -4,6 +4,10 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+### Fixed
+
+- The connector previously used Cloudflare's DNS resolver. Now it uses the locally-configured DNS resolver. ([#125](https://github.com/hasura/ndc-mongodb/pull/125))
+
 ## [1.4.0] - 2024-11-14
 
 ### Added
