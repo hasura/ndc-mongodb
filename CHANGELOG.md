@@ -4,6 +4,10 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+### Changed
+
+- Updates MongoDB Rust driver from v2.8 to v3.1.0 ([#124](https://github.com/hasura/ndc-mongodb/pull/124))
+
 ## [1.4.0] - 2024-11-14
 
 ### Added
