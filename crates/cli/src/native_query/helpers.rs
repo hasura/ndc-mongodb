@@ -1,7 +1,8 @@
 use std::{borrow::Cow, collections::BTreeMap};
 
 use configuration::Configuration;
-use ndc_models::{CollectionInfo, CollectionName, ObjectTypeName};
+use ndc_models::{CollectionInfo, CollectionName, FieldName, ObjectTypeName};
+use nonempty::NonEmpty;
 use regex::Regex;
 
 use super::error::{Error, Result};
@@ -55,4 +56,39 @@ pub fn parse_counter_suffix(name: &str) -> (Cow<'_, str>, u32) {
         return (Cow::Borrowed(name), 0);
     };
     (Cow::Owned(prefix.to_string()), count)
+}
+
+pub fn get_object_field_type<'a>(
+    object_types: &'a BTreeMap<ObjectTypeName, ndc_models::ObjectType>,
+    object_type_name: &ObjectTypeName,
+    object_type: &'a ndc_models::ObjectType,
+    path: NonEmpty<FieldName>,
+) -> Result<&'a ndc_models::Type> {
+    let field_name = path.head;
+    let rest = NonEmpty::from_vec(path.tail);
+
+    let field = object_type
+        .fields
+        .get(&field_name)
+        .ok_or_else(|| Error::ObjectMissingField {
+            object_type: object_type_name.clone(),
+            field_name: field_name.clone(),
+        })?;
+
+    match rest {
+        None => Ok(&field.r#type),
+        Some(rest) => match &field.r#type {
+            ndc_models::Type::Named { name } => {
+                let type_name: ObjectTypeName = name.clone().into();
+                let inner_object_type = object_types
+                    .get(&type_name)
+                    .ok_or_else(|| Error::UnknownObjectType(type_name.to_string()))?;
+                get_object_field_type(object_types, &type_name, inner_object_type, rest)
+            }
+            _ => Err(Error::ObjectMissingField {
+                object_type: object_type_name.clone(),
+                field_name: field_name.clone(),
+            }),
+        },
+    }
 }

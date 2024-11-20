@@ -2,7 +2,7 @@
 
 use std::{
     borrow::Cow,
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
 };
 
 use configuration::{
@@ -43,7 +43,7 @@ pub struct PipelineTypeContext<'a> {
     /// to a type here, or in [self.configuration.object_types]
     object_types: BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
 
-    type_variables: HashMap<TypeVariable, HashSet<TypeConstraint>>,
+    type_variables: HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
     next_type_variable: u32,
 
     warnings: Vec<Error>,
@@ -71,6 +71,11 @@ impl PipelineTypeContext<'_> {
         context
     }
 
+    #[cfg(test)]
+    pub fn type_variables(&self) -> &HashMap<TypeVariable, BTreeSet<TypeConstraint>> {
+        &self.type_variables
+    }
+
     pub fn into_types(self) -> Result<PipelineTypes> {
         let result_document_type_variable = self.input_doc_type.ok_or(Error::IncompletePipeline)?;
         let required_type_variables = self
@@ -79,6 +84,15 @@ impl PipelineTypeContext<'_> {
             .copied()
             .chain([result_document_type_variable])
             .collect_vec();
+
+        #[cfg(test)]
+        {
+            println!("variable mappings:");
+            for (parameter, variable) in self.parameter_types.iter() {
+                println!("  {variable}: {parameter}");
+            }
+            println!("  {result_document_type_variable}: result type\n");
+        }
 
         let mut object_type_constraints = self.object_types;
         let (variable_types, added_object_types) = unify(
@@ -175,6 +189,60 @@ impl PipelineTypeContext<'_> {
             .get_mut(&variable)
             .expect("unknown type variable");
         entry.insert(constraint);
+    }
+
+    pub fn constraint_references_variable(
+        &self,
+        constraint: &TypeConstraint,
+        variable: TypeVariable,
+    ) -> bool {
+        let object_constraint_references_variable = |name: &ObjectTypeName| -> bool {
+            if let Some(object_type) = self.object_types.get(name) {
+                object_type.fields.iter().any(|(_, field_type)| {
+                    self.constraint_references_variable(field_type, variable)
+                })
+            } else {
+                false
+            }
+        };
+
+        match constraint {
+            TypeConstraint::ExtendedJSON => false,
+            TypeConstraint::Scalar(_) => false,
+            TypeConstraint::Object(name) => object_constraint_references_variable(name),
+            TypeConstraint::ArrayOf(t) => self.constraint_references_variable(t, variable),
+            TypeConstraint::Predicate { object_type_name } => {
+                object_constraint_references_variable(object_type_name)
+            }
+            TypeConstraint::Union(ts) => ts
+                .iter()
+                .any(|t| self.constraint_references_variable(t, variable)),
+            TypeConstraint::OneOf(ts) => ts
+                .iter()
+                .any(|t| self.constraint_references_variable(t, variable)),
+            TypeConstraint::Variable(v2) if *v2 == variable => true,
+            TypeConstraint::Variable(v2) => {
+                let constraints = self.type_variables.get(v2);
+                constraints
+                    .iter()
+                    .flat_map(|m| *m)
+                    .any(|t| self.constraint_references_variable(t, variable))
+            }
+            TypeConstraint::ElementOf(t) => self.constraint_references_variable(t, variable),
+            TypeConstraint::FieldOf { target_type, .. } => {
+                self.constraint_references_variable(target_type, variable)
+            }
+            TypeConstraint::WithFieldOverrides {
+                target_type,
+                fields,
+                ..
+            } => {
+                self.constraint_references_variable(target_type, variable)
+                    || fields
+                        .iter()
+                        .any(|(_, t)| self.constraint_references_variable(t, variable))
+            }
+        }
     }
 
     pub fn insert_object_type(&mut self, name: ObjectTypeName, object_type: ObjectTypeConstraint) {

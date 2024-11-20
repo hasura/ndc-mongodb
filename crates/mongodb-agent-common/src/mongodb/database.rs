@@ -55,7 +55,9 @@ impl DatabaseTrait for Database {
     where
         Options: Into<Option<AggregateOptions>> + Send + 'static,
     {
-        Database::aggregate(self, pipeline, options).await
+        Database::aggregate(self, pipeline)
+            .with_options(options)
+            .await
     }
 
     fn collection(&self, name: &str) -> Self::Collection {

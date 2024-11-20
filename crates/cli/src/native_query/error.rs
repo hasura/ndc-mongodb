@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use configuration::schema::Type;
 use mongodb::bson::{self, Bson, Document};
@@ -24,6 +24,9 @@ pub enum Error {
 
     #[error("Expected an array type, but got: {actual_type:?}")]
     ExpectedArray { actual_type: Type },
+
+    #[error("Expected an array, but got: {actual_argument}")]
+    ExpectedArrayExpressionArgument { actual_argument: Bson },
 
     #[error("Expected an object type, but got: {actual_type:?}")]
     ExpectedObject { actual_type: Type },
@@ -68,20 +71,20 @@ pub enum Error {
         could_not_infer_return_type: bool,
 
         // These fields are included here for internal debugging
-        type_variables: HashMap<TypeVariable, HashSet<TypeConstraint>>,
+        type_variables: HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
         object_type_constraints: BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     },
 
     #[error("Error parsing a string in the aggregation pipeline: {0}")]
     UnableToParseReferenceShorthand(String),
 
-    #[error("Unknown match document operator: {0}")]
+    #[error("Type inference is not currently implemented for the query document operator, {0}. Please file a bug report, and declare types for your native query by hand for the time being.")]
     UnknownMatchDocumentOperator(String),
 
-    #[error("Unknown aggregation operator: {0}")]
+    #[error("Type inference is not currently implemented for the aggregation expression operator, {0}. Please file a bug report, and declare types for your native query by hand for the time being.")]
     UnknownAggregationOperator(String),
 
-    #[error("Type inference is not currently implemented for stage {stage_index} in the aggregation pipeline. Please file a bug report, and declare types for your native query by hand.\n\n{stage}")]
+    #[error("Type inference is not currently implemented for {stage}, stage number {} in your aggregation pipeline. Please file a bug report, and declare types for your native query by hand for the time being.", stage_index + 1)]
     UnknownAggregationStage {
         stage_index: usize,
         stage: bson::Document,
@@ -92,6 +95,12 @@ pub enum Error {
 
     #[error("Unknown object type, \"{0}\"")]
     UnknownObjectType(String),
+
+    #[error("{0}")]
+    Other(String),
+
+    #[error("Errors processing pipeline:\n\n{}", multiple_errors(.0))]
+    Multiple(Vec<Error>),
 }
 
 fn unable_to_infer_types_message(
@@ -115,4 +124,12 @@ fn unable_to_infer_types_message(
         message += "\n";
     }
     message
+}
+
+fn multiple_errors(errors: &[Error]) -> String {
+    let mut output = String::new();
+    for error in errors {
+        output += &format!("- {}\n", error);
+    }
+    output
 }
