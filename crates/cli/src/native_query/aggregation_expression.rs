@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use itertools::Itertools as _;
+use itertools::{Either, Itertools as _};
 use mongodb::bson::{Bson, Document};
 use mongodb_support::BsonScalarType;
 use nonempty::NonEmpty;
@@ -127,7 +127,6 @@ fn infer_type_from_aggregation_expression_document(
     }
 }
 
-// TODO: propagate expected type based on operator used
 fn infer_type_from_operator_expression(
     context: &mut PipelineTypeContext<'_>,
     desired_object_type_name: &str,
@@ -340,10 +339,13 @@ pub fn infer_type_from_reference_shorthand(
     let t = match reference {
         Reference::NativeQueryVariable {
             name,
-            type_annotation: _,
+            type_annotation,
         } => {
-            // TODO: read type annotation ENG-1249
-            context.register_parameter(name.into(), type_hint.into_iter().cloned())
+            let constraints = match type_annotation {
+                Some(annotation) => Either::Left(std::iter::once(TypeConstraint::from(annotation))),
+                None => Either::Right(type_hint.into_iter().cloned()),
+            };
+            context.register_parameter(name.into(), constraints)
         }
         Reference::PipelineVariable { .. } => todo!("pipeline variable"),
         Reference::InputDocumentField { name, nested_path } => {

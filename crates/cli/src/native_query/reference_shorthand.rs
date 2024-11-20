@@ -1,3 +1,4 @@
+use configuration::schema::Type;
 use ndc_models::FieldName;
 use nom::{
     branch::alt,
@@ -9,7 +10,10 @@ use nom::{
     IResult,
 };
 
-use super::error::{Error, Result};
+use super::{
+    error::{Error, Result},
+    type_annotation::type_expression,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Reference {
@@ -17,7 +21,7 @@ pub enum Reference {
     /// sending to MongoDB. For example, `"{{ artist_id }}`.
     NativeQueryVariable {
         name: String,
-        type_annotation: Option<String>,
+        type_annotation: Option<Type>,
     },
 
     /// Reference to a variable that is defined as part of the pipeline syntax. May be followed by
@@ -66,7 +70,7 @@ fn native_query_variable(input: &str) -> IResult<&str, Reference> {
             content.trim()
         })(input)
     };
-    let type_annotation = preceded(tag("|"), placeholder_content);
+    let type_annotation = preceded(tag("|"), type_expression);
 
     let (remaining, (name, variable_type)) = delimited(
         tag("{{"),
@@ -78,7 +82,7 @@ fn native_query_variable(input: &str) -> IResult<&str, Reference> {
 
     let variable = Reference::NativeQueryVariable {
         name: name.to_string(),
-        type_annotation: variable_type.map(ToString::to_string),
+        type_annotation: variable_type,
     };
     Ok((remaining, variable))
 }

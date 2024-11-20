@@ -262,9 +262,13 @@ fn analyze_match_expression_string(
     match parse_reference_shorthand(&match_expression)? {
         Reference::NativeQueryVariable {
             name,
-            type_annotation: _, // TODO: parse type annotation ENG-1249
+            type_annotation,
         } => {
-            context.register_parameter(name.into(), [field_type.clone()]);
+            let constraints = match type_annotation {
+                Some(type_annotation) => [type_annotation.into()],
+                None => [field_type.clone()],
+            };
+            context.register_parameter(name.into(), constraints);
         }
         Reference::String {
             native_query_variables,
