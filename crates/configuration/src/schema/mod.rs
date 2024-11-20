@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, fmt::Display};
 
 use ref_cast::RefCast as _;
 use schemars::JsonSchema;
@@ -120,6 +120,31 @@ impl From<ndc_models::Type> for Type {
             }
             ndc_models::Type::Predicate { object_type_name } => {
                 Type::Predicate { object_type_name }
+            }
+        }
+    }
+}
+
+impl Display for Type {
+    /// Display types using GraphQL-style syntax
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fn helper(t: &Type, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match t {
+                Type::ExtendedJSON => write!(f, "extendedJSON"),
+                Type::Scalar(s) => write!(f, "{}", s.bson_name()),
+                Type::Object(name) => write!(f, "{name}"),
+                Type::ArrayOf(t) => write!(f, "[{t}]"),
+                Type::Nullable(t) => write!(f, "{t}"),
+                Type::Predicate { object_type_name } => {
+                    write!(f, "predicate<{object_type_name}>")
+                }
+            }
+        }
+        match self {
+            Type::Nullable(t) => helper(t, f),
+            t => {
+                helper(t, f)?;
+                write!(f, "!")
             }
         }
     }
