@@ -124,7 +124,7 @@ where
 /// trailing whitespace, returning the output of `inner`.
 ///
 /// From https://github.com/rust-bakery/nom/blob/main/doc/nom_recipes.md#wrapper-combinators-that-eat-whitespace-before-and-after-a-parser
-pub fn ws<'a, O, E: ParseError<&'a str>, F>(inner: F) -> impl Parser<&'a str, O, E>
+fn ws<'a, O, E: ParseError<&'a str>, F>(inner: F) -> impl Parser<&'a str, O, E>
 where
     F: Parser<&'a str, O, E>,
 {

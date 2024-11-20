@@ -3,11 +3,12 @@ use ndc_models::FieldName;
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while1},
-    character::complete::{alpha1, alphanumeric1},
+    character::complete::{alpha1, alphanumeric1, multispace0},
     combinator::{all_consuming, cut, map, opt, recognize},
+    error::ParseError,
     multi::{many0, many0_count},
     sequence::{delimited, pair, preceded},
-    IResult,
+    IResult, Parser,
 };
 
 use super::{
@@ -70,11 +71,11 @@ fn native_query_variable(input: &str) -> IResult<&str, Reference> {
             content.trim()
         })(input)
     };
-    let type_annotation = preceded(tag("|"), type_expression);
+    let type_annotation = preceded(ws(tag("|")), type_expression);
 
     let (remaining, (name, variable_type)) = delimited(
         tag("{{"),
-        cut(pair(placeholder_content, opt(type_annotation))),
+        cut(ws(pair(ws(placeholder_content), ws(opt(type_annotation))))),
         tag("}}"),
     )(input)?;
     // Since the native_query_variable parser runs inside an `alt`, the use of `cut` commits to
@@ -138,4 +139,15 @@ fn plain_string(_input: &str) -> IResult<&str, Reference> {
             native_query_variables: Default::default(),
         },
     ))
+}
+
+/// A combinator that takes a parser `inner` and produces a parser that also consumes both leading and
+/// trailing whitespace, returning the output of `inner`.
+///
+/// From https://github.com/rust-bakery/nom/blob/main/doc/nom_recipes.md#wrapper-combinators-that-eat-whitespace-before-and-after-a-parser
+fn ws<'a, O, E: ParseError<&'a str>, F>(inner: F) -> impl Parser<&'a str, O, E>
+where
+    F: Parser<&'a str, O, E>,
+{
+    delimited(multispace0, inner, multispace0)
 }
