@@ -39,13 +39,12 @@ where
     where
         Options: Into<Option<AggregateOptions>> + Send + 'static;
 
-    async fn find<Filter, Options>(
+    async fn find<Options>(
         &self,
-        filter: Filter,
+        filter: Document,
         options: Options,
     ) -> Result<Self::RowCursor, Error>
     where
-        Filter: Into<Option<Document>> + Send + 'static,
         Options: Into<Option<FindOptions>> + Send + 'static;
 }
 
@@ -65,18 +64,19 @@ where
     where
         Options: Into<Option<AggregateOptions>> + Send + 'static,
     {
-        Collection::aggregate(self, pipeline, options).await
+        Collection::aggregate(self, pipeline)
+            .with_options(options)
+            .await
     }
 
-    async fn find<Filter, Options>(
+    async fn find<Options>(
         &self,
-        filter: Filter,
+        filter: Document,
         options: Options,
     ) -> Result<Self::RowCursor, Error>
     where
-        Filter: Into<Option<Document>> + Send + 'static,
         Options: Into<Option<FindOptions>> + Send + 'static,
     {
-        Collection::find(self, filter, options).await
+        Collection::find(self, filter).with_options(options).await
     }
 }

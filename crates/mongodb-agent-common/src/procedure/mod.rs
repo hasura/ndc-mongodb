@@ -44,9 +44,14 @@ impl<'a> Procedure<'a> {
         self,
         database: Database,
     ) -> Result<(bson::Document, Type), ProcedureError> {
-        let selection_criteria = self.selection_criteria.map(Cow::into_owned);
         let command = interpolate(self.arguments, &self.command)?;
-        let result = database.run_command(command, selection_criteria).await?;
+        let run_command = database.run_command(command);
+        let run_command = if let Some(selection_criteria) = self.selection_criteria {
+            run_command.selection_criteria(selection_criteria.into_owned())
+        } else {
+            run_command
+        };
+        let result = run_command.await?;
         Ok((result, self.result_type))
     }
 
