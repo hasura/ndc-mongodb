@@ -5,11 +5,11 @@ use mongodb_support::BsonScalarType;
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    character::complete::{alpha1, alphanumeric1},
+    character::complete::{alpha1, alphanumeric1, multispace0},
     combinator::{cut, opt, recognize},
     error::ParseError,
     multi::many0_count,
-    sequence::{delimited, pair, preceded},
+    sequence::{delimited, pair, preceded, terminated},
     IResult, Parser,
 };
 
@@ -52,8 +52,8 @@ fn object_annotation(input: &str) -> IResult<&str, Type> {
 
 fn predicate_annotation(input: &str) -> IResult<&str, Type> {
     let (remaining, name) = preceded(
-        tag("predicate"),
-        delimited(tag("<"), cut(object_type_name), tag(">")),
+        terminated(tag("predicate"), multispace0),
+        delimited(tag("<"), cut(ws(object_type_name)), tag(">")),
     )(input)?;
     Ok((
         remaining,
@@ -70,7 +70,7 @@ fn object_type_name(input: &str) -> IResult<&str, &str> {
 }
 
 fn array_of_annotation(input: &str) -> IResult<&str, Type> {
-    let (remaining, element_type) = delimited(tag("["), cut(type_expression), tag("]"))(input)?;
+    let (remaining, element_type) = delimited(tag("["), cut(ws(type_expression)), tag("]"))(input)?;
     Ok((
         remaining,
         Type::Nullable(Box::new(Type::ArrayOf(Box::new(element_type)))),
@@ -87,7 +87,7 @@ where
     move |input| {
         let (remaining, t) = parser.parse(input)?;
         let t = t.normalize_type(); // strip redundant nullable layers
-        let (remaining, non_nullable_suffix) = opt(tag("!"))(remaining)?;
+        let (remaining, non_nullable_suffix) = opt(preceded(multispace0, tag("!")))(remaining)?;
         let t = match non_nullable_suffix {
             None => t,
             Some(_) => match t {
@@ -120,6 +120,17 @@ where
     }
 }
 
+/// A combinator that takes a parser `inner` and produces a parser that also consumes both leading and
+/// trailing whitespace, returning the output of `inner`.
+///
+/// From https://github.com/rust-bakery/nom/blob/main/doc/nom_recipes.md#wrapper-combinators-that-eat-whitespace-before-and-after-a-parser
+pub fn ws<'a, O, E: ParseError<&'a str>, F>(inner: F) -> impl Parser<&'a str, O, E>
+where
+    F: Parser<&'a str, O, E>,
+{
+    delimited(multispace0, inner, multispace0)
+}
+
 #[cfg(test)]
 mod tests {
     use configuration::schema::Type;
@@ -147,6 +158,29 @@ mod tests {
         expect_that!(
             super::type_expression("double!"),
             ok((anything(), eq(&Type::Scalar(BsonScalarType::Double))))
+        );
+        Ok(())
+    }
+
+    #[googletest::test]
+    fn ignores_whitespace_in_type_expressions() -> Result<()> {
+        expect_that!(
+            super::type_expression("[ double ! ] !"),
+            ok((
+                anything(),
+                eq(&Type::ArrayOf(Box::new(Type::Scalar(
+                    BsonScalarType::Double
+                ))))
+            ))
+        );
+        expect_that!(
+            super::type_expression("predicate < obj >"),
+            ok((
+                anything(),
+                eq(&Type::Nullable(Box::new(Type::Predicate {
+                    object_type_name: "obj".into()
+                })))
+            ))
         );
         Ok(())
     }
