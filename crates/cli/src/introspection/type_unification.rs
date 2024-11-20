@@ -67,6 +67,25 @@ pub fn unify_type(type_a: Type, type_b: Type) -> Type {
             }
         }
 
+        // Predicate types unify if they have the same name.
+        // If they are diffferent then the union is ExtendedJSON.
+        (
+            Type::Predicate {
+                object_type_name: object_a,
+            },
+            Type::Predicate {
+                object_type_name: object_b,
+            },
+        ) => {
+            if object_a == object_b {
+                Type::Predicate {
+                    object_type_name: object_a,
+                }
+            } else {
+                Type::ExtendedJSON
+            }
+        }
+
         // Array types unify iff their element types unify.
         (Type::ArrayOf(elem_type_a), Type::ArrayOf(elem_type_b)) => {
             let elem_type = unify_type(*elem_type_a, *elem_type_b);
