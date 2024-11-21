@@ -15,7 +15,7 @@ use mongodb_support::{
     aggregate::{Accumulator, Pipeline, Selection, Stage},
     BsonScalarType,
 };
-use ndc_models::{FieldName, ObjectTypeName};
+use ndc_models::{ArgumentName, FieldName, ObjectTypeName};
 use pretty_assertions::assert_eq;
 use test_helpers::configuration::mflix_config;
 
