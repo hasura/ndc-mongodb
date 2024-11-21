@@ -55,9 +55,12 @@ pub enum Error {
         field_name: FieldName,
     },
 
-    #[error("Type mismatch in {context}: {a:?} is not compatible with {b:?}")]
+    #[error("Type mismatch{}: {a:?} is not compatible with {b:?}", match context {
+        Some(context) => format!(" in {}", context),
+        None => String::new(),
+    })]
     TypeMismatch {
-        context: String,
+        context: Option<String>,
         a: TypeConstraint,
         b: TypeConstraint,
     },
@@ -114,7 +117,7 @@ fn unable_to_infer_types_message(
         for name in problem_parameter_types {
             message += &format!("- {name}\n");
         }
-        message += "\nTry adding type annotations of the form: {{parameter_name|[int!]!}}\n";
+        message += "\nTry adding type annotations of the form: {{ parameter_name | [int!]! }}\n";
     }
     if could_not_infer_return_type {
         message += "\nUnable to infer return type.";

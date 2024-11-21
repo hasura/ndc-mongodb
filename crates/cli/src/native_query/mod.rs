@@ -101,7 +101,10 @@ pub async fn run(context: &Context, command: Command) -> anyhow::Result<()> {
             let native_query =
                 match native_query_from_pipeline(&configuration, &name, collection, pipeline) {
                     Ok(q) => WithName::named(name, q),
-                    Err(_) => todo!(),
+                    Err(err) => {
+                        eprintln!("Error interpreting aggregation pipeline.\n\n{err}");
+                        exit(ExitCode::CouldNotReadAggregationPipeline.into())
+                    }
                 };
 
             let native_query_dir = native_query_path

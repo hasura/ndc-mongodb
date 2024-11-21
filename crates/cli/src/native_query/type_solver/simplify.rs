@@ -130,9 +130,15 @@ fn simplify_constraint_pair(
         (C::ExtendedJSON, b) if variance == Variance::Contravariant => Ok(b),
         (a, C::ExtendedJSON) if variance == Variance::Contravariant => Ok(a),
 
-        // TODO: If we don't get a solution from solve_scalar, if the variable is covariant we want
-        // to make a union type
-        (C::Scalar(a), C::Scalar(b)) => solve_scalar(variance, a, b),
+        (C::Scalar(a), C::Scalar(b)) => {
+            if let Ok(t) = solve_scalar(variance, a, b) {
+                Ok(t)
+            } else if variance == Variance::Covariant {
+                Ok(C::ExtendedJSON)
+            } else {
+                Err((C::Scalar(a), C::Scalar(b)))
+            }
+        }
 
         (C::Union(mut a), C::Union(mut b)) if variance == Variance::Covariant => {
             a.append(&mut b);
@@ -156,7 +162,7 @@ fn simplify_constraint_pair(
             let union = simplify_constraints_internal(context, variable, a);
             Ok(C::Union(union))
         }
-        (b, a @ C::Union(_)) => simplify_constraint_pair(context, variable, b, a),
+        (a, b @ C::Union(_)) => simplify_constraint_pair(context, variable, b, a),
 
         (C::OneOf(mut a), C::OneOf(mut b)) => {
             a.append(&mut b);
