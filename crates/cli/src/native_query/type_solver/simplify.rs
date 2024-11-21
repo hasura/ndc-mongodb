@@ -633,6 +633,34 @@ mod tests {
     }
 
     #[googletest::test]
+    fn simplifies_from_nullable_to_non_nullable_in_contravariant_context() -> Result<()> {
+        let configuration = mflix_config();
+        let result = super::simplify_constraints(
+            &configuration,
+            &Default::default(),
+            &mut Default::default(),
+            Some(TypeVariable::new(1, Variance::Contravariant)),
+            [
+                TypeConstraint::Scalar(BsonScalarType::String),
+                TypeConstraint::Union(
+                    [
+                        TypeConstraint::Scalar(BsonScalarType::String),
+                        TypeConstraint::Scalar(BsonScalarType::Null),
+                    ]
+                    .into(),
+                ),
+            ],
+        );
+        expect_that!(
+            result,
+            ok(eq(&BTreeSet::from([TypeConstraint::Scalar(
+                BsonScalarType::String
+            )])))
+        );
+        Ok(())
+    }
+
+    #[googletest::test]
     fn emits_error_if_scalar_is_not_compatible_with_any_union_branch() -> Result<()> {
         let configuration = mflix_config();
         let result = super::simplify_constraints(
