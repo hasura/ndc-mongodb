@@ -15,7 +15,7 @@ use mongodb_support::{
     aggregate::{Accumulator, Pipeline, Selection, Stage},
     BsonScalarType,
 };
-use ndc_models::{ArgumentName, FieldName, ObjectTypeName};
+use ndc_models::{FieldName, ObjectTypeName};
 use pretty_assertions::assert_eq;
 use test_helpers::configuration::mflix_config;
 
@@ -159,27 +159,21 @@ fn infers_native_query_from_pipeline_with_unannotated_parameter() -> googletest:
 }
 
 #[googletest::test]
-fn reads_parameter_type_annotation() -> googletest::Result<()> {
+fn emits_error_on_incorrect_parameter_type_annotation() -> googletest::Result<()> {
     let config = mflix_config();
 
     let pipeline = Pipeline::new(vec![Stage::Match(doc! {
-        "title": { "$eq": "{{ title | decimal }}" },
+        "title": { "$eq": "{{ title | decimal! }}" },
     })]);
 
     let native_query =
-        native_query_from_pipeline(&config, "movies_by_title", Some("movies".into()), pipeline)?;
+        native_query_from_pipeline(&config, "movies_by_title", Some("movies".into()), pipeline);
 
     expect_that!(
-        native_query.arguments,
-        unordered_elements_are![(
-            eq(&ArgumentName::from("title")),
-            field!(
-                ObjectField.r#type,
-                eq(&Type::Nullable(Box::new(Type::Scalar(
-                    BsonScalarType::Decimal
-                ))))
-            )
-        )]
+        native_query,
+        err(displays_as(contains_substring(
+            "decimal is not compatible with string"
+        )))
     );
     Ok(())
 }

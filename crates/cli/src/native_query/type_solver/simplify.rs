@@ -27,6 +27,12 @@ struct SimplifyContext<'a> {
     errors: &'a mut Vec<Error>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum OnMismatch {
+    ReportError,
+    Ignore,
+}
+
 // Attempts to reduce the number of type constraints from the input by combining redundant
 // constraints, merging constraints into more specific ones where possible, and applying
 // accumulated variable substitutions.
@@ -44,7 +50,8 @@ pub fn simplify_constraints(
         object_type_constraints,
         errors: &mut errors,
     };
-    let constraints = simplify_constraints_internal(&mut context, variable, constraints);
+    let constraints =
+        simplify_constraints_internal(&mut context, variable, OnMismatch::ReportError, constraints);
     if errors.is_empty() {
         Ok(constraints)
     } else {
@@ -55,6 +62,7 @@ pub fn simplify_constraints(
 fn simplify_constraints_internal(
     context: &mut SimplifyContext,
     variable: Option<TypeVariable>,
+    on_mismatch: OnMismatch, // don't emit errors when trying to simplify within a union or oneof
     constraints: impl IntoIterator<Item = TypeConstraint>,
 ) -> BTreeSet<TypeConstraint> {
     let constraints: BTreeSet<_> = constraints
@@ -65,7 +73,7 @@ fn simplify_constraints_internal(
     constraints
         .into_iter()
         .coalesce(|constraint_a, constraint_b| {
-            simplify_constraint_pair(context, variable, constraint_a, constraint_b)
+            simplify_constraint_pair(context, variable, on_mismatch, constraint_a, constraint_b)
         })
         .collect()
 }
@@ -98,13 +106,13 @@ fn simplify_single_constraint(
 
         C::Union(constraints) => {
             let simplified_constraints =
-                simplify_constraints_internal(context, variable, constraints);
+                simplify_constraints_internal(context, variable, OnMismatch::Ignore, constraints);
             vec![C::Union(simplified_constraints)]
         }
 
         C::OneOf(constraints) => {
             let simplified_constraints =
-                simplify_constraints_internal(context, variable, constraints);
+                simplify_constraints_internal(context, variable, OnMismatch::Ignore, constraints);
             vec![C::OneOf(simplified_constraints)]
         }
 
@@ -112,9 +120,15 @@ fn simplify_single_constraint(
     }
 }
 
+// TODO: Change the signature to distinguish between cases where we have provable type mismatches,
+// vs cases where we cannot combine constraints due to lack of information. Then use that
+// information to report type mismatches in more cases, such as when simplifying a scalar type and
+// a union in a contravariant or invariant context where the scalar is not compatibly with any
+// branch of the union (e.g. `string` and `(decimal | null)`).
 fn simplify_constraint_pair(
     context: &mut SimplifyContext,
     variable: Option<TypeVariable>,
+    on_mismatch: OnMismatch, // don't emit errors when trying to simplify within a union or oneof
     a: TypeConstraint,
     b: TypeConstraint,
 ) -> Simplified<TypeConstraint> {
@@ -134,18 +148,26 @@ fn simplify_constraint_pair(
             if let Ok(t) = solve_scalar(variance, a, b) {
                 Ok(t)
             } else if variance == Variance::Covariant {
-                Ok(C::ExtendedJSON)
+                Ok(C::Union([C::Scalar(a), C::Scalar(b)].into()))
             } else {
+                if on_mismatch == OnMismatch::ReportError {
+                    context.errors.push(Error::TypeMismatch {
+                        context: None,
+                        a: C::Scalar(a),
+                        b: C::Scalar(b),
+                    });
+                }
                 Err((C::Scalar(a), C::Scalar(b)))
             }
         }
 
         (C::Union(mut a), C::Union(mut b)) if variance == Variance::Covariant => {
             a.append(&mut b);
-            let union = simplify_constraints_internal(context, variable, a);
+            let union = simplify_constraints_internal(context, variable, OnMismatch::Ignore, a);
             Ok(C::Union(union))
         }
 
+        // TODO: Instead of a naive intersection we want to get a common subtype of both unions
         (C::Union(a), C::Union(b)) if variance == Variance::Contravariant => {
             let intersection: BTreeSet<_> = a.intersection(&b).cloned().collect();
             if intersection.is_empty() {
@@ -159,10 +181,10 @@ fn simplify_constraint_pair(
 
         (C::Union(mut a), b) if variance == Variance::Covariant => {
             a.insert(b);
-            let union = simplify_constraints_internal(context, variable, a);
+            let union = simplify_constraints_internal(context, variable, OnMismatch::Ignore, a);
             Ok(C::Union(union))
         }
-        (a, b @ C::Union(_)) => simplify_constraint_pair(context, variable, b, a),
+        (a, b @ C::Union(_)) => simplify_constraint_pair(context, variable, on_mismatch, b, a),
 
         (C::OneOf(mut a), C::OneOf(mut b)) => {
             a.append(&mut b);
@@ -173,28 +195,33 @@ fn simplify_constraint_pair(
             let matches: BTreeSet<_> = constraints
                 .clone()
                 .into_iter()
-                .filter_map(
-                    |c| match simplify_constraint_pair(context, variable, c, b.clone()) {
+                .filter_map(|c| {
+                    match simplify_constraint_pair(
+                        context,
+                        variable,
+                        OnMismatch::Ignore,
+                        c,
+                        b.clone(),
+                    ) {
                         Ok(c) => Some(c),
                         Err(_) => None,
-                    },
-                )
+                    }
+                })
                 .collect();
 
             if matches.len() == 1 {
                 Ok(matches.into_iter().next().unwrap())
             } else if matches.is_empty() {
-                // TODO: record type mismatch
                 Err((C::OneOf(constraints), b))
             } else {
                 Ok(C::OneOf(matches))
             }
         }
-        (a, b @ C::OneOf(_)) => simplify_constraint_pair(context, variable, b, a),
+        (a, b @ C::OneOf(_)) => simplify_constraint_pair(context, variable, on_mismatch, b, a),
 
         (C::Object(a), C::Object(b)) if a == b => Ok(C::Object(a)),
         (C::Object(a), C::Object(b)) => {
-            match merge_object_type_constraints(context, variable, &a, &b) {
+            match merge_object_type_constraints(context, variable, on_mismatch, &a, &b) {
                 Some(merged_name) => Ok(C::Object(merged_name)),
                 None => Err((C::Object(a), C::Object(b))),
             }
@@ -217,56 +244,24 @@ fn simplify_constraint_pair(
             C::Predicate {
                 object_type_name: b,
             },
-        ) if a == b => match merge_object_type_constraints(context, variable, &a, &b) {
-            Some(merged_name) => Ok(C::Predicate {
-                object_type_name: merged_name,
-            }),
-            None => Err((
-                C::Predicate {
-                    object_type_name: a,
-                },
-                C::Predicate {
-                    object_type_name: b,
-                },
-            )),
-        },
+        ) if a == b => {
+            match merge_object_type_constraints(context, variable, on_mismatch, &a, &b) {
+                Some(merged_name) => Ok(C::Predicate {
+                    object_type_name: merged_name,
+                }),
+                None => Err((
+                    C::Predicate {
+                        object_type_name: a,
+                    },
+                    C::Predicate {
+                        object_type_name: b,
+                    },
+                )),
+            }
+        }
 
-        // TODO: We probably want a separate step that swaps ElementOf and FieldOf constraints with
-        // constraint of the targeted structure. We might do a similar thing with
-        // WithFieldOverrides.
-
-        // (C::ElementOf(a), b) => {
-        //     if let TypeConstraint::ArrayOf(elem_type) = *a {
-        //         simplify_constraint_pair(
-        //             configuration,
-        //             object_type_constraints,
-        //             variance,
-        //             *elem_type,
-        //             b,
-        //         )
-        //     } else {
-        //         Err((C::ElementOf(a), b))
-        //     }
-        // }
-        //
-        // (C::FieldOf { target_type, path }, b) => {
-        //     if let TypeConstraint::Object(type_name) = *target_type {
-        //         let object_type = object_type_constraints
-        //     } else {
-        //         Err((C::FieldOf { target_type, path }, b))
-        //     }
-        // }
-
-        // (
-        //     C::Object(_),
-        //     C::WithFieldOverrides {
-        //         target_type,
-        //         fields,
-        //         ..
-        //     },
-        // ) => todo!(),
         (C::ArrayOf(a), C::ArrayOf(b)) => {
-            match simplify_constraint_pair(context, variable, *a, *b) {
+            match simplify_constraint_pair(context, variable, on_mismatch, *a, *b) {
                 Ok(ab) => Ok(C::ArrayOf(Box::new(ab))),
                 Err((a, b)) => Err((C::ArrayOf(Box::new(a)), C::ArrayOf(Box::new(b)))),
             }
@@ -316,6 +311,7 @@ fn solve_scalar(
 fn merge_object_type_constraints(
     context: &mut SimplifyContext,
     variable: Option<TypeVariable>,
+    on_mismatch: OnMismatch,
     name_a: &ObjectTypeName,
     name_b: &ObjectTypeName,
 ) -> Option<ObjectTypeName> {
@@ -335,7 +331,7 @@ fn merge_object_type_constraints(
         b.fields.clone().into_iter().collect(),
         always_ok(TypeConstraint::make_nullable),
         always_ok(TypeConstraint::make_nullable),
-        |field_a, field_b| unify_object_field(context, variable, field_a, field_b),
+        |field_a, field_b| unify_object_field(context, variable, on_mismatch, field_a, field_b),
     );
 
     let fields = match merged_fields_result {
@@ -356,10 +352,12 @@ fn merge_object_type_constraints(
 fn unify_object_field(
     context: &mut SimplifyContext,
     variable: Option<TypeVariable>,
+    on_mismatch: OnMismatch,
     field_type_a: TypeConstraint,
     field_type_b: TypeConstraint,
 ) -> Result<TypeConstraint, ()> {
-    simplify_constraint_pair(context, variable, field_type_a, field_type_b).map_err(|_| ())
+    simplify_constraint_pair(context, variable, on_mismatch, field_type_a, field_type_b)
+        .map_err(|_| ())
 }
 
 fn always_ok<A, B, E, F>(mut f: F) -> impl FnMut(A) -> Result<B, E>
@@ -513,7 +511,10 @@ mod tests {
     use nonempty::nonempty;
     use test_helpers::configuration::mflix_config;
 
-    use crate::native_query::type_constraint::{TypeConstraint, TypeVariable, Variance};
+    use crate::native_query::{
+        error::Error,
+        type_constraint::{TypeConstraint, TypeVariable, Variance},
+    };
 
     #[googletest::test]
     fn multiple_identical_scalar_constraints_resolve_one_constraint() {
@@ -577,6 +578,61 @@ mod tests {
             matches_pattern!(Ok(&BTreeSet::from_iter([TypeConstraint::Scalar(
                 BsonScalarType::String
             )])))
+        );
+        Ok(())
+    }
+
+    #[googletest::test]
+    fn nullable_union_does_not_error_and_does_not_simplify() -> Result<()> {
+        let configuration = mflix_config();
+        let result = super::simplify_constraints(
+            &configuration,
+            &Default::default(),
+            &mut Default::default(),
+            Some(TypeVariable::new(1, Variance::Contravariant)),
+            [TypeConstraint::Union(
+                [
+                    TypeConstraint::Scalar(BsonScalarType::Int),
+                    TypeConstraint::Scalar(BsonScalarType::Null),
+                ]
+                .into(),
+            )],
+        );
+        expect_that!(
+            result,
+            ok(eq(&BTreeSet::from([TypeConstraint::Union(
+                [
+                    TypeConstraint::Scalar(BsonScalarType::Int),
+                    TypeConstraint::Scalar(BsonScalarType::Null),
+                ]
+                .into(),
+            )])))
+        );
+        Ok(())
+    }
+
+    #[googletest::test]
+    fn emits_error_if_scalar_is_not_compatible_with_any_union_branch() -> Result<()> {
+        let configuration = mflix_config();
+        let result = super::simplify_constraints(
+            &configuration,
+            &Default::default(),
+            &mut Default::default(),
+            Some(TypeVariable::new(1, Variance::Contravariant)),
+            [
+                TypeConstraint::Scalar(BsonScalarType::Decimal),
+                TypeConstraint::Union(
+                    [
+                        TypeConstraint::Scalar(BsonScalarType::String),
+                        TypeConstraint::Scalar(BsonScalarType::Null),
+                    ]
+                    .into(),
+                ),
+            ],
+        );
+        expect_that!(
+            result,
+            err(elements_are![matches_pattern!(Error::TypeMismatch { .. })])
         );
         Ok(())
     }

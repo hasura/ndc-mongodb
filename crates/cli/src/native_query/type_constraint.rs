@@ -54,7 +54,6 @@ pub enum TypeConstraint {
     },
 
     // Complex types
-    
     Union(BTreeSet<TypeConstraint>),
 
     /// Unlike Union we expect the solved concrete type for a variable with a OneOf constraint may
@@ -93,15 +92,15 @@ pub enum TypeConstraint {
 impl std::fmt::Display for TypeConstraint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TypeConstraint::ExtendedJSON => write!(f, "ExtendedJSON"),
+            TypeConstraint::ExtendedJSON => write!(f, "extendedJSON"),
             TypeConstraint::Scalar(s) => s.fmt(f),
-            TypeConstraint::Object(name) => write!(f, "Object({name})"),
+            TypeConstraint::Object(name) => write!(f, "{name}"),
             TypeConstraint::ArrayOf(t) => write!(f, "[{t}]"),
             TypeConstraint::Predicate { object_type_name } => {
-                write!(f, "Predicate({object_type_name})")
+                write!(f, "predicate<{object_type_name}>")
             }
-            TypeConstraint::Union(ts) => write!(f, "{}", ts.iter().join(" | ")),
-            TypeConstraint::OneOf(ts) => write!(f, "{}", ts.iter().join(" / ")),
+            TypeConstraint::Union(ts) => write!(f, "({})", ts.iter().join(" | ")),
+            TypeConstraint::OneOf(ts) => write!(f, "({})", ts.iter().join(" / ")),
             TypeConstraint::Variable(v) => v.fmt(f),
             TypeConstraint::ElementOf(t) => write!(f, "{t}[@]"),
             TypeConstraint::FieldOf { target_type, path } => {
