@@ -264,10 +264,8 @@ fn analyze_match_expression_string(
             name,
             type_annotation,
         } => {
-            let constraints = match type_annotation {
-                Some(type_annotation) => [type_annotation.into()],
-                None => [field_type.clone()],
-            };
+            let constraints = std::iter::once(field_type.clone())
+                .chain(type_annotation.map(TypeConstraint::from));
             context.register_parameter(name.into(), constraints);
         }
         Reference::String {

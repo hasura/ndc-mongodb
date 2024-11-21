@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use itertools::{Either, Itertools as _};
+use itertools::Itertools as _;
 use mongodb::bson::{Bson, Document};
 use mongodb_support::BsonScalarType;
 use nonempty::NonEmpty;
@@ -341,10 +341,10 @@ pub fn infer_type_from_reference_shorthand(
             name,
             type_annotation,
         } => {
-            let constraints = match type_annotation {
-                Some(annotation) => Either::Left(std::iter::once(TypeConstraint::from(annotation))),
-                None => Either::Right(type_hint.into_iter().cloned()),
-            };
+            let constraints = type_hint
+                .into_iter()
+                .cloned()
+                .chain(type_annotation.map(TypeConstraint::from));
             context.register_parameter(name.into(), constraints)
         }
         Reference::PipelineVariable { .. } => todo!("pipeline variable"),
