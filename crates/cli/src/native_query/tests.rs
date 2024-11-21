@@ -159,11 +159,37 @@ fn infers_native_query_from_pipeline_with_unannotated_parameter() -> googletest:
 }
 
 #[googletest::test]
+fn reads_parameter_type_annotation() -> googletest::Result<()> {
+    let config = mflix_config();
+
+    // Parameter type would be inferred as double without this annotation
+    let pipeline = Pipeline::new(vec![Stage::Match(doc! {
+        "imdb.rating": { "$gt": "{{ min_rating | int! }}" },
+    })]);
+
+    let native_query = native_query_from_pipeline(
+        &config,
+        "movies_by_min_rating",
+        Some("movies".into()),
+        pipeline,
+    )?;
+
+    expect_that!(
+        native_query.arguments,
+        unordered_elements_are![(
+            eq(&ArgumentName::from("min_rating")),
+            field!(ObjectField.r#type, eq(&Type::Scalar(BsonScalarType::Int)))
+        )]
+    );
+    Ok(())
+}
+
+#[googletest::test]
 fn emits_error_on_incorrect_parameter_type_annotation() -> googletest::Result<()> {
     let config = mflix_config();
 
     let pipeline = Pipeline::new(vec![Stage::Match(doc! {
-        "title": { "$eq": "{{ title | decimal! }}" },
+        "title": { "$eq": "{{ title | decimal }}" },
     })]);
 
     let native_query =
@@ -172,7 +198,7 @@ fn emits_error_on_incorrect_parameter_type_annotation() -> googletest::Result<()
     expect_that!(
         native_query,
         err(displays_as(contains_substring(
-            "decimal is not compatible with string"
+            "string is not compatible with decimal"
         )))
     );
     Ok(())

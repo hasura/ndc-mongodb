@@ -167,8 +167,10 @@ fn simplify_constraint_pair(
             Ok(C::Union(union))
         }
 
-        // TODO: Instead of a naive intersection we want to get a common subtype of both unions
-        (C::Union(a), C::Union(b)) if variance == Variance::Contravariant => {
+        // TODO: Instead of a naive intersection we want to get a common subtype of both unions in
+        // the contravariant case, or get the intersection after solving all types in the invariant
+        // case.
+        (C::Union(a), C::Union(b)) => {
             let intersection: BTreeSet<_> = a.intersection(&b).cloned().collect();
             if intersection.is_empty() {
                 Err((C::Union(a), C::Union(b)))
@@ -184,6 +186,25 @@ fn simplify_constraint_pair(
             let union = simplify_constraints_internal(context, variable, OnMismatch::Ignore, a);
             Ok(C::Union(union))
         }
+        (C::Union(a), b) => {
+            let mut simplified = b.clone();
+            for union_branch in a.iter() {
+                match simplify_constraint_pair(
+                    context,
+                    variable,
+                    OnMismatch::ReportError,
+                    simplified,
+                    union_branch.clone(),
+                ) {
+                    Ok(t) => {
+                        simplified = t;
+                    }
+                    Err(_) => return Err((C::Union(a), b)),
+                }
+            }
+            Ok(simplified)
+        }
+
         (a, b @ C::Union(_)) => simplify_constraint_pair(context, variable, on_mismatch, b, a),
 
         (C::OneOf(mut a), C::OneOf(mut b)) => {
@@ -632,7 +653,11 @@ mod tests {
         );
         expect_that!(
             result,
-            err(elements_are![matches_pattern!(Error::TypeMismatch { .. })])
+            err(unordered_elements_are![eq(&Error::TypeMismatch {
+                context: None,
+                a: TypeConstraint::Scalar(BsonScalarType::Decimal),
+                b: TypeConstraint::Scalar(BsonScalarType::String),
+            }),])
         );
         Ok(())
     }

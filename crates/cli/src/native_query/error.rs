@@ -9,7 +9,7 @@ use super::type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable}
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Clone, Debug, Error)]
+#[derive(Clone, Debug, Error, PartialEq)]
 pub enum Error {
     #[error("Cannot infer a result type for an empty pipeline")]
     EmptyPipeline,
