@@ -198,7 +198,7 @@ fn emits_error_on_incorrect_parameter_type_annotation() -> googletest::Result<()
     expect_that!(
         native_query,
         err(displays_as(contains_substring(
-            "string is not compatible with decimal"
+            "string! is not compatible with decimal"
         )))
     );
     Ok(())

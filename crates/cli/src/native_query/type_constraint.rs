@@ -1,4 +1,7 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    borrow::Cow,
+    collections::{BTreeMap, BTreeSet},
+};
 
 use configuration::MongoScalarType;
 use itertools::Itertools as _;
@@ -91,35 +94,49 @@ pub enum TypeConstraint {
 
 impl std::fmt::Display for TypeConstraint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TypeConstraint::ExtendedJSON => write!(f, "extendedJSON"),
-            TypeConstraint::Scalar(s) => s.fmt(f),
-            TypeConstraint::Object(name) => write!(f, "{name}"),
-            TypeConstraint::ArrayOf(t) => write!(f, "[{t}]"),
-            TypeConstraint::Predicate { object_type_name } => {
-                write!(f, "predicate<{object_type_name}>")
-            }
-            TypeConstraint::Union(ts) => write!(f, "({})", ts.iter().join(" | ")),
-            TypeConstraint::OneOf(ts) => write!(f, "({})", ts.iter().join(" / ")),
-            TypeConstraint::Variable(v) => v.fmt(f),
-            TypeConstraint::ElementOf(t) => write!(f, "{t}[@]"),
-            TypeConstraint::FieldOf { target_type, path } => {
-                write!(f, "{target_type}.{}", path.iter().join("."))
-            }
-            TypeConstraint::WithFieldOverrides {
-                augmented_object_type_name,
-                target_type,
-                fields,
-            } => {
-                writeln!(f, "{target_type} // {augmented_object_type_name} {{")?;
-                for (name, spec) in fields {
-                    write!(f, "  {name}: ")?;
-                    match spec {
-                        Some(t) => write!(f, "{t}"),
-                        None => write!(f, "-"),
-                    }?;
+        fn helper(t: &TypeConstraint, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match t {
+                TypeConstraint::ExtendedJSON => write!(f, "extendedJSON"),
+                TypeConstraint::Scalar(s) => s.fmt(f),
+                TypeConstraint::Object(name) => write!(f, "{name}"),
+                TypeConstraint::ArrayOf(t) => write!(f, "[{t}]"),
+                TypeConstraint::Predicate { object_type_name } => {
+                    write!(f, "predicate<{object_type_name}>")
                 }
-                write!(f, "}}")
+                TypeConstraint::Union(ts) => write!(f, "({})", ts.iter().join(" | ")),
+                TypeConstraint::OneOf(ts) => write!(f, "({})", ts.iter().join(" / ")),
+                TypeConstraint::Variable(v) => v.fmt(f),
+                TypeConstraint::ElementOf(t) => write!(f, "{t}[@]"),
+                TypeConstraint::FieldOf { target_type, path } => {
+                    write!(f, "{target_type}.{}", path.iter().join("."))
+                }
+                TypeConstraint::WithFieldOverrides {
+                    augmented_object_type_name,
+                    target_type,
+                    fields,
+                } => {
+                    writeln!(f, "{target_type} // {augmented_object_type_name} {{")?;
+                    for (name, spec) in fields {
+                        write!(f, "  {name}: ")?;
+                        match spec {
+                            Some(t) => write!(f, "{t}"),
+                            None => write!(f, "<removed>"),
+                        }?;
+                        writeln!(f)?;
+                    }
+                    write!(f, "}}")
+                }
+            }
+        }
+        if *self == TypeConstraint::Scalar(BsonScalarType::Null) {
+            write!(f, "null")
+        } else {
+            match self.without_null() {
+                Some(t) => helper(&t, f),
+                None => {
+                    helper(self, f)?;
+                    write!(f, "!")
+                }
             }
         }
     }
@@ -184,6 +201,29 @@ impl TypeConstraint {
                 .iter()
                 .any(|t| matches!(t, TypeConstraint::Scalar(BsonScalarType::Null))),
             _ => false,
+        }
+    }
+
+    /// If the type constraint is a union including null then return a constraint with the null
+    /// removed
+    pub fn without_null(&self) -> Option<Cow<'_, TypeConstraint>> {
+        match self {
+            TypeConstraint::Union(constraints) => {
+                let non_null = constraints
+                    .iter()
+                    .filter(|c| **c != TypeConstraint::Scalar(BsonScalarType::Null))
+                    .collect_vec();
+                if non_null.len() == constraints.len() {
+                    Some(Cow::Borrowed(self))
+                } else if non_null.len() == 1 {
+                    Some(Cow::Borrowed(non_null.first().unwrap()))
+                } else {
+                    Some(Cow::Owned(TypeConstraint::Union(
+                        non_null.into_iter().cloned().collect(),
+                    )))
+                }
+            }
+            _ => None,
         }
     }
 
@@ -312,5 +352,38 @@ impl From<ndc_models::ObjectType> for ObjectTypeConstraint {
                 .map(|(name, field)| (name, field.r#type.into()))
                 .collect(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use googletest::prelude::*;
+    use mongodb_support::BsonScalarType;
+
+    use super::TypeConstraint;
+
+    #[googletest::test]
+    fn displays_non_nullable_type_with_suffix() {
+        expect_eq!(
+            format!("{}", TypeConstraint::Scalar(BsonScalarType::Int)),
+            "int!".to_string()
+        );
+    }
+
+    #[googletest::test]
+    fn displays_nullable_type_without_suffix() {
+        expect_eq!(
+            format!(
+                "{}",
+                TypeConstraint::Union(
+                    [
+                        TypeConstraint::Scalar(BsonScalarType::Int),
+                        TypeConstraint::Scalar(BsonScalarType::Null),
+                    ]
+                    .into()
+                )
+            ),
+            "int".to_string()
+        );
     }
 }
