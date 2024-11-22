@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use configuration::MongoScalarType;
+use itertools::Itertools as _;
 use mongodb_support::BsonScalarType;
 use ndc_models::{FieldName, ObjectTypeName};
 use nonempty::NonEmpty;
@@ -81,12 +82,48 @@ pub enum TypeConstraint {
         path: NonEmpty<FieldName>,
     },
 
-    /// A type that modifies another type by adding or replacing object fields.
+    /// A type that modifies another type by adding, replacing, or subtracting object fields.
     WithFieldOverrides {
         augmented_object_type_name: ObjectTypeName,
         target_type: Box<TypeConstraint>,
-        fields: BTreeMap<FieldName, TypeConstraint>,
+        fields: BTreeMap<FieldName, Option<TypeConstraint>>,
     },
+}
+
+impl std::fmt::Display for TypeConstraint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TypeConstraint::ExtendedJSON => write!(f, "ExtendedJSON"),
+            TypeConstraint::Scalar(s) => s.fmt(f),
+            TypeConstraint::Object(name) => write!(f, "Object({name})"),
+            TypeConstraint::ArrayOf(t) => write!(f, "[{t}]"),
+            TypeConstraint::Predicate { object_type_name } => {
+                write!(f, "Predicate({object_type_name})")
+            }
+            TypeConstraint::Union(ts) => write!(f, "{}", ts.iter().join(" | ")),
+            TypeConstraint::OneOf(ts) => write!(f, "{}", ts.iter().join(" / ")),
+            TypeConstraint::Variable(v) => v.fmt(f),
+            TypeConstraint::ElementOf(t) => write!(f, "{t}[@]"),
+            TypeConstraint::FieldOf { target_type, path } => {
+                write!(f, "{target_type}.{}", path.iter().join("."))
+            }
+            TypeConstraint::WithFieldOverrides {
+                augmented_object_type_name,
+                target_type,
+                fields,
+            } => {
+                writeln!(f, "{target_type} // {augmented_object_type_name} {{")?;
+                for (name, spec) in fields {
+                    write!(f, "  {name}: ")?;
+                    match spec {
+                        Some(t) => write!(f, "{t}"),
+                        None => write!(f, "-"),
+                    }?;
+                }
+                write!(f, "}}")
+            }
+        }
+    }
 }
 
 impl TypeConstraint {
@@ -122,6 +159,7 @@ impl TypeConstraint {
             } => {
                 let overridden_field_complexity: usize = fields
                     .values()
+                    .flatten()
                     .map(|constraint| constraint.complexity())
                     .sum();
                 2 + target_type.complexity() + overridden_field_complexity

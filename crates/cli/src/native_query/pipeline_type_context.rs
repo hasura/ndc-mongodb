@@ -65,10 +65,15 @@ impl PipelineTypeContext<'_> {
         };
 
         if let Some(type_name) = input_collection_document_type {
-            context.set_stage_doc_type(TypeConstraint::Object(type_name))
+            context.set_stage_doc_type(TypeConstraint::Object(type_name));
         }
 
         context
+    }
+
+    #[cfg(test)]
+    pub fn object_types(&self) -> &BTreeMap<ObjectTypeName, ObjectTypeConstraint> {
+        &self.object_types
     }
 
     #[cfg(test)]
@@ -240,7 +245,8 @@ impl PipelineTypeContext<'_> {
                 self.constraint_references_variable(target_type, variable)
                     || fields
                         .iter()
-                        .any(|(_, t)| self.constraint_references_variable(t, variable))
+                        .flat_map(|(_, t)| t)
+                        .any(|t| self.constraint_references_variable(t, variable))
             }
         }
     }
@@ -278,9 +284,10 @@ impl PipelineTypeContext<'_> {
         )
     }
 
-    pub fn set_stage_doc_type(&mut self, doc_type: TypeConstraint) {
+    pub fn set_stage_doc_type(&mut self, doc_type: TypeConstraint) -> TypeConstraint {
         let variable = self.new_type_variable(Variance::Covariant, [doc_type]);
         self.input_doc_type = Some(variable);
+        TypeConstraint::Variable(variable)
     }
 
     pub fn add_warning(&mut self, warning: Error) {

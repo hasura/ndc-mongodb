@@ -9,12 +9,13 @@ use configuration::{
     Configuration,
 };
 use googletest::prelude::*;
+use itertools::Itertools as _;
 use mongodb::bson::doc;
 use mongodb_support::{
     aggregate::{Accumulator, Pipeline, Selection, Stage},
     BsonScalarType,
 };
-use ndc_models::ObjectTypeName;
+use ndc_models::{FieldName, ObjectTypeName};
 use pretty_assertions::assert_eq;
 use test_helpers::configuration::mflix_config;
 
@@ -318,6 +319,120 @@ fn supports_various_aggregation_operators() -> googletest::Result<()> {
             ]),
             description: None,
         }
+    );
+
+    Ok(())
+}
+
+#[googletest::test]
+fn supports_project_stage_in_exclusion_mode() -> Result<()> {
+    let config = mflix_config();
+
+    let pipeline = Pipeline::new(vec![Stage::Project(doc! {
+        "title": 0,
+        "tomatoes.critic.rating": false,
+        "tomatoes.critic.meter": false,
+        "tomatoes.lastUpdated": false,
+    })]);
+
+    let native_query =
+        native_query_from_pipeline(&config, "project_test", Some("movies".into()), pipeline)?;
+
+    let result_type_name = native_query.result_document_type;
+    let result_type = &native_query.object_types[&result_type_name];
+
+    expect_false!(result_type.fields.contains_key("title"));
+
+    let tomatoes_type_name = match result_type.fields.get("tomatoes") {
+        Some(ObjectField {
+            r#type: Type::Object(name),
+            ..
+        }) => ObjectTypeName::from(name.clone()),
+        _ => panic!("tomatoes field does not have an object type"),
+    };
+    let tomatoes_type = &native_query.object_types[&tomatoes_type_name];
+    expect_that!(
+        tomatoes_type.fields.keys().collect_vec(),
+        unordered_elements_are![&&FieldName::from("viewer"), &&FieldName::from("critic")]
+    );
+    expect_eq!(
+        tomatoes_type.fields["viewer"].r#type,
+        Type::Object("TomatoesCriticViewer".into()),
+    );
+
+    let critic_type_name = match tomatoes_type.fields.get("critic") {
+        Some(ObjectField {
+            r#type: Type::Object(name),
+            ..
+        }) => ObjectTypeName::from(name.clone()),
+        _ => panic!("tomatoes.critic field does not have an object type"),
+    };
+    let critic_type = &native_query.object_types[&critic_type_name];
+    expect_eq!(
+        critic_type.fields,
+        object_fields([("numReviews", Type::Scalar(BsonScalarType::Int))]),
+    );
+
+    Ok(())
+}
+
+#[googletest::test]
+fn supports_project_stage_in_inclusion_mode() -> Result<()> {
+    let config = mflix_config();
+
+    let pipeline = Pipeline::new(vec![Stage::Project(doc! {
+        "title": 1,
+        "tomatoes.critic.rating": true,
+        "tomatoes.critic.meter": true,
+        "tomatoes.lastUpdated": true,
+        "releaseDate": "$released",
+    })]);
+
+    let native_query =
+        native_query_from_pipeline(&config, "inclusion", Some("movies".into()), pipeline)?;
+
+    expect_eq!(native_query.result_document_type, "inclusion_project".into());
+
+    expect_eq!(
+        native_query.object_types,
+        [
+            (
+                "inclusion_project".into(),
+                ObjectType {
+                    fields: object_fields([
+                        ("_id", Type::Scalar(BsonScalarType::ObjectId)),
+                        ("title", Type::Scalar(BsonScalarType::String)),
+                        ("tomatoes", Type::Object("inclusion_project_tomatoes".into())),
+                        ("releaseDate", Type::Scalar(BsonScalarType::Date)),
+                    ]),
+                    description: None
+                }
+            ),
+            (
+                "inclusion_project_tomatoes".into(),
+                ObjectType {
+                    fields: object_fields([
+                        (
+                            "critic",
+                            Type::Object("inclusion_project_tomatoes_critic".into())
+                        ),
+                        ("lastUpdated", Type::Scalar(BsonScalarType::Date)),
+                    ]),
+                    description: None
+                }
+            ),
+            (
+                "inclusion_project_tomatoes_critic".into(),
+                ObjectType {
+                    fields: object_fields([
+                        ("rating", Type::Scalar(BsonScalarType::Double)),
+                        ("meter", Type::Scalar(BsonScalarType::Int)),
+                    ]),
+                    description: None
+                }
+            )
+        ]
+        .into(),
     );
 
     Ok(())

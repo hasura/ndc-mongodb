@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use mongodb::bson;
+use mongodb::bson::{self, Bson};
 use serde::{Deserialize, Serialize};
 
 use super::{Accumulator, Pipeline, Selection, SortDocument};
@@ -50,7 +50,7 @@ pub enum Stage {
     ///
     /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/limit/#mongodb-pipeline-pipe.-limit
     #[serde(rename = "$limit")]
-    Limit(u32),
+    Limit(Bson),
 
     /// Performs a left outer join to another collection in the same database to filter in
     /// documents from the "joined" collection for processing.
@@ -114,7 +114,7 @@ pub enum Stage {
     ///
     /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/skip/#mongodb-pipeline-pipe.-skip
     #[serde(rename = "$skip")]
-    Skip(u32),
+    Skip(Bson),
 
     /// Groups input documents by a specified identifier expression and applies the accumulator
     /// expression(s), if specified, to each group. Consumes all input documents and outputs one
@@ -151,6 +151,25 @@ pub enum Stage {
     /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/count/#mongodb-pipeline-pipe.-count
     #[serde(rename = "$count")]
     Count(String),
+
+    /// Reshapes each document in the stream, such as by adding new fields or removing existing
+    /// fields. For each input document, outputs one document.
+    ///
+    /// See also $unset for removing existing fields.
+    ///
+    /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/project/#mongodb-pipeline-pipe.-project
+    #[serde(rename = "$project")]
+    Project(bson::Document),
+
+    /// Replaces a document with the specified embedded document. The operation replaces all
+    /// existing fields in the input document, including the _id field. Specify a document embedded
+    /// in the input document to promote the embedded document to the top level.
+    ///
+    /// $replaceWith is an alias for $replaceRoot stage.
+    ///
+    /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/replaceRoot/#mongodb-pipeline-pipe.-replaceRoot
+    #[serde(rename = "$replaceWith", rename_all = "camelCase")]
+    ReplaceRoot { new_root: Selection },
 
     /// Replaces a document with the specified embedded document. The operation replaces all
     /// existing fields in the input document, including the _id field. Specify a document embedded

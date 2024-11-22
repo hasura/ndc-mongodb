@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 
 use configuration::{
     schema::{ObjectField, ObjectType, Type},
@@ -16,6 +16,8 @@ use TypeConstraint as C;
 
 /// In cases where there is enough information present in one constraint itself to infer a concrete
 /// type, do that. Returns None if there is not enough information present.
+///
+/// TODO: Most of this logic should be moved to `simplify_one`
 pub fn constraint_to_type(
     configuration: &Configuration,
     solutions: &HashMap<TypeVariable, Type>,
@@ -124,8 +126,9 @@ pub fn constraint_to_type(
                 object_type_constraints,
                 target_type,
             )?;
-            let resolved_field_types: Option<Vec<(FieldName, Type)>> = fields
+            let added_or_replaced_fields: Option<Vec<(FieldName, Type)>> = fields
                 .iter()
+                .flat_map(|(field_name, option_t)| option_t.as_ref().map(|t| (field_name, t)))
                 .map(|(field_name, t)| {
                     Ok(constraint_to_type(
                         configuration,
@@ -137,15 +140,23 @@ pub fn constraint_to_type(
                     .map(|t| (field_name.clone(), t)))
                 })
                 .collect::<Result<_>>()?;
-            match (resolved_object_type, resolved_field_types) {
-                (Some(object_type), Some(fields)) => with_field_overrides(
+            let subtracted_fields = fields
+                .iter()
+                .filter_map(|(n, option_t)| match option_t {
+                    Some(_) => None,
+                    None => Some(n),
+                })
+                .collect_vec();
+            match (resolved_object_type, added_or_replaced_fields) {
+                (Some(object_type), Some(added_fields)) => with_field_overrides(
                     configuration,
                     solutions,
                     added_object_types,
                     object_type_constraints,
                     object_type,
                     augmented_object_type_name.clone(),
-                    fields,
+                    added_fields,
+                    subtracted_fields,
                 )?,
                 _ => None,
             }
@@ -242,8 +253,8 @@ fn field_of<'a>(
                 return Ok(None);
             };
 
-            let mut path_iter = path.into_iter();
-            let Some(field_name) = path_iter.next() else {
+            let mut path: VecDeque<_> = path.into_iter().collect();
+            let Some(field_name) = path.pop_front() else {
                 return Ok(Some(Type::Object(type_name)));
             };
 
@@ -256,7 +267,18 @@ fn field_of<'a>(
                         field_name: field_name.clone(),
                     })?;
 
-            Ok(Some(field_type.r#type.clone()))
+            if path.is_empty() {
+                Ok(Some(field_type.r#type.clone()))
+            } else {
+                field_of(
+                    configuration,
+                    solutions,
+                    added_object_types,
+                    object_type_constraints,
+                    field_type.r#type.clone(),
+                    path,
+                )
+            }
         }
         Type::Nullable(t) => {
             let underlying_type = field_of(
@@ -274,14 +296,16 @@ fn field_of<'a>(
     Ok(field_type.map(Type::normalize_type))
 }
 
-fn with_field_overrides(
+#[allow(clippy::too_many_arguments)]
+fn with_field_overrides<'a>(
     configuration: &Configuration,
     solutions: &HashMap<TypeVariable, Type>,
     added_object_types: &mut BTreeMap<ObjectTypeName, ObjectType>,
     object_type_constraints: &mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     object_type: Type,
     augmented_object_type_name: ObjectTypeName,
-    fields: impl IntoIterator<Item = (FieldName, Type)>,
+    added_or_replaced_fields: impl IntoIterator<Item = (FieldName, Type)>,
+    subtracted_fields: impl IntoIterator<Item = &'a FieldName>,
 ) -> Result<Option<Type>> {
     let augmented_object_type = match object_type {
         Type::ExtendedJSON => Some(Type::ExtendedJSON),
@@ -297,7 +321,7 @@ fn with_field_overrides(
                 return Ok(None);
             };
             let mut new_object_type = object_type.clone();
-            for (field_name, field_type) in fields.into_iter() {
+            for (field_name, field_type) in added_or_replaced_fields.into_iter() {
                 new_object_type.fields.insert(
                     field_name,
                     ObjectField {
@@ -305,6 +329,9 @@ fn with_field_overrides(
                         description: None,
                     },
                 );
+            }
+            for field_name in subtracted_fields {
+                new_object_type.fields.remove(field_name);
             }
             // We might end up back-tracking in which case this will register an object type that
             // isn't referenced. BUT once solving is complete we should get here again with the
@@ -321,7 +348,8 @@ fn with_field_overrides(
                 object_type_constraints,
                 *t,
                 augmented_object_type_name,
-                fields,
+                added_or_replaced_fields,
+                subtracted_fields,
             )?;
             underlying_type.map(|t| Type::Nullable(Box::new(t)))
         }
