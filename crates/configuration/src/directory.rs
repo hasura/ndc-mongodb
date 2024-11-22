@@ -73,7 +73,11 @@ pub async fn read_directory_with_ignored_configs(
             .await?
             .unwrap_or_default();
 
-    let native_queries = read_native_query_directory(dir).await?;
+    let native_queries = read_native_query_directory(dir)
+        .await?
+        .into_iter()
+        .map(|(name, (config, _))| (name, config))
+        .collect();
 
     let options = parse_configuration_options_file(dir).await?;
 
@@ -85,9 +89,9 @@ pub async fn read_directory_with_ignored_configs(
 /// Read native queries only, and skip configuration processing
 pub async fn read_native_query_directory(
     configuration_dir: impl AsRef<Path> + Send,
-) -> anyhow::Result<BTreeMap<FunctionName, NativeQuery>> {
+) -> anyhow::Result<BTreeMap<FunctionName, (NativeQuery, PathBuf)>> {
     let dir = configuration_dir.as_ref();
-    let native_queries = read_subdir_configs(&dir.join(NATIVE_QUERIES_DIRNAME), &[])
+    let native_queries = read_subdir_configs_with_paths(&dir.join(NATIVE_QUERIES_DIRNAME), &[])
         .await?
         .unwrap_or_default();
     Ok(native_queries)
@@ -106,13 +110,30 @@ where
     for<'a> T: Deserialize<'a>,
     for<'a> N: Ord + ToString + Deserialize<'a>,
 {
+    let configs_with_paths = read_subdir_configs_with_paths(subdir, ignored_configs).await?;
+    let configs_without_paths = configs_with_paths.map(|cs| {
+        cs.into_iter()
+            .map(|(name, (config, _))| (name, config))
+            .collect()
+    });
+    Ok(configs_without_paths)
+}
+
+async fn read_subdir_configs_with_paths<N, T>(
+    subdir: &Path,
+    ignored_configs: &[PathBuf],
+) -> anyhow::Result<Option<BTreeMap<N, (T, PathBuf)>>>
+where
+    for<'a> T: Deserialize<'a>,
+    for<'a> N: Ord + ToString + Deserialize<'a>,
+{
     if !(fs::try_exists(subdir).await?) {
         return Ok(None);
     }
 
     let dir_stream = ReadDirStream::new(fs::read_dir(subdir).await?);
-    let configs: Vec<WithName<N, T>> = dir_stream
-        .map_err(|err| err.into())
+    let configs: Vec<WithName<N, (T, PathBuf)>> = dir_stream
+        .map_err(anyhow::Error::from)
         .try_filter_map(|dir_entry| async move {
             // Permits regular files and symlinks, does not filter out symlinks to directories.
             let is_file = !(dir_entry.file_type().await?.is_dir());
@@ -141,7 +162,11 @@ where
             Ok(format_option.map(|format| (path, format)))
         })
         .and_then(|(path, format)| async move {
-            parse_config_file::<WithName<N, T>>(path, format).await
+            let config = parse_config_file::<WithName<N, T>>(&path, format).await?;
+            Ok(WithName {
+                name: config.name,
+                value: (config.value, path),
+            })
         })
         .try_collect()
         .await?;

@@ -56,6 +56,10 @@ pub enum Command {
         pipeline_path: PathBuf,
     },
 
+    /// Delete a native query identified by name. Use the list subcommand to see native query
+    /// names.
+    Delete { native_query_name: String },
+
     /// List all configured native queries
     List,
 
@@ -72,6 +76,7 @@ pub async fn run(context: &Context, command: Command) -> anyhow::Result<()> {
             force,
             pipeline_path,
         } => create(context, name, collection, force, &pipeline_path).await,
+        Command::Delete { native_query_name } => delete(context, &native_query_name).await,
         Command::List => list(context).await,
         Command::Show { native_query_name } => show(context, &native_query_name).await,
     }
@@ -85,16 +90,20 @@ async fn list(context: &Context) -> anyhow::Result<()> {
     Ok(())
 }
 
+async fn delete(context: &Context, native_query_name: &str) -> anyhow::Result<()> {
+    let (_, path) = find_native_query(context, native_query_name).await?;
+    fs::remove_file(&path).await?;
+    eprintln!(
+        "Deleted native query configuration at {}",
+        path.to_string_lossy()
+    );
+    Ok(())
+}
+
 async fn show(context: &Context, native_query_name: &str) -> anyhow::Result<()> {
-    let native_queries = read_native_queries(context).await?;
-    let native_query = match native_queries.get(native_query_name) {
-        Some(native_query) => native_query,
-        None => {
-            eprintln!("No native query named {native_query_name} found.");
-            exit(ExitCode::ResourceNotFound.into())
-        }
-    };
-    pretty_print_native_query(&mut std::io::stdout(), native_query)?;
+    let (native_query, path) = find_native_query(context, native_query_name).await?;
+    println!("configuration source: {}", path.to_string_lossy());
+    pretty_print_native_query(&mut std::io::stdout(), &native_query)?;
     Ok(())
 }
 
@@ -185,7 +194,7 @@ async fn read_configuration(
 /// Reads native queries skipping configuration processing, or exits with specific error code on error
 async fn read_native_queries(
     context: &Context,
-) -> anyhow::Result<BTreeMap<FunctionName, NativeQuery>> {
+) -> anyhow::Result<BTreeMap<FunctionName, (NativeQuery, PathBuf)>> {
     let native_queries = match read_native_query_directory(&context.path).await {
         Ok(native_queries) => native_queries,
         Err(err) => {
@@ -194,6 +203,21 @@ async fn read_native_queries(
         }
     };
     Ok(native_queries)
+}
+
+async fn find_native_query(
+    context: &Context,
+    name: &str,
+) -> anyhow::Result<(NativeQuery, PathBuf)> {
+    let mut native_queries = read_native_queries(context).await?;
+    let (_, definition_and_path) = match native_queries.remove_entry(name) {
+        Some(native_query) => native_query,
+        None => {
+            eprintln!("No native query named {name} found.");
+            exit(ExitCode::ResourceNotFound.into())
+        }
+    };
+    Ok(definition_and_path)
 }
 
 async fn read_pipeline(pipeline_path: &Path) -> anyhow::Result<Pipeline> {
