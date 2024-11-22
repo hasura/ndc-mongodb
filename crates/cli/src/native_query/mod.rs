@@ -40,9 +40,9 @@ use self::pretty_printing::pretty_print_native_query_info;
 pub enum Command {
     /// Create a native query from a JSON file containing an aggregation pipeline
     Create {
-        /// Name that will identify the query in your data graph
-        #[arg(long, short = 'n', required = true)]
-        name: String,
+        /// Name that will identify the query in your data graph (defaults to base name of pipeline file)
+        #[arg(long, short = 'n')]
+        name: Option<String>,
 
         /// Name of the collection that acts as input for the pipeline - omit for a pipeline that does not require input
         #[arg(long, short = 'c')]
@@ -52,7 +52,8 @@ pub enum Command {
         #[arg(long, short = 'f')]
         force: bool,
 
-        /// Path to a JSON file with an aggregation pipeline
+        /// Path to a JSON file with an aggregation pipeline that specifies your custom query. This
+        /// is a value that could be given to the MongoDB command db.<collectionName>.aggregate().
         pipeline_path: PathBuf,
     },
 
@@ -109,11 +110,23 @@ async fn show(context: &Context, native_query_name: &str) -> anyhow::Result<()> 
 
 async fn create(
     context: &Context,
-    name: String,
+    name: Option<String>,
     collection: Option<CollectionName>,
     force: bool,
     pipeline_path: &Path,
 ) -> anyhow::Result<()> {
+    let name = match name.or_else(|| {
+        pipeline_path
+            .file_stem()
+            .map(|os_str| os_str.to_string_lossy().to_string())
+    }) {
+        Some(name) => name,
+        None => {
+            eprintln!("Could not determine name for native query.");
+            exit(ExitCode::InvalidArguments.into())
+        }
+    };
+
     let native_query_path = {
         let path = get_native_query_path(context, &name);
         if !force && fs::try_exists(&path).await? {
