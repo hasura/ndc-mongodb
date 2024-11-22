@@ -195,7 +195,7 @@ async fn read_configuration(
 async fn read_native_queries(
     context: &Context,
 ) -> anyhow::Result<BTreeMap<FunctionName, (NativeQuery, PathBuf)>> {
-    let native_queries = match read_native_query_directory(&context.path).await {
+    let native_queries = match read_native_query_directory(&context.path, &[]).await {
         Ok(native_queries) => native_queries,
         Err(err) => {
             eprintln!("Could not read native queries.\n\n{err}");

@@ -73,7 +73,7 @@ pub async fn read_directory_with_ignored_configs(
             .await?
             .unwrap_or_default();
 
-    let native_queries = read_native_query_directory(dir)
+    let native_queries = read_native_query_directory(dir, ignored_configs)
         .await?
         .into_iter()
         .map(|(name, (config, _))| (name, config))
@@ -89,11 +89,13 @@ pub async fn read_directory_with_ignored_configs(
 /// Read native queries only, and skip configuration processing
 pub async fn read_native_query_directory(
     configuration_dir: impl AsRef<Path> + Send,
+    ignored_configs: &[PathBuf],
 ) -> anyhow::Result<BTreeMap<FunctionName, (NativeQuery, PathBuf)>> {
     let dir = configuration_dir.as_ref();
-    let native_queries = read_subdir_configs_with_paths(&dir.join(NATIVE_QUERIES_DIRNAME), &[])
-        .await?
-        .unwrap_or_default();
+    let native_queries =
+        read_subdir_configs_with_paths(&dir.join(NATIVE_QUERIES_DIRNAME), ignored_configs)
+            .await?
+            .unwrap_or_default();
     Ok(native_queries)
 }
 
