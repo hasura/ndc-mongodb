@@ -18,19 +18,10 @@ use crate::native_query::{
 
 use TypeConstraint as C;
 
-type Simplified<T> = std::result::Result<T, (T, T)>;
-
 struct SimplifyContext<'a> {
     configuration: &'a Configuration,
     substitutions: &'a HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
     object_type_constraints: &'a mut BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
-    errors: &'a mut Vec<Error>,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum OnMismatch {
-    ReportError,
-    Ignore,
 }
 
 // Attempts to reduce the number of type constraints from the input by combining redundant
@@ -43,15 +34,12 @@ pub fn simplify_constraints(
     variable: Option<TypeVariable>,
     constraints: impl IntoIterator<Item = TypeConstraint>,
 ) -> Result<BTreeSet<TypeConstraint>, Vec<Error>> {
-    let mut errors = vec![];
     let mut context = SimplifyContext {
         configuration,
         substitutions,
         object_type_constraints,
-        errors: &mut errors,
     };
-    let constraints =
-        simplify_constraints_internal(&mut context, variable, OnMismatch::ReportError, constraints);
+    let (constraints, errors) = simplify_constraints_internal(&mut context, variable, constraints);
     if errors.is_empty() {
         Ok(constraints)
     } else {
@@ -60,30 +48,44 @@ pub fn simplify_constraints(
 }
 
 fn simplify_constraints_internal(
-    context: &mut SimplifyContext,
+    state: &mut SimplifyContext,
     variable: Option<TypeVariable>,
-    on_mismatch: OnMismatch, // don't emit errors when trying to simplify within a union or oneof
     constraints: impl IntoIterator<Item = TypeConstraint>,
-) -> BTreeSet<TypeConstraint> {
-    let constraints: BTreeSet<_> = constraints
+) -> (BTreeSet<TypeConstraint>, Vec<Error>) {
+    let (constraint_sets, error_sets): (Vec<Vec<_>>, Vec<Vec<_>>) = constraints
         .into_iter()
-        .flat_map(|constraint| simplify_single_constraint(context, variable, constraint))
+        .map(|constraint| simplify_single_constraint(state, variable, constraint))
+        .partition_result();
+    let constraints = constraint_sets.into_iter().flatten();
+    let mut errors: Vec<Error> = error_sets.into_iter().flatten().collect();
+
+    let constraints = constraints
+        .coalesce(|constraint_a, constraint_b| {
+            match simplify_constraint_pair(
+                state,
+                variable,
+                constraint_a.clone(),
+                constraint_b.clone(),
+            ) {
+                Ok(Some(t)) => Ok(t),
+                Ok(None) => Err((constraint_a, constraint_b)),
+                Err(errs) => {
+                    errors.extend(errs);
+                    Err((constraint_a, constraint_b))
+                }
+            }
+        })
         .collect();
 
-    constraints
-        .into_iter()
-        .coalesce(|constraint_a, constraint_b| {
-            simplify_constraint_pair(context, variable, on_mismatch, constraint_a, constraint_b)
-        })
-        .collect()
+    (constraints, errors)
 }
 
 fn simplify_single_constraint(
     context: &mut SimplifyContext,
     variable: Option<TypeVariable>,
     constraint: TypeConstraint,
-) -> Vec<TypeConstraint> {
-    match constraint {
+) -> Result<Vec<TypeConstraint>, Vec<Error>> {
+    let simplified = match constraint {
         C::Variable(v) if Some(v) == variable => vec![],
 
         C::Variable(v) => match context.substitutions.get(&v) {
@@ -92,79 +94,69 @@ fn simplify_single_constraint(
         },
 
         C::FieldOf { target_type, path } => {
-            let object_type = simplify_single_constraint(context, variable, *target_type.clone());
+            let object_type = simplify_single_constraint(context, variable, *target_type.clone())?;
             if object_type.len() == 1 {
                 let object_type = object_type.into_iter().next().unwrap();
                 match expand_field_of(context, object_type, path.clone()) {
-                    Ok(Some(t)) => return t,
+                    Ok(Some(t)) => return Ok(t),
                     Ok(None) => (),
-                    Err(e) => context.errors.push(e),
+                    Err(e) => return Err(e),
                 }
             }
             vec![C::FieldOf { target_type, path }]
         }
 
         C::Union(constraints) => {
-            let simplified_constraints =
-                simplify_constraints_internal(context, variable, OnMismatch::Ignore, constraints);
+            let (simplified_constraints, _) =
+                simplify_constraints_internal(context, variable, constraints);
             vec![C::Union(simplified_constraints)]
         }
 
         C::OneOf(constraints) => {
-            let simplified_constraints =
-                simplify_constraints_internal(context, variable, OnMismatch::Ignore, constraints);
+            let (simplified_constraints, _) =
+                simplify_constraints_internal(context, variable, constraints);
             vec![C::OneOf(simplified_constraints)]
         }
 
         _ => vec![constraint],
-    }
+    };
+    Ok(simplified)
 }
 
-// TODO: Change the signature to distinguish between cases where we have provable type mismatches,
-// vs cases where we cannot combine constraints due to lack of information. Then use that
-// information to report type mismatches in more cases, such as when simplifying a scalar type and
-// a union in a contravariant or invariant context where the scalar is not compatibly with any
-// branch of the union (e.g. `string` and `(decimal | null)`).
+// Attempt to unify two type constraints. There are three possible result shapes:
+//
+// - Ok(Some(t)) : successfully unified the two constraints into one
+// - Ok(None) : could not unify, but that could be because there is insufficient information available
+// - Err(errs) : it is not possible to unify the two constraints
+//
 fn simplify_constraint_pair(
     context: &mut SimplifyContext,
     variable: Option<TypeVariable>,
-    on_mismatch: OnMismatch, // don't emit errors when trying to simplify within a union or oneof
     a: TypeConstraint,
     b: TypeConstraint,
-) -> Simplified<TypeConstraint> {
+) -> Result<Option<TypeConstraint>, Vec<Error>> {
     let variance = variable.map(|v| v.variance).unwrap_or(Variance::Invariant);
     match (a, b) {
-        (a, b) if a == b => Ok(a),
+        (a, b) if a == b => Ok(Some(a)),
 
-        (C::Variable(a), C::Variable(b)) if a == b => Ok(C::Variable(a)),
+        (C::Variable(a), C::Variable(b)) if a == b => Ok(Some(C::Variable(a))),
 
         (C::ExtendedJSON, _) | (_, C::ExtendedJSON) if variance == Variance::Covariant => {
-            Ok(C::ExtendedJSON)
+            Ok(Some(C::ExtendedJSON))
         }
-        (C::ExtendedJSON, b) if variance == Variance::Contravariant => Ok(b),
-        (a, C::ExtendedJSON) if variance == Variance::Contravariant => Ok(a),
+        (C::ExtendedJSON, b) if variance == Variance::Contravariant => Ok(Some(b)),
+        (a, C::ExtendedJSON) if variance == Variance::Contravariant => Ok(Some(a)),
 
-        (C::Scalar(a), C::Scalar(b)) => {
-            if let Ok(t) = solve_scalar(variance, a, b) {
-                Ok(t)
-            } else if variance == Variance::Covariant {
-                Ok(C::Union([C::Scalar(a), C::Scalar(b)].into()))
-            } else {
-                if on_mismatch == OnMismatch::ReportError {
-                    context.errors.push(Error::TypeMismatch {
-                        context: None,
-                        a: C::Scalar(a),
-                        b: C::Scalar(b),
-                    });
-                }
-                Err((C::Scalar(a), C::Scalar(b)))
-            }
-        }
+        (C::Scalar(a), C::Scalar(b)) => match solve_scalar(variance, a, b) {
+            Ok(t) => Ok(Some(t)),
+            Err(e) => Err(vec![e]),
+        },
 
         (C::Union(mut a), C::Union(mut b)) if variance == Variance::Covariant => {
             a.append(&mut b);
-            let union = simplify_constraints_internal(context, variable, OnMismatch::Ignore, a);
-            Ok(C::Union(union))
+            // Ignore errors when simplifying because union branches are allowed to be strictly incompatible
+            let (constraints, _) = simplify_constraints_internal(context, variable, a);
+            Ok(Some(C::Union(constraints)))
         }
 
         // TODO: Instead of a naive intersection we want to get a common subtype of both unions in
@@ -173,78 +165,93 @@ fn simplify_constraint_pair(
         (C::Union(a), C::Union(b)) => {
             let intersection: BTreeSet<_> = a.intersection(&b).cloned().collect();
             if intersection.is_empty() {
-                Err((C::Union(a), C::Union(b)))
+                Ok(None)
             } else if intersection.len() == 1 {
-                Ok(intersection.into_iter().next().unwrap())
+                Ok(Some(intersection.into_iter().next().unwrap()))
             } else {
-                Ok(C::Union(intersection))
+                Ok(Some(C::Union(intersection)))
             }
         }
 
         (C::Union(mut a), b) if variance == Variance::Covariant => {
             a.insert(b);
-            let union = simplify_constraints_internal(context, variable, OnMismatch::Ignore, a);
-            Ok(C::Union(union))
+            // Ignore errors when simplifying because union branches are allowed to be strictly incompatible
+            let (constraints, _) = simplify_constraints_internal(context, variable, a);
+            Ok(Some(C::Union(constraints)))
         }
-        (C::Union(a), b) => {
-            let mut simplified = b.clone();
-            for union_branch in a.iter() {
+
+        (C::Union(a), b) if variance == Variance::Contravariant => {
+            let mut simplified = None;
+            let mut not_simplified_but_not_incompatible = BTreeSet::new();
+            let mut errors = vec![];
+
+            for union_branch in a {
                 match simplify_constraint_pair(
                     context,
                     variable,
-                    OnMismatch::ReportError,
-                    simplified,
+                    simplified.clone().unwrap_or(b.clone()),
                     union_branch.clone(),
                 ) {
-                    Ok(t) => {
-                        simplified = t;
+                    Ok(Some(t)) => {
+                        simplified = Some(t);
                     }
-                    Err(_) => return Err((C::Union(a), b)),
+                    Ok(None) => {
+                        not_simplified_but_not_incompatible.insert(union_branch);
+                    }
+                    Err(errs) => {
+                        // ignore incompatible branches, but note errors
+                        errors.extend(errs);
+                    }
                 }
             }
-            Ok(simplified)
+
+            match simplified {
+                Some(t) if not_simplified_but_not_incompatible.is_empty() => Ok(Some(t)),
+                Some(t) => Ok(Some(C::Union(
+                    std::iter::once(t)
+                        .chain(not_simplified_but_not_incompatible)
+                        .collect(),
+                ))),
+                None if not_simplified_but_not_incompatible.is_empty() => Err(errors),
+                None => Ok(Some(C::Union(not_simplified_but_not_incompatible))),
+            }
         }
 
-        (a, b @ C::Union(_)) => simplify_constraint_pair(context, variable, on_mismatch, b, a),
+        (a, b @ C::Union(_)) => simplify_constraint_pair(context, variable, b, a),
 
         (C::OneOf(mut a), C::OneOf(mut b)) => {
             a.append(&mut b);
-            Ok(C::OneOf(a))
+            Ok(Some(C::OneOf(a)))
         }
 
         (C::OneOf(constraints), b) => {
             let matches: BTreeSet<_> = constraints
                 .clone()
                 .into_iter()
-                .filter_map(|c| {
-                    match simplify_constraint_pair(
-                        context,
-                        variable,
-                        OnMismatch::Ignore,
-                        c,
-                        b.clone(),
-                    ) {
+                .filter_map(
+                    |c| match simplify_constraint_pair(context, variable, c, b.clone()) {
                         Ok(c) => Some(c),
                         Err(_) => None,
-                    }
-                })
+                    },
+                )
+                .flatten()
                 .collect();
 
             if matches.len() == 1 {
-                Ok(matches.into_iter().next().unwrap())
+                Ok(Some(matches.into_iter().next().unwrap()))
             } else if matches.is_empty() {
-                Err((C::OneOf(constraints), b))
+                Ok(None)
             } else {
-                Ok(C::OneOf(matches))
+                Ok(Some(C::OneOf(matches)))
             }
         }
-        (a, b @ C::OneOf(_)) => simplify_constraint_pair(context, variable, on_mismatch, b, a),
+        (a, b @ C::OneOf(_)) => simplify_constraint_pair(context, variable, b, a),
 
-        (C::Object(a), C::Object(b)) if a == b => Ok(C::Object(a)),
+        (C::Object(a), C::Object(b)) if a == b => Ok(Some(C::Object(a))),
         (C::Object(a), C::Object(b)) => {
-            match merge_object_type_constraints(context, variable, on_mismatch, &a, &b) {
-                Some(merged_name) => Ok(C::Object(merged_name)),
-                None => Err((C::Object(a), C::Object(b))),
+            match merge_object_type_constraints(context, variable, &a, &b) {
+                Some(merged_name) => Ok(Some(C::Object(merged_name))),
+                None => Ok(None),
             }
         }
 
@@ -255,9 +262,9 @@ fn simplify_constraint_pair(
             C::Predicate {
                 object_type_name: b,
             },
-        ) if a == b => Ok(C::Predicate {
+        ) if a == b => Ok(Some(C::Predicate {
             object_type_name: a,
-        }),
+        })),
         (
             C::Predicate {
                 object_type_name: a,
@@ -265,30 +272,17 @@ fn simplify_constraint_pair(
             C::Predicate {
                 object_type_name: b,
             },
-        ) if a == b => {
-            match merge_object_type_constraints(context, variable, on_mismatch, &a, &b) {
-                Some(merged_name) => Ok(C::Predicate {
-                    object_type_name: merged_name,
-                }),
-                None => Err((
-                    C::Predicate {
-                        object_type_name: a,
-                    },
-                    C::Predicate {
-                        object_type_name: b,
-                    },
-                )),
-            }
-        }
+        ) if a == b => match merge_object_type_constraints(context, variable, &a, &b) {
+            Some(merged_name) => Ok(Some(C::Predicate {
+                object_type_name: merged_name,
+            })),
+            None => Ok(None),
+        },
 
-        (C::ArrayOf(a), C::ArrayOf(b)) => {
-            match simplify_constraint_pair(context, variable, on_mismatch, *a, *b) {
-                Ok(ab) => Ok(C::ArrayOf(Box::new(ab))),
-                Err((a, b)) => Err((C::ArrayOf(Box::new(a)), C::ArrayOf(Box::new(b)))),
-            }
-        }
+        (C::ArrayOf(a), C::ArrayOf(b)) => simplify_constraint_pair(context, variable, *a, *b)
+            .map(|r| r.map(|ab| C::ArrayOf(Box::new(ab)))),
 
-        (a, b) => Err((a, b)),
+        (_, _) => Ok(None),
     }
 }
 
@@ -299,40 +293,47 @@ fn solve_scalar(
     variance: Variance,
     a: BsonScalarType,
     b: BsonScalarType,
-) -> Simplified<TypeConstraint> {
-    match variance {
+) -> Result<TypeConstraint, Error> {
+    let solution = match variance {
         Variance::Covariant => {
             if a == b || is_supertype(&a, &b) {
-                Ok(C::Scalar(a))
+                Some(C::Scalar(a))
             } else if is_supertype(&b, &a) {
-                Ok(C::Scalar(b))
+                Some(C::Scalar(b))
             } else {
-                Err((C::Scalar(a), C::Scalar(b)))
+                Some(C::Union([C::Scalar(a), C::Scalar(b)].into()))
             }
         }
         Variance::Contravariant => {
             if a == b || is_supertype(&a, &b) {
-                Ok(C::Scalar(b))
+                Some(C::Scalar(b))
             } else if is_supertype(&b, &a) {
-                Ok(C::Scalar(a))
+                Some(C::Scalar(a))
             } else {
-                Err((C::Scalar(a), C::Scalar(b)))
+                None
             }
         }
         Variance::Invariant => {
             if a == b {
-                Ok(C::Scalar(a))
+                Some(C::Scalar(a))
             } else {
-                Err((C::Scalar(a), C::Scalar(b)))
+                None
             }
         }
+    };
+    match solution {
+        Some(t) => Ok(t),
+        None => Err(Error::TypeMismatch {
+            context: None,
+            a: C::Scalar(a),
+            b: C::Scalar(b),
+        }),
     }
 }
 
 fn merge_object_type_constraints(
     context: &mut SimplifyContext,
     variable: Option<TypeVariable>,
-    on_mismatch: OnMismatch,
     name_a: &ObjectTypeName,
     name_b: &ObjectTypeName,
 ) -> Option<ObjectTypeName> {
@@ -352,7 +353,7 @@ fn merge_object_type_constraints(
         b.fields.clone().into_iter().collect(),
         always_ok(TypeConstraint::make_nullable),
         always_ok(TypeConstraint::make_nullable),
-        |field_a, field_b| unify_object_field(context, variable, on_mismatch, field_a, field_b),
+        |field_a, field_b| unify_object_field(context, variable, field_a, field_b),
     );
 
     let fields = match merged_fields_result {
@@ -373,12 +374,14 @@ fn merge_object_type_constraints(
 fn unify_object_field(
     context: &mut SimplifyContext,
     variable: Option<TypeVariable>,
-    on_mismatch: OnMismatch,
     field_type_a: TypeConstraint,
     field_type_b: TypeConstraint,
-) -> Result<TypeConstraint, ()> {
-    simplify_constraint_pair(context, variable, on_mismatch, field_type_a, field_type_b)
-        .map_err(|_| ())
+) -> Result<TypeConstraint, Vec<Error>> {
+    match simplify_constraint_pair(context, variable, field_type_a, field_type_b) {
+        Ok(Some(t)) => Ok(t),
+        Ok(None) => Err(vec![]),
+        Err(errs) => Err(errs),
+    }
 }
 
 fn always_ok<A, B, E, F>(mut f: F) -> impl FnMut(A) -> Result<B, E>
@@ -421,7 +424,7 @@ fn expand_field_of(
     context: &mut SimplifyContext,
     object_type: TypeConstraint,
     path: NonEmpty<FieldName>,
-) -> Result<Option<Vec<TypeConstraint>>, Error> {
+) -> Result<Option<Vec<TypeConstraint>>, Vec<Error>> {
     let field_type = match object_type {
         C::ExtendedJSON => Some(vec![C::ExtendedJSON]),
         C::Object(type_name) => get_object_constraint_field_type(context, &type_name, path)?,
@@ -439,7 +442,7 @@ fn expand_field_of(
                     })
                 })
                 .flatten_ok()
-                .collect::<Result<_, Error>>()?;
+                .collect::<Result<_, Vec<Error>>>()?;
             Some(vec![(C::Union(variants))])
         }
         C::OneOf(constraints) => {
@@ -458,15 +461,15 @@ fn expand_field_of(
                     })
                 })
                 .flatten_ok()
-                .collect::<Result<_, Error>>()?;
+                .collect::<Result<_, Vec<Error>>>()?;
             if expanded_variants.len() == 1 {
                 Some(vec![expanded_variants.into_iter().next().unwrap()])
             } else if !expanded_variants.is_empty() {
                 Some(vec![C::Union(expanded_variants)])
             } else {
-                Err(Error::Other(format!(
+                Err(vec![Error::Other(format!(
                     "no variant matched object field path {path:?}"
-                )))?
+                ))])?
             }
         }
         _ => None,
@@ -478,19 +481,20 @@ fn get_object_constraint_field_type(
     context: &mut SimplifyContext,
     object_type_name: &ObjectTypeName,
     path: NonEmpty<FieldName>,
-) -> Result<Option<Vec<TypeConstraint>>, Error> {
+) -> Result<Option<Vec<TypeConstraint>>, Vec<Error>> {
     if let Some(object_type) = context.configuration.object_types.get(object_type_name) {
         let t = get_object_field_type(
             &context.configuration.object_types,
             object_type_name,
             object_type,
             path,
-        )?;
+        )
+        .map_err(|e| vec![e])?;
         return Ok(Some(vec![t.clone().into()]));
     }
 
     let Some(object_type_constraint) = context.object_type_constraints.get(object_type_name) else {
-        return Err(Error::UnknownObjectType(object_type_name.to_string()));
+        return Err(vec![Error::UnknownObjectType(object_type_name.to_string())]);
     };
 
     let field_name = path.head;
@@ -499,26 +503,28 @@ fn get_object_constraint_field_type(
     let field_type = object_type_constraint
         .fields
         .get(&field_name)
-        .ok_or_else(|| Error::ObjectMissingField {
-            object_type: object_type_name.clone(),
-            field_name: field_name.clone(),
+        .ok_or_else(|| {
+            vec![Error::ObjectMissingField {
+                object_type: object_type_name.clone(),
+                field_name: field_name.clone(),
+            }]
         })?
         .clone();
 
-    let field_type = simplify_single_constraint(context, None, field_type);
+    let field_type = simplify_single_constraint(context, None, field_type)?;
 
     match rest {
         None => Ok(Some(field_type)),
         Some(rest) if field_type.len() == 1 => match field_type.into_iter().next().unwrap() {
             C::Object(type_name) => get_object_constraint_field_type(context, &type_name, rest),
-            _ => Err(Error::ObjectMissingField {
+            _ => Err(vec![Error::ObjectMissingField {
                 object_type: object_type_name.clone(),
                 field_name: field_name.clone(),
-            }),
+            }]),
         },
-        _ if field_type.is_empty() => Err(Error::Other(
+        _ if field_type.is_empty() => Err(vec![Error::Other(
             "could not resolve object field to a type".to_string(),
-        )),
+        )]),
         _ => Ok(None), // field_type len > 1
     }
 }
@@ -681,11 +687,18 @@ mod tests {
         );
         expect_that!(
             result,
-            err(unordered_elements_are![eq(&Error::TypeMismatch {
-                context: None,
-                a: TypeConstraint::Scalar(BsonScalarType::Decimal),
-                b: TypeConstraint::Scalar(BsonScalarType::String),
-            }),])
+            err(unordered_elements_are![
+                eq(&Error::TypeMismatch {
+                    context: None,
+                    a: TypeConstraint::Scalar(BsonScalarType::Decimal),
+                    b: TypeConstraint::Scalar(BsonScalarType::String),
+                }),
+                eq(&Error::TypeMismatch {
+                    context: None,
+                    a: TypeConstraint::Scalar(BsonScalarType::Decimal),
+                    b: TypeConstraint::Scalar(BsonScalarType::Null),
+                }),
+            ])
         );
         Ok(())
     }
