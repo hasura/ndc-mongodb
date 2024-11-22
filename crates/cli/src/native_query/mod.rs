@@ -53,6 +53,9 @@ pub enum Command {
         /// Path to a JSON file with an aggregation pipeline
         pipeline_path: PathBuf,
     },
+
+    /// List all configured native queries
+    List,
 }
 
 pub async fn run(context: &Context, command: Command) -> anyhow::Result<()> {
@@ -62,78 +65,101 @@ pub async fn run(context: &Context, command: Command) -> anyhow::Result<()> {
             collection,
             force,
             pipeline_path,
-        } => {
-            let native_query_path = {
-                let path = get_native_query_path(context, &name);
-                if !force && fs::try_exists(&path).await? {
-                    eprintln!(
-                        "A native query named {name} already exists at {}.",
-                        path.to_string_lossy()
-                    );
-                    eprintln!("Re-run with --force to overwrite.");
-                    exit(ExitCode::RefusedToOverwrite.into())
-                }
-                path
-            };
-
-            let configuration = match read_directory_with_ignored_configs(
-                &context.path,
-                &[native_query_path.clone()],
-            )
-            .await
-            {
-                Ok(c) => c,
-                Err(err) => {
-                    eprintln!("Could not read connector configuration - configuration must be initialized before creating native queries.\n\n{err:#}");
-                    exit(ExitCode::CouldNotReadConfiguration.into())
-                }
-            };
-            eprintln!(
-                "Read configuration from {}",
-                &context.path.to_string_lossy()
-            );
-
-            let pipeline = match read_pipeline(&pipeline_path).await {
-                Ok(p) => p,
-                Err(err) => {
-                    eprintln!("Could not read aggregation pipeline.\n\n{err}");
-                    exit(ExitCode::CouldNotReadAggregationPipeline.into())
-                }
-            };
-            let native_query =
-                match native_query_from_pipeline(&configuration, &name, collection, pipeline) {
-                    Ok(q) => WithName::named(name, q),
-                    Err(err) => {
-                        eprintln!("Error interpreting aggregation pipeline.\n\n{err}");
-                        exit(ExitCode::CouldNotReadAggregationPipeline.into())
-                    }
-                };
-
-            let native_query_dir = native_query_path
-                .parent()
-                .expect("parent directory of native query configuration path");
-            if !(fs::try_exists(&native_query_dir).await?) {
-                fs::create_dir(&native_query_dir).await?;
-            }
-
-            if let Err(err) = fs::write(
-                &native_query_path,
-                serde_json::to_string_pretty(&native_query)?,
-            )
-            .await
-            {
-                eprintln!("Error writing native query configuration: {err}");
-                exit(ExitCode::ErrorWriting.into())
-            };
-            eprintln!(
-                "\nWrote native query configuration to {}",
-                native_query_path.to_string_lossy()
-            );
-            eprintln!();
-            pretty_print_native_query_info(&mut std::io::stderr(), &native_query.value)?;
-            Ok(())
-        }
+        } => create(context, name, collection, force, &pipeline_path).await,
+        Command::List => list(context).await,
     }
+}
+
+async fn list(context: &Context) -> std::result::Result<(), anyhow::Error> {
+    let configuration = read_configuration(context, &[]).await?;
+    for (name, _) in configuration.native_queries {
+        println!("{}", name);
+    }
+    Ok(())
+}
+
+async fn create(
+    context: &Context,
+    name: String,
+    collection: Option<CollectionName>,
+    force: bool,
+    pipeline_path: &Path,
+) -> anyhow::Result<()> {
+    let native_query_path = {
+        let path = get_native_query_path(context, &name);
+        if !force && fs::try_exists(&path).await? {
+            eprintln!(
+                "A native query named {name} already exists at {}.",
+                path.to_string_lossy()
+            );
+            eprintln!("Re-run with --force to overwrite.");
+            exit(ExitCode::RefusedToOverwrite.into())
+        }
+        path
+    };
+
+    let configuration = read_configuration(context, &[native_query_path.clone()]).await?;
+
+    let pipeline = match read_pipeline(&pipeline_path).await {
+        Ok(p) => p,
+        Err(err) => {
+            eprintln!("Could not read aggregation pipeline.\n\n{err}");
+            exit(ExitCode::CouldNotReadAggregationPipeline.into())
+        }
+    };
+    let native_query = match native_query_from_pipeline(&configuration, &name, collection, pipeline)
+    {
+        Ok(q) => WithName::named(name, q),
+        Err(err) => {
+            eprintln!("Error interpreting aggregation pipeline.\n\n{err}");
+            exit(ExitCode::CouldNotReadAggregationPipeline.into())
+        }
+    };
+
+    let native_query_dir = native_query_path
+        .parent()
+        .expect("parent directory of native query configuration path");
+    if !(fs::try_exists(&native_query_dir).await?) {
+        fs::create_dir(&native_query_dir).await?;
+    }
+
+    if let Err(err) = fs::write(
+        &native_query_path,
+        serde_json::to_string_pretty(&native_query)?,
+    )
+    .await
+    {
+        eprintln!("Error writing native query configuration: {err}");
+        exit(ExitCode::ErrorWriting.into())
+    };
+    eprintln!(
+        "\nWrote native query configuration to {}",
+        native_query_path.to_string_lossy()
+    );
+    eprintln!();
+    pretty_print_native_query_info(&mut std::io::stderr(), &native_query.value)?;
+    Ok(())
+}
+
+/// Reads configuration, or exits with specific error code on error
+async fn read_configuration(
+    context: &Context,
+    ignored_configs: &[PathBuf],
+) -> anyhow::Result<Configuration> {
+    let configuration = match read_directory_with_ignored_configs(&context.path, ignored_configs)
+        .await
+    {
+        Ok(c) => c,
+        Err(err) => {
+            eprintln!("Could not read connector configuration - configuration must be initialized before creating native queries.\n\n{err:#}");
+            exit(ExitCode::CouldNotReadConfiguration.into())
+        }
+    };
+    eprintln!(
+        "Read configuration from {}",
+        &context.path.to_string_lossy()
+    );
+    Ok(configuration)
 }
 
 async fn read_pipeline(pipeline_path: &Path) -> anyhow::Result<Pipeline> {
