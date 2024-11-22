@@ -697,4 +697,43 @@ mod tests {
         );
         Ok(())
     }
+
+    // TODO:
+    // #[googletest::test]
+    // fn simplifies_two_compatible_unions_in_contravariant_context() -> Result<()> {
+    //     let configuration = mflix_config();
+    //     let result = super::simplify_constraints(
+    //         &configuration,
+    //         &Default::default(),
+    //         &mut Default::default(),
+    //         Some(TypeVariable::new(1, Variance::Contravariant)),
+    //         [
+    //             TypeConstraint::Union(
+    //                 [
+    //                     TypeConstraint::Scalar(BsonScalarType::Double),
+    //                     TypeConstraint::Scalar(BsonScalarType::Null),
+    //                 ]
+    //                 .into(),
+    //             ),
+    //             TypeConstraint::Union(
+    //                 [
+    //                     TypeConstraint::Scalar(BsonScalarType::Int),
+    //                     TypeConstraint::Scalar(BsonScalarType::Null),
+    //                 ]
+    //                 .into(),
+    //             ),
+    //         ],
+    //     );
+    //     expect_that!(
+    //         result,
+    //         ok(eq(&BTreeSet::from([TypeConstraint::Union(
+    //             [
+    //                 TypeConstraint::Scalar(BsonScalarType::Int),
+    //                 TypeConstraint::Scalar(BsonScalarType::Null),
+    //             ]
+    //             .into(),
+    //         )])))
+    //     );
+    //     Ok(())
+    // }
 }
