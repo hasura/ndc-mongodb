@@ -1,77 +1,98 @@
+use std::path::Path;
+
 use configuration::{schema::ObjectType, serialized::NativeQuery};
 use itertools::Itertools;
-use pretty::{BoxAllocator, DocAllocator, DocBuilder, Pretty};
+use pretty::{
+    termcolor::{Color, ColorSpec, StandardStream},
+    BoxAllocator, DocAllocator, DocBuilder, Pretty,
+};
 use tokio::task;
 
 /// Prints metadata for a native query, excluding its pipeline
 pub async fn pretty_print_native_query_info(
-    output: &mut impl std::io::Write,
+    output: &mut StandardStream,
     native_query: &NativeQuery,
 ) -> std::io::Result<()> {
     task::block_in_place(move || {
         let allocator = BoxAllocator;
-        native_query_info_printer::<_, ()>(native_query, &allocator)
+        native_query_info_printer(native_query, &allocator)
             .1
-            .render(80, output)?;
+            .render_colored(80, output)?;
         Ok(())
     })
 }
 
 /// Prints metadata for a native query including its pipeline
 pub async fn pretty_print_native_query(
-    output: &mut impl std::io::Write,
+    output: &mut StandardStream,
     native_query: &NativeQuery,
+    path: &Path,
 ) -> std::io::Result<()> {
     task::block_in_place(move || {
         let allocator = BoxAllocator;
-        native_query_printer::<_, ()>(native_query, &allocator)
+        native_query_printer(native_query, path, &allocator)
             .1
-            .render(80, output)?;
+            .render_colored(80, output)?;
         Ok(())
     })
 }
 
-fn native_query_printer<'a, D, A>(nq: &'a NativeQuery, allocator: &'a D) -> DocBuilder<'a, D, A>
+fn native_query_printer<'a, D>(
+    nq: &'a NativeQuery,
+    path: &'a Path,
+    allocator: &'a D,
+) -> DocBuilder<'a, D, ColorSpec>
 where
-    D: DocAllocator<'a, A>,
+    D: DocAllocator<'a, ColorSpec>,
     D::Doc: Clone,
-    A: Clone,
 {
+    let source = definition_list_entry(
+        "configuration source",
+        allocator.text(path.to_string_lossy()),
+        allocator,
+    );
     let info = native_query_info_printer(nq, allocator);
     let pipeline = section(
         "pipeline",
         allocator.text(serde_json::to_string_pretty(&nq.pipeline).unwrap()),
         allocator,
     );
-    allocator.intersperse([info, pipeline], allocator.hardline())
+    allocator.intersperse([source, info, pipeline], allocator.hardline())
 }
 
-fn native_query_info_printer<'a, D, A>(
+fn native_query_info_printer<'a, D>(
     nq: &'a NativeQuery,
     allocator: &'a D,
-) -> DocBuilder<'a, D, A>
+) -> DocBuilder<'a, D, ColorSpec>
 where
-    D: DocAllocator<'a, A>,
+    D: DocAllocator<'a, ColorSpec>,
     D::Doc: Clone,
-    A: Clone,
 {
     let input_collection = nq.input_collection.as_ref().map(|collection| {
-        allocator
-            .text("input collection: ")
-            .append(allocator.text(collection.to_string()))
+        definition_list_entry(
+            "input collection",
+            allocator.text(collection.to_string()),
+            allocator,
+        )
     });
 
-    let representation = Some(
-        allocator
-            .text("representation: ")
-            .append(allocator.text(nq.representation.to_str())),
-    );
+    let representation = Some(definition_list_entry(
+        "representation",
+        allocator.text(nq.representation.to_str()),
+        allocator,
+    ));
 
     let parameters = if !nq.arguments.is_empty() {
         let params = nq.arguments.iter().map(|(name, definition)| {
             allocator
-                .text(format!("{name}: "))
-                .append(allocator.text(format!("{}", definition.r#type)))
+                .text(name.to_string())
+                .annotate(field_name())
+                .append(allocator.text(": "))
+                .append(
+                    allocator
+                        .text(definition.r#type.to_string())
+                        .annotate(type_expression()),
+                )
         });
         Some(section(
             "parameters",
@@ -100,6 +121,7 @@ where
         let docs = other_object_types.into_iter().map(|(name, definition)| {
             allocator
                 .text(format!("{name} "))
+                .annotate(object_type_name())
                 .append(object_type_printer(definition, allocator))
         });
         let separator = allocator.line().append(allocator.line());
@@ -126,16 +148,21 @@ where
     )
 }
 
-fn object_type_printer<'a, D, A>(ot: &'a ObjectType, allocator: &'a D) -> DocBuilder<'a, D, A>
+fn object_type_printer<'a, D>(ot: &'a ObjectType, allocator: &'a D) -> DocBuilder<'a, D, ColorSpec>
 where
-    D: DocAllocator<'a, A>,
+    D: DocAllocator<'a, ColorSpec>,
     D::Doc: Clone,
-    A: Clone,
 {
     let fields = ot.fields.iter().map(|(name, definition)| {
         allocator
-            .text(format!("{name}: "))
-            .append(allocator.text(format!("{}", definition.r#type)))
+            .text(name.to_string())
+            .annotate(field_name())
+            .append(allocator.text(": "))
+            .append(
+                allocator
+                    .text(definition.r#type.to_string())
+                    .annotate(type_expression()),
+            )
     });
     let separator = allocator.text(",").append(allocator.line());
     let body = allocator.intersperse(fields, separator);
@@ -145,21 +172,68 @@ where
     )
 }
 
-fn section<'a, D, A>(
-    heading: &'a str,
-    body: impl Pretty<'a, D, A>,
+fn definition_list_entry<'a, D>(
+    label: &'a str,
+    body: impl Pretty<'a, D, ColorSpec>,
     allocator: &'a D,
-) -> DocBuilder<'a, D, A>
+) -> DocBuilder<'a, D, ColorSpec>
 where
-    D: DocAllocator<'a, A>,
+    D: DocAllocator<'a, ColorSpec>,
     D::Doc: Clone,
-    A: Clone,
 {
-    let heading_doc = allocator.text("## ").append(heading);
+    allocator
+        .text(label)
+        .annotate(definition_list_label())
+        .append(allocator.text(": "))
+        .append(body)
+}
+
+fn section<'a, D>(
+    heading: &'a str,
+    body: impl Pretty<'a, D, ColorSpec>,
+    allocator: &'a D,
+) -> DocBuilder<'a, D, ColorSpec>
+where
+    D: DocAllocator<'a, ColorSpec>,
+    D::Doc: Clone,
+{
+    let heading_doc = allocator
+        .text("## ")
+        .append(heading)
+        .annotate(section_heading());
     allocator
         .line()
         .append(heading_doc)
         .append(allocator.line())
         .append(allocator.line())
         .append(body)
+}
+
+fn section_heading() -> ColorSpec {
+    let mut color = ColorSpec::new();
+    color.set_fg(Some(Color::Red));
+    color.set_bold(true);
+    color
+}
+
+fn definition_list_label() -> ColorSpec {
+    let mut color = ColorSpec::new();
+    color.set_fg(Some(Color::Blue));
+    color
+}
+
+fn field_name() -> ColorSpec {
+    let mut color = ColorSpec::new();
+    color.set_fg(Some(Color::Yellow));
+    color
+}
+
+fn object_type_name() -> ColorSpec {
+    // placeholder in case we want styling here in the future
+    ColorSpec::new()
+}
+
+fn type_expression() -> ColorSpec {
+    // placeholder in case we want styling here in the future
+    ColorSpec::new()
 }

@@ -2359,6 +2359,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b55c4d17d994b637e2f4daf6e5dc5d660d209d5642377d675d7a1c3ab69fa579"
 dependencies = [
  "arrayvec",
+ "termcolor",
  "typed-arena",
  "unicode-width",
 ]

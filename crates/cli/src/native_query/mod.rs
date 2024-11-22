@@ -25,6 +25,7 @@ use configuration::{
 use configuration::{read_directory_with_ignored_configs, read_native_query_directory, WithName};
 use mongodb_support::aggregate::Pipeline;
 use ndc_models::{CollectionName, FunctionName};
+use pretty::termcolor::{ColorChoice, StandardStream};
 use pretty_printing::pretty_print_native_query;
 use tokio::fs;
 
@@ -103,8 +104,12 @@ async fn delete(context: &Context, native_query_name: &str) -> anyhow::Result<()
 
 async fn show(context: &Context, native_query_name: &str) -> anyhow::Result<()> {
     let (native_query, path) = find_native_query(context, native_query_name).await?;
-    println!("configuration source: {}", path.to_string_lossy());
-    pretty_print_native_query(&mut std::io::stdout(), &native_query).await?;
+    pretty_print_native_query(
+        &mut StandardStream::stdout(ColorChoice::Auto),
+        &native_query,
+        &path,
+    )
+    .await?;
     Ok(())
 }
 
@@ -179,7 +184,11 @@ async fn create(
         native_query_path.to_string_lossy()
     );
     eprintln!();
-    pretty_print_native_query_info(&mut std::io::stderr(), &native_query.value).await?;
+    pretty_print_native_query_info(
+        &mut StandardStream::stdout(ColorChoice::Auto),
+        &native_query.value,
+    )
+    .await?;
     Ok(())
 }
 
