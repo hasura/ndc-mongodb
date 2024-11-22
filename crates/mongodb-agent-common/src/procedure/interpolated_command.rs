@@ -123,14 +123,18 @@ enum NativeMutationPart {
 }
 
 /// Parse a string or key in a native procedure into parts where variables have the syntax
-/// `{{<variable>}}`.
+/// `{{<variable>}}` or `{{ <variable> | type expression }}`.
 fn parse_native_mutation(string: &str) -> Vec<NativeMutationPart> {
     let vec: Vec<Vec<NativeMutationPart>> = string
         .split("{{")
         .filter(|part| !part.is_empty())
         .map(|part| match part.split_once("}}") {
             None => vec![NativeMutationPart::Text(part.to_string())],
-            Some((var, text)) => {
+            Some((placeholder_content, text)) => {
+                let var = match placeholder_content.split_once("|") {
+                    Some((var_name, _type_annotation)) => var_name,
+                    None => placeholder_content,
+                };
                 if text.is_empty() {
                     vec![NativeMutationPart::Parameter(var.trim().into())]
                 } else {
@@ -320,6 +324,47 @@ mod tests {
             bson::doc! {
                 "insert": "current-some-coll",
                 "empty": "",
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn strips_type_annotation_from_placeholder_text() -> anyhow::Result<()> {
+        let native_mutation = NativeMutation {
+            result_type: Type::Object(ObjectType {
+                name: Some("InsertArtist".into()),
+                fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
+            }),
+            command: doc! {
+                "insert": "Artist",
+                "documents": [{
+                    "Name": "{{name | string! }}",
+                }],
+            },
+            selection_criteria: Default::default(),
+            description: Default::default(),
+        };
+
+        let input_arguments = [(
+            "name".into(),
+            MutationProcedureArgument::Literal {
+                value: json!("Regina Spektor"),
+                argument_type: Type::Scalar(MongoScalarType::Bson(S::String)),
+            },
+        )]
+        .into();
+
+        let arguments = arguments_to_mongodb_expressions(input_arguments)?;
+        let command = interpolated_command(&native_mutation.command, &arguments)?;
+
+        assert_eq!(
+            command,
+            bson::doc! {
+                "insert": "Artist",
+                "documents": [{
+                    "Name": "Regina Spektor",
+                }],
             }
         );
         Ok(())
