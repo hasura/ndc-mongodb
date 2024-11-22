@@ -181,23 +181,15 @@ fn simplify_constraint_pair(
         }
 
         (C::Union(a), b) if variance == Variance::Contravariant => {
-            let mut simplified = None;
-            let mut not_simplified_but_not_incompatible = BTreeSet::new();
+            let mut simplified = BTreeSet::new();
             let mut errors = vec![];
 
             for union_branch in a {
-                match simplify_constraint_pair(
-                    context,
-                    variable,
-                    simplified.clone().unwrap_or(b.clone()),
-                    union_branch.clone(),
-                ) {
+                match simplify_constraint_pair(context, variable, b.clone(), union_branch.clone()) {
                     Ok(Some(t)) => {
-                        simplified = Some(t);
+                        simplified.insert(t);
                     }
-                    Ok(None) => {
-                        not_simplified_but_not_incompatible.insert(union_branch);
-                    }
+                    Ok(None) => return Ok(None),
                     Err(errs) => {
                         // ignore incompatible branches, but note errors
                         errors.extend(errs);
@@ -205,15 +197,18 @@ fn simplify_constraint_pair(
                 }
             }
 
-            match simplified {
-                Some(t) if not_simplified_but_not_incompatible.is_empty() => Ok(Some(t)),
-                Some(t) => Ok(Some(C::Union(
-                    std::iter::once(t)
-                        .chain(not_simplified_but_not_incompatible)
-                        .collect(),
-                ))),
-                None if not_simplified_but_not_incompatible.is_empty() => Err(errors),
-                None => Ok(Some(C::Union(not_simplified_but_not_incompatible))),
+            if simplified.is_empty() {
+                return Err(errors);
+            }
+
+            let (simplified, errors) = simplify_constraints_internal(context, variable, simplified);
+
+            if simplified.is_empty() {
+                Err(errors)
+            } else if simplified.len() == 1 {
+                Ok(Some(simplified.into_iter().next().unwrap()))
+            } else {
+                Ok(Some(C::Union(simplified)))
             }
         }
 
