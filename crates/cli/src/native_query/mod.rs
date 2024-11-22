@@ -3,6 +3,7 @@ pub mod error;
 mod helpers;
 mod pipeline;
 mod pipeline_type_context;
+mod pretty_printing;
 mod prune_object_types;
 mod reference_shorthand;
 mod type_annotation;
@@ -30,6 +31,7 @@ use crate::Context;
 
 use self::error::Result;
 use self::pipeline::infer_pipeline_types;
+use self::pretty_printing::pretty_print_native_query_info;
 
 /// Create native queries - custom MongoDB queries that integrate into your data graph
 #[derive(Clone, Debug, Subcommand)]
@@ -124,9 +126,11 @@ pub async fn run(context: &Context, command: Command) -> anyhow::Result<()> {
                 exit(ExitCode::ErrorWriting.into())
             };
             eprintln!(
-                "Wrote native query configuration to {}",
+                "\nWrote native query configuration to {}",
                 native_query_path.to_string_lossy()
             );
+            eprintln!();
+            pretty_print_native_query_info(&mut std::io::stderr(), &native_query.value)?;
             Ok(())
         }
     }
