@@ -104,12 +104,7 @@ async fn delete(context: &Context, native_query_name: &str) -> anyhow::Result<()
 
 async fn show(context: &Context, native_query_name: &str) -> anyhow::Result<()> {
     let (native_query, path) = find_native_query(context, native_query_name).await?;
-    pretty_print_native_query(
-        &mut StandardStream::stdout(ColorChoice::Auto),
-        &native_query,
-        &path,
-    )
-    .await?;
+    pretty_print_native_query(&mut stdout(context), &native_query, &path).await?;
     Ok(())
 }
 
@@ -184,11 +179,7 @@ async fn create(
         native_query_path.to_string_lossy()
     );
     eprintln!();
-    pretty_print_native_query_info(
-        &mut StandardStream::stdout(ColorChoice::Auto),
-        &native_query.value,
-    )
-    .await?;
+    pretty_print_native_query_info(&mut stdout(context), &native_query.value).await?;
     Ok(())
 }
 
@@ -292,4 +283,12 @@ pub fn native_query_from_pipeline(
         pipeline: pipeline.into(),
         description: None,
     })
+}
+
+fn stdout(context: &Context) -> StandardStream {
+    if context.display_color {
+        StandardStream::stdout(ColorChoice::Auto)
+    } else {
+        StandardStream::stdout(ColorChoice::Never)
+    }
 }
