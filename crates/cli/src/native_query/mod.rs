@@ -103,7 +103,7 @@ async fn delete(context: &Context, native_query_name: &str) -> anyhow::Result<()
 async fn show(context: &Context, native_query_name: &str) -> anyhow::Result<()> {
     let (native_query, path) = find_native_query(context, native_query_name).await?;
     println!("configuration source: {}", path.to_string_lossy());
-    pretty_print_native_query(&mut std::io::stdout(), &native_query)?;
+    pretty_print_native_query(&mut std::io::stdout(), &native_query).await?;
     Ok(())
 }
 
@@ -166,7 +166,7 @@ async fn create(
         native_query_path.to_string_lossy()
     );
     eprintln!();
-    pretty_print_native_query_info(&mut std::io::stderr(), &native_query.value)?;
+    pretty_print_native_query_info(&mut std::io::stderr(), &native_query.value).await?;
     Ok(())
 }
 

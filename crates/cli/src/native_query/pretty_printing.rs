@@ -1,29 +1,34 @@
 use configuration::{schema::ObjectType, serialized::NativeQuery};
 use itertools::Itertools;
 use pretty::{BoxAllocator, DocAllocator, DocBuilder, Pretty};
+use tokio::task;
 
 /// Prints metadata for a native query, excluding its pipeline
-pub fn pretty_print_native_query_info(
+pub async fn pretty_print_native_query_info(
     output: &mut impl std::io::Write,
     native_query: &NativeQuery,
 ) -> std::io::Result<()> {
-    let allocator = BoxAllocator;
-    native_query_info_printer::<_, ()>(native_query, &allocator)
-        .1
-        .render(80, output)?;
-    Ok(())
+    task::block_in_place(move || {
+        let allocator = BoxAllocator;
+        native_query_info_printer::<_, ()>(native_query, &allocator)
+            .1
+            .render(80, output)?;
+        Ok(())
+    })
 }
 
 /// Prints metadata for a native query including its pipeline
-pub fn pretty_print_native_query(
+pub async fn pretty_print_native_query(
     output: &mut impl std::io::Write,
     native_query: &NativeQuery,
 ) -> std::io::Result<()> {
-    let allocator = BoxAllocator;
-    native_query_printer::<_, ()>(native_query, &allocator)
-        .1
-        .render(80, output)?;
-    Ok(())
+    task::block_in_place(move || {
+        let allocator = BoxAllocator;
+        native_query_printer::<_, ()>(native_query, &allocator)
+            .1
+            .render(80, output)?;
+        Ok(())
+    })
 }
 
 fn native_query_printer<'a, D, A>(nq: &'a NativeQuery, allocator: &'a D) -> DocBuilder<'a, D, A>
