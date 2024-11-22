@@ -127,7 +127,6 @@ fn infer_type_from_aggregation_expression_document(
     }
 }
 
-// TODO: propagate expected type based on operator used
 fn infer_type_from_operator_expression(
     context: &mut PipelineTypeContext<'_>,
     desired_object_type_name: &str,
@@ -340,10 +339,13 @@ pub fn infer_type_from_reference_shorthand(
     let t = match reference {
         Reference::NativeQueryVariable {
             name,
-            type_annotation: _,
+            type_annotation,
         } => {
-            // TODO: read type annotation ENG-1249
-            context.register_parameter(name.into(), type_hint.into_iter().cloned())
+            let constraints = type_hint
+                .into_iter()
+                .cloned()
+                .chain(type_annotation.map(TypeConstraint::from));
+            context.register_parameter(name.into(), constraints)
         }
         Reference::PipelineVariable { .. } => todo!("pipeline variable"),
         Reference::InputDocumentField { name, nested_path } => {

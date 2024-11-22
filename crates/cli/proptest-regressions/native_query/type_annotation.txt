@@ -1,0 +1,10 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 525ecaf39caf362837e1addccbf4e0f4301e7e0ad1f84047a952b6ac710f795f # shrinks to t = Scalar(Double)
+cc 893face3f71cf906a1a089e94527e12d36882624d651797754b0d622f7af7680 # shrinks to t = Scalar(JavascriptWithScope)
+cc 6500920ee0ab41ac265301e4afdc05438df74f2b92112a7c0c1ccb59f056071c # shrinks to t = ArrayOf(Scalar(Double))
+cc adf516fe79b0dc9248c54a23f8b301ad1e2a3280081cde3f89586e4b5ade1065 # shrinks to t = Nullable(Nullable(Scalar(Double)))

@@ -15,7 +15,7 @@ use mongodb_support::{
     aggregate::{Accumulator, Pipeline, Selection, Stage},
     BsonScalarType,
 };
-use ndc_models::{FieldName, ObjectTypeName};
+use ndc_models::{ArgumentName, FieldName, ObjectTypeName};
 use pretty_assertions::assert_eq;
 use test_helpers::configuration::mflix_config;
 
@@ -154,6 +154,52 @@ fn infers_native_query_from_pipeline_with_unannotated_parameter() -> googletest:
                 eq(&Type::Scalar(BsonScalarType::String))
             )
         )]
+    );
+    Ok(())
+}
+
+#[googletest::test]
+fn reads_parameter_type_annotation() -> googletest::Result<()> {
+    let config = mflix_config();
+
+    // Parameter type would be inferred as double without this annotation
+    let pipeline = Pipeline::new(vec![Stage::Match(doc! {
+        "imdb.rating": { "$gt": "{{ min_rating | int! }}" },
+    })]);
+
+    let native_query = native_query_from_pipeline(
+        &config,
+        "movies_by_min_rating",
+        Some("movies".into()),
+        pipeline,
+    )?;
+
+    expect_that!(
+        native_query.arguments,
+        unordered_elements_are![(
+            eq(&ArgumentName::from("min_rating")),
+            field!(ObjectField.r#type, eq(&Type::Scalar(BsonScalarType::Int)))
+        )]
+    );
+    Ok(())
+}
+
+#[googletest::test]
+fn emits_error_on_incorrect_parameter_type_annotation() -> googletest::Result<()> {
+    let config = mflix_config();
+
+    let pipeline = Pipeline::new(vec![Stage::Match(doc! {
+        "title": { "$eq": "{{ title | decimal }}" },
+    })]);
+
+    let native_query =
+        native_query_from_pipeline(&config, "movies_by_title", Some("movies".into()), pipeline);
+
+    expect_that!(
+        native_query,
+        err(displays_as(contains_substring(
+            "string! is not compatible with decimal"
+        )))
     );
     Ok(())
 }
@@ -391,7 +437,10 @@ fn supports_project_stage_in_inclusion_mode() -> Result<()> {
     let native_query =
         native_query_from_pipeline(&config, "inclusion", Some("movies".into()), pipeline)?;
 
-    expect_eq!(native_query.result_document_type, "inclusion_project".into());
+    expect_eq!(
+        native_query.result_document_type,
+        "inclusion_project".into()
+    );
 
     expect_eq!(
         native_query.object_types,
@@ -402,7 +451,10 @@ fn supports_project_stage_in_inclusion_mode() -> Result<()> {
                     fields: object_fields([
                         ("_id", Type::Scalar(BsonScalarType::ObjectId)),
                         ("title", Type::Scalar(BsonScalarType::String)),
-                        ("tomatoes", Type::Object("inclusion_project_tomatoes".into())),
+                        (
+                            "tomatoes",
+                            Type::Object("inclusion_project_tomatoes".into())
+                        ),
                         ("releaseDate", Type::Scalar(BsonScalarType::Date)),
                     ]),
                     description: None

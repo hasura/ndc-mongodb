@@ -262,9 +262,11 @@ fn analyze_match_expression_string(
     match parse_reference_shorthand(&match_expression)? {
         Reference::NativeQueryVariable {
             name,
-            type_annotation: _, // TODO: parse type annotation ENG-1249
+            type_annotation,
         } => {
-            context.register_parameter(name.into(), [field_type.clone()]);
+            let constraints = std::iter::once(field_type.clone())
+                .chain(type_annotation.map(TypeConstraint::from));
+            context.register_parameter(name.into(), constraints);
         }
         Reference::String {
             native_query_variables,

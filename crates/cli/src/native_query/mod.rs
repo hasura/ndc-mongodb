@@ -5,6 +5,7 @@ mod pipeline;
 mod pipeline_type_context;
 mod prune_object_types;
 mod reference_shorthand;
+mod type_annotation;
 mod type_constraint;
 mod type_solver;
 
@@ -100,7 +101,10 @@ pub async fn run(context: &Context, command: Command) -> anyhow::Result<()> {
             let native_query =
                 match native_query_from_pipeline(&configuration, &name, collection, pipeline) {
                     Ok(q) => WithName::named(name, q),
-                    Err(_) => todo!(),
+                    Err(err) => {
+                        eprintln!("Error interpreting aggregation pipeline.\n\n{err}");
+                        exit(ExitCode::CouldNotReadAggregationPipeline.into())
+                    }
                 };
 
             let native_query_dir = native_query_path

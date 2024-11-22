@@ -2,6 +2,7 @@
 pub enum ExitCode {
     CouldNotReadAggregationPipeline,
     CouldNotReadConfiguration,
+    CouldNotProcessAggregationPipeline,
     ErrorWriting,
     RefusedToOverwrite,
 }
@@ -11,6 +12,7 @@ impl From<ExitCode> for i32 {
         match value {
             ExitCode::CouldNotReadAggregationPipeline => 201,
             ExitCode::CouldNotReadConfiguration => 202,
+            ExitCode::CouldNotProcessAggregationPipeline => 205,
             ExitCode::ErrorWriting => 204,
             ExitCode::RefusedToOverwrite => 203,
         }
