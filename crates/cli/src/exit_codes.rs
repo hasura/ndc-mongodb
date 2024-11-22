@@ -5,6 +5,7 @@ pub enum ExitCode {
     CouldNotProcessAggregationPipeline,
     ErrorWriting,
     RefusedToOverwrite,
+    ResourceNotFound,
 }
 
 impl From<ExitCode> for i32 {
@@ -15,6 +16,7 @@ impl From<ExitCode> for i32 {
             ExitCode::CouldNotProcessAggregationPipeline => 205,
             ExitCode::ErrorWriting => 204,
             ExitCode::RefusedToOverwrite => 203,
+            ExitCode::ResourceNotFound => 206,
         }
     }
 }

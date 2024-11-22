@@ -13,6 +13,7 @@ mod type_solver;
 #[cfg(test)]
 mod tests;
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 
@@ -21,9 +22,10 @@ use configuration::schema::ObjectField;
 use configuration::{
     native_query::NativeQueryRepresentation::Collection, serialized::NativeQuery, Configuration,
 };
-use configuration::{read_directory_with_ignored_configs, WithName};
+use configuration::{read_directory_with_ignored_configs, read_native_query_directory, WithName};
 use mongodb_support::aggregate::Pipeline;
-use ndc_models::CollectionName;
+use ndc_models::{CollectionName, FunctionName};
+use pretty_printing::pretty_print_native_query;
 use tokio::fs;
 
 use crate::exit_codes::ExitCode;
@@ -56,6 +58,10 @@ pub enum Command {
 
     /// List all configured native queries
     List,
+
+    /// Print details of a native query identified by name. Use the list subcommand to see native
+    /// query names.
+    Show { native_query_name: String },
 }
 
 pub async fn run(context: &Context, command: Command) -> anyhow::Result<()> {
@@ -67,14 +73,28 @@ pub async fn run(context: &Context, command: Command) -> anyhow::Result<()> {
             pipeline_path,
         } => create(context, name, collection, force, &pipeline_path).await,
         Command::List => list(context).await,
+        Command::Show { native_query_name } => show(context, &native_query_name).await,
     }
 }
 
-async fn list(context: &Context) -> std::result::Result<(), anyhow::Error> {
-    let configuration = read_configuration(context, &[]).await?;
-    for (name, _) in configuration.native_queries {
+async fn list(context: &Context) -> anyhow::Result<()> {
+    let native_queries = read_native_queries(context).await?;
+    for (name, _) in native_queries {
         println!("{}", name);
     }
+    Ok(())
+}
+
+async fn show(context: &Context, native_query_name: &str) -> anyhow::Result<()> {
+    let native_queries = read_native_queries(context).await?;
+    let native_query = match native_queries.get(native_query_name) {
+        Some(native_query) => native_query,
+        None => {
+            eprintln!("No native query named {native_query_name} found.");
+            exit(ExitCode::ResourceNotFound.into())
+        }
+    };
+    pretty_print_native_query(&mut std::io::stdout(), native_query)?;
     Ok(())
 }
 
@@ -100,7 +120,7 @@ async fn create(
 
     let configuration = read_configuration(context, &[native_query_path.clone()]).await?;
 
-    let pipeline = match read_pipeline(&pipeline_path).await {
+    let pipeline = match read_pipeline(pipeline_path).await {
         Ok(p) => p,
         Err(err) => {
             eprintln!("Could not read aggregation pipeline.\n\n{err}");
@@ -160,6 +180,20 @@ async fn read_configuration(
         &context.path.to_string_lossy()
     );
     Ok(configuration)
+}
+
+/// Reads native queries skipping configuration processing, or exits with specific error code on error
+async fn read_native_queries(
+    context: &Context,
+) -> anyhow::Result<BTreeMap<FunctionName, NativeQuery>> {
+    let native_queries = match read_native_query_directory(&context.path).await {
+        Ok(native_queries) => native_queries,
+        Err(err) => {
+            eprintln!("Could not read native queries.\n\n{err}");
+            exit(ExitCode::CouldNotReadConfiguration.into())
+        }
+    };
+    Ok(native_queries)
 }
 
 async fn read_pipeline(pipeline_path: &Path) -> anyhow::Result<Pipeline> {

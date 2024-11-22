@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Context as _};
 use futures::stream::TryStreamExt as _;
 use itertools::Itertools as _;
+use ndc_models::FunctionName;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashSet},
@@ -11,7 +12,10 @@ use tokio::{fs, io::AsyncWriteExt};
 use tokio_stream::wrappers::ReadDirStream;
 
 use crate::{
-    configuration::ConfigurationOptions, serialized::Schema, with_name::WithName, Configuration,
+    configuration::ConfigurationOptions,
+    serialized::{NativeQuery, Schema},
+    with_name::WithName,
+    Configuration,
 };
 
 pub const SCHEMA_DIRNAME: &str = "schema";
@@ -69,15 +73,24 @@ pub async fn read_directory_with_ignored_configs(
             .await?
             .unwrap_or_default();
 
-    let native_queries = read_subdir_configs(&dir.join(NATIVE_QUERIES_DIRNAME), ignored_configs)
-        .await?
-        .unwrap_or_default();
+    let native_queries = read_native_query_directory(dir).await?;
 
     let options = parse_configuration_options_file(dir).await?;
 
     native_mutations.extend(native_procedures.into_iter());
 
     Configuration::validate(schema, native_mutations, native_queries, options)
+}
+
+/// Read native queries only, and skip configuration processing
+pub async fn read_native_query_directory(
+    configuration_dir: impl AsRef<Path> + Send,
+) -> anyhow::Result<BTreeMap<FunctionName, NativeQuery>> {
+    let dir = configuration_dir.as_ref();
+    let native_queries = read_subdir_configs(&dir.join(NATIVE_QUERIES_DIRNAME), &[])
+        .await?
+        .unwrap_or_default();
+    Ok(native_queries)
 }
 
 /// Parse all files in a directory with one of the allowed configuration extensions according to
