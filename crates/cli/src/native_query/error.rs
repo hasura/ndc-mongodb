@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use configuration::schema::Type;
-use mongodb::bson::{self, Bson, Document};
+use mongodb::bson::{Bson, Document};
 use ndc_models::{ArgumentName, FieldName, ObjectTypeName};
 use thiserror::Error;
 
