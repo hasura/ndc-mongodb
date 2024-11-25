@@ -4,6 +4,7 @@ edition = "2021"
 version.workspace = true
 
 [features]
+default = ["native-query-subcommand"]
 native-query-subcommand = ["dep:pretty", "dep:nom"]
 
 [dependencies]
