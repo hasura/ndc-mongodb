@@ -45,3 +45,12 @@ pub enum NativeQueryRepresentation {
     Collection,
     Function,
 }
+
+impl NativeQueryRepresentation {
+    pub fn to_str(&self) -> &'static str {
+        match self {
+            NativeQueryRepresentation::Collection => "collection",
+            NativeQueryRepresentation::Function => "function",
+        }
+    }
+}

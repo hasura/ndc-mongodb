@@ -31,6 +31,10 @@ pub struct Args {
     )]
     pub connection_uri: Option<String>,
 
+    /// Disable color in command output.
+    #[arg(long = "no-color", short = 'C')]
+    pub no_color: bool,
+
     /// The command to invoke.
     #[command(subcommand)]
     pub subcommand: Command,
@@ -49,6 +53,7 @@ pub async fn main() -> anyhow::Result<()> {
     let context = Context {
         path,
         connection_uri: args.connection_uri,
+        display_color: !args.no_color,
     };
     run(args.subcommand, &context).await?;
     Ok(())

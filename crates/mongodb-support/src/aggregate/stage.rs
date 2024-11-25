@@ -168,7 +168,7 @@ pub enum Stage {
     /// $replaceWith is an alias for $replaceRoot stage.
     ///
     /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/replaceRoot/#mongodb-pipeline-pipe.-replaceRoot
-    #[serde(rename = "$replaceWith", rename_all = "camelCase")]
+    #[serde(rename = "$replaceRoot", rename_all = "camelCase")]
     ReplaceRoot { new_root: Selection },
 
     /// Replaces a document with the specified embedded document. The operation replaces all
