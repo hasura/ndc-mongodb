@@ -3,10 +3,8 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 use configuration::{
     native_query::NativeQueryRepresentation::Collection,
-    read_directory,
     schema::{ObjectField, ObjectType, Type},
     serialized::NativeQuery,
-    Configuration,
 };
 use googletest::prelude::*;
 use itertools::Itertools as _;
@@ -23,7 +21,7 @@ use super::native_query_from_pipeline;
 
 #[tokio::test]
 async fn infers_native_query_from_pipeline() -> Result<()> {
-    let config = read_configuration().await?;
+    let config = mflix_config();
     let pipeline = Pipeline::new(vec![Stage::Documents(vec![
         doc! { "foo": 1 },
         doc! { "bar": 2 },
@@ -78,7 +76,7 @@ async fn infers_native_query_from_pipeline() -> Result<()> {
 
 #[tokio::test]
 async fn infers_native_query_from_non_trivial_pipeline() -> Result<()> {
-    let config = read_configuration().await?;
+    let config = mflix_config();
     let pipeline = Pipeline::new(vec![
         Stage::ReplaceWith(Selection::new(doc! {
             "title": "$title",
@@ -507,8 +505,4 @@ where
             )
         })
         .collect()
-}
-
-async fn read_configuration() -> Result<Configuration> {
-    read_directory("../../fixtures/hasura/sample_mflix/connector").await
 }

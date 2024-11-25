@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Context as _};
 use futures::stream::TryStreamExt as _;
 use itertools::Itertools as _;
+use ndc_models::FunctionName;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashSet},
@@ -11,7 +12,10 @@ use tokio::{fs, io::AsyncWriteExt};
 use tokio_stream::wrappers::ReadDirStream;
 
 use crate::{
-    configuration::ConfigurationOptions, serialized::Schema, with_name::WithName, Configuration,
+    configuration::ConfigurationOptions,
+    serialized::{NativeQuery, Schema},
+    with_name::WithName,
+    Configuration,
 };
 
 pub const SCHEMA_DIRNAME: &str = "schema";
@@ -69,15 +73,30 @@ pub async fn read_directory_with_ignored_configs(
             .await?
             .unwrap_or_default();
 
-    let native_queries = read_subdir_configs(&dir.join(NATIVE_QUERIES_DIRNAME), ignored_configs)
+    let native_queries = read_native_query_directory(dir, ignored_configs)
         .await?
-        .unwrap_or_default();
+        .into_iter()
+        .map(|(name, (config, _))| (name, config))
+        .collect();
 
     let options = parse_configuration_options_file(dir).await?;
 
     native_mutations.extend(native_procedures.into_iter());
 
     Configuration::validate(schema, native_mutations, native_queries, options)
+}
+
+/// Read native queries only, and skip configuration processing
+pub async fn read_native_query_directory(
+    configuration_dir: impl AsRef<Path> + Send,
+    ignored_configs: &[PathBuf],
+) -> anyhow::Result<BTreeMap<FunctionName, (NativeQuery, PathBuf)>> {
+    let dir = configuration_dir.as_ref();
+    let native_queries =
+        read_subdir_configs_with_paths(&dir.join(NATIVE_QUERIES_DIRNAME), ignored_configs)
+            .await?
+            .unwrap_or_default();
+    Ok(native_queries)
 }
 
 /// Parse all files in a directory with one of the allowed configuration extensions according to
@@ -93,13 +112,30 @@ where
     for<'a> T: Deserialize<'a>,
     for<'a> N: Ord + ToString + Deserialize<'a>,
 {
+    let configs_with_paths = read_subdir_configs_with_paths(subdir, ignored_configs).await?;
+    let configs_without_paths = configs_with_paths.map(|cs| {
+        cs.into_iter()
+            .map(|(name, (config, _))| (name, config))
+            .collect()
+    });
+    Ok(configs_without_paths)
+}
+
+async fn read_subdir_configs_with_paths<N, T>(
+    subdir: &Path,
+    ignored_configs: &[PathBuf],
+) -> anyhow::Result<Option<BTreeMap<N, (T, PathBuf)>>>
+where
+    for<'a> T: Deserialize<'a>,
+    for<'a> N: Ord + ToString + Deserialize<'a>,
+{
     if !(fs::try_exists(subdir).await?) {
         return Ok(None);
     }
 
     let dir_stream = ReadDirStream::new(fs::read_dir(subdir).await?);
-    let configs: Vec<WithName<N, T>> = dir_stream
-        .map_err(|err| err.into())
+    let configs: Vec<WithName<N, (T, PathBuf)>> = dir_stream
+        .map_err(anyhow::Error::from)
         .try_filter_map(|dir_entry| async move {
             // Permits regular files and symlinks, does not filter out symlinks to directories.
             let is_file = !(dir_entry.file_type().await?.is_dir());
@@ -128,7 +164,11 @@ where
             Ok(format_option.map(|format| (path, format)))
         })
         .and_then(|(path, format)| async move {
-            parse_config_file::<WithName<N, T>>(path, format).await
+            let config = parse_config_file::<WithName<N, T>>(&path, format).await?;
+            Ok(WithName {
+                name: config.name,
+                value: (config.value, path),
+            })
         })
         .try_collect()
         .await?;

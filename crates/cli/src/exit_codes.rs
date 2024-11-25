@@ -4,7 +4,9 @@ pub enum ExitCode {
     CouldNotReadConfiguration,
     CouldNotProcessAggregationPipeline,
     ErrorWriting,
+    InvalidArguments,
     RefusedToOverwrite,
+    ResourceNotFound,
 }
 
 impl From<ExitCode> for i32 {
@@ -14,7 +16,9 @@ impl From<ExitCode> for i32 {
             ExitCode::CouldNotReadConfiguration => 202,
             ExitCode::CouldNotProcessAggregationPipeline => 205,
             ExitCode::ErrorWriting => 204,
+            ExitCode::InvalidArguments => 400,
             ExitCode::RefusedToOverwrite => 203,
+            ExitCode::ResourceNotFound => 404,
         }
     }
 }

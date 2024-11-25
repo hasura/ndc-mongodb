@@ -43,6 +43,7 @@ pub enum Command {
 pub struct Context {
     pub path: PathBuf,
     pub connection_uri: Option<String>,
+    pub display_color: bool,
 }
 
 /// Run a command in a given directory.

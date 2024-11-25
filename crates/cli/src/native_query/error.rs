@@ -87,10 +87,10 @@ pub enum Error {
     #[error("Type inference is not currently implemented for the aggregation expression operator, {0}. Please file a bug report, and declare types for your native query by hand for the time being.")]
     UnknownAggregationOperator(String),
 
-    #[error("Type inference is not currently implemented for {stage}, stage number {} in your aggregation pipeline. Please file a bug report, and declare types for your native query by hand for the time being.", stage_index + 1)]
+    #[error("Type inference is not currently implemented for{} stage number {} in your aggregation pipeline. Please file a bug report, and declare types for your native query by hand for the time being.", match stage_name { Some(name) => format!(" {name},"), None => "".to_string() }, stage_index + 1)]
     UnknownAggregationStage {
         stage_index: usize,
-        stage: bson::Document,
+        stage_name: Option<&'static str>,
     },
 
     #[error("Native query input collection, \"{0}\", is not defined in the connector schema")]
