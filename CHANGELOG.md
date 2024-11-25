@@ -4,6 +4,10 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+### Added
+
+- Adds CLI command to manage native queries with automatic type inference ([#131](https://github.com/hasura/ndc-mongodb/pull/131))
+
 ### Changed
 
 - Updates MongoDB Rust driver from v2.8 to v3.1.0 ([#124](https://github.com/hasura/ndc-mongodb/pull/124))
@@ -11,6 +15,75 @@ This changelog documents the changes between release versions.
 ### Fixed
 
 - The connector previously used Cloudflare's DNS resolver. Now it uses the locally-configured DNS resolver. ([#125](https://github.com/hasura/ndc-mongodb/pull/125))
+
+#### Managing native queries with the CLI
+
+New in this release is a CLI plugin command to create, list, inspect, and delete
+native queries. A big advantage of using the command versus writing native query
+configurations by hand is that the command will type-check your query's
+aggregation pipeline, and will write type declarations automatically.
+
+You can run the new command like this:
+
+```sh
+$ ddn connector plugin --connector app/connector/my_connector/connector.yaml -- native-query
+```
+
+To create a native query create a file with a `.json` extension that contains
+the aggregation pipeline for you query. For example this pipeline in
+`title_word_frequency.json` outputs frequency counts for words appearing in
+movie titles in a given year:
+
+```json
+[
+  {
+    "$match": {
+      "year": "{{ year }}"
+    }
+  },
+  { 
+    "$replaceWith": {
+      "title_words": { "$split": ["$title", " "] }
+    }
+  },
+  { "$unwind": { "path": "$title_words" } },
+  { 
+    "$group": {
+      "_id": "$title_words",
+      "count": { "$count": {} }
+    }
+  }
+]
+```
+
+In your supergraph directory run a command like this using the path to the pipeline file as an argument,
+
+```sh
+$ ddn connector plugin --connector app/connector/my_connector/connector.yaml -- native-query create title_word_frequency.json --collection movies
+```
+
+You should see output like this:
+
+```
+Wrote native query configuration to your-project/connector/native_queries/title_word_frequency.json
+
+input collection: movies
+representation: collection
+
+## parameters
+
+year: int!
+
+## result type
+
+{
+  _id: string!,
+  count: int!
+}
+```
+
+For more details see the
+[documentation page](https://hasura.io/docs/3.0/connectors/mongodb/native-operations/native-queries/#manage-native-queries-with-the-ddn-cli).
 
 ## [1.4.0] - 2024-11-14
 
