@@ -153,7 +153,7 @@ async fn create(
     {
         Ok(q) => WithName::named(name, q),
         Err(err) => {
-            eprintln!("Error interpreting aggregation pipeline.\n\n{err}");
+            eprintln!("Error interpreting aggregation pipeline. If you are not able to resolve this error you can add the native query by writing the configuration file directly in {}.\n\n{err}", native_query_path.to_string_lossy());
             exit(ExitCode::CouldNotReadAggregationPipeline.into())
         }
     };

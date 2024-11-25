@@ -69,7 +69,10 @@ fn infer_stage_output_type(
     stage: &Stage,
 ) -> Result<Option<TypeConstraint>> {
     let output_type = match stage {
-        Stage::AddFields(_) => todo!("add fields stage"),
+        Stage::AddFields(_) => Err(Error::UnknownAggregationStage {
+            stage_index,
+            stage_name: Some("$addFields"),
+        })?,
         Stage::Documents(docs) => {
             let doc_constraints = docs
                 .iter()
@@ -112,7 +115,10 @@ fn infer_stage_output_type(
             )?;
             None
         }
-        Stage::Lookup { .. } => todo!("lookup stage"),
+        Stage::Lookup { .. } => Err(Error::UnknownAggregationStage {
+            stage_index,
+            stage_name: Some("$lookup"),
+        })?,
         Stage::Group {
             key_expression,
             accumulators,
@@ -125,8 +131,14 @@ fn infer_stage_output_type(
             )?;
             Some(TypeConstraint::Object(object_type_name))
         }
-        Stage::Facet(_) => todo!("facet stage"),
-        Stage::Count(_) => todo!("count stage"),
+        Stage::Facet(_) => Err(Error::UnknownAggregationStage {
+            stage_index,
+            stage_name: Some("$facet"),
+        })?,
+        Stage::Count(_) => Err(Error::UnknownAggregationStage {
+            stage_index,
+            stage_name: Some("$count"),
+        })?,
         Stage::Project(doc) => {
             let augmented_type = project_stage::infer_type_from_project_stage(
                 context,
@@ -160,16 +172,10 @@ fn infer_stage_output_type(
             include_array_index.as_deref(),
             *preserve_null_and_empty_arrays,
         )?),
-        Stage::Other(doc) => {
-            context.add_warning(Error::UnknownAggregationStage {
-                stage_index,
-                stage: doc.clone(),
-            });
-            // We don't know what the type is here so we represent it with an unconstrained type
-            // variable.
-            let type_variable = context.new_type_variable(Variance::Covariant, []);
-            Some(TypeConstraint::Variable(type_variable))
-        }
+        Stage::Other(_) => Err(Error::UnknownAggregationStage {
+            stage_index,
+            stage_name: None,
+        })?,
     };
     Ok(output_type)
 }
