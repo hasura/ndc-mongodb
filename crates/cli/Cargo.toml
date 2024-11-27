@@ -5,7 +5,7 @@ version.workspace = true
 
 [features]
 default = ["native-query-subcommand"]
-native-query-subcommand = ["dep:pretty", "dep:nom"]
+native-query-subcommand = ["dep:pretty", "dep:nom", "dep:textwrap"]
 
 [dependencies]
 configuration = { path = "../configuration" }
@@ -27,6 +27,7 @@ ref-cast = { workspace = true }
 regex = "^1.11.1"
 serde = { workspace = true }
 serde_json = { workspace = true }
+textwrap = { version = "^0.16.1", optional = true }
 thiserror = "1.0.57"
 tokio = { version = "1.36.0", features = ["full"] }
 
