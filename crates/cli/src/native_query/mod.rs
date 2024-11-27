@@ -153,7 +153,13 @@ async fn create(
     {
         Ok(q) => WithName::named(name, q),
         Err(err) => {
-            eprintln!("Error interpreting aggregation pipeline. If you are not able to resolve this error you can add the native query by writing the configuration file directly in {}.\n\n{err}", native_query_path.to_string_lossy());
+            eprintln!("Error interpreting aggregation pipeline. If you are not able to resolve this error you can add the native query by writing the configuration file directly in {}", native_query_path.to_string_lossy());
+            eprintln!();
+            eprintln!("If you want to request support for a currently unsupported query feature,
+report a bug, or get support please file an issue at
+https://github.com/hasura/ndc-mongodb/issues/new?template=native-query.md");
+            eprintln!();
+            eprintln!("{err}");
             exit(ExitCode::CouldNotReadAggregationPipeline.into())
         }
     };
