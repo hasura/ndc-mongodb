@@ -23,6 +23,10 @@ native queries. A big advantage of using the command versus writing native query
 configurations by hand is that the command will type-check your query's
 aggregation pipeline, and will write type declarations automatically.
 
+This is a BETA feature - it is a work in progress, and will not work for all
+cases. It is safe to experiment with since it is limited to managing native
+query configuration files, and does not lock you into anything.
+
 You can run the new command like this:
 
 ```sh

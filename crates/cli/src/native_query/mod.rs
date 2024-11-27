@@ -36,7 +36,7 @@ use self::error::Result;
 use self::pipeline::infer_pipeline_types;
 use self::pretty_printing::pretty_print_native_query_info;
 
-/// Create or manage native queries - custom MongoDB queries that integrate into your data graph
+/// [BETA] Create or manage native queries - custom MongoDB queries that integrate into your data graph
 #[derive(Clone, Debug, Subcommand)]
 pub enum Command {
     /// Create a native query from a JSON file containing an aggregation pipeline
