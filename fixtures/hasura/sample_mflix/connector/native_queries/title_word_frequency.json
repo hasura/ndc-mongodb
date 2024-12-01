@@ -1,0 +1,49 @@
+{
+  "name": "title_word_frequency",
+  "representation": "collection",
+  "inputCollection": "movies",
+  "arguments": {},
+  "resultDocumentType": "title_word_frequency_group",
+  "objectTypes": {
+    "title_word_frequency_group": {
+      "fields": {
+        "_id": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "count": {
+          "type": {
+            "scalar": "int"
+          }
+        }
+      }
+    }
+  },
+  "pipeline": [
+    {
+      "$replaceWith": {
+        "title": "$title",
+        "title_words": {
+          "$split": [
+            "$title",
+            " "
+          ]
+        }
+      }
+    },
+    {
+      "$unwind": {
+        "path": "$title_words"
+      }
+    },
+    {
+      "$group": {
+        "_id": "$title_words",
+        "count": {
+          "$count": {}
+        }
+      }
+    }
+  ]
+}
