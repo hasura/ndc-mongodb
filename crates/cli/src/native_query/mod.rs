@@ -105,6 +105,7 @@ async fn delete(context: &Context, native_query_name: &str) -> anyhow::Result<()
 async fn show(context: &Context, native_query_name: &str) -> anyhow::Result<()> {
     let (native_query, path) = find_native_query(context, native_query_name).await?;
     pretty_print_native_query(&mut stdout(context), &native_query, &path).await?;
+    println!(); // blank line to avoid unterminated output indicator
     Ok(())
 }
 
@@ -186,6 +187,7 @@ async fn create(
     );
     eprintln!();
     pretty_print_native_query_info(&mut stdout(context), &native_query.value).await?;
+    println!(); // blank line to avoid unterminated output indicator
     Ok(())
 }
 
