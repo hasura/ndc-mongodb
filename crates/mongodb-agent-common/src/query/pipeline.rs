@@ -7,14 +7,16 @@ use mongodb_support::{
     aggregate::{Accumulator, Pipeline, Selection, Stage},
     BsonScalarType,
 };
-use ndc_models::{FieldName, UnaryComparisonOperator};
+use ndc_models::FieldName;
 use tracing::instrument;
 
 use crate::{
     aggregation_function::AggregationFunction,
+    comparison_function::ComparisonFunction,
     interface_types::MongoAgentError,
     mongo_query_plan::{
-        Aggregate, ComparisonTarget, Expression, MongoConfiguration, Query, QueryPlan, Type,
+        Aggregate, ComparisonTarget, ComparisonValue, Expression, MongoConfiguration, Query,
+        QueryPlan, Type,
     },
     mongodb::{sanitize::get_field, selection_from_query_request},
 };
@@ -256,9 +258,13 @@ fn pipeline_for_aggregate(
         target_field: ComparisonTarget,
     ) -> Result<Stage, MongoAgentError> {
         Ok(Stage::Match(make_selector(&Expression::Not {
-            expression: Box::new(Expression::UnaryComparisonOperator {
+            expression: Box::new(Expression::BinaryComparisonOperator {
                 column: target_field,
-                operator: UnaryComparisonOperator::IsNull,
+                operator: ComparisonFunction::NotEqual,
+                value: ComparisonValue::Scalar {
+                    value: serde_json::Value::Null,
+                    value_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::Null)),
+                },
             }),
         })?))
     }
