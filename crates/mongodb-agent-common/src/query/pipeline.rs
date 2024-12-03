@@ -1,18 +1,26 @@
 use std::collections::BTreeMap;
 
+use configuration::MongoScalarType;
 use itertools::Itertools;
 use mongodb::bson::{self, doc, Bson};
-use mongodb_support::aggregate::{Accumulator, Pipeline, Selection, Stage};
+use mongodb_support::{
+    aggregate::{Accumulator, Pipeline, Selection, Stage},
+    BsonScalarType,
+};
+use ndc_models::{FieldName, UnaryComparisonOperator};
 use tracing::instrument;
 
 use crate::{
     aggregation_function::AggregationFunction,
     interface_types::MongoAgentError,
-    mongo_query_plan::{Aggregate, MongoConfiguration, Query, QueryPlan},
+    mongo_query_plan::{
+        Aggregate, ComparisonTarget, Expression, MongoConfiguration, Query, QueryPlan, Type,
+    },
     mongodb::{sanitize::get_field, selection_from_query_request},
 };
 
 use super::{
+    column_ref::ColumnRef,
     constants::{RESULT_FIELD, ROWS_FIELD},
     foreach::pipeline_for_foreach,
     make_selector,
@@ -235,32 +243,58 @@ fn pipeline_for_aggregate(
     aggregate: Aggregate,
     limit: Option<u32>,
 ) -> Result<Pipeline, MongoAgentError> {
-    // Group expressions use a dollar-sign prefix to indicate a reference to a document field.
-    // TODO: I don't think we need sanitizing, but I could use a second opinion -Jesse H.
-    let field_ref = |column: &str| Bson::String(format!("${column}"));
+    fn mk_target_field(name: FieldName, field_path: Option<Vec<FieldName>>) -> ComparisonTarget {
+        ComparisonTarget::Column {
+            name,
+            field_path,
+            field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::Null)), // type does not matter here
+            path: Default::default(),
+        }
+    }
+
+    fn filter_to_documents_with_value(
+        target_field: ComparisonTarget,
+    ) -> Result<Stage, MongoAgentError> {
+        Ok(Stage::Match(make_selector(&Expression::Not {
+            expression: Box::new(Expression::UnaryComparisonOperator {
+                column: target_field,
+                operator: UnaryComparisonOperator::IsNull,
+            }),
+        })?))
+    }
 
     let pipeline = match aggregate {
-        Aggregate::ColumnCount { column, distinct } if distinct => Pipeline::from_iter(
-            [
-                Some(Stage::Match(
-                    bson::doc! { column.as_str(): { "$exists": true, "$ne": null } },
-                )),
-                limit.map(Into::into).map(Stage::Limit),
-                Some(Stage::Group {
-                    key_expression: field_ref(column.as_str()),
-                    accumulators: [].into(),
-                }),
-                Some(Stage::Count(RESULT_FIELD.to_string())),
-            ]
-            .into_iter()
-            .flatten(),
-        ),
+        Aggregate::ColumnCount {
+            column,
+            field_path,
+            distinct,
+        } if distinct => {
+            let target_field = mk_target_field(column, field_path);
+            Pipeline::from_iter(
+                [
+                    Some(filter_to_documents_with_value(target_field.clone())?),
+                    limit.map(Into::into).map(Stage::Limit),
+                    Some(Stage::Group {
+                        key_expression: ColumnRef::from_comparison_target(&target_field)
+                            .into_aggregate_expression(),
+                        accumulators: [].into(),
+                    }),
+                    Some(Stage::Count(RESULT_FIELD.to_string())),
+                ]
+                .into_iter()
+                .flatten(),
+            )
+        }
 
-        Aggregate::ColumnCount { column, .. } => Pipeline::from_iter(
+        Aggregate::ColumnCount {
+            column,
+            field_path,
+            distinct: _,
+        } => Pipeline::from_iter(
             [
-                Some(Stage::Match(
-                    bson::doc! { column.as_str(): { "$exists": true, "$ne": null } },
-                )),
+                Some(filter_to_documents_with_value(mk_target_field(
+                    column, field_path,
+                ))?),
                 limit.map(Into::into).map(Stage::Limit),
                 Some(Stage::Count(RESULT_FIELD.to_string())),
             ]
@@ -269,22 +303,32 @@ fn pipeline_for_aggregate(
         ),
 
         Aggregate::SingleColumn {
-            column, function, ..
+            column,
+            field_path,
+            function,
+            result_type: _,
         } => {
             use AggregationFunction::*;
 
+            let target_field = ComparisonTarget::Column {
+                name: column.clone(),
+                field_path,
+                field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::Null)), // type does not matter here
+                path: Default::default(),
+            };
+            let field_ref =
+                ColumnRef::from_comparison_target(&target_field).into_aggregate_expression();
+
             let accumulator = match function {
-                Avg => Accumulator::Avg(field_ref(column.as_str())),
+                Avg => Accumulator::Avg(field_ref),
                 Count => Accumulator::Count,
-                Min => Accumulator::Min(field_ref(column.as_str())),
-                Max => Accumulator::Max(field_ref(column.as_str())),
-                Sum => Accumulator::Sum(field_ref(column.as_str())),
+                Min => Accumulator::Min(field_ref),
+                Max => Accumulator::Max(field_ref),
+                Sum => Accumulator::Sum(field_ref),
             };
             Pipeline::from_iter(
                 [
-                    Some(Stage::Match(
-                        bson::doc! { column: { "$exists": true, "$ne": null } },
-                    )),
+                    Some(filter_to_documents_with_value(target_field)?),
                     limit.map(Into::into).map(Stage::Limit),
                     Some(Stage::Group {
                         key_expression: Bson::Null,
