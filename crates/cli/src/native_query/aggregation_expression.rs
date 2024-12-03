@@ -347,7 +347,7 @@ pub fn infer_type_from_reference_shorthand(
                 .chain(type_annotation.map(TypeConstraint::from));
             context.register_parameter(name.into(), constraints)
         }
-        Reference::PipelineVariable { .. } => todo!("pipeline variable"),
+        Reference::PipelineVariable { name, .. } => Err(Error::Other(format!("Encountered a pipeline variable, $${name}. Pipeline variables are currently not supported.")))?,
         Reference::InputDocumentField { name, nested_path } => {
             let doc_type = context.get_input_document_type()?;
             let path = NonEmpty {

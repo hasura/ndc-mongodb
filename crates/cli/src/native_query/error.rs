@@ -1,13 +1,17 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use configuration::schema::Type;
-use mongodb::bson::{self, Bson, Document};
+use mongodb::bson::{Bson, Document};
 use ndc_models::{ArgumentName, FieldName, ObjectTypeName};
 use thiserror::Error;
 
 use super::type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable};
 
 pub type Result<T> = std::result::Result<T, Error>;
+
+// The URL for native query issues will be visible due to a wrapper around this error message in
+// [crate::native_query::create].
+const UNSUPPORTED_FEATURE_MESSAGE: &str = r#"For a list of currently-supported features see https://hasura.io/docs/3.0/connectors/mongodb/native-operations/supported-aggregation-pipeline-features/. Please file a bug report, and declare types for your native query by hand for the time being."#;
 
 #[derive(Clone, Debug, Error, PartialEq)]
 pub enum Error {
@@ -41,9 +45,7 @@ pub enum Error {
         unsolved_variables: Vec<TypeVariable>,
     },
 
-    #[error(
-        "Cannot infer a result document type for pipeline because it does not produce documents"
-    )]
+    #[error("Cannot infer a result document type for pipeline because it does not produce documents. You might need to add a --collection flag to your command to specify an input collection for the query.")]
     IncompletePipeline,
 
     #[error("An object representing an expression must have exactly one field: {0}")]
@@ -81,13 +83,13 @@ pub enum Error {
     #[error("Error parsing a string in the aggregation pipeline: {0}")]
     UnableToParseReferenceShorthand(String),
 
-    #[error("Type inference is not currently implemented for the query document operator, {0}. Please file a bug report, and declare types for your native query by hand for the time being.")]
+    #[error("Type inference is not currently implemented for the query predicate operator, {0}. {UNSUPPORTED_FEATURE_MESSAGE}")]
     UnknownMatchDocumentOperator(String),
 
-    #[error("Type inference is not currently implemented for the aggregation expression operator, {0}. Please file a bug report, and declare types for your native query by hand for the time being.")]
+    #[error("Type inference is not currently implemented for the aggregation expression operator, {0}. {UNSUPPORTED_FEATURE_MESSAGE}")]
     UnknownAggregationOperator(String),
 
-    #[error("Type inference is not currently implemented for{} stage number {} in your aggregation pipeline. Please file a bug report, and declare types for your native query by hand for the time being.", match stage_name { Some(name) => format!(" {name},"), None => "".to_string() }, stage_index + 1)]
+    #[error("Type inference is not currently implemented for{} stage number {} in your aggregation pipeline. {UNSUPPORTED_FEATURE_MESSAGE}", match stage_name { Some(name) => format!(" {name},"), None => "".to_string() }, stage_index + 1)]
     UnknownAggregationStage {
         stage_index: usize,
         stage_name: Option<&'static str>,

@@ -36,7 +36,7 @@ use self::error::Result;
 use self::pipeline::infer_pipeline_types;
 use self::pretty_printing::pretty_print_native_query_info;
 
-/// Create native queries - custom MongoDB queries that integrate into your data graph
+/// [BETA] Create or manage native queries - custom MongoDB queries that integrate into your data graph
 #[derive(Clone, Debug, Subcommand)]
 pub enum Command {
     /// Create a native query from a JSON file containing an aggregation pipeline
@@ -105,6 +105,7 @@ async fn delete(context: &Context, native_query_name: &str) -> anyhow::Result<()
 async fn show(context: &Context, native_query_name: &str) -> anyhow::Result<()> {
     let (native_query, path) = find_native_query(context, native_query_name).await?;
     pretty_print_native_query(&mut stdout(context), &native_query, &path).await?;
+    println!(); // blank line to avoid unterminated output indicator
     Ok(())
 }
 
@@ -145,7 +146,7 @@ async fn create(
     let pipeline = match read_pipeline(pipeline_path).await {
         Ok(p) => p,
         Err(err) => {
-            eprintln!("Could not read aggregation pipeline.\n\n{err}");
+            write_stderr(&format!("Could not read aggregation pipeline.\n\n{err}"));
             exit(ExitCode::CouldNotReadAggregationPipeline.into())
         }
     };
@@ -153,7 +154,13 @@ async fn create(
     {
         Ok(q) => WithName::named(name, q),
         Err(err) => {
-            eprintln!("Error interpreting aggregation pipeline. If you are not able to resolve this error you can add the native query by writing the configuration file directly in {}.\n\n{err}", native_query_path.to_string_lossy());
+            eprintln!();
+            write_stderr(&err.to_string());
+            eprintln!();
+            write_stderr(&format!("If you are not able to resolve this error you can add the native query by writing the configuration file directly in {}. See https://hasura.io/docs/3.0/connectors/mongodb/native-operations/native-queries/#write-native-query-configurations-directly", native_query_path.to_string_lossy()));
+            // eprintln!("See https://hasura.io/docs/3.0/connectors/mongodb/native-operations/native-queries/#write-native-query-configurations-directly");
+            eprintln!();
+            write_stderr("If you want to request support for a currently unsupported query feature, report a bug, or get support please file an issue at https://github.com/hasura/ndc-mongodb/issues/new?template=native-query.md");
             exit(ExitCode::CouldNotReadAggregationPipeline.into())
         }
     };
@@ -171,7 +178,7 @@ async fn create(
     )
     .await
     {
-        eprintln!("Error writing native query configuration: {err}");
+        write_stderr(&format!("Error writing native query configuration: {err}"));
         exit(ExitCode::ErrorWriting.into())
     };
     eprintln!(
@@ -180,6 +187,7 @@ async fn create(
     );
     eprintln!();
     pretty_print_native_query_info(&mut stdout(context), &native_query.value).await?;
+    println!(); // blank line to avoid unterminated output indicator
     Ok(())
 }
 
@@ -193,7 +201,7 @@ async fn read_configuration(
     {
         Ok(c) => c,
         Err(err) => {
-            eprintln!("Could not read connector configuration - configuration must be initialized before creating native queries.\n\n{err:#}");
+            write_stderr(&format!("Could not read connector configuration - configuration must be initialized before creating native queries.\n\n{err:#}"));
             exit(ExitCode::CouldNotReadConfiguration.into())
         }
     };
@@ -211,7 +219,7 @@ async fn read_native_queries(
     let native_queries = match read_native_query_directory(&context.path, &[]).await {
         Ok(native_queries) => native_queries,
         Err(err) => {
-            eprintln!("Could not read native queries.\n\n{err}");
+            write_stderr(&format!("Could not read native queries.\n\n{err}"));
             exit(ExitCode::CouldNotReadConfiguration.into())
         }
     };
@@ -291,4 +299,10 @@ fn stdout(context: &Context) -> StandardStream {
     } else {
         StandardStream::stdout(ColorChoice::Never)
     }
+}
+
+/// Write a message to sdterr with automatic line wrapping
+fn write_stderr(message: &str) {
+    let wrap_options = 120;
+    eprintln!("{}", textwrap::fill(message, wrap_options))
 }
