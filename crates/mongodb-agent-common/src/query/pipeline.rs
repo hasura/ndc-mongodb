@@ -249,7 +249,7 @@ fn pipeline_for_aggregate(
         ComparisonTarget::Column {
             name,
             field_path,
-            field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::Null)), // type does not matter here
+            field_type: Type::Scalar(MongoScalarType::ExtendedJSON), // type does not matter here
             path: Default::default(),
         }
     }
