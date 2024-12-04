@@ -1,0 +1,184 @@
+---
+kind: ScalarType
+version: v1
+definition:
+  name: ObjectId_1
+  graphql:
+    typeName: ObjectId1
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: ObjectIdBoolExp_1
+  operand:
+    scalar:
+      type: ObjectId_1
+      comparisonOperators:
+        - name: _eq
+          argumentType: ObjectId_1!
+        - name: _in
+          argumentType: "[ObjectId_1!]!"
+        - name: _neq
+          argumentType: ObjectId_1!
+        - name: _nin
+          argumentType: "[ObjectId_1!]!"
+      dataConnectorOperatorMapping:
+        - dataConnectorName: chinook
+          dataConnectorScalarType: ObjectId
+          operatorMapping: {}
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: ObjectIdBoolExp1
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: chinook
+  dataConnectorScalarType: ObjectId
+  representation: ObjectId_1
+  graphql:
+    comparisonExpressionTypeName: ObjectId1ComparisonExp
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: chinook
+  dataConnectorScalarType: Int
+  representation: Int
+  graphql:
+    comparisonExpressionTypeName: IntComparisonExp_1
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: chinook
+  dataConnectorScalarType: String
+  representation: String
+  graphql:
+    comparisonExpressionTypeName: StringComparisonExp_1
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: ObjectIdAggExp_1
+  operand:
+    scalar:
+      aggregatedType: ObjectId_1
+      aggregationFunctions:
+        - name: count
+          returnType: Int!
+      dataConnectorAggregationFunctionMapping:
+        - dataConnectorName: chinook
+          dataConnectorScalarType: ObjectId
+          functionMapping:
+            count:
+              name: count
+  count:
+    enable: true
+  countDistinct:
+    enable: true
+  graphql:
+    selectTypeName: ObjectIdAggExp1
+
+---
+kind: ScalarType
+version: v1
+definition:
+  name: Decimal
+  graphql:
+    typeName: Decimal
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: DecimalBoolExp
+  operand:
+    scalar:
+      type: Decimal
+      comparisonOperators:
+        - name: _eq
+          argumentType: Decimal!
+        - name: _gt
+          argumentType: Decimal!
+        - name: _gte
+          argumentType: Decimal!
+        - name: _in
+          argumentType: "[Decimal!]!"
+        - name: _lt
+          argumentType: Decimal!
+        - name: _lte
+          argumentType: Decimal!
+        - name: _neq
+          argumentType: Decimal!
+        - name: _nin
+          argumentType: "[Decimal!]!"
+      dataConnectorOperatorMapping:
+        - dataConnectorName: chinook
+          dataConnectorScalarType: Decimal
+          operatorMapping: {}
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: DecimalBoolExp
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: chinook
+  dataConnectorScalarType: Decimal
+  representation: Decimal
+  graphql:
+    comparisonExpressionTypeName: DecimalComparisonExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: DecimalAggExp
+  operand:
+    scalar:
+      aggregatedType: Decimal
+      aggregationFunctions:
+        - name: avg
+          returnType: Decimal!
+        - name: count
+          returnType: Int!
+        - name: max
+          returnType: Decimal!
+        - name: min
+          returnType: Decimal!
+        - name: sum
+          returnType: Decimal!
+      dataConnectorAggregationFunctionMapping:
+        - dataConnectorName: chinook
+          dataConnectorScalarType: Decimal
+          functionMapping:
+            avg:
+              name: avg
+            count:
+              name: count
+            max:
+              name: max
+            min:
+              name: min
+            sum:
+              name: sum
+  count:
+    enable: true
+  countDistinct:
+    enable: true
+  graphql:
+    selectTypeName: DecimalAggExp
+

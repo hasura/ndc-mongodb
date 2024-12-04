@@ -141,6 +141,9 @@ definition:
         - dataConnectorName: sample_mflix
           dataConnectorScalarType: String
           operatorMapping: {}
+        - dataConnectorName: chinook
+          dataConnectorScalarType: String
+          operatorMapping: {}
   logicalOperators:
     enable: true
   isNull:
@@ -239,6 +242,15 @@ definition:
               name: max
             min:
               name: min
+        - dataConnectorName: chinook
+          dataConnectorScalarType: String
+          functionMapping:
+            count:
+              name: count
+            max:
+              name: max
+            min:
+              name: min
   count:
     enable: true
   countDistinct:
@@ -329,6 +341,9 @@ definition:
         - dataConnectorName: sample_mflix
           dataConnectorScalarType: Int
           operatorMapping: {}
+        - dataConnectorName: chinook
+          dataConnectorScalarType: Int
+          operatorMapping: {}
   logicalOperators:
     enable: true
   isNull:
@@ -357,6 +372,19 @@ definition:
           returnType: Int!
       dataConnectorAggregationFunctionMapping:
         - dataConnectorName: sample_mflix
+          dataConnectorScalarType: Int
+          functionMapping:
+            avg:
+              name: avg
+            count:
+              name: count
+            max:
+              name: max
+            min:
+              name: min
+            sum:
+              name: sum
+        - dataConnectorName: chinook
           dataConnectorScalarType: Int
           functionMapping:
             avg:

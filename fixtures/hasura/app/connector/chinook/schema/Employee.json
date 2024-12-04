@@ -1,0 +1,96 @@
+{
+  "name": "Employee",
+  "collections": {
+    "Employee": {
+      "type": "Employee"
+    }
+  },
+  "objectTypes": {
+    "Employee": {
+      "fields": {
+        "Address": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "BirthDate": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "City": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "Country": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "Email": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "EmployeeId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "Fax": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "FirstName": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "HireDate": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "LastName": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "Phone": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "PostalCode": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "ReportsTo": {
+          "type": {
+            "nullable": {
+              "scalar": "int"
+            }
+          }
+        },
+        "State": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "Title": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        }
+      }
+    }
+  }
+}

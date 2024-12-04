@@ -1,0 +1,278 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: Customer
+  fields:
+    - name: id
+      type: ObjectId_1!
+    - name: address
+      type: String!
+    - name: city
+      type: String!
+    - name: company
+      type: String
+    - name: country
+      type: String!
+    - name: customerId
+      type: Int!
+    - name: email
+      type: String!
+    - name: fax
+      type: String
+    - name: firstName
+      type: String!
+    - name: lastName
+      type: String!
+    - name: phone
+      type: String
+    - name: postalCode
+      type: String
+    - name: state
+      type: String
+    - name: supportRepId
+      type: Int!
+  graphql:
+    typeName: Customer
+    inputTypeName: CustomerInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: chinook
+      dataConnectorObjectType: Customer
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        address:
+          column:
+            name: Address
+        city:
+          column:
+            name: City
+        company:
+          column:
+            name: Company
+        country:
+          column:
+            name: Country
+        customerId:
+          column:
+            name: CustomerId
+        email:
+          column:
+            name: Email
+        fax:
+          column:
+            name: Fax
+        firstName:
+          column:
+            name: FirstName
+        lastName:
+          column:
+            name: LastName
+        phone:
+          column:
+            name: Phone
+        postalCode:
+          column:
+            name: PostalCode
+        state:
+          column:
+            name: State
+        supportRepId:
+          column:
+            name: SupportRepId
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Customer
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - address
+          - city
+          - company
+          - country
+          - customerId
+          - email
+          - fax
+          - firstName
+          - lastName
+          - phone
+          - postalCode
+          - state
+          - supportRepId
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: CustomerBoolExp
+  operand:
+    object:
+      type: Customer
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp_1
+        - fieldName: address
+          booleanExpressionType: StringBoolExp
+        - fieldName: city
+          booleanExpressionType: StringBoolExp
+        - fieldName: company
+          booleanExpressionType: StringBoolExp
+        - fieldName: country
+          booleanExpressionType: StringBoolExp
+        - fieldName: customerId
+          booleanExpressionType: IntBoolExp
+        - fieldName: email
+          booleanExpressionType: StringBoolExp
+        - fieldName: fax
+          booleanExpressionType: StringBoolExp
+        - fieldName: firstName
+          booleanExpressionType: StringBoolExp
+        - fieldName: lastName
+          booleanExpressionType: StringBoolExp
+        - fieldName: phone
+          booleanExpressionType: StringBoolExp
+        - fieldName: postalCode
+          booleanExpressionType: StringBoolExp
+        - fieldName: state
+          booleanExpressionType: StringBoolExp
+        - fieldName: supportRepId
+          booleanExpressionType: IntBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: CustomerBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: CustomerAggExp
+  operand:
+    object:
+      aggregatedType: Customer
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: ObjectIdAggExp_1
+        - fieldName: address
+          aggregateExpression: StringAggExp
+        - fieldName: city
+          aggregateExpression: StringAggExp
+        - fieldName: company
+          aggregateExpression: StringAggExp
+        - fieldName: country
+          aggregateExpression: StringAggExp
+        - fieldName: customerId
+          aggregateExpression: IntAggExp
+        - fieldName: email
+          aggregateExpression: StringAggExp
+        - fieldName: fax
+          aggregateExpression: StringAggExp
+        - fieldName: firstName
+          aggregateExpression: StringAggExp
+        - fieldName: lastName
+          aggregateExpression: StringAggExp
+        - fieldName: phone
+          aggregateExpression: StringAggExp
+        - fieldName: postalCode
+          aggregateExpression: StringAggExp
+        - fieldName: state
+          aggregateExpression: StringAggExp
+        - fieldName: supportRepId
+          aggregateExpression: IntAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: CustomerAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: Customer
+  objectType: Customer
+  source:
+    dataConnectorName: chinook
+    collection: Customer
+  filterExpressionType: CustomerBoolExp
+  aggregateExpression: CustomerAggExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: address
+      orderByDirections:
+        enableAll: true
+    - fieldName: city
+      orderByDirections:
+        enableAll: true
+    - fieldName: company
+      orderByDirections:
+        enableAll: true
+    - fieldName: country
+      orderByDirections:
+        enableAll: true
+    - fieldName: customerId
+      orderByDirections:
+        enableAll: true
+    - fieldName: email
+      orderByDirections:
+        enableAll: true
+    - fieldName: fax
+      orderByDirections:
+        enableAll: true
+    - fieldName: firstName
+      orderByDirections:
+        enableAll: true
+    - fieldName: lastName
+      orderByDirections:
+        enableAll: true
+    - fieldName: phone
+      orderByDirections:
+        enableAll: true
+    - fieldName: postalCode
+      orderByDirections:
+        enableAll: true
+    - fieldName: state
+      orderByDirections:
+        enableAll: true
+    - fieldName: supportRepId
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: customer
+      subscription:
+        rootField: customer
+    selectUniques:
+      - queryRootField: customerById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: customerById
+    orderByExpressionType: CustomerOrderBy
+    filterInputTypeName: CustomerFilterInput
+    aggregate:
+      queryRootField: customerAggregate
+      subscription:
+        rootField: customerAggregate
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Customer
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+

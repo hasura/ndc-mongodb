@@ -1,0 +1,304 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: Employee
+  fields:
+    - name: id
+      type: ObjectId_1!
+    - name: address
+      type: String!
+    - name: birthDate
+      type: String!
+    - name: city
+      type: String!
+    - name: country
+      type: String!
+    - name: email
+      type: String!
+    - name: employeeId
+      type: Int!
+    - name: fax
+      type: String!
+    - name: firstName
+      type: String!
+    - name: hireDate
+      type: String!
+    - name: lastName
+      type: String!
+    - name: phone
+      type: String!
+    - name: postalCode
+      type: String!
+    - name: reportsTo
+      type: Int
+    - name: state
+      type: String!
+    - name: title
+      type: String!
+  graphql:
+    typeName: Employee
+    inputTypeName: EmployeeInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: chinook
+      dataConnectorObjectType: Employee
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        address:
+          column:
+            name: Address
+        birthDate:
+          column:
+            name: BirthDate
+        city:
+          column:
+            name: City
+        country:
+          column:
+            name: Country
+        email:
+          column:
+            name: Email
+        employeeId:
+          column:
+            name: EmployeeId
+        fax:
+          column:
+            name: Fax
+        firstName:
+          column:
+            name: FirstName
+        hireDate:
+          column:
+            name: HireDate
+        lastName:
+          column:
+            name: LastName
+        phone:
+          column:
+            name: Phone
+        postalCode:
+          column:
+            name: PostalCode
+        reportsTo:
+          column:
+            name: ReportsTo
+        state:
+          column:
+            name: State
+        title:
+          column:
+            name: Title
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Employee
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - address
+          - birthDate
+          - city
+          - country
+          - email
+          - employeeId
+          - fax
+          - firstName
+          - hireDate
+          - lastName
+          - phone
+          - postalCode
+          - reportsTo
+          - state
+          - title
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: EmployeeBoolExp
+  operand:
+    object:
+      type: Employee
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp_1
+        - fieldName: address
+          booleanExpressionType: StringBoolExp
+        - fieldName: birthDate
+          booleanExpressionType: StringBoolExp
+        - fieldName: city
+          booleanExpressionType: StringBoolExp
+        - fieldName: country
+          booleanExpressionType: StringBoolExp
+        - fieldName: email
+          booleanExpressionType: StringBoolExp
+        - fieldName: employeeId
+          booleanExpressionType: IntBoolExp
+        - fieldName: fax
+          booleanExpressionType: StringBoolExp
+        - fieldName: firstName
+          booleanExpressionType: StringBoolExp
+        - fieldName: hireDate
+          booleanExpressionType: StringBoolExp
+        - fieldName: lastName
+          booleanExpressionType: StringBoolExp
+        - fieldName: phone
+          booleanExpressionType: StringBoolExp
+        - fieldName: postalCode
+          booleanExpressionType: StringBoolExp
+        - fieldName: reportsTo
+          booleanExpressionType: IntBoolExp
+        - fieldName: state
+          booleanExpressionType: StringBoolExp
+        - fieldName: title
+          booleanExpressionType: StringBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: EmployeeBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: EmployeeAggExp
+  operand:
+    object:
+      aggregatedType: Employee
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: ObjectIdAggExp_1
+        - fieldName: address
+          aggregateExpression: StringAggExp
+        - fieldName: birthDate
+          aggregateExpression: StringAggExp
+        - fieldName: city
+          aggregateExpression: StringAggExp
+        - fieldName: country
+          aggregateExpression: StringAggExp
+        - fieldName: email
+          aggregateExpression: StringAggExp
+        - fieldName: employeeId
+          aggregateExpression: IntAggExp
+        - fieldName: fax
+          aggregateExpression: StringAggExp
+        - fieldName: firstName
+          aggregateExpression: StringAggExp
+        - fieldName: hireDate
+          aggregateExpression: StringAggExp
+        - fieldName: lastName
+          aggregateExpression: StringAggExp
+        - fieldName: phone
+          aggregateExpression: StringAggExp
+        - fieldName: postalCode
+          aggregateExpression: StringAggExp
+        - fieldName: reportsTo
+          aggregateExpression: IntAggExp
+        - fieldName: state
+          aggregateExpression: StringAggExp
+        - fieldName: title
+          aggregateExpression: StringAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: EmployeeAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: Employee
+  objectType: Employee
+  source:
+    dataConnectorName: chinook
+    collection: Employee
+  filterExpressionType: EmployeeBoolExp
+  aggregateExpression: EmployeeAggExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: address
+      orderByDirections:
+        enableAll: true
+    - fieldName: birthDate
+      orderByDirections:
+        enableAll: true
+    - fieldName: city
+      orderByDirections:
+        enableAll: true
+    - fieldName: country
+      orderByDirections:
+        enableAll: true
+    - fieldName: email
+      orderByDirections:
+        enableAll: true
+    - fieldName: employeeId
+      orderByDirections:
+        enableAll: true
+    - fieldName: fax
+      orderByDirections:
+        enableAll: true
+    - fieldName: firstName
+      orderByDirections:
+        enableAll: true
+    - fieldName: hireDate
+      orderByDirections:
+        enableAll: true
+    - fieldName: lastName
+      orderByDirections:
+        enableAll: true
+    - fieldName: phone
+      orderByDirections:
+        enableAll: true
+    - fieldName: postalCode
+      orderByDirections:
+        enableAll: true
+    - fieldName: reportsTo
+      orderByDirections:
+        enableAll: true
+    - fieldName: state
+      orderByDirections:
+        enableAll: true
+    - fieldName: title
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: employee
+      subscription:
+        rootField: employee
+    selectUniques:
+      - queryRootField: employeeById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: employeeById
+    orderByExpressionType: EmployeeOrderBy
+    filterInputTypeName: EmployeeFilterInput
+    aggregate:
+      queryRootField: employeeAggregate
+      subscription:
+        rootField: employeeAggregate
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Employee
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+

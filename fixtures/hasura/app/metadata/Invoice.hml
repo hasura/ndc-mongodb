@@ -1,0 +1,226 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: Invoice
+  fields:
+    - name: id
+      type: ObjectId_1!
+    - name: billingAddress
+      type: String!
+    - name: billingCity
+      type: String!
+    - name: billingCountry
+      type: String!
+    - name: billingPostalCode
+      type: String
+    - name: billingState
+      type: String
+    - name: customerId
+      type: Int!
+    - name: invoiceDate
+      type: String!
+    - name: invoiceId
+      type: Int!
+    - name: total
+      type: Decimal!
+  graphql:
+    typeName: Invoice
+    inputTypeName: InvoiceInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: chinook
+      dataConnectorObjectType: Invoice
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        billingAddress:
+          column:
+            name: BillingAddress
+        billingCity:
+          column:
+            name: BillingCity
+        billingCountry:
+          column:
+            name: BillingCountry
+        billingPostalCode:
+          column:
+            name: BillingPostalCode
+        billingState:
+          column:
+            name: BillingState
+        customerId:
+          column:
+            name: CustomerId
+        invoiceDate:
+          column:
+            name: InvoiceDate
+        invoiceId:
+          column:
+            name: InvoiceId
+        total:
+          column:
+            name: Total
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Invoice
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - billingAddress
+          - billingCity
+          - billingCountry
+          - billingPostalCode
+          - billingState
+          - customerId
+          - invoiceDate
+          - invoiceId
+          - total
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: InvoiceBoolExp
+  operand:
+    object:
+      type: Invoice
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp_1
+        - fieldName: billingAddress
+          booleanExpressionType: StringBoolExp
+        - fieldName: billingCity
+          booleanExpressionType: StringBoolExp
+        - fieldName: billingCountry
+          booleanExpressionType: StringBoolExp
+        - fieldName: billingPostalCode
+          booleanExpressionType: StringBoolExp
+        - fieldName: billingState
+          booleanExpressionType: StringBoolExp
+        - fieldName: customerId
+          booleanExpressionType: IntBoolExp
+        - fieldName: invoiceDate
+          booleanExpressionType: StringBoolExp
+        - fieldName: invoiceId
+          booleanExpressionType: IntBoolExp
+        - fieldName: total
+          booleanExpressionType: DecimalBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: InvoiceBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: InvoiceAggExp
+  operand:
+    object:
+      aggregatedType: Invoice
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: ObjectIdAggExp_1
+        - fieldName: billingAddress
+          aggregateExpression: StringAggExp
+        - fieldName: billingCity
+          aggregateExpression: StringAggExp
+        - fieldName: billingCountry
+          aggregateExpression: StringAggExp
+        - fieldName: billingPostalCode
+          aggregateExpression: StringAggExp
+        - fieldName: billingState
+          aggregateExpression: StringAggExp
+        - fieldName: customerId
+          aggregateExpression: IntAggExp
+        - fieldName: invoiceDate
+          aggregateExpression: StringAggExp
+        - fieldName: invoiceId
+          aggregateExpression: IntAggExp
+        - fieldName: total
+          aggregateExpression: DecimalAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: InvoiceAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: Invoice
+  objectType: Invoice
+  source:
+    dataConnectorName: chinook
+    collection: Invoice
+  filterExpressionType: InvoiceBoolExp
+  aggregateExpression: InvoiceAggExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: billingAddress
+      orderByDirections:
+        enableAll: true
+    - fieldName: billingCity
+      orderByDirections:
+        enableAll: true
+    - fieldName: billingCountry
+      orderByDirections:
+        enableAll: true
+    - fieldName: billingPostalCode
+      orderByDirections:
+        enableAll: true
+    - fieldName: billingState
+      orderByDirections:
+        enableAll: true
+    - fieldName: customerId
+      orderByDirections:
+        enableAll: true
+    - fieldName: invoiceDate
+      orderByDirections:
+        enableAll: true
+    - fieldName: invoiceId
+      orderByDirections:
+        enableAll: true
+    - fieldName: total
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: invoice
+      subscription:
+        rootField: invoice
+    selectUniques:
+      - queryRootField: invoiceById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: invoiceById
+    orderByExpressionType: InvoiceOrderBy
+    filterInputTypeName: InvoiceFilterInput
+    aggregate:
+      queryRootField: invoiceAggregate
+      subscription:
+        rootField: invoiceAggregate
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Invoice
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+

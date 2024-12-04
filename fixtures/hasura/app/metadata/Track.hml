@@ -1,0 +1,226 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: Track
+  fields:
+    - name: id
+      type: ObjectId_1!
+    - name: albumId
+      type: Int!
+    - name: bytes
+      type: Int!
+    - name: composer
+      type: String
+    - name: genreId
+      type: Int!
+    - name: mediaTypeId
+      type: Int!
+    - name: milliseconds
+      type: Int!
+    - name: name
+      type: String!
+    - name: trackId
+      type: Int!
+    - name: unitPrice
+      type: Decimal!
+  graphql:
+    typeName: Track
+    inputTypeName: TrackInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: chinook
+      dataConnectorObjectType: Track
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        albumId:
+          column:
+            name: AlbumId
+        bytes:
+          column:
+            name: Bytes
+        composer:
+          column:
+            name: Composer
+        genreId:
+          column:
+            name: GenreId
+        mediaTypeId:
+          column:
+            name: MediaTypeId
+        milliseconds:
+          column:
+            name: Milliseconds
+        name:
+          column:
+            name: Name
+        trackId:
+          column:
+            name: TrackId
+        unitPrice:
+          column:
+            name: UnitPrice
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Track
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - albumId
+          - bytes
+          - composer
+          - genreId
+          - mediaTypeId
+          - milliseconds
+          - name
+          - trackId
+          - unitPrice
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: TrackBoolExp
+  operand:
+    object:
+      type: Track
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp_1
+        - fieldName: albumId
+          booleanExpressionType: IntBoolExp
+        - fieldName: bytes
+          booleanExpressionType: IntBoolExp
+        - fieldName: composer
+          booleanExpressionType: StringBoolExp
+        - fieldName: genreId
+          booleanExpressionType: IntBoolExp
+        - fieldName: mediaTypeId
+          booleanExpressionType: IntBoolExp
+        - fieldName: milliseconds
+          booleanExpressionType: IntBoolExp
+        - fieldName: name
+          booleanExpressionType: StringBoolExp
+        - fieldName: trackId
+          booleanExpressionType: IntBoolExp
+        - fieldName: unitPrice
+          booleanExpressionType: DecimalBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: TrackBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: TrackAggExp
+  operand:
+    object:
+      aggregatedType: Track
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: ObjectIdAggExp_1
+        - fieldName: albumId
+          aggregateExpression: IntAggExp
+        - fieldName: bytes
+          aggregateExpression: IntAggExp
+        - fieldName: composer
+          aggregateExpression: StringAggExp
+        - fieldName: genreId
+          aggregateExpression: IntAggExp
+        - fieldName: mediaTypeId
+          aggregateExpression: IntAggExp
+        - fieldName: milliseconds
+          aggregateExpression: IntAggExp
+        - fieldName: name
+          aggregateExpression: StringAggExp
+        - fieldName: trackId
+          aggregateExpression: IntAggExp
+        - fieldName: unitPrice
+          aggregateExpression: DecimalAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: TrackAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: Track
+  objectType: Track
+  source:
+    dataConnectorName: chinook
+    collection: Track
+  filterExpressionType: TrackBoolExp
+  aggregateExpression: TrackAggExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: albumId
+      orderByDirections:
+        enableAll: true
+    - fieldName: bytes
+      orderByDirections:
+        enableAll: true
+    - fieldName: composer
+      orderByDirections:
+        enableAll: true
+    - fieldName: genreId
+      orderByDirections:
+        enableAll: true
+    - fieldName: mediaTypeId
+      orderByDirections:
+        enableAll: true
+    - fieldName: milliseconds
+      orderByDirections:
+        enableAll: true
+    - fieldName: name
+      orderByDirections:
+        enableAll: true
+    - fieldName: trackId
+      orderByDirections:
+        enableAll: true
+    - fieldName: unitPrice
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: track
+      subscription:
+        rootField: track
+    selectUniques:
+      - queryRootField: trackById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: trackById
+    orderByExpressionType: TrackOrderBy
+    filterInputTypeName: TrackFilterInput
+    aggregate:
+      queryRootField: trackAggregate
+      subscription:
+        rootField: trackAggregate
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Track
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+
