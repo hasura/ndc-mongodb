@@ -29,9 +29,6 @@ let
         "OTEL_SERVICE_NAME=mongodb-connector"
         "OTEL_EXPORTER_OTLP_ENDPOINT=${default-otlp-endpoint}"
       ];
-      Volumes = {
-        "${config-directory}" = { };
-      };
     } // extraConfig;
   };
 in
