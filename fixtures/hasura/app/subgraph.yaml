@@ -8,12 +8,28 @@ definition:
   includePaths:
     - metadata
   envMapping:
+    APP_CHINOOK_AUTHORIZATION_HEADER:
+      fromEnv: APP_CHINOOK_AUTHORIZATION_HEADER
+    APP_CHINOOK_READ_URL:
+      fromEnv: APP_CHINOOK_READ_URL
+    APP_CHINOOK_WRITE_URL:
+      fromEnv: APP_CHINOOK_WRITE_URL
     APP_SAMPLE_MFLIX_AUTHORIZATION_HEADER:
       fromEnv: APP_SAMPLE_MFLIX_AUTHORIZATION_HEADER
     APP_SAMPLE_MFLIX_READ_URL:
       fromEnv: APP_SAMPLE_MFLIX_READ_URL
     APP_SAMPLE_MFLIX_WRITE_URL:
       fromEnv: APP_SAMPLE_MFLIX_WRITE_URL
+    APP_TEST_CASES_AUTHORIZATION_HEADER:
+      fromEnv: APP_TEST_CASES_AUTHORIZATION_HEADER
+    APP_TEST_CASES_READ_URL:
+      fromEnv: APP_TEST_CASES_READ_URL
+    APP_TEST_CASES_WRITE_URL:
+      fromEnv: APP_TEST_CASES_WRITE_URL
   connectors:
     - path: connector/sample_mflix/connector.yaml
       connectorLinkName: sample_mflix
+    - path: connector/chinook/connector.yaml
+      connectorLinkName: chinook
+    - path: connector/test_cases/connector.yaml
+      connectorLinkName: test_cases

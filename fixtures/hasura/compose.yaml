@@ -1,13 +1,8 @@
 include:
   - path: app/connector/sample_mflix/compose.yaml
+  - path: app/connector/chinook/compose.yaml
+  - path: app/connector/test_cases/compose.yaml
 services:
-  mongodb:
-    image: mongo:latest
-    container_name: mongodb
-    ports:
-      - "27017:27017"
-    volumes:
-      - ../mongodb:/docker-entrypoint-initdb.d:ro
   engine:
     build:
       context: engine
@@ -26,6 +21,13 @@ services:
       io.hasura.ddn.service-name: engine
     ports:
       - 3280:3000
+  mongodb:
+    container_name: mongodb
+    image: mongo:latest
+    ports:
+      - 27017:27017
+    volumes:
+      - ../mongodb:/docker-entrypoint-initdb.d:ro
   otel-collector:
     command:
       - --config=/etc/otel-collector-config.yaml
