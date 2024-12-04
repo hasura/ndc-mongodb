@@ -981,12 +981,16 @@ definition:
                 name: Int
             numReviews:
               type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
             rating:
               type:
-                type: named
-                name: Double
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Double
         movies_tomatoes_viewer:
           fields:
             meter:
@@ -1001,8 +1005,10 @@ definition:
                 name: Int
             rating:
               type:
-                type: named
-                name: Double
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Double
         sessions:
           fields:
             _id:
@@ -1095,6 +1101,14 @@ definition:
               type:
                 type: named
                 name: String
+            preferences:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: users_preferences
+        users_preferences:
+          fields: {}
       collections:
         - name: comments
           arguments: {}

@@ -277,12 +277,16 @@
         },
         "numReviews": {
           "type": {
-            "scalar": "int"
+            "nullable": {
+              "scalar": "int"
+            }
           }
         },
         "rating": {
           "type": {
-            "scalar": "double"
+            "nullable": {
+              "scalar": "double"
+            }
           }
         }
       }
@@ -303,7 +307,9 @@
         },
         "rating": {
           "type": {
-            "scalar": "double"
+            "nullable": {
+              "scalar": "double"
+            }
           }
         }
       }

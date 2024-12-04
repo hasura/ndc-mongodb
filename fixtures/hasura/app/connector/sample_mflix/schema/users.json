@@ -27,8 +27,18 @@
           "type": {
             "scalar": "string"
           }
+        },
+        "preferences": {
+          "type": {
+            "nullable": {
+              "object": "users_preferences"
+            }
+          }
         }
       }
+    },
+    "users_preferences": {
+      "fields": {}
     }
   }
 }
