@@ -144,6 +144,9 @@ definition:
         - dataConnectorName: chinook
           dataConnectorScalarType: String
           operatorMapping: {}
+        - dataConnectorName: test_cases
+          dataConnectorScalarType: String
+          operatorMapping: {}
   logicalOperators:
     enable: true
   isNull:
@@ -251,6 +254,15 @@ definition:
               name: max
             min:
               name: min
+        - dataConnectorName: test_cases
+          dataConnectorScalarType: String
+          functionMapping:
+            count:
+              name: count
+            max:
+              name: max
+            min:
+              name: min
   count:
     enable: true
   countDistinct:
@@ -344,6 +356,9 @@ definition:
         - dataConnectorName: chinook
           dataConnectorScalarType: Int
           operatorMapping: {}
+        - dataConnectorName: test_cases
+          dataConnectorScalarType: Int
+          operatorMapping: {}
   logicalOperators:
     enable: true
   isNull:
@@ -385,6 +400,19 @@ definition:
             sum:
               name: sum
         - dataConnectorName: chinook
+          dataConnectorScalarType: Int
+          functionMapping:
+            avg:
+              name: avg
+            count:
+              name: count
+            max:
+              name: max
+            min:
+              name: min
+            sum:
+              name: sum
+        - dataConnectorName: test_cases
           dataConnectorScalarType: Int
           functionMapping:
             avg:

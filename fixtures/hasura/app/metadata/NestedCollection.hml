@@ -1,0 +1,178 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: NestedCollectionStaff
+  fields:
+    - name: name
+      type: String!
+  graphql:
+    typeName: NestedCollectionStaff
+    inputTypeName: NestedCollectionStaffInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: test_cases
+      dataConnectorObjectType: nested_collection_staff
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: NestedCollectionStaff
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - name
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: NestedCollection
+  fields:
+    - name: id
+      type: ObjectId_2!
+    - name: institution
+      type: String!
+    - name: staff
+      type: "[NestedCollectionStaff!]!"
+  graphql:
+    typeName: NestedCollection
+    inputTypeName: NestedCollectionInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: test_cases
+      dataConnectorObjectType: nested_collection
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        institution:
+          column:
+            name: institution
+        staff:
+          column:
+            name: staff
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: NestedCollection
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - institution
+          - staff
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: NestedCollectionStaffBoolExp
+  operand:
+    object:
+      type: NestedCollectionStaff
+      comparableFields:
+        - fieldName: name
+          booleanExpressionType: StringBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: NestedCollectionStaffBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: NestedCollectionBoolExp
+  operand:
+    object:
+      type: NestedCollection
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp_2
+        - fieldName: institution
+          booleanExpressionType: StringBoolExp
+        - fieldName: staff
+          booleanExpressionType: NestedCollectionStaffBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: NestedCollectionBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: NestedCollectionAggExp
+  operand:
+    object:
+      aggregatedType: NestedCollection
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: ObjectIdAggExp_2
+        - fieldName: institution
+          aggregateExpression: StringAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: NestedCollectionAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: NestedCollection
+  objectType: NestedCollection
+  source:
+    dataConnectorName: test_cases
+    collection: nested_collection
+  filterExpressionType: NestedCollectionBoolExp
+  aggregateExpression: NestedCollectionAggExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: institution
+      orderByDirections:
+        enableAll: true
+    - fieldName: staff
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: nestedCollection
+      subscription:
+        rootField: nestedCollection
+    selectUniques:
+      - queryRootField: nestedCollectionById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: nestedCollectionById
+    orderByExpressionType: NestedCollectionOrderBy
+    filterInputTypeName: NestedCollectionFilterInput
+    aggregate:
+      queryRootField: nestedCollectionAggregate
+      subscription:
+        rootField: nestedCollectionAggregate
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: NestedCollection
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+
