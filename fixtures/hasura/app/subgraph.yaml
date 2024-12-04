@@ -1,0 +1,19 @@
+kind: Subgraph
+version: v2
+definition:
+  name: app
+  generator:
+    rootPath: .
+    namingConvention: graphql
+  includePaths:
+    - metadata
+  envMapping:
+    APP_SAMPLE_MFLIX_AUTHORIZATION_HEADER:
+      fromEnv: APP_SAMPLE_MFLIX_AUTHORIZATION_HEADER
+    APP_SAMPLE_MFLIX_READ_URL:
+      fromEnv: APP_SAMPLE_MFLIX_READ_URL
+    APP_SAMPLE_MFLIX_WRITE_URL:
+      fromEnv: APP_SAMPLE_MFLIX_WRITE_URL
+  connectors:
+    - path: connector/sample_mflix/connector.yaml
+      connectorLinkName: sample_mflix
