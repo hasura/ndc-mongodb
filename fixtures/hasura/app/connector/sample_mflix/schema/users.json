@@ -1,0 +1,34 @@
+{
+  "name": "users",
+  "collections": {
+    "users": {
+      "type": "users"
+    }
+  },
+  "objectTypes": {
+    "users": {
+      "fields": {
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        },
+        "email": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "name": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "password": {
+          "type": {
+            "scalar": "string"
+          }
+        }
+      }
+    }
+  }
+}
