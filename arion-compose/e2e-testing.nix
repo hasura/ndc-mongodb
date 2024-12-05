@@ -2,7 +2,7 @@
 
 let
   connector-port = "7130";
-  engine-port = "7100";
+  engine-port = "3280";
   mongodb-port = "27017";
 in
 {

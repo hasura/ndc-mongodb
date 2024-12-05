@@ -39,7 +39,7 @@ containers:
 $ just up
 ```
 
-Next access the GraphQL interface at http://localhost:7100/
+Next access the GraphQL interface at http://localhost:3280/
 
 Run the above command again to restart any services that are affected by code
 changes or configuration changes.
@@ -100,7 +100,7 @@ shell. Or you can install it yourself.
 
 The typical workflow for interactive testing (testing by hand) is to interact
 with the system through the Hasura GraphQL Engine's GraphQL UI at
-http://localhost:7100/. If you can get insight into what the connector is doing
+http://localhost:3280/. If you can get insight into what the connector is doing
 by reading the logs which you can access by running `just logs`, or via the
 Jaeger UI at http://localhost:16686/.
 
@@ -269,11 +269,11 @@ The arion configuration runs these services:
 - connector: the MongoDB data connector agent defined in this repo serving the sample_mflix database (port 7130)
 - two more instances of the connector - one connected to the chinook sample database, the other to a database of ad-hoc data that is queried by integration tests (ports 7131 & 7132)
 - mongodb (port 27017)
-- Hasura GraphQL Engine (HGE) (port 7100)
+- Hasura GraphQL Engine (HGE) (port 3280)
 - a stubbed authentication server
 - jaeger to collect logs (see UI at http://localhost:16686/)
 
-Connect to the HGE GraphiQL UI at http://localhost:7100/
+Connect to the HGE GraphiQL UI at http://localhost:3280/
 
 Instead of a `docker-compose.yaml` configuration is found in
 `arion-compose.nix`. That file imports from modular configurations in the
