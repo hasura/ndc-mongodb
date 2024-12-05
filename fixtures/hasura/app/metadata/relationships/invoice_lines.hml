@@ -1,0 +1,34 @@
+kind: Relationship
+version: v1
+definition:
+  name: lines
+  source: Invoice
+  target:
+    model:
+      name: InvoiceLine
+      relationshipType: Array
+  mapping:
+    - source:
+        fieldPath:
+          - fieldName: invoiceId
+      target:
+        modelField:
+          - fieldName: invoiceId
+
+---
+kind: Relationship
+version: v1
+definition:
+  name: invoice
+  source: InvoiceLine
+  target:
+    model:
+      name: Invoice
+      relationshipType: Object
+  mapping:
+    - source:
+        fieldPath:
+          - fieldName: invoiceId
+      target:
+        modelField:
+          - fieldName: invoiceId
