@@ -505,7 +505,8 @@ definition:
           booleanExpressionType: StringBoolExp
         - fieldName: year
           booleanExpressionType: IntBoolExp
-      comparableRelationships: []
+      comparableRelationships:
+        - relationshipName: comments
   logicalOperators:
     enable: true
   isNull:

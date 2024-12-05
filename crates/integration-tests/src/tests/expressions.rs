@@ -13,7 +13,7 @@ async fn evaluates_field_name_that_requires_escaping() -> anyhow::Result<()> {
         graphql_query(
             r#"
                 query {
-                  testCases_weirdFieldNames(where: { invalidName: { _eq: 3 } }) {
+                  weirdFieldNames(where: { invalidName: { _eq: 3 } }) {
                     invalidName
                   }
                 }
@@ -31,7 +31,7 @@ async fn evaluates_field_name_that_requires_escaping_in_complex_expression() -> 
         graphql_query(
             r#"
                 query {
-                  testCases_weirdFieldNames(
+                  weirdFieldNames(
                     where: { 
                         _and: [
                             { invalidName: { _gt: 2 } },

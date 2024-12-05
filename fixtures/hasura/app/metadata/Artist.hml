@@ -55,7 +55,8 @@ definition:
           booleanExpressionType: IntBoolExp
         - fieldName: name
           booleanExpressionType: StringBoolExp
-      comparableRelationships: []
+      comparableRelationships:
+        - relationshipName: albums
   logicalOperators:
     enable: true
   isNull:

@@ -57,6 +57,15 @@ definition:
           - movieId
           - name
           - text
+    - role: user
+      output:
+        allowedFields:
+          - id
+          - date
+          - email
+          - movieId
+          - name
+          - text
 
 ---
 kind: BooleanExpressionType
@@ -79,7 +88,9 @@ definition:
           booleanExpressionType: StringBoolExp
         - fieldName: text
           booleanExpressionType: StringBoolExp
-      comparableRelationships: []
+      comparableRelationships:
+        - relationshipName: movie
+        - relationshipName: user
   logicalOperators:
     enable: true
   isNull:
@@ -171,4 +182,14 @@ definition:
       select:
         filter: null
         allowSubscriptions: true
-
+    - role: user
+      select:
+        filter:
+          relationship:
+            name: user
+            predicate:
+              fieldComparison:
+                field: id
+                operator: _eq
+                value:
+                  sessionVariable: x-hasura-user-id

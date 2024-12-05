@@ -51,6 +51,12 @@ definition:
           - name
           - password
           - preferences
+    - role: user
+      output:
+        allowedFields:
+          - id
+          - email
+          - name
 
 ---
 kind: BooleanExpressionType
@@ -71,7 +77,8 @@ definition:
           booleanExpressionType: StringBoolExp
         - fieldName: preferences
           booleanExpressionType: UsersPreferencesBoolExp
-      comparableRelationships: []
+      comparableRelationships:
+        - relationshipName: comments
   logicalOperators:
     enable: true
   isNull:
@@ -156,6 +163,14 @@ definition:
       select:
         filter: null
         allowSubscriptions: true
+    - role: user
+      select:
+        filter:
+          fieldComparison:
+            field: id
+            operator: _eq
+            value:
+              sessionVariable: x-hasura-user-id
 
 ---
 kind: ObjectType

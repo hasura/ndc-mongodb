@@ -159,7 +159,10 @@ definition:
           booleanExpressionType: StringBoolExp
         - fieldName: title
           booleanExpressionType: StringBoolExp
-      comparableRelationships: []
+      comparableRelationships:
+        - relationshipName: directReports
+        - relationshipName: manager
+        - relationshipName: supportRepCustomers
   logicalOperators:
     enable: true
   isNull:

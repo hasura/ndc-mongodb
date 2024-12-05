@@ -143,7 +143,9 @@ definition:
           booleanExpressionType: StringBoolExp
         - fieldName: supportRepId
           booleanExpressionType: IntBoolExp
-      comparableRelationships: []
+      comparableRelationships:
+        - relationshipName: invoices
+        - relationshipName: supportRep
   logicalOperators:
     enable: true
   isNull:

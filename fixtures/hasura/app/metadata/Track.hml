@@ -111,7 +111,12 @@ definition:
           booleanExpressionType: IntBoolExp
         - fieldName: unitPrice
           booleanExpressionType: DecimalBoolExp
-      comparableRelationships: []
+      comparableRelationships:
+        - relationshipName: album
+        - relationshipName: genre
+        - relationshipName: invoiceLines
+        - relationshipName: mediaType
+        - relationshipName: playlistTracks
   logicalOperators:
     enable: true
   isNull:

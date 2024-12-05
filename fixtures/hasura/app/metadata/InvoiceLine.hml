@@ -79,7 +79,9 @@ definition:
           booleanExpressionType: IntBoolExp
         - fieldName: unitPrice
           booleanExpressionType: DecimalBoolExp
-      comparableRelationships: []
+      comparableRelationships:
+        - relationshipName: invoice
+        - relationshipName: track
   logicalOperators:
     enable: true
   isNull:

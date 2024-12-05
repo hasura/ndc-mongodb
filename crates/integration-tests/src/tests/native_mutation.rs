@@ -66,7 +66,7 @@ async fn accepts_predicate_argument() -> anyhow::Result<()> {
     let mutation_resp = graphql_query(
         r#"
             mutation($albumId: Int!) {
-              chinook_updateTrackPrices(newPrice: "11.99", where: {albumId: {_eq: $albumId}}) {
+              updateTrackPrices(newPrice: "11.99", where: {albumId: {_eq: $albumId}}) {
                 n
                 ok
               }
@@ -79,7 +79,7 @@ async fn accepts_predicate_argument() -> anyhow::Result<()> {
 
     assert_eq!(mutation_resp.errors, None);
     assert_json!(mutation_resp.data, {
-        "chinook_updateTrackPrices": {
+        "updateTrackPrices": {
             "ok": 1.0,
             "n": validators::i64(|n| if n > &0 {
                 Ok(())

@@ -51,7 +51,7 @@ async fn filters_by_comparisons_on_elements_of_array_field() -> anyhow::Result<(
         graphql_query(
             r#"
             query {
-              testCases_nestedCollection(
+              nestedCollection(
                 where: { staff: { name: { _eq: "Freeman" } } }
                 order_by: { institution: Asc }
               ) {

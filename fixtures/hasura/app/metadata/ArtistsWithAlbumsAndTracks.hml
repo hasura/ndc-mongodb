@@ -95,8 +95,6 @@ definition:
           booleanExpressionType: ObjectIdBoolExp_1
         - fieldName: title
           booleanExpressionType: StringBoolExp
-        - fieldName: tracks
-          booleanExpressionType: TrackBoolExp
       comparableRelationships: []
   logicalOperators:
     enable: true

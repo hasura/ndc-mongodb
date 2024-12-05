@@ -23,7 +23,6 @@
   "pipeline": [
     {
       "$replaceWith": {
-        "title": "$title",
         "title_words": {
           "$split": [
             "$title",

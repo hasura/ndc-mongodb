@@ -55,7 +55,8 @@ definition:
           booleanExpressionType: StringBoolExp
         - fieldName: playlistId
           booleanExpressionType: IntBoolExp
-      comparableRelationships: []
+      comparableRelationships:
+        - relationshipName: playlistTracks
   logicalOperators:
     enable: true
   isNull:

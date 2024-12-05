@@ -63,7 +63,9 @@ definition:
           booleanExpressionType: IntBoolExp
         - fieldName: title
           booleanExpressionType: StringBoolExp
-      comparableRelationships: []
+      comparableRelationships:
+        - relationshipName: artist
+        - relationshipName: tracks
   logicalOperators:
     enable: true
   isNull:
