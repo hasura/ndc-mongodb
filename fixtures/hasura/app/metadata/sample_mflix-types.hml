@@ -432,3 +432,101 @@ definition:
   graphql:
     selectTypeName: IntAggExp
 
+---
+kind: ScalarType
+version: v1
+definition:
+  name: ExtendedJson
+  graphql:
+    typeName: ExtendedJson
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: ExtendedJsonBoolExp
+  operand:
+    scalar:
+      type: ExtendedJson
+      comparisonOperators:
+        - name: _eq
+          argumentType: ExtendedJson!
+        - name: _gt
+          argumentType: ExtendedJson!
+        - name: _gte
+          argumentType: ExtendedJson!
+        - name: _in
+          argumentType: ExtendedJson!
+        - name: _iregex
+          argumentType: String!
+        - name: _lt
+          argumentType: ExtendedJson!
+        - name: _lte
+          argumentType: ExtendedJson!
+        - name: _neq
+          argumentType: ExtendedJson!
+        - name: _nin
+          argumentType: ExtendedJson!
+        - name: _regex
+          argumentType: String!
+      dataConnectorOperatorMapping:
+        - dataConnectorName: sample_mflix
+          dataConnectorScalarType: ExtendedJSON
+          operatorMapping: {}
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: ExtendedJsonBoolExp
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: sample_mflix
+  dataConnectorScalarType: ExtendedJSON
+  representation: ExtendedJson
+  graphql:
+    comparisonExpressionTypeName: ExtendedJsonComparisonExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: ExtendedJsonAggExp
+  operand:
+    scalar:
+      aggregatedType: ExtendedJson
+      aggregationFunctions:
+        - name: avg
+          returnType: ExtendedJson!
+        - name: count
+          returnType: Int!
+        - name: max
+          returnType: ExtendedJson!
+        - name: min
+          returnType: ExtendedJson!
+        - name: sum
+          returnType: ExtendedJson!
+      dataConnectorAggregationFunctionMapping:
+        - dataConnectorName: sample_mflix
+          dataConnectorScalarType: ExtendedJSON
+          functionMapping:
+            avg:
+              name: avg
+            count:
+              name: count
+            max:
+              name: max
+            min:
+              name: min
+            sum:
+              name: sum
+  count:
+    enable: true
+  countDistinct:
+    enable: true
+  graphql:
+    selectTypeName: ExtendedJsonAggExp
+

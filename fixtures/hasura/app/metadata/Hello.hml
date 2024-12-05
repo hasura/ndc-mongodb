@@ -2,8 +2,7 @@
 kind: Command
 version: v1
 definition:
-  name: hello
-  description: Basic test of native queries
+  name: Hello
   outputType: String!
   arguments:
     - name: name
@@ -12,17 +11,16 @@ definition:
     dataConnectorName: sample_mflix
     dataConnectorCommand:
       function: hello
-    argumentMapping:
-      name: name
   graphql:
     rootFieldName: hello
     rootFieldKind: Query
+  description: Basic test of native queries
 
 ---
 kind: CommandPermissions
 version: v1
 definition:
-  commandName: hello
+  commandName: Hello
   permissions:
     - role: admin
       allowExecution: true

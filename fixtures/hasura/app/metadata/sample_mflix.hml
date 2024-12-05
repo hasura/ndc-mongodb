@@ -728,6 +728,24 @@ definition:
                   type: named
                   name: Undefined
       object_types:
+        DocWithExtendedJsonValue:
+          fields:
+            type:
+              type:
+                type: named
+                name: String
+            value:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: ExtendedJSON
+        Hello:
+          fields:
+            __value:
+              type:
+                type: named
+                name: String
         comments:
           fields:
             _id:
@@ -751,6 +769,60 @@ definition:
                 type: named
                 name: String
             text:
+              type:
+                type: named
+                name: String
+        eq_title_project:
+          fields:
+            _id:
+              type:
+                type: named
+                name: ObjectId
+            bar:
+              type:
+                type: named
+                name: eq_title_project_bar
+            foo:
+              type:
+                type: named
+                name: eq_title_project_foo
+            title:
+              type:
+                type: named
+                name: String
+            tomatoes:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: movies_tomatoes
+            what:
+              type:
+                type: named
+                name: eq_title_project_what
+        eq_title_project_bar:
+          fields:
+            foo:
+              type:
+                type: named
+                name: movies_imdb
+        eq_title_project_foo:
+          fields:
+            bar:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: movies_tomatoes_critic
+        eq_title_project_what:
+          fields:
+            the:
+              type:
+                type: named
+                name: eq_title_project_what_the
+        eq_title_project_what_the:
+          fields:
+            heck:
               type:
                 type: named
                 name: String
@@ -1006,6 +1078,60 @@ definition:
                 underlying_type:
                   type: named
                   name: Double
+        native_query_project:
+          fields:
+            _id:
+              type:
+                type: named
+                name: ObjectId
+            bar:
+              type:
+                type: named
+                name: native_query_project_bar
+            foo:
+              type:
+                type: named
+                name: native_query_project_foo
+            title:
+              type:
+                type: named
+                name: String
+            tomatoes:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: movies_tomatoes
+            what:
+              type:
+                type: named
+                name: native_query_project_what
+        native_query_project_bar:
+          fields:
+            foo:
+              type:
+                type: named
+                name: movies_imdb
+        native_query_project_foo:
+          fields:
+            bar:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: movies_tomatoes_critic
+        native_query_project_what:
+          fields:
+            the:
+              type:
+                type: named
+                name: native_query_project_what_the
+        native_query_project_what_the:
+          fields:
+            heck:
+              type:
+                type: named
+                name: String
         sessions:
           fields:
             _id:
@@ -1080,6 +1206,16 @@ definition:
               type:
                 type: named
                 name: String
+        title_word_frequency_group:
+          fields:
+            _id:
+              type:
+                type: named
+                name: String
+            count:
+              type:
+                type: named
+                name: Int
         users:
           fields:
             _id:
@@ -1115,11 +1251,45 @@ definition:
               unique_columns:
                 - _id
           foreign_keys: {}
+        - name: eq_title
+          arguments:
+            title:
+              type:
+                type: named
+                name: String
+            year:
+              type:
+                type: named
+                name: Int
+          type: eq_title_project
+          uniqueness_constraints:
+            eq_title_id:
+              unique_columns:
+                - _id
+          foreign_keys: {}
+        - name: extended_json_test_data
+          description: various values that all have the ExtendedJSON type
+          arguments: {}
+          type: DocWithExtendedJsonValue
+          uniqueness_constraints: {}
+          foreign_keys: {}
         - name: movies
           arguments: {}
           type: movies
           uniqueness_constraints:
             movies_id:
+              unique_columns:
+                - _id
+          foreign_keys: {}
+        - name: native_query
+          arguments:
+            title:
+              type:
+                type: named
+                name: String
+          type: native_query_project
+          uniqueness_constraints:
+            native_query_id:
               unique_columns:
                 - _id
           foreign_keys: {}
@@ -1139,6 +1309,14 @@ definition:
               unique_columns:
                 - _id
           foreign_keys: {}
+        - name: title_word_frequency
+          arguments: {}
+          type: title_word_frequency_group
+          uniqueness_constraints:
+            title_word_frequency_id:
+              unique_columns:
+                - _id
+          foreign_keys: {}
         - name: users
           arguments: {}
           type: users
@@ -1147,7 +1325,17 @@ definition:
               unique_columns:
                 - _id
           foreign_keys: {}
-      functions: []
+      functions:
+        - name: hello
+          description: Basic test of native queries
+          arguments:
+            name:
+              type:
+                type: named
+                name: String
+          result_type:
+            type: named
+            name: String
       procedures: []
     capabilities:
       version: 0.1.6

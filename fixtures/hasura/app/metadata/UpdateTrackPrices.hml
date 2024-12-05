@@ -8,13 +8,13 @@ definition:
     - name: newPrice
       type: Decimal!
     - name: where
-      type: TrackComparisonExp!
+      type: TrackBoolExp!
   source:
     dataConnectorName: chinook
     dataConnectorCommand:
       procedure: updateTrackPrices
   graphql:
-    rootFieldName: chinook_updateTrackPrices
+    rootFieldName: updateTrackPrices
     rootFieldKind: Mutation
   description: Update unit price of every track that matches predicate
 

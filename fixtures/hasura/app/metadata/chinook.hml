@@ -746,6 +746,22 @@ definition:
               type:
                 type: named
                 name: String
+        AlbumWithTracks:
+          fields:
+            _id:
+              type:
+                type: named
+                name: ObjectId
+            Title:
+              type:
+                type: named
+                name: String
+            Tracks:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: Track
         Artist:
           fields:
             _id:
@@ -756,6 +772,22 @@ definition:
               type:
                 type: named
                 name: Int
+            Name:
+              type:
+                type: named
+                name: String
+        ArtistWithAlbumsAndTracks:
+          fields:
+            _id:
+              type:
+                type: named
+                name: ObjectId
+            Albums:
+              type:
+                type: array
+                element_type:
+                  type: named
+                  name: AlbumWithTracks
             Name:
               type:
                 type: named
@@ -910,6 +942,16 @@ definition:
               type:
                 type: named
                 name: String
+        InsertArtist:
+          fields:
+            "n":
+              type:
+                type: named
+                name: Int
+            ok:
+              type:
+                type: named
+                name: Double
         Invoice:
           fields:
             _id:
@@ -1157,8 +1199,45 @@ definition:
               unique_columns:
                 - _id
           foreign_keys: {}
+        - name: artists_with_albums_and_tracks
+          description: combines artist, albums, and tracks into a single document per artist
+          arguments: {}
+          type: ArtistWithAlbumsAndTracks
+          uniqueness_constraints:
+            artists_with_albums_and_tracks_id:
+              unique_columns:
+                - _id
+          foreign_keys: {}
       functions: []
-      procedures: []
+      procedures:
+        - name: insertArtist
+          description: Example of a database update using a native mutation
+          arguments:
+            id:
+              type:
+                type: named
+                name: Int
+            name:
+              type:
+                type: named
+                name: String
+          result_type:
+            type: named
+            name: InsertArtist
+        - name: updateTrackPrices
+          description: Update unit price of every track that matches predicate
+          arguments:
+            newPrice:
+              type:
+                type: named
+                name: Decimal
+            where:
+              type:
+                type: predicate
+                object_type_name: Track
+          result_type:
+            type: named
+            name: InsertArtist
     capabilities:
       version: 0.1.6
       capabilities:

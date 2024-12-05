@@ -12,6 +12,8 @@ definition:
       type: String!
     - name: password
       type: String!
+    - name: preferences
+      type: UsersPreferences
   graphql:
     typeName: Users
     inputTypeName: UsersInput
@@ -31,6 +33,9 @@ definition:
         password:
           column:
             name: password
+        preferences:
+          column:
+            name: preferences
 
 ---
 kind: TypePermissions
@@ -45,6 +50,7 @@ definition:
           - email
           - name
           - password
+          - preferences
 
 ---
 kind: BooleanExpressionType
@@ -63,6 +69,8 @@ definition:
           booleanExpressionType: StringBoolExp
         - fieldName: password
           booleanExpressionType: StringBoolExp
+        - fieldName: preferences
+          booleanExpressionType: UsersPreferencesBoolExp
       comparableRelationships: []
   logicalOperators:
     enable: true
@@ -117,6 +125,9 @@ definition:
     - fieldName: password
       orderByDirections:
         enableAll: true
+    - fieldName: preferences
+      orderByDirections:
+        enableAll: true
   graphql:
     selectMany:
       queryRootField: users
@@ -145,4 +156,44 @@ definition:
       select:
         filter: null
         allowSubscriptions: true
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: UsersPreferences
+  fields: []
+  graphql:
+    typeName: UsersPreferences
+    inputTypeName: UsersPreferencesInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: users_preferences
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: UsersPreferences
+  permissions:
+    - role: admin
+      output:
+        allowedFields: []
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: UsersPreferencesBoolExp
+  operand:
+    object:
+      type: UsersPreferences
+      comparableFields: []
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: UsersPreferencesBoolExp
 

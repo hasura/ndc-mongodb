@@ -1,0 +1,199 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: AlbumWithTracks
+  fields:
+    - name: id
+      type: ObjectId_1!
+    - name: title
+      type: String!
+    - name: tracks
+      type: "[Track!]!"
+  graphql:
+    typeName: AlbumWithTracks
+    inputTypeName: AlbumWithTracksInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: chinook
+      dataConnectorObjectType: AlbumWithTracks
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        title:
+          column:
+            name: Title
+        tracks:
+          column:
+            name: Tracks
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: AlbumWithTracks
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - title
+          - tracks
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: ArtistWithAlbumsAndTracks
+  fields:
+    - name: id
+      type: ObjectId_1!
+    - name: albums
+      type: "[AlbumWithTracks!]!"
+    - name: name
+      type: String!
+  graphql:
+    typeName: ArtistWithAlbumsAndTracks
+    inputTypeName: ArtistWithAlbumsAndTracksInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: chinook
+      dataConnectorObjectType: ArtistWithAlbumsAndTracks
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        albums:
+          column:
+            name: Albums
+        name:
+          column:
+            name: Name
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: ArtistWithAlbumsAndTracks
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - albums
+          - name
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: AlbumWithTracksBoolExp
+  operand:
+    object:
+      type: AlbumWithTracks
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp_1
+        - fieldName: title
+          booleanExpressionType: StringBoolExp
+        - fieldName: tracks
+          booleanExpressionType: TrackBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: AlbumWithTracksBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: ArtistWithAlbumsAndTracksBoolExp
+  operand:
+    object:
+      type: ArtistWithAlbumsAndTracks
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp_1
+        - fieldName: albums
+          booleanExpressionType: AlbumWithTracksBoolExp
+        - fieldName: name
+          booleanExpressionType: StringBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: ArtistWithAlbumsAndTracksBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: ArtistWithAlbumsAndTracksAggExp
+  operand:
+    object:
+      aggregatedType: ArtistWithAlbumsAndTracks
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: ObjectIdAggExp_1
+        - fieldName: name
+          aggregateExpression: StringAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: ArtistWithAlbumsAndTracksAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: ArtistsWithAlbumsAndTracks
+  objectType: ArtistWithAlbumsAndTracks
+  source:
+    dataConnectorName: chinook
+    collection: artists_with_albums_and_tracks
+  filterExpressionType: ArtistWithAlbumsAndTracksBoolExp
+  aggregateExpression: ArtistWithAlbumsAndTracksAggExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: albums
+      orderByDirections:
+        enableAll: true
+    - fieldName: name
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: artistsWithAlbumsAndTracks
+      subscription:
+        rootField: artistsWithAlbumsAndTracks
+    selectUniques:
+      - queryRootField: artistsWithAlbumsAndTracksById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: artistsWithAlbumsAndTracksById
+    orderByExpressionType: ArtistsWithAlbumsAndTracksOrderBy
+    filterInputTypeName: ArtistsWithAlbumsAndTracksFilterInput
+    aggregate:
+      queryRootField: artistsWithAlbumsAndTracksAggregate
+      subscription:
+        rootField: artistsWithAlbumsAndTracksAggregate
+  description: combines artist, albums, and tracks into a single document per artist
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: ArtistsWithAlbumsAndTracks
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+
