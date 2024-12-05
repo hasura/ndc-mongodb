@@ -132,7 +132,9 @@ fn bson_aggregation_functions(
     aggregate_functions(bson_scalar_type)
         .map(|(fn_name, result_type)| {
             let aggregation_definition = AggregateFunctionDefinition {
-                result_type: bson_to_named_type(result_type),
+                result_type: Type::Nullable {
+                    underlying_type: Box::new(bson_to_named_type(result_type)),
+                },
             };
             (fn_name.graphql_name().into(), aggregation_definition)
         })

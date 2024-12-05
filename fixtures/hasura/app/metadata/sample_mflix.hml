@@ -16,8 +16,10 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
           comparison_operators:
             _eq:
               type: equal
@@ -41,8 +43,10 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
           comparison_operators:
             _eq:
               type: equal
@@ -66,16 +70,22 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
             max:
               result_type:
-                type: named
-                name: Date
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Date
             min:
               result_type:
-                type: named
-                name: Date
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Date
           comparison_operators:
             _eq:
               type: equal
@@ -117,8 +127,10 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
           comparison_operators:
             _eq:
               type: equal
@@ -142,24 +154,34 @@ definition:
           aggregate_functions:
             avg:
               result_type:
-                type: named
-                name: Decimal
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Decimal
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
             max:
               result_type:
-                type: named
-                name: Decimal
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Decimal
             min:
               result_type:
-                type: named
-                name: Decimal
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Decimal
             sum:
               result_type:
-                type: named
-                name: Decimal
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Decimal
           comparison_operators:
             _eq:
               type: equal
@@ -203,24 +225,34 @@ definition:
           aggregate_functions:
             avg:
               result_type:
-                type: named
-                name: Double
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Double
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
             max:
               result_type:
-                type: named
-                name: Double
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Double
             min:
               result_type:
-                type: named
-                name: Double
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Double
             sum:
               result_type:
-                type: named
-                name: Double
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Double
           comparison_operators:
             _eq:
               type: equal
@@ -336,24 +368,34 @@ definition:
           aggregate_functions:
             avg:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
             max:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
             min:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
             sum:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
           comparison_operators:
             _eq:
               type: equal
@@ -395,15 +437,19 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
           comparison_operators: {}
         JavascriptWithScope:
           aggregate_functions:
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
           comparison_operators: {}
         Long:
           representation:
@@ -411,24 +457,34 @@ definition:
           aggregate_functions:
             avg:
               result_type:
-                type: named
-                name: Long
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Long
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
             max:
               result_type:
-                type: named
-                name: Long
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Long
             min:
               result_type:
-                type: named
-                name: Long
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Long
             sum:
               result_type:
-                type: named
-                name: Long
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Long
           comparison_operators:
             _eq:
               type: equal
@@ -470,8 +526,10 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
           comparison_operators:
             _eq:
               type: equal
@@ -493,8 +551,10 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
           comparison_operators:
             _eq:
               type: equal
@@ -516,8 +576,10 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
           comparison_operators:
             _eq:
               type: equal
@@ -541,8 +603,10 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
           comparison_operators:
             _eq:
               type: equal
@@ -564,8 +628,10 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
           comparison_operators: {}
         String:
           representation:
@@ -573,16 +639,22 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
             max:
               result_type:
-                type: named
-                name: String
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
             min:
               result_type:
-                type: named
-                name: String
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
           comparison_operators:
             _eq:
               type: equal
@@ -634,8 +706,10 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
           comparison_operators:
             _eq:
               type: equal
@@ -657,16 +731,22 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
             max:
               result_type:
-                type: named
-                name: Timestamp
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Timestamp
             min:
               result_type:
-                type: named
-                name: Timestamp
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Timestamp
           comparison_operators:
             _eq:
               type: equal
@@ -708,8 +788,10 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: named
-                name: Int
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: Int
           comparison_operators:
             _eq:
               type: equal

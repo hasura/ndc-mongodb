@@ -192,10 +192,15 @@ fn facet_pipelines_for_query(
             // has a field called `result`. This code selects each facet result by name, and pulls
             // out the `result` value.
             let value_expr = doc! {
-                "$getField": {
-                    "field": RESULT_FIELD, // evaluates to the value of this field
-                    "input": { "$first": get_field(key.as_str()) }, // field is accessed from this document
-                },
+                "$ifNull": [
+                    {
+                        "$getField": {
+                            "field": RESULT_FIELD, // evaluates to the value of this field
+                            "input": { "$first": get_field(key.as_str()) }, // field is accessed from this document
+                        },
+                    },
+                    null,
+                ]
             };
 
             // Matching SQL semantics, if a **count** aggregation does not match any rows we want
