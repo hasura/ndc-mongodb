@@ -257,16 +257,16 @@ fn pipeline_for_aggregate(
     fn filter_to_documents_with_value(
         target_field: ComparisonTarget,
     ) -> Result<Stage, MongoAgentError> {
-        Ok(Stage::Match(make_selector(&Expression::Not {
-            expression: Box::new(Expression::BinaryComparisonOperator {
+        Ok(Stage::Match(make_selector(
+            &Expression::BinaryComparisonOperator {
                 column: target_field,
                 operator: ComparisonFunction::NotEqual,
                 value: ComparisonValue::Scalar {
                     value: serde_json::Value::Null,
                     value_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::Null)),
                 },
-            }),
-        })?))
+            },
+        )?))
     }
 
     let pipeline = match aggregate {
