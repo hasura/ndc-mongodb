@@ -1,0 +1,17 @@
+# This is not a meaningful relationship, but it gives us something to test with. 
+kind: Relationship
+version: v1
+definition:
+  name: movies
+  source: Album
+  target:
+    model:
+      name: Movies
+      relationshipType: Array
+  mapping:
+    - source:
+        fieldPath:
+          - fieldName: albumId
+      target:
+        modelField:
+          - fieldName: runtime
