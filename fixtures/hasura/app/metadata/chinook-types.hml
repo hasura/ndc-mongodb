@@ -183,56 +183,11 @@ definition:
     selectTypeName: DecimalAggExp
 
 ---
-kind: ScalarType
-version: v1
-definition:
-  name: Double_1
-  graphql:
-    typeName: Double1
-
----
-kind: BooleanExpressionType
-version: v1
-definition:
-  name: DoubleBoolExp_1
-  operand:
-    scalar:
-      type: Double_1
-      comparisonOperators:
-        - name: _eq
-          argumentType: Double_1!
-        - name: _gt
-          argumentType: Double_1!
-        - name: _gte
-          argumentType: Double_1!
-        - name: _in
-          argumentType: "[Double_1!]!"
-        - name: _lt
-          argumentType: Double_1!
-        - name: _lte
-          argumentType: Double_1!
-        - name: _neq
-          argumentType: Double_1!
-        - name: _nin
-          argumentType: "[Double_1!]!"
-      dataConnectorOperatorMapping:
-        - dataConnectorName: chinook
-          dataConnectorScalarType: Double
-          operatorMapping: {}
-  logicalOperators:
-    enable: true
-  isNull:
-    enable: true
-  graphql:
-    typeName: DoubleBoolExp1
-
----
 kind: DataConnectorScalarRepresentation
 version: v1
 definition:
   dataConnectorName: chinook
   dataConnectorScalarType: Double
-  representation: Double_1
+  representation: Double
   graphql:
-    comparisonExpressionTypeName: Double1ComparisonExp
-
+    comparisonExpressionTypeName: DoubleComparisonExp

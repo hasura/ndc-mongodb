@@ -315,6 +315,72 @@ definition:
     typeName: DoubleBoolExp
 
 ---
+kind: AggregateExpression
+version: v1
+definition:
+  name: DoubleAggExp
+  operand:
+    scalar:
+      aggregatedType: Double
+      aggregationFunctions:
+        - name: avg
+          returnType: Double!
+        - name: count
+          returnType: Int!
+        - name: max
+          returnType: Double!
+        - name: min
+          returnType: Double!
+        - name: sum
+          returnType: Double!
+      dataConnectorAggregationFunctionMapping:
+        - dataConnectorName: sample_mflix
+          dataConnectorScalarType: Double
+          functionMapping:
+            avg:
+              name: avg
+            count:
+              name: count
+            max:
+              name: max
+            min:
+              name: min
+            sum:
+              name: sum
+        - dataConnectorName: chinook
+          dataConnectorScalarType: Double
+          functionMapping:
+            avg:
+              name: avg
+            count:
+              name: count
+            max:
+              name: max
+            min:
+              name: min
+            sum:
+              name: sum
+        - dataConnectorName: test_cases
+          dataConnectorScalarType: Double
+          functionMapping:
+            avg:
+              name: avg
+            count:
+              name: count
+            max:
+              name: max
+            min:
+              name: min
+            sum:
+              name: sum
+  count:
+    enable: true
+  countDistinct:
+    enable: true
+  graphql:
+    selectTypeName: DoubleAggExp
+
+---
 kind: DataConnectorScalarRepresentation
 version: v1
 definition:

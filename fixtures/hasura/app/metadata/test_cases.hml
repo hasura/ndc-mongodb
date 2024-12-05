@@ -847,6 +847,7 @@ definition:
           nested_fields:
             filter_by: {}
             order_by: {}
+            aggregates: {}
           exists:
             nested_collections: {}
         mutation: {}
