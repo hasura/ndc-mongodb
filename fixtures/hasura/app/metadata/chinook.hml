@@ -8,9 +8,6 @@ definition:
         valueFromEnv: APP_CHINOOK_READ_URL
       write:
         valueFromEnv: APP_CHINOOK_WRITE_URL
-  headers:
-    Authorization:
-      valueFromEnv: APP_CHINOOK_AUTHORIZATION_HEADER
   schema:
     version: v0.1
     schema:

@@ -6,8 +6,6 @@ definition:
   source: hasura/mongodb:v1.4.0
   context: .
   envMapping:
-    HASURA_SERVICE_TOKEN_SECRET:
-      fromEnv: APP_CHINOOK_HASURA_SERVICE_TOKEN_SECRET
     MONGODB_DATABASE_URI:
       fromEnv: APP_CHINOOK_MONGODB_DATABASE_URI
     OTEL_EXPORTER_OTLP_ENDPOINT:
