@@ -4,6 +4,8 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+## [1.5.0] - 2024-12-05
+
 ### Added
 
 - Adds CLI command to manage native queries with automatic type inference ([#131](https://github.com/hasura/ndc-mongodb/pull/131))
@@ -15,6 +17,7 @@ This changelog documents the changes between release versions.
 ### Fixed
 
 - The connector previously used Cloudflare's DNS resolver. Now it uses the locally-configured DNS resolver. ([#125](https://github.com/hasura/ndc-mongodb/pull/125))
+- Fixed connector not picking up configuration changes when running locally using the ddn CLI workflow. ([#133](https://github.com/hasura/ndc-mongodb/pull/133))
 
 #### Managing native queries with the CLI
 
