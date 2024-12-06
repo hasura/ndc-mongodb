@@ -187,7 +187,7 @@ fn facet_pipelines_for_query(
     let aggregate_selections: bson::Document = aggregates
         .iter()
         .flatten()
-        .map(|(key, aggregate)| {
+        .map(|(key, _)| {
             // The facet result for each aggregate is an array containing a single document which
             // has a field called `result`. This code selects each facet result by name, and pulls
             // out the `result` value.
@@ -202,17 +202,6 @@ fn facet_pipelines_for_query(
                     null,
                 ]
             };
-
-            // Matching SQL semantics, if a **count** aggregation does not match any rows we want
-            // to return zero. Other aggregations should return null.
-            let value_expr = if is_count(aggregate) {
-                doc! {
-                    "$ifNull": [value_expr, 0],
-                }
-            } else {
-                value_expr
-            };
-
             (key.to_string(), value_expr.into())
         })
         .collect();
@@ -236,14 +225,6 @@ fn facet_pipelines_for_query(
     );
 
     Ok((facet_pipelines, selection))
-}
-
-fn is_count(aggregate: &Aggregate) -> bool {
-    match aggregate {
-        Aggregate::ColumnCount { .. } => true,
-        Aggregate::StarCount { .. } => true,
-        Aggregate::SingleColumn { function, .. } => function.is_count(),
-    }
 }
 
 fn pipeline_for_aggregate(
@@ -332,7 +313,6 @@ fn pipeline_for_aggregate(
 
             let accumulator = match function {
                 Avg => Accumulator::Avg(field_ref),
-                Count => Accumulator::Count,
                 Min => Accumulator::Min(field_ref),
                 Max => Accumulator::Max(field_ref),
                 Sum => Accumulator::Sum(field_ref),

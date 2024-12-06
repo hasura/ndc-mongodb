@@ -13,13 +13,7 @@ definition:
     schema:
       scalar_types:
         BinData:
-          aggregate_functions:
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+          aggregate_functions: {}
           comparison_operators:
             _eq:
               type: equal
@@ -40,13 +34,7 @@ definition:
         Bool:
           representation:
             type: boolean
-          aggregate_functions:
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+          aggregate_functions: {}
           comparison_operators:
             _eq:
               type: equal
@@ -68,12 +56,6 @@ definition:
           representation:
             type: timestamp
           aggregate_functions:
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
             max:
               result_type:
                 type: nullable
@@ -124,13 +106,7 @@ definition:
                   type: named
                   name: Date
         DbPointer:
-          aggregate_functions:
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+          aggregate_functions: {}
           comparison_operators:
             _eq:
               type: equal
@@ -158,12 +134,6 @@ definition:
                 underlying_type:
                   type: named
                   name: Decimal
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
             max:
               result_type:
                 type: nullable
@@ -229,12 +199,6 @@ definition:
                 underlying_type:
                   type: named
                   name: Double
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
             max:
               result_type:
                 type: nullable
@@ -298,10 +262,6 @@ definition:
               result_type:
                 type: named
                 name: ExtendedJSON
-            count:
-              result_type:
-                type: named
-                name: Int
             max:
               result_type:
                 type: named
@@ -372,12 +332,6 @@ definition:
                 underlying_type:
                   type: named
                   name: Int
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
             max:
               result_type:
                 type: nullable
@@ -434,22 +388,10 @@ definition:
                   type: named
                   name: Int
         Javascript:
-          aggregate_functions:
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+          aggregate_functions: {}
           comparison_operators: {}
         JavascriptWithScope:
-          aggregate_functions:
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+          aggregate_functions: {}
           comparison_operators: {}
         Long:
           representation:
@@ -461,12 +403,6 @@ definition:
                 underlying_type:
                   type: named
                   name: Long
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
             max:
               result_type:
                 type: nullable
@@ -523,13 +459,7 @@ definition:
                   type: named
                   name: Long
         MaxKey:
-          aggregate_functions:
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+          aggregate_functions: {}
           comparison_operators:
             _eq:
               type: equal
@@ -548,13 +478,7 @@ definition:
                   type: named
                   name: MaxKey
         MinKey:
-          aggregate_functions:
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+          aggregate_functions: {}
           comparison_operators:
             _eq:
               type: equal
@@ -573,13 +497,7 @@ definition:
                   type: named
                   name: MinKey
         "Null":
-          aggregate_functions:
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+          aggregate_functions: {}
           comparison_operators:
             _eq:
               type: equal
@@ -600,13 +518,7 @@ definition:
         ObjectId:
           representation:
             type: string
-          aggregate_functions:
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+          aggregate_functions: {}
           comparison_operators:
             _eq:
               type: equal
@@ -625,24 +537,12 @@ definition:
                   type: named
                   name: ObjectId
         Regex:
-          aggregate_functions:
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+          aggregate_functions: {}
           comparison_operators: {}
         String:
           representation:
             type: string
           aggregate_functions:
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
             max:
               result_type:
                 type: nullable
@@ -703,13 +603,7 @@ definition:
                 type: named
                 name: String
         Symbol:
-          aggregate_functions:
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+          aggregate_functions: {}
           comparison_operators:
             _eq:
               type: equal
@@ -729,12 +623,6 @@ definition:
                   name: Symbol
         Timestamp:
           aggregate_functions:
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
             max:
               result_type:
                 type: nullable
@@ -785,13 +673,7 @@ definition:
                   type: named
                   name: Timestamp
         Undefined:
-          aggregate_functions:
-            count:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+          aggregate_functions: {}
           comparison_operators:
             _eq:
               type: equal

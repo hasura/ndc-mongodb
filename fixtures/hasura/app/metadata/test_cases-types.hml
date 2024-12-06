@@ -74,7 +74,7 @@ definition:
       aggregatedType: ObjectId_2
       aggregationFunctions:
         - name: count
-          returnType: Int!
+          returnType: Int
       dataConnectorAggregationFunctionMapping:
         - dataConnectorName: test_cases
           dataConnectorScalarType: ObjectId
@@ -97,3 +97,4 @@ definition:
   representation: Double
   graphql:
     comparisonExpressionTypeName: DoubleComparisonExp
+

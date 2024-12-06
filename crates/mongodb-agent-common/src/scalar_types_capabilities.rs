@@ -45,7 +45,6 @@ fn extended_json_scalar_type() -> (ndc_models::ScalarTypeName, ScalarType) {
                     let name = aggregation_function.graphql_name().into();
                     let result_type = match aggregation_function {
                         AggregationFunction::Avg => ext_json_type.clone(),
-                        AggregationFunction::Count => bson_to_named_type(S::Int),
                         AggregationFunction::Min => ext_json_type.clone(),
                         AggregationFunction::Max => ext_json_type.clone(),
                         AggregationFunction::Sum => ext_json_type.clone(),
@@ -150,20 +149,18 @@ fn bson_to_named_type(bson_scalar_type: BsonScalarType) -> Type {
 pub fn aggregate_functions(
     scalar_type: BsonScalarType,
 ) -> impl Iterator<Item = (AggregationFunction, BsonScalarType)> {
-    [(A::Count, S::Int)]
-        .into_iter()
-        .chain(iter_if(
-            scalar_type.is_orderable(),
-            [A::Min, A::Max]
-                .into_iter()
-                .map(move |op| (op, scalar_type)),
-        ))
-        .chain(iter_if(
-            scalar_type.is_numeric(),
-            [A::Avg, A::Sum]
-                .into_iter()
-                .map(move |op| (op, scalar_type)),
-        ))
+    iter_if(
+        scalar_type.is_orderable(),
+        [A::Min, A::Max]
+            .into_iter()
+            .map(move |op| (op, scalar_type)),
+    )
+    .chain(iter_if(
+        scalar_type.is_numeric(),
+        [A::Avg, A::Sum]
+            .into_iter()
+            .map(move |op| (op, scalar_type)),
+    ))
 }
 
 pub fn comparison_operators(
