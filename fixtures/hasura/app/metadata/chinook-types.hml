@@ -74,7 +74,7 @@ definition:
       aggregatedType: ObjectId_1
       aggregationFunctions:
         - name: count
-          returnType: Int
+          returnType: Int!
       dataConnectorAggregationFunctionMapping:
         - dataConnectorName: chinook
           dataConnectorScalarType: ObjectId
@@ -152,15 +152,15 @@ definition:
       aggregatedType: Decimal
       aggregationFunctions:
         - name: avg
-          returnType: Decimal
+          returnType: Decimal!
         - name: count
-          returnType: Int
+          returnType: Int!
         - name: max
-          returnType: Decimal
+          returnType: Decimal!
         - name: min
-          returnType: Decimal
+          returnType: Decimal!
         - name: sum
-          returnType: Decimal
+          returnType: Decimal!
       dataConnectorAggregationFunctionMapping:
         - dataConnectorName: chinook
           dataConnectorScalarType: Decimal
@@ -191,4 +191,3 @@ definition:
   representation: Double
   graphql:
     comparisonExpressionTypeName: DoubleComparisonExp
-
