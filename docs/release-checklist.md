@@ -101,7 +101,6 @@ platforms:
 
 Values that should change for each release are,
 
-- `.name`
 - `.version`
 - `.platforms.[].uri`
 - `.platforms.[].sha256`
