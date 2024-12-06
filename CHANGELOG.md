@@ -4,6 +4,18 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+### Added
+
+- You can now aggregate values in nested object fields ([#136](https://github.com/hasura/ndc-mongodb/pull/136))
+
+### Changed
+
+- Result types for aggregation operations other than count are now nullable ([#136](https://github.com/hasura/ndc-mongodb/pull/136))
+
+### Fixed
+
+- Aggregations on empty document sets now produce `null` instead of failing with an error ([#136](https://github.com/hasura/ndc-mongodb/pull/136))
+
 ## [1.5.0] - 2024-12-05
 
 ### Added
