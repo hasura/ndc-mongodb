@@ -101,3 +101,103 @@ async fn aggregates_mixture_of_numeric_and_null_values() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+#[tokio::test]
+async fn returns_null_when_aggregating_empty_result_set() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+            query {
+              moviesAggregate(filter_input: {where: {title: {_eq: "no such movie"}}}) {
+                runtime {
+                  avg
+                }
+              }
+            }
+            "#
+        )
+        .run()
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn returns_zero_when_counting_empty_result_set() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+            query {
+              moviesAggregate(filter_input: {where: {title: {_eq: "no such movie"}}}) {
+                _count
+                title {
+                  count
+                }
+              }
+            }
+            "#
+        )
+        .run()
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn returns_zero_when_counting_nested_fields_in_empty_result_set() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+            query {
+              moviesAggregate(filter_input: {where: {title: {_eq: "no such movie"}}}) {
+                awards {
+                  nominations {
+                    count
+                    _count
+                  }
+                }
+              }
+            }
+            "#
+        )
+        .run()
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn aggregates_nested_field_values() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+            query {
+              moviesAggregate(
+                filter_input: {where: {title: {_in: ["Within Our Gates", "The Ace of Hearts"]}}}
+              ) {
+                tomatoes {
+                  viewer {
+                    rating {
+                      avg
+                    }
+                  }
+                  critic {
+                    rating {
+                      avg
+                    }
+                  }
+                }
+                imdb {
+                  rating {
+                    avg
+                  }
+                }
+              }
+            }
+            "#
+        )
+        .run()
+        .await?
+    );
+    Ok(())
+}

@@ -1,0 +1,17 @@
+---
+source: crates/integration-tests/src/tests/aggregation.rs
+expression: "graphql_query(r#\"\n            query {\n              moviesAggregate(\n                filter_input: {where: {title: {_in: [\"Within Our Gates\", \"The Ace of Hearts\"]}}}\n              ) {\n                tomatoes {\n                  viewer {\n                    rating {\n                      avg\n                    }\n                  }\n                  critic {\n                    rating {\n                      avg\n                    }\n                  }\n                }\n                imdb {\n                  rating {\n                    avg\n                  }\n                }\n              }\n            }\n            \"#).run().await?"
+---
+data:
+  moviesAggregate:
+    tomatoes:
+      viewer:
+        rating:
+          avg: 3.45
+      critic:
+        rating:
+          avg: ~
+    imdb:
+      rating:
+        avg: 6.65
+errors: ~
