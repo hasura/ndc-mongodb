@@ -12,7 +12,7 @@ let
   connector-port = "7130";
   connector-chinook-port = "7131";
   connector-test-cases-port = "7132";
-  engine-port = "3280";
+  engine-port = "7100";
 
   services = import ./integration-test-services.nix {
     inherit pkgs connector-port connector-chinook-port engine-port;

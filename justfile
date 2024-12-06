@@ -7,7 +7,7 @@ default:
   @just --list
 
 # Run a local development environment using docker. This makes the GraphQL
-# Engine available on https://localhost:3280/ with three connected MongoDB
+# Engine available on https://localhost:7100/ with two connected MongoDB
 # connector instances.
 up:
   arion up -d

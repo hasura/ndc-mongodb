@@ -1,5 +1,5 @@
 { pkgs
-, port ? "3280"
+, port ? "7100"
 , hostPort ? null
 
   # Each key in the `connectors` map should match
