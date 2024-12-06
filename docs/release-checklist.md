@@ -31,28 +31,12 @@ Create a PR on https://github.com/hasura/cli-plugins-index with a title like
 "Release MongoDB version 1.5.0"
 
 This PR requires URLs and hashes for the CLI plugin for each supported platform.
-Hashes are listed in the `sha256sum` asset on the Github release. But that file
-uses hex encoding. Convert hashes to base64 encoding with this script:
-
-```bash
-while read -r line; do
-    hash=$(echo "$line" | tr -s ' ' | cut -d' ' -f1)
-    filename=$(echo "$line" | tr -s ' ' | cut -d' ' -f2)
-    echo "$hash" | xxd -r -p | base64 | awk -v fn="$filename" '{print "sha256-" $0 "  " fn}'
-done < sha256sum
-```
-
-Or another option that doesn't use the `sha256sum` file is to run this command
-for each URL:
-
-```sh
-$ nix store prefetch-file "$URL" --json | jq -r .hash
-```
+Hashes are listed in the `sha256sum` asset on the Github release.
 
 Create a new file called `plugins/ndc-mongodb/<version>/manifest.yaml`. The
 plugin version number is the same as the connector version. For example,
 `plugins/ndc-mongodb/v1.5.0/manifest.yaml`. Include URLs to binaries from the
-Github release with the base64-encoded hashes. 
+Github release with matching hashes. 
 
 Here is an example of what the new file should look like,
 
@@ -64,35 +48,35 @@ homepage: https://hasura.io/connectors/mongodb
 platforms:
   - selector: darwin-arm64
     uri: "https://github.com/hasura/ndc-mongodb/releases/download/v1.5.0/mongodb-cli-plugin-aarch64-apple-darwin"
-    sha256: "sha256-RJx1M3zVAwB0oq3E/U6FpndFSGfdRign2JSpB+b+IDE="
+    sha256: "449c75337cd5030074a2adc4fd4e85a677454867dd462827d894a907e6fe2031"
     bin: "hasura-ndc-mongodb"
     files:
       - from: "./mongodb-cli-plugin-aarch64-apple-darwin"
         to: "hasura-ndc-mongodb"
   - selector: linux-arm64
     uri: "https://github.com/hasura/ndc-mongodb/releases/download/v1.5.0/mongodb-cli-plugin-aarch64-unknown-linux-musl"
-    sha256: "sha256-cZ+MJiN/evfngn2PWKcUK3mqAKlte+XZ4XiJiiDLy3w="
+    sha256: "719f8c26237f7af7e7827d8f58a7142b79aa00a96d7be5d9e178898a20cbcb7c"
     bin: "hasura-ndc-mongodb"
     files:
       - from: "./mongodb-cli-plugin-aarch64-unknown-linux-musl"
         to: "hasura-ndc-mongodb"
   - selector: darwin-amd64
     uri: "https://github.com/hasura/ndc-mongodb/releases/download/v1.5.0/mongodb-cli-plugin-x86_64-apple-darwin"
-    sha256: "sha256-TOqS5N7jLGBLqn+YKRUrdV7c24Fg85z2mfPLWmLT3FA="
+    sha256: "4cea92e4dee32c604baa7f9829152b755edcdb8160f39cf699f3cb5a62d3dc50"
     bin: "hasura-ndc-mongodb"
     files:
       - from: "./mongodb-cli-plugin-x86_64-apple-darwin"
         to: "hasura-ndc-mongodb"
   - selector: windows-amd64
     uri: "https://github.com/hasura/ndc-mongodb/releases/download/v1.5.0/mongodb-cli-plugin-x86_64-pc-windows-msvc.exe"
-    sha256: "sha256-p9ERfN1ueSZzlG40IpLlJdUKGMyDPDFQGQr+7dBulTg="
+    sha256: "a7d1117cdd6e792673946e342292e525d50a18cc833c3150190afeedd06e9538"
     bin: "hasura-ndc-mongodb.exe"
     files:
       - from: "./mongodb-cli-plugin-x86_64-pc-windows-msvc.exe"
         to: "hasura-ndc-mongodb.exe"
   - selector: linux-amd64
     uri: "https://github.com/hasura/ndc-mongodb/releases/download/v1.5.0/mongodb-cli-plugin-x86_64-unknown-linux-musl"
-    sha256: "sha256-wQGdXD3ExPHjn2g7WQ2+4+w0kp6ZyXswPG0xIoWjFsE="
+    sha256: "c1019d5c3dc4c4f1e39f683b590dbee3ec34929e99c97b303c6d312285a316c1"
     bin: "hasura-ndc-mongodb"
     files:
       - from: "./mongodb-cli-plugin-x86_64-unknown-linux-musl"
@@ -149,7 +133,7 @@ The content should have this format,
   "uri": "https://github.com/hasura/ndc-mongodb/releases/download/<version>/connector-definition.tgz",
   "checksum": {
     "type": "sha256",
-    "value": "<hex-encoded hash of connectior-definition.tgz>"
+    "value": "<content hash of connectior-definition.tgz>"
   },
   "source": {
     "hash": "<hash of tagged commit>"
@@ -158,8 +142,7 @@ The content should have this format,
 ```
 
 The content hash for `connector-definition.tgz` is found in the `sha256sum` file
-on the Github release. This time you want the hex-encoding found in the file so
-no conversion is necessary.
+on the Github release.
 
 The commit hash is the same as in the previous step.
 
