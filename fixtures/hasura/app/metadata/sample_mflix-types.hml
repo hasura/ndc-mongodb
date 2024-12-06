@@ -200,9 +200,9 @@ definition:
         - name: count
           returnType: Int!
         - name: max
-          returnType: Date!
+          returnType: Date
         - name: min
-          returnType: Date!
+          returnType: Date
       dataConnectorAggregationFunctionMapping:
         - dataConnectorName: sample_mflix
           dataConnectorScalarType: Date
@@ -232,9 +232,9 @@ definition:
         - name: count
           returnType: Int!
         - name: max
-          returnType: String!
+          returnType: String
         - name: min
-          returnType: String!
+          returnType: String
       dataConnectorAggregationFunctionMapping:
         - dataConnectorName: sample_mflix
           dataConnectorScalarType: String
@@ -307,6 +307,9 @@ definition:
         - dataConnectorName: sample_mflix
           dataConnectorScalarType: Double
           operatorMapping: {}
+        - dataConnectorName: chinook
+          dataConnectorScalarType: Double
+          operatorMapping: {}
   logicalOperators:
     enable: true
   isNull:
@@ -324,15 +327,15 @@ definition:
       aggregatedType: Double
       aggregationFunctions:
         - name: avg
-          returnType: Double!
+          returnType: Double
         - name: count
           returnType: Int!
         - name: max
-          returnType: Double!
+          returnType: Double
         - name: min
-          returnType: Double!
+          returnType: Double
         - name: sum
-          returnType: Double!
+          returnType: Double
       dataConnectorAggregationFunctionMapping:
         - dataConnectorName: sample_mflix
           dataConnectorScalarType: Double
@@ -442,15 +445,15 @@ definition:
       aggregatedType: Int
       aggregationFunctions:
         - name: avg
-          returnType: Int!
+          returnType: Int
         - name: count
           returnType: Int!
         - name: max
-          returnType: Int!
+          returnType: Int
         - name: min
-          returnType: Int!
+          returnType: Int
         - name: sum
-          returnType: Int!
+          returnType: Int
       dataConnectorAggregationFunctionMapping:
         - dataConnectorName: sample_mflix
           dataConnectorScalarType: Int

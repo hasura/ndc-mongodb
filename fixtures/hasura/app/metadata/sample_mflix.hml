@@ -16,10 +16,8 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
           comparison_operators:
             _eq:
               type: equal
@@ -43,10 +41,8 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
           comparison_operators:
             _eq:
               type: equal
@@ -70,10 +66,8 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
             max:
               result_type:
                 type: nullable
@@ -127,10 +121,8 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
           comparison_operators:
             _eq:
               type: equal
@@ -160,10 +152,8 @@ definition:
                   name: Decimal
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
             max:
               result_type:
                 type: nullable
@@ -231,10 +221,8 @@ definition:
                   name: Double
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
             max:
               result_type:
                 type: nullable
@@ -374,10 +362,8 @@ definition:
                   name: Int
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
             max:
               result_type:
                 type: nullable
@@ -437,19 +423,15 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
           comparison_operators: {}
         JavascriptWithScope:
           aggregate_functions:
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
           comparison_operators: {}
         Long:
           representation:
@@ -463,10 +445,8 @@ definition:
                   name: Long
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
             max:
               result_type:
                 type: nullable
@@ -526,10 +506,8 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
           comparison_operators:
             _eq:
               type: equal
@@ -551,10 +529,8 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
           comparison_operators:
             _eq:
               type: equal
@@ -576,10 +552,8 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
           comparison_operators:
             _eq:
               type: equal
@@ -603,10 +577,8 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
           comparison_operators:
             _eq:
               type: equal
@@ -628,10 +600,8 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
           comparison_operators: {}
         String:
           representation:
@@ -639,10 +609,8 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
             max:
               result_type:
                 type: nullable
@@ -706,10 +674,8 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
           comparison_operators:
             _eq:
               type: equal
@@ -731,10 +697,8 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
             max:
               result_type:
                 type: nullable
@@ -788,10 +752,8 @@ definition:
           aggregate_functions:
             count:
               result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+                type: named
+                name: Int
           comparison_operators:
             _eq:
               type: equal
