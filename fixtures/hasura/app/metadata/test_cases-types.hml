@@ -88,3 +88,12 @@ definition:
   graphql:
     selectTypeName: ObjectIdAggExp2
 
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: test_cases
+  dataConnectorScalarType: Double
+  representation: Double
+  graphql:
+    comparisonExpressionTypeName: DoubleComparisonExp

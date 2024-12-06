@@ -12,7 +12,7 @@ pub fn mongo_capabilities() -> Capabilities {
             nested_fields: NestedFieldCapabilities {
                 filter_by: Some(LeafCapability {}),
                 order_by: Some(LeafCapability {}),
-                aggregates: None,
+                aggregates: Some(LeafCapability {}),
             },
             exists: ExistsCapabilities {
                 nested_collections: Some(LeafCapability {}),
