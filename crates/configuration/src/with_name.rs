@@ -56,7 +56,7 @@ pub struct WithNameRef<'a, N, T> {
     pub value: &'a T,
 }
 
-impl<'a, N, T> WithNameRef<'a, N, T> {
+impl<N, T> WithNameRef<'_, N, T> {
     pub fn named<'b>(name: &'b N, value: &'b T) -> WithNameRef<'b, N, T> {
         WithNameRef { name, value }
     }

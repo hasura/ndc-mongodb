@@ -1,0 +1,29 @@
+{
+  "name": "MediaType",
+  "collections": {
+    "MediaType": {
+      "type": "MediaType"
+    }
+  },
+  "objectTypes": {
+    "MediaType": {
+      "fields": {
+        "MediaTypeId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "Name": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        }
+      }
+    }
+  }
+}

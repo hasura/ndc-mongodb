@@ -1,8 +1,0 @@
-kind: Subgraph
-version: v2
-definition:
-  generator:
-    rootPath: .
-  includePaths:
-    - metadata
-  name: chinook

@@ -1,0 +1,352 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: EqTitleProjectBar
+  fields:
+    - name: foo
+      type: MoviesImdb!
+  graphql:
+    typeName: EqTitleProjectBar
+    inputTypeName: EqTitleProjectBarInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: eq_title_project_bar
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: EqTitleProjectBar
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - foo
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: EqTitleProjectFoo
+  fields:
+    - name: bar
+      type: MoviesTomatoesCritic
+  graphql:
+    typeName: EqTitleProjectFoo
+    inputTypeName: EqTitleProjectFooInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: eq_title_project_foo
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: EqTitleProjectFoo
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - bar
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: EqTitleProjectWhatThe
+  fields:
+    - name: heck
+      type: String!
+  graphql:
+    typeName: EqTitleProjectWhatThe
+    inputTypeName: EqTitleProjectWhatTheInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: eq_title_project_what_the
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: EqTitleProjectWhatThe
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - heck
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: EqTitleProjectWhat
+  fields:
+    - name: the
+      type: EqTitleProjectWhatThe!
+  graphql:
+    typeName: EqTitleProjectWhat
+    inputTypeName: EqTitleProjectWhatInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: eq_title_project_what
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: EqTitleProjectWhat
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - the
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: EqTitleProject
+  fields:
+    - name: id
+      type: ObjectId!
+    - name: bar
+      type: EqTitleProjectBar!
+    - name: foo
+      type: EqTitleProjectFoo!
+    - name: title
+      type: String!
+    - name: tomatoes
+      type: MoviesTomatoes
+    - name: what
+      type: EqTitleProjectWhat!
+  graphql:
+    typeName: EqTitleProject
+    inputTypeName: EqTitleProjectInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: eq_title_project
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        bar:
+          column:
+            name: bar
+        foo:
+          column:
+            name: foo
+        title:
+          column:
+            name: title
+        tomatoes:
+          column:
+            name: tomatoes
+        what:
+          column:
+            name: what
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: EqTitleProject
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - bar
+          - foo
+          - title
+          - tomatoes
+          - what
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: EqTitleProjectBarBoolExp
+  operand:
+    object:
+      type: EqTitleProjectBar
+      comparableFields:
+        - fieldName: foo
+          booleanExpressionType: MoviesImdbBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: EqTitleProjectBarBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: EqTitleProjectFooBoolExp
+  operand:
+    object:
+      type: EqTitleProjectFoo
+      comparableFields:
+        - fieldName: bar
+          booleanExpressionType: MoviesTomatoesCriticBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: EqTitleProjectFooBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: EqTitleProjectWhatTheBoolExp
+  operand:
+    object:
+      type: EqTitleProjectWhatThe
+      comparableFields:
+        - fieldName: heck
+          booleanExpressionType: StringBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: EqTitleProjectWhatTheBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: EqTitleProjectWhatBoolExp
+  operand:
+    object:
+      type: EqTitleProjectWhat
+      comparableFields:
+        - fieldName: the
+          booleanExpressionType: EqTitleProjectWhatTheBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: EqTitleProjectWhatBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: EqTitleProjectBoolExp
+  operand:
+    object:
+      type: EqTitleProject
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp
+        - fieldName: bar
+          booleanExpressionType: EqTitleProjectBarBoolExp
+        - fieldName: foo
+          booleanExpressionType: EqTitleProjectFooBoolExp
+        - fieldName: title
+          booleanExpressionType: StringBoolExp
+        - fieldName: tomatoes
+          booleanExpressionType: MoviesTomatoesBoolExp
+        - fieldName: what
+          booleanExpressionType: EqTitleProjectWhatBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: EqTitleProjectBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: EqTitleProjectAggExp
+  operand:
+    object:
+      aggregatedType: EqTitleProject
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: ObjectIdAggExp
+        - fieldName: title
+          aggregateExpression: StringAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: EqTitleProjectAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: EqTitle
+  objectType: EqTitleProject
+  arguments:
+    - name: title
+      type: String!
+    - name: year
+      type: Int!
+  source:
+    dataConnectorName: sample_mflix
+    collection: eq_title
+  filterExpressionType: EqTitleProjectBoolExp
+  aggregateExpression: EqTitleProjectAggExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: bar
+      orderByDirections:
+        enableAll: true
+    - fieldName: foo
+      orderByDirections:
+        enableAll: true
+    - fieldName: title
+      orderByDirections:
+        enableAll: true
+    - fieldName: tomatoes
+      orderByDirections:
+        enableAll: true
+    - fieldName: what
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: eqTitle
+      subscription:
+        rootField: eqTitle
+    selectUniques:
+      - queryRootField: eqTitleById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: eqTitleById
+    argumentsInputType: EqTitleArguments
+    orderByExpressionType: EqTitleOrderBy
+    filterInputTypeName: EqTitleFilterInput
+    aggregate:
+      queryRootField: eqTitleAggregate
+      subscription:
+        rootField: eqTitleAggregate
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: EqTitle
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+

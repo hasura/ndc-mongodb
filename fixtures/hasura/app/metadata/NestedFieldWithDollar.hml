@@ -1,0 +1,169 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: NestedFieldWithDollarConfiguration
+  fields:
+    - name: schema
+      type: String
+  graphql:
+    typeName: NestedFieldWithDollarConfiguration
+    inputTypeName: NestedFieldWithDollarConfigurationInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: test_cases
+      dataConnectorObjectType: nested_field_with_dollar_configuration
+      fieldMapping:
+        schema:
+          column:
+            name: $schema
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: NestedFieldWithDollarConfiguration
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - schema
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: NestedFieldWithDollar
+  fields:
+    - name: id
+      type: ObjectId_2!
+    - name: configuration
+      type: NestedFieldWithDollarConfiguration!
+  graphql:
+    typeName: NestedFieldWithDollar
+    inputTypeName: NestedFieldWithDollarInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: test_cases
+      dataConnectorObjectType: nested_field_with_dollar
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        configuration:
+          column:
+            name: configuration
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: NestedFieldWithDollar
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - configuration
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: NestedFieldWithDollarConfigurationBoolExp
+  operand:
+    object:
+      type: NestedFieldWithDollarConfiguration
+      comparableFields:
+        - fieldName: schema
+          booleanExpressionType: StringBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: NestedFieldWithDollarConfigurationBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: NestedFieldWithDollarBoolExp
+  operand:
+    object:
+      type: NestedFieldWithDollar
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp_2
+        - fieldName: configuration
+          booleanExpressionType: NestedFieldWithDollarConfigurationBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: NestedFieldWithDollarBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: NestedFieldWithDollarAggExp
+  operand:
+    object:
+      aggregatedType: NestedFieldWithDollar
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: ObjectIdAggExp_2
+  count:
+    enable: true
+  graphql:
+    selectTypeName: NestedFieldWithDollarAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: NestedFieldWithDollar
+  objectType: NestedFieldWithDollar
+  source:
+    dataConnectorName: test_cases
+    collection: nested_field_with_dollar
+  filterExpressionType: NestedFieldWithDollarBoolExp
+  aggregateExpression: NestedFieldWithDollarAggExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: configuration
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: nestedFieldWithDollar
+      subscription:
+        rootField: nestedFieldWithDollar
+    selectUniques:
+      - queryRootField: nestedFieldWithDollarById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: nestedFieldWithDollarById
+    orderByExpressionType: NestedFieldWithDollarOrderBy
+    filterInputTypeName: NestedFieldWithDollarFilterInput
+    aggregate:
+      queryRootField: nestedFieldWithDollarAggregate
+      subscription:
+        rootField: nestedFieldWithDollarAggregate
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: NestedFieldWithDollar
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+

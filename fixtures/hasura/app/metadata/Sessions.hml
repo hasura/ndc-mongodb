@@ -1,0 +1,135 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: Sessions
+  fields:
+    - name: id
+      type: ObjectId!
+    - name: jwt
+      type: String!
+    - name: userId
+      type: String!
+  graphql:
+    typeName: Sessions
+    inputTypeName: SessionsInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: sessions
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        jwt:
+          column:
+            name: jwt
+        userId:
+          column:
+            name: user_id
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Sessions
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - jwt
+          - userId
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: SessionsBoolExp
+  operand:
+    object:
+      type: Sessions
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp
+        - fieldName: jwt
+          booleanExpressionType: StringBoolExp
+        - fieldName: userId
+          booleanExpressionType: StringBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: SessionsBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: SessionsAggExp
+  operand:
+    object:
+      aggregatedType: Sessions
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: ObjectIdAggExp
+        - fieldName: jwt
+          aggregateExpression: StringAggExp
+        - fieldName: userId
+          aggregateExpression: StringAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: SessionsAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: Sessions
+  objectType: Sessions
+  source:
+    dataConnectorName: sample_mflix
+    collection: sessions
+  filterExpressionType: SessionsBoolExp
+  aggregateExpression: SessionsAggExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: jwt
+      orderByDirections:
+        enableAll: true
+    - fieldName: userId
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: sessions
+      subscription:
+        rootField: sessions
+    selectUniques:
+      - queryRootField: sessionsById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: sessionsById
+    orderByExpressionType: SessionsOrderBy
+    filterInputTypeName: SessionsFilterInput
+    aggregate:
+      queryRootField: sessionsAggregate
+      subscription:
+        rootField: sessionsAggregate
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Sessions
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+

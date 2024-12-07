@@ -1,0 +1,111 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: DocWithExtendedJsonValue
+  fields:
+    - name: type
+      type: String!
+    - name: value
+      type: ExtendedJson
+  graphql:
+    typeName: DocWithExtendedJsonValue
+    inputTypeName: DocWithExtendedJsonValueInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: DocWithExtendedJsonValue
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: DocWithExtendedJsonValue
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - type
+          - value
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: DocWithExtendedJsonValueBoolExp
+  operand:
+    object:
+      type: DocWithExtendedJsonValue
+      comparableFields:
+        - fieldName: type
+          booleanExpressionType: StringBoolExp
+        - fieldName: value
+          booleanExpressionType: ExtendedJsonBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: DocWithExtendedJsonValueBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: DocWithExtendedJsonValueAggExp
+  operand:
+    object:
+      aggregatedType: DocWithExtendedJsonValue
+      aggregatableFields:
+        - fieldName: type
+          aggregateExpression: StringAggExp
+        - fieldName: value
+          aggregateExpression: ExtendedJsonAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: DocWithExtendedJsonValueAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: ExtendedJsonTestData
+  objectType: DocWithExtendedJsonValue
+  source:
+    dataConnectorName: sample_mflix
+    collection: extended_json_test_data
+  filterExpressionType: DocWithExtendedJsonValueBoolExp
+  aggregateExpression: DocWithExtendedJsonValueAggExp
+  orderableFields:
+    - fieldName: type
+      orderByDirections:
+        enableAll: true
+    - fieldName: value
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: extendedJsonTestData
+      subscription:
+        rootField: extendedJsonTestData
+    selectUniques: []
+    orderByExpressionType: ExtendedJsonTestDataOrderBy
+    filterInputTypeName: ExtendedJsonTestDataFilterInput
+    aggregate:
+      queryRootField: extendedJsonTestDataAggregate
+      subscription:
+        rootField: extendedJsonTestDataAggregate
+  description: various values that all have the ExtendedJSON type
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: ExtendedJsonTestData
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+

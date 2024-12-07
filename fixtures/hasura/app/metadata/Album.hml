@@ -1,0 +1,150 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: Album
+  fields:
+    - name: id
+      type: ObjectId_1!
+    - name: albumId
+      type: Int!
+    - name: artistId
+      type: Int!
+    - name: title
+      type: String!
+  graphql:
+    typeName: Album
+    inputTypeName: AlbumInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: chinook
+      dataConnectorObjectType: Album
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        albumId:
+          column:
+            name: AlbumId
+        artistId:
+          column:
+            name: ArtistId
+        title:
+          column:
+            name: Title
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Album
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - albumId
+          - artistId
+          - title
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: AlbumBoolExp
+  operand:
+    object:
+      type: Album
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp_1
+        - fieldName: albumId
+          booleanExpressionType: IntBoolExp
+        - fieldName: artistId
+          booleanExpressionType: IntBoolExp
+        - fieldName: title
+          booleanExpressionType: StringBoolExp
+      comparableRelationships:
+        - relationshipName: artist
+        - relationshipName: tracks
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: AlbumBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: AlbumAggExp
+  operand:
+    object:
+      aggregatedType: Album
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: ObjectIdAggExp_1
+        - fieldName: albumId
+          aggregateExpression: IntAggExp
+        - fieldName: artistId
+          aggregateExpression: IntAggExp
+        - fieldName: title
+          aggregateExpression: StringAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: AlbumAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: Album
+  objectType: Album
+  source:
+    dataConnectorName: chinook
+    collection: Album
+  filterExpressionType: AlbumBoolExp
+  aggregateExpression: AlbumAggExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: albumId
+      orderByDirections:
+        enableAll: true
+    - fieldName: artistId
+      orderByDirections:
+        enableAll: true
+    - fieldName: title
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: album
+      subscription:
+        rootField: album
+    selectUniques:
+      - queryRootField: albumById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: albumById
+    orderByExpressionType: AlbumOrderBy
+    filterInputTypeName: AlbumFilterInput
+    aggregate:
+      queryRootField: albumAggregate
+      subscription:
+        rootField: albumAggregate
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Album
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+

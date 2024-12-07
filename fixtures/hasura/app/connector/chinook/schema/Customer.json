@@ -1,0 +1,94 @@
+{
+  "name": "Customer",
+  "collections": {
+    "Customer": {
+      "type": "Customer"
+    }
+  },
+  "objectTypes": {
+    "Customer": {
+      "fields": {
+        "Address": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "City": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "Company": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "Country": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "CustomerId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "Email": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "Fax": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "FirstName": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "LastName": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "Phone": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "PostalCode": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "State": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "SupportRepId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        }
+      }
+    }
+  }
+}
