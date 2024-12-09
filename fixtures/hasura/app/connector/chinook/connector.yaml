@@ -3,7 +3,7 @@ version: v2
 definition:
   name: chinook
   subgraph: app
-  source: hasura/mongodb:v1.4.0
+  source: hasura/mongodb:v1.5.0
   context: .
   envMapping:
     MONGODB_DATABASE_URI:
