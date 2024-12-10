@@ -1,0 +1,350 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: NativeQueryProjectBar
+  fields:
+    - name: foo
+      type: MoviesImdb!
+  graphql:
+    typeName: NativeQueryProjectBar
+    inputTypeName: NativeQueryProjectBarInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: native_query_project_bar
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: NativeQueryProjectBar
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - foo
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: NativeQueryProjectFoo
+  fields:
+    - name: bar
+      type: MoviesTomatoesCritic
+  graphql:
+    typeName: NativeQueryProjectFoo
+    inputTypeName: NativeQueryProjectFooInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: native_query_project_foo
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: NativeQueryProjectFoo
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - bar
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: NativeQueryProjectWhatThe
+  fields:
+    - name: heck
+      type: String!
+  graphql:
+    typeName: NativeQueryProjectWhatThe
+    inputTypeName: NativeQueryProjectWhatTheInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: native_query_project_what_the
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: NativeQueryProjectWhatThe
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - heck
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: NativeQueryProjectWhat
+  fields:
+    - name: the
+      type: NativeQueryProjectWhatThe!
+  graphql:
+    typeName: NativeQueryProjectWhat
+    inputTypeName: NativeQueryProjectWhatInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: native_query_project_what
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: NativeQueryProjectWhat
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - the
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: NativeQueryProject
+  fields:
+    - name: id
+      type: ObjectId!
+    - name: bar
+      type: NativeQueryProjectBar!
+    - name: foo
+      type: NativeQueryProjectFoo!
+    - name: title
+      type: String!
+    - name: tomatoes
+      type: MoviesTomatoes
+    - name: what
+      type: NativeQueryProjectWhat!
+  graphql:
+    typeName: NativeQueryProject
+    inputTypeName: NativeQueryProjectInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: native_query_project
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        bar:
+          column:
+            name: bar
+        foo:
+          column:
+            name: foo
+        title:
+          column:
+            name: title
+        tomatoes:
+          column:
+            name: tomatoes
+        what:
+          column:
+            name: what
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: NativeQueryProject
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - bar
+          - foo
+          - title
+          - tomatoes
+          - what
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: NativeQueryProjectBarBoolExp
+  operand:
+    object:
+      type: NativeQueryProjectBar
+      comparableFields:
+        - fieldName: foo
+          booleanExpressionType: MoviesImdbBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: NativeQueryProjectBarBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: NativeQueryProjectFooBoolExp
+  operand:
+    object:
+      type: NativeQueryProjectFoo
+      comparableFields:
+        - fieldName: bar
+          booleanExpressionType: MoviesTomatoesCriticBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: NativeQueryProjectFooBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: NativeQueryProjectWhatTheBoolExp
+  operand:
+    object:
+      type: NativeQueryProjectWhatThe
+      comparableFields:
+        - fieldName: heck
+          booleanExpressionType: StringBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: NativeQueryProjectWhatTheBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: NativeQueryProjectWhatBoolExp
+  operand:
+    object:
+      type: NativeQueryProjectWhat
+      comparableFields:
+        - fieldName: the
+          booleanExpressionType: NativeQueryProjectWhatTheBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: NativeQueryProjectWhatBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: NativeQueryProjectBoolExp
+  operand:
+    object:
+      type: NativeQueryProject
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp
+        - fieldName: bar
+          booleanExpressionType: NativeQueryProjectBarBoolExp
+        - fieldName: foo
+          booleanExpressionType: NativeQueryProjectFooBoolExp
+        - fieldName: title
+          booleanExpressionType: StringBoolExp
+        - fieldName: tomatoes
+          booleanExpressionType: MoviesTomatoesBoolExp
+        - fieldName: what
+          booleanExpressionType: NativeQueryProjectWhatBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: NativeQueryProjectBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: NativeQueryProjectAggExp
+  operand:
+    object:
+      aggregatedType: NativeQueryProject
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: ObjectIdAggExp
+        - fieldName: title
+          aggregateExpression: StringAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: NativeQueryProjectAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: NativeQuery
+  objectType: NativeQueryProject
+  arguments:
+    - name: title
+      type: String!
+  source:
+    dataConnectorName: sample_mflix
+    collection: native_query
+  filterExpressionType: NativeQueryProjectBoolExp
+  aggregateExpression: NativeQueryProjectAggExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: bar
+      orderByDirections:
+        enableAll: true
+    - fieldName: foo
+      orderByDirections:
+        enableAll: true
+    - fieldName: title
+      orderByDirections:
+        enableAll: true
+    - fieldName: tomatoes
+      orderByDirections:
+        enableAll: true
+    - fieldName: what
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: nativeQuery
+      subscription:
+        rootField: nativeQuery
+    selectUniques:
+      - queryRootField: nativeQueryById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: nativeQueryById
+    argumentsInputType: NativeQueryArguments
+    orderByExpressionType: NativeQueryOrderBy
+    filterInputTypeName: NativeQueryFilterInput
+    aggregate:
+      queryRootField: nativeQueryAggregate
+      subscription:
+        rootField: nativeQueryAggregate
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: NativeQuery
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+

@@ -77,7 +77,7 @@ async fn selects_field_names_that_require_escaping() -> anyhow::Result<()> {
         graphql_query(
             r#"
             query {
-              testCases_weirdFieldNames(limit: 1, order_by: { invalidName: Asc }) {
+              weirdFieldNames(limit: 1, order_by: { invalidName: Asc }) {
                 invalidName
                 invalidObjectName {
                   validName
@@ -101,7 +101,7 @@ async fn selects_nested_field_with_dollar_sign_in_name() -> anyhow::Result<()> {
         graphql_query(
             r#"
             query {
-              testCases_nestedFieldWithDollar(order_by: { configuration: Asc }) {
+              nestedFieldWithDollar(order_by: { configuration: Asc }) {
                 configuration {
                   schema
                 }

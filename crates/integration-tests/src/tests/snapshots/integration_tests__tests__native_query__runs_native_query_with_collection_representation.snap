@@ -1,57 +1,57 @@
 ---
 source: crates/integration-tests/src/tests/native_query.rs
-expression: "graphql_query(r#\"\n                query {\n                  title_word_frequencies(\n                    where: {count: {_eq: 2}}\n                    order_by: {word: Asc}\n                    offset: 100\n                    limit: 25\n                  ) {\n                    word\n                    count\n                  }\n                }\n            \"#).run().await?"
+expression: "graphql_query(r#\"\n                query {\n                  titleWordFrequency(\n                    where: {count: {_eq: 2}}\n                    order_by: {id: Asc}\n                    offset: 100\n                    limit: 25\n                  ) {\n                    id\n                    count\n                  }\n                }\n            \"#).run().await?"
 ---
 data:
-  title_word_frequencies:
-    - word: Amish
+  titleWordFrequency:
+    - id: Amish
       count: 2
-    - word: Amor?
+    - id: Amor?
       count: 2
-    - word: Anara
+    - id: Anara
       count: 2
-    - word: Anarchy
+    - id: Anarchy
       count: 2
-    - word: Anastasia
+    - id: Anastasia
       count: 2
-    - word: Anchorman
+    - id: Anchorman
       count: 2
-    - word: Andre
+    - id: Andre
       count: 2
-    - word: Andrei
+    - id: Andrei
       count: 2
-    - word: Andromeda
+    - id: Andromeda
       count: 2
-    - word: Andrè
+    - id: Andrè
       count: 2
-    - word: Angela
+    - id: Angela
       count: 2
-    - word: Angelica
+    - id: Angelica
       count: 2
-    - word: "Angels'"
+    - id: "Angels'"
       count: 2
-    - word: "Angels:"
+    - id: "Angels:"
       count: 2
-    - word: Angst
+    - id: Angst
       count: 2
-    - word: Animation
+    - id: Animation
       count: 2
-    - word: Annabelle
+    - id: Annabelle
       count: 2
-    - word: Anonyma
+    - id: Anonyma
       count: 2
-    - word: Anonymous
+    - id: Anonymous
       count: 2
-    - word: Answer
+    - id: Answer
       count: 2
-    - word: Ant
+    - id: Ant
       count: 2
-    - word: Antarctic
+    - id: Antarctic
       count: 2
-    - word: Antoinette
+    - id: Antoinette
       count: 2
-    - word: Anybody
+    - id: Anybody
       count: 2
-    - word: Anywhere
+    - id: Anywhere
       count: 2
 errors: ~

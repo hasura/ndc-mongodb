@@ -13,18 +13,18 @@ arion up -d
 
 ## Cheat Sheet
 
-We have two subgraphs, and two connector configurations. So a lot of these
-commands are repeated for each subgraph + connector combination.
+We have three connector configurations. So a lot of these commands are repeated
+for each connector.
 
 Run introspection to update connector configuration. To do that through the ddn
 CLI run these commands in the same directory as this README file:
 
 ```sh
-$ ddn connector introspect --connector sample_mflix/connector/connector.yaml
+$ ddn connector introspect sample_mflix
 
-$ ddn connector introspect --connector chinook/connector/connector.yaml
+$ ddn connector introspect chinook
 
-$ ddn connector introspect --connector test_cases/connector/connector.yaml
+$ ddn connector introspect test_cases
 ```
 
 Alternatively run `mongodb-cli-plugin` directly to use the CLI plugin version in
@@ -44,9 +44,9 @@ Update Hasura metadata based on connector configuration
 introspection):
 
 ```sh
-$ ddn connector-link update sample_mflix --subgraph sample_mflix/subgraph.yaml --env-file sample_mflix/.env.sample_mflix --add-all-resources
+$ ddn connector-link update sample_mflix --add-all-resources
 
-$ ddn connector-link update chinook --subgraph chinook/subgraph.yaml --env-file chinook/.env.chinook --add-all-resources
+$ ddn connector-link update chinook --add-all-resources
 
-$ ddn connector-link update test_cases --subgraph test_cases/subgraph.yaml --env-file test_cases/.env.test_cases --add-all-resources
+$ ddn connector-link update test_cases --add-all-resources
 ```

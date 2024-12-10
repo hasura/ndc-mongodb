@@ -1,0 +1,68 @@
+{
+  "name": "Invoice",
+  "collections": {
+    "Invoice": {
+      "type": "Invoice"
+    }
+  },
+  "objectTypes": {
+    "Invoice": {
+      "fields": {
+        "BillingAddress": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "BillingCity": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "BillingCountry": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "BillingPostalCode": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "BillingState": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "CustomerId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "InvoiceDate": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "InvoiceId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "Total": {
+          "type": {
+            "scalar": "decimal"
+          }
+        },
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        }
+      }
+    }
+  }
+}

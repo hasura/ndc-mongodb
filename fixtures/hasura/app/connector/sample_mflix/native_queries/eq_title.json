@@ -1,0 +1,125 @@
+{
+  "name": "eq_title",
+  "representation": "collection",
+  "inputCollection": "movies",
+  "arguments": {
+    "title": {
+      "type": {
+        "scalar": "string"
+      }
+    },
+    "year": {
+      "type": {
+        "scalar": "int"
+      }
+    }
+  },
+  "resultDocumentType": "eq_title_project",
+  "objectTypes": {
+    "eq_title_project": {
+      "fields": {
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        },
+        "bar": {
+          "type": {
+            "object": "eq_title_project_bar"
+          }
+        },
+        "foo": {
+          "type": {
+            "object": "eq_title_project_foo"
+          }
+        },
+        "title": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "tomatoes": {
+          "type": {
+            "nullable": {
+              "object": "movies_tomatoes"
+            }
+          }
+        },
+        "what": {
+          "type": {
+            "object": "eq_title_project_what"
+          }
+        }
+      }
+    },
+    "eq_title_project_bar": {
+      "fields": {
+        "foo": {
+          "type": {
+            "object": "movies_imdb"
+          }
+        }
+      }
+    },
+    "eq_title_project_foo": {
+      "fields": {
+        "bar": {
+          "type": {
+            "nullable": {
+              "object": "movies_tomatoes_critic"
+            }
+          }
+        }
+      }
+    },
+    "eq_title_project_what": {
+      "fields": {
+        "the": {
+          "type": {
+            "object": "eq_title_project_what_the"
+          }
+        }
+      }
+    },
+    "eq_title_project_what_the": {
+      "fields": {
+        "heck": {
+          "type": {
+            "scalar": "string"
+          }
+        }
+      }
+    }
+  },
+  "pipeline": [
+    {
+      "$match": {
+        "title": "{{ title | string }}",
+        "year": {
+          "$gt": "{{ year }}"
+        }
+      }
+    },
+    {
+      "$project": {
+        "title": 1,
+        "tomatoes": 1,
+        "foo.bar": "$tomatoes.critic",
+        "bar.foo": "$imdb",
+        "what.the.heck": "hello",
+        "genres": 1,
+        "cast": 1
+      }
+    },
+    {
+      "$project": {
+        "genres": false
+      }
+    },
+    {
+      "$project": {
+        "cast": false
+      }
+    }
+  ]
+}

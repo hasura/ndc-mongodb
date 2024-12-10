@@ -1,18 +1,18 @@
 ---
 source: crates/integration-tests/src/tests/aggregation.rs
-expression: "graphql_query(r#\"\n                query ($types: String!) {\n                  extendedJsonTestDataAggregate(\n                    filter_input: { where: { type: { _regex: $types } } }\n                  ) {\n                    value {\n                      _avg\n                      _count\n                      _max\n                      _min\n                      _sum\n                      _count_distinct\n                    }\n                  }\n                  extendedJsonTestData(where: { type: { _regex: $types } }) {\n                    type\n                    value\n                  }\n                }\n            \"#).variables(json!({\n                        \"types\": \"double|null\"\n                    })).run().await?"
+expression: "graphql_query(r#\"\n                query ($types: String!) {\n                  extendedJsonTestDataAggregate(\n                    filter_input: { where: { type: { _regex: $types } } }\n                  ) {\n                    value {\n                      avg\n                      _count\n                      max\n                      min\n                      sum\n                      _count_distinct\n                    }\n                  }\n                  extendedJsonTestData(where: { type: { _regex: $types } }) {\n                    type\n                    value\n                  }\n                }\n            \"#).variables(json!({\n    \"types\": \"double|null\"\n})).run().await?"
 ---
 data:
   extendedJsonTestDataAggregate:
     value:
-      _avg:
+      avg:
         $numberDouble: "3.5"
       _count: 2
-      _max:
+      max:
         $numberDouble: "4.0"
-      _min:
+      min:
         $numberDouble: "3.0"
-      _sum:
+      sum:
         $numberDouble: "7.0"
       _count_distinct: 2
   extendedJsonTestData:

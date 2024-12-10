@@ -14,7 +14,7 @@ use crate::{procedure::ProcedureError, query::QueryResponseError};
 /// agent.
 #[derive(Debug, Error)]
 pub enum MongoAgentError {
-    BadCollectionSchema(String, bson::Bson, bson::de::Error),
+    BadCollectionSchema(Box<(String, bson::Bson, bson::de::Error)>), // boxed to avoid an excessively-large stack value
     BadQuery(anyhow::Error),
     InvalidVariableName(String),
     InvalidScalarTypeName(String),
@@ -37,31 +37,34 @@ use MongoAgentError::*;
 impl MongoAgentError {
     pub fn status_and_error_response(&self) -> (StatusCode, ErrorResponse) {
         match self {
-            BadCollectionSchema(collection_name, schema, err) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse {
-                    message: format!("Could not parse a collection validator: {err}"),
-                    details: Some(
-                        [
-                            (
-                                "collection_name".to_owned(),
-                                serde_json::Value::String(collection_name.clone()),
-                            ),
-                            (
-                                "collection_validator".to_owned(),
-                                bson::from_bson::<serde_json::Value>(schema.clone())
-                                    .unwrap_or_else(|err| {
-                                        serde_json::Value::String(format!(
-                                            "Failed to convert bson validator to json: {err}"
-                                        ))
-                                    }),
-                            ),
-                        ]
-                        .into(),
-                    ),
-                    r#type: None,
-                },
-            ),
+            BadCollectionSchema(boxed_details) => {
+                let (collection_name, schema, err) = &**boxed_details;
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse {
+                        message: format!("Could not parse a collection validator: {err}"),
+                        details: Some(
+                            [
+                                (
+                                    "collection_name".to_owned(),
+                                    serde_json::Value::String(collection_name.clone()),
+                                ),
+                                (
+                                    "collection_validator".to_owned(),
+                                    bson::from_bson::<serde_json::Value>(schema.clone())
+                                        .unwrap_or_else(|err| {
+                                            serde_json::Value::String(format!(
+                                                "Failed to convert bson validator to json: {err}"
+                                            ))
+                                        }),
+                                ),
+                            ]
+                            .into(),
+                        ),
+                        r#type: None,
+                    },
+                )
+            },
             BadQuery(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(&err)),
             InvalidVariableName(name) => (
                 StatusCode::BAD_REQUEST,

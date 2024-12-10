@@ -24,13 +24,13 @@ async fn runs_native_query_with_collection_representation() -> anyhow::Result<()
         graphql_query(
             r#"
                 query {
-                  title_word_frequencies(
+                  titleWordFrequency(
                     where: {count: {_eq: 2}}
-                    order_by: {word: Asc}
+                    order_by: {id: Asc}
                     offset: 100
                     limit: 25
                   ) {
-                    word
+                    id
                     count
                   }
                 }

@@ -1,0 +1,29 @@
+{
+  "name": "Genre",
+  "collections": {
+    "Genre": {
+      "type": "Genre"
+    }
+  },
+  "objectTypes": {
+    "Genre": {
+      "fields": {
+        "GenreId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "Name": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,136 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: Genre
+  fields:
+    - name: id
+      type: ObjectId_1!
+    - name: genreId
+      type: Int!
+    - name: name
+      type: String!
+  graphql:
+    typeName: Genre
+    inputTypeName: GenreInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: chinook
+      dataConnectorObjectType: Genre
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        genreId:
+          column:
+            name: GenreId
+        name:
+          column:
+            name: Name
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Genre
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - genreId
+          - name
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: GenreBoolExp
+  operand:
+    object:
+      type: Genre
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp_1
+        - fieldName: genreId
+          booleanExpressionType: IntBoolExp
+        - fieldName: name
+          booleanExpressionType: StringBoolExp
+      comparableRelationships:
+        - relationshipName: tracks
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: GenreBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: GenreAggExp
+  operand:
+    object:
+      aggregatedType: Genre
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: ObjectIdAggExp_1
+        - fieldName: genreId
+          aggregateExpression: IntAggExp
+        - fieldName: name
+          aggregateExpression: StringAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: GenreAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: Genre
+  objectType: Genre
+  source:
+    dataConnectorName: chinook
+    collection: Genre
+  filterExpressionType: GenreBoolExp
+  aggregateExpression: GenreAggExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: genreId
+      orderByDirections:
+        enableAll: true
+    - fieldName: name
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: genre
+      subscription:
+        rootField: genre
+    selectUniques:
+      - queryRootField: genreById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: genreById
+    orderByExpressionType: GenreOrderBy
+    filterInputTypeName: GenreFilterInput
+    aggregate:
+      queryRootField: genreAggregate
+      subscription:
+        rootField: genreAggregate
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Genre
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+

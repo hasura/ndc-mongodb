@@ -1,0 +1,14 @@
+kind: Connector
+version: v2
+definition:
+  name: test_cases
+  subgraph: app
+  source: hasura/mongodb:v1.5.0
+  context: .
+  envMapping:
+    MONGODB_DATABASE_URI:
+      fromEnv: APP_TEST_CASES_MONGODB_DATABASE_URI
+    OTEL_EXPORTER_OTLP_ENDPOINT:
+      fromEnv: APP_TEST_CASES_OTEL_EXPORTER_OTLP_ENDPOINT
+    OTEL_SERVICE_NAME:
+      fromEnv: APP_TEST_CASES_OTEL_SERVICE_NAME

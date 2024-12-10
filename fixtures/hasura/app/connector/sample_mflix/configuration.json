@@ -1,0 +1,10 @@
+{
+  "introspectionOptions": {
+    "sampleSize": 1000,
+    "noValidatorSchema": false,
+    "allSchemaNullable": false
+  },
+  "serializationOptions": {
+    "extendedJsonMode": "canonical"
+  }
+}

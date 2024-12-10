@@ -1,0 +1,176 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: InvoiceLine
+  fields:
+    - name: id
+      type: ObjectId_1!
+    - name: invoiceId
+      type: Int!
+    - name: invoiceLineId
+      type: Int!
+    - name: quantity
+      type: Int!
+    - name: trackId
+      type: Int!
+    - name: unitPrice
+      type: Decimal!
+  graphql:
+    typeName: InvoiceLine
+    inputTypeName: InvoiceLineInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: chinook
+      dataConnectorObjectType: InvoiceLine
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        invoiceId:
+          column:
+            name: InvoiceId
+        invoiceLineId:
+          column:
+            name: InvoiceLineId
+        quantity:
+          column:
+            name: Quantity
+        trackId:
+          column:
+            name: TrackId
+        unitPrice:
+          column:
+            name: UnitPrice
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: InvoiceLine
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - invoiceId
+          - invoiceLineId
+          - quantity
+          - trackId
+          - unitPrice
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: InvoiceLineBoolExp
+  operand:
+    object:
+      type: InvoiceLine
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp_1
+        - fieldName: invoiceId
+          booleanExpressionType: IntBoolExp
+        - fieldName: invoiceLineId
+          booleanExpressionType: IntBoolExp
+        - fieldName: quantity
+          booleanExpressionType: IntBoolExp
+        - fieldName: trackId
+          booleanExpressionType: IntBoolExp
+        - fieldName: unitPrice
+          booleanExpressionType: DecimalBoolExp
+      comparableRelationships:
+        - relationshipName: invoice
+        - relationshipName: track
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: InvoiceLineBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: InvoiceLineAggExp
+  operand:
+    object:
+      aggregatedType: InvoiceLine
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: ObjectIdAggExp_1
+        - fieldName: invoiceId
+          aggregateExpression: IntAggExp
+        - fieldName: invoiceLineId
+          aggregateExpression: IntAggExp
+        - fieldName: quantity
+          aggregateExpression: IntAggExp
+        - fieldName: trackId
+          aggregateExpression: IntAggExp
+        - fieldName: unitPrice
+          aggregateExpression: DecimalAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: InvoiceLineAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: InvoiceLine
+  objectType: InvoiceLine
+  source:
+    dataConnectorName: chinook
+    collection: InvoiceLine
+  filterExpressionType: InvoiceLineBoolExp
+  aggregateExpression: InvoiceLineAggExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: invoiceId
+      orderByDirections:
+        enableAll: true
+    - fieldName: invoiceLineId
+      orderByDirections:
+        enableAll: true
+    - fieldName: quantity
+      orderByDirections:
+        enableAll: true
+    - fieldName: trackId
+      orderByDirections:
+        enableAll: true
+    - fieldName: unitPrice
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: invoiceLine
+      subscription:
+        rootField: invoiceLine
+    selectUniques:
+      - queryRootField: invoiceLineById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: invoiceLineById
+    orderByExpressionType: InvoiceLineOrderBy
+    filterInputTypeName: InvoiceLineFilterInput
+    aggregate:
+      queryRootField: invoiceLineAggregate
+      subscription:
+        rootField: invoiceLineAggregate
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: InvoiceLine
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+
