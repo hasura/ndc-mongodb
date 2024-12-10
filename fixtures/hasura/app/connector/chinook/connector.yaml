@@ -1,0 +1,14 @@
+kind: Connector
+version: v2
+definition:
+  name: chinook
+  subgraph: app
+  source: hasura/mongodb:v1.5.0
+  context: .
+  envMapping:
+    MONGODB_DATABASE_URI:
+      fromEnv: APP_CHINOOK_MONGODB_DATABASE_URI
+    OTEL_EXPORTER_OTLP_ENDPOINT:
+      fromEnv: APP_CHINOOK_OTEL_EXPORTER_OTLP_ENDPOINT
+    OTEL_SERVICE_NAME:
+      fromEnv: APP_CHINOOK_OTEL_SERVICE_NAME

@@ -1,0 +1,302 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: WeirdFieldNamesInvalidArray
+  fields:
+    - name: invalidElement
+      type: Int!
+  graphql:
+    typeName: WeirdFieldNamesInvalidArray
+    inputTypeName: WeirdFieldNamesInvalidArrayInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: test_cases
+      dataConnectorObjectType: weird_field_names_$invalid.array
+      fieldMapping:
+        invalidElement:
+          column:
+            name: $invalid.element
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: WeirdFieldNamesInvalidArray
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - invalidElement
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: WeirdFieldNamesInvalidObjectName
+  fields:
+    - name: validName
+      type: Int!
+  graphql:
+    typeName: WeirdFieldNamesInvalidObjectName
+    inputTypeName: WeirdFieldNamesInvalidObjectNameInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: test_cases
+      dataConnectorObjectType: weird_field_names_$invalid.object.name
+      fieldMapping:
+        validName:
+          column:
+            name: valid_name
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: WeirdFieldNamesInvalidObjectName
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - validName
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: WeirdFieldNamesValidObjectName
+  fields:
+    - name: invalidNestedName
+      type: Int!
+  graphql:
+    typeName: WeirdFieldNamesValidObjectName
+    inputTypeName: WeirdFieldNamesValidObjectNameInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: test_cases
+      dataConnectorObjectType: weird_field_names_valid_object_name
+      fieldMapping:
+        invalidNestedName:
+          column:
+            name: $invalid.nested.name
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: WeirdFieldNamesValidObjectName
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - invalidNestedName
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: WeirdFieldNames
+  fields:
+    - name: invalidArray
+      type: "[WeirdFieldNamesInvalidArray!]!"
+    - name: invalidName
+      type: Int!
+    - name: invalidObjectName
+      type: WeirdFieldNamesInvalidObjectName!
+    - name: id
+      type: ObjectId_2!
+    - name: validObjectName
+      type: WeirdFieldNamesValidObjectName!
+  graphql:
+    typeName: WeirdFieldNames
+    inputTypeName: WeirdFieldNamesInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: test_cases
+      dataConnectorObjectType: weird_field_names
+      fieldMapping:
+        invalidArray:
+          column:
+            name: $invalid.array
+        invalidName:
+          column:
+            name: $invalid.name
+        invalidObjectName:
+          column:
+            name: $invalid.object.name
+        id:
+          column:
+            name: _id
+        validObjectName:
+          column:
+            name: valid_object_name
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: WeirdFieldNames
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - invalidArray
+          - invalidName
+          - invalidObjectName
+          - id
+          - validObjectName
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: WeirdFieldNamesInvalidArrayBoolExp
+  operand:
+    object:
+      type: WeirdFieldNamesInvalidArray
+      comparableFields:
+        - fieldName: invalidElement
+          booleanExpressionType: IntBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: WeirdFieldNamesInvalidArrayBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: WeirdFieldNamesInvalidObjectNameBoolExp
+  operand:
+    object:
+      type: WeirdFieldNamesInvalidObjectName
+      comparableFields:
+        - fieldName: validName
+          booleanExpressionType: IntBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: WeirdFieldNamesInvalidObjectNameBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: WeirdFieldNamesValidObjectNameBoolExp
+  operand:
+    object:
+      type: WeirdFieldNamesValidObjectName
+      comparableFields:
+        - fieldName: invalidNestedName
+          booleanExpressionType: IntBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: WeirdFieldNamesValidObjectNameBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: WeirdFieldNamesBoolExp
+  operand:
+    object:
+      type: WeirdFieldNames
+      comparableFields:
+        - fieldName: invalidArray
+          booleanExpressionType: WeirdFieldNamesInvalidArrayBoolExp
+        - fieldName: invalidName
+          booleanExpressionType: IntBoolExp
+        - fieldName: invalidObjectName
+          booleanExpressionType: WeirdFieldNamesInvalidObjectNameBoolExp
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp_2
+        - fieldName: validObjectName
+          booleanExpressionType: WeirdFieldNamesValidObjectNameBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: WeirdFieldNamesBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: WeirdFieldNamesAggExp
+  operand:
+    object:
+      aggregatedType: WeirdFieldNames
+      aggregatableFields:
+        - fieldName: invalidName
+          aggregateExpression: IntAggExp
+        - fieldName: id
+          aggregateExpression: ObjectIdAggExp_2
+  count:
+    enable: true
+  graphql:
+    selectTypeName: WeirdFieldNamesAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: WeirdFieldNames
+  objectType: WeirdFieldNames
+  source:
+    dataConnectorName: test_cases
+    collection: weird_field_names
+  filterExpressionType: WeirdFieldNamesBoolExp
+  aggregateExpression: WeirdFieldNamesAggExp
+  orderableFields:
+    - fieldName: invalidArray
+      orderByDirections:
+        enableAll: true
+    - fieldName: invalidName
+      orderByDirections:
+        enableAll: true
+    - fieldName: invalidObjectName
+      orderByDirections:
+        enableAll: true
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: validObjectName
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: weirdFieldNames
+      subscription:
+        rootField: weirdFieldNames
+    selectUniques:
+      - queryRootField: weirdFieldNamesById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: weirdFieldNamesById
+    orderByExpressionType: WeirdFieldNamesOrderBy
+    filterInputTypeName: WeirdFieldNamesFilterInput
+    aggregate:
+      queryRootField: weirdFieldNamesAggregate
+      subscription:
+        rootField: weirdFieldNamesAggregate
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: WeirdFieldNames
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+

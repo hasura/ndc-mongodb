@@ -12,7 +12,7 @@
 , profile ? "dev" # Rust crate profile, usually either "dev" or "release"
 , hostPort ? null
 , command ? ["serve"]
-, configuration-dir ? ../../fixtures/hasura/sample_mflix/connector
+, configuration-dir ? ../../fixtures/hasura/app/connector/sample_mflix
 , database-uri ? "mongodb://mongodb/sample_mflix"
 , service ? { } # additional options to customize this service configuration
 , otlp-endpoint ? null

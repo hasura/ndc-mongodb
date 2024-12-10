@@ -1,0 +1,44 @@
+{
+  "name": "InvoiceLine",
+  "collections": {
+    "InvoiceLine": {
+      "type": "InvoiceLine"
+    }
+  },
+  "objectTypes": {
+    "InvoiceLine": {
+      "fields": {
+        "InvoiceId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "InvoiceLineId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "Quantity": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "TrackId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "UnitPrice": {
+          "type": {
+            "scalar": "decimal"
+          }
+        },
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        }
+      }
+    }
+  }
+}

@@ -14,7 +14,7 @@ in
       # command = ["test" "--snapshots-dir" "/snapshots" "--seed" "1337_1337_1337_1337_1337_1337_13"];
       # Replay and test the recorded snapshots
       # command = ["replay" "--snapshots-dir" "/snapshots"];
-      configuration-dir = ../fixtures/hasura/chinook/connector;
+      configuration-dir = ../fixtures/hasura/app/connector/chinook;
       database-uri = "mongodb://mongodb:${mongodb-port}/chinook";
       service.depends_on.mongodb.condition = "service_healthy";
       # Run the container as the current user so when it writes to the snapshots directory it doesn't write as root

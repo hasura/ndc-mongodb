@@ -37,7 +37,11 @@ pub async fn get_metadata_from_validation_schema(
         if let Some(schema_bson) = schema_bson_option {
             let validator_schema =
                 from_bson::<ValidatorSchema>(schema_bson.clone()).map_err(|err| {
-                    MongoAgentError::BadCollectionSchema(name.to_owned(), schema_bson.clone(), err)
+                    MongoAgentError::BadCollectionSchema(Box::new((
+                        name.to_owned(),
+                        schema_bson.clone(),
+                        err,
+                    )))
                 })?;
             let collection_schema = make_collection_schema(name, &validator_schema);
             schemas.push(collection_schema);

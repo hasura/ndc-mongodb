@@ -1,0 +1,122 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: TitleWordFrequencyGroup
+  fields:
+    - name: id
+      type: String!
+    - name: count
+      type: Int!
+  graphql:
+    typeName: TitleWordFrequencyGroup
+    inputTypeName: TitleWordFrequencyGroupInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: title_word_frequency_group
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        count:
+          column:
+            name: count
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: TitleWordFrequencyGroup
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - count
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: TitleWordFrequencyGroupBoolExp
+  operand:
+    object:
+      type: TitleWordFrequencyGroup
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: StringBoolExp
+        - fieldName: count
+          booleanExpressionType: IntBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: TitleWordFrequencyGroupBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: TitleWordFrequencyGroupAggExp
+  operand:
+    object:
+      aggregatedType: TitleWordFrequencyGroup
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: StringAggExp
+        - fieldName: count
+          aggregateExpression: IntAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: TitleWordFrequencyGroupAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: TitleWordFrequency
+  objectType: TitleWordFrequencyGroup
+  source:
+    dataConnectorName: sample_mflix
+    collection: title_word_frequency
+  filterExpressionType: TitleWordFrequencyGroupBoolExp
+  aggregateExpression: TitleWordFrequencyGroupAggExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: count
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: titleWordFrequency
+      subscription:
+        rootField: titleWordFrequency
+    selectUniques:
+      - queryRootField: titleWordFrequencyById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: titleWordFrequencyById
+    orderByExpressionType: TitleWordFrequencyOrderBy
+    filterInputTypeName: TitleWordFrequencyFilterInput
+    aggregate:
+      queryRootField: titleWordFrequencyAggregate
+      subscription:
+        rootField: titleWordFrequencyAggregate
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: TitleWordFrequency
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+

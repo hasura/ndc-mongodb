@@ -18,10 +18,10 @@ async fn runs_aggregation_over_top_level_fields() -> anyhow::Result<()> {
                   ) {
                     _count
                     milliseconds {
-                      _avg
-                      _max
-                      _min
-                      _sum
+                      avg
+                      max
+                      min
+                      sum
                     }
                     unitPrice {
                       _count
@@ -48,11 +48,11 @@ async fn aggregates_extended_json_representing_mixture_of_numeric_types() -> any
                     filter_input: { where: { type: { _regex: $types } } }
                   ) {
                     value {
-                      _avg
+                      avg
                       _count
-                      _max
-                      _min
-                      _sum
+                      max
+                      min
+                      sum
                       _count_distinct
                     }
                   }
@@ -80,11 +80,11 @@ async fn aggregates_mixture_of_numeric_and_null_values() -> anyhow::Result<()> {
                     filter_input: { where: { type: { _regex: $types } } }
                   ) {
                     value {
-                      _avg
+                      avg
                       _count
-                      _max
-                      _min
-                      _sum
+                      max
+                      min
+                      sum
                       _count_distinct
                     }
                   }

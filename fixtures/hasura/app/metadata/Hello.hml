@@ -1,0 +1,27 @@
+---
+kind: Command
+version: v1
+definition:
+  name: Hello
+  outputType: String!
+  arguments:
+    - name: name
+      type: String!
+  source:
+    dataConnectorName: sample_mflix
+    dataConnectorCommand:
+      function: hello
+  graphql:
+    rootFieldName: hello
+    rootFieldKind: Query
+  description: Basic test of native queries
+
+---
+kind: CommandPermissions
+version: v1
+definition:
+  commandName: Hello
+  permissions:
+    - role: admin
+      allowExecution: true
+

@@ -1,0 +1,29 @@
+{
+  "name": "Artist",
+  "collections": {
+    "Artist": {
+      "type": "Artist"
+    }
+  },
+  "objectTypes": {
+    "Artist": {
+      "fields": {
+        "ArtistId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "Name": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        }
+      }
+    }
+  }
+}
