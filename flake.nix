@@ -46,7 +46,7 @@
     # If source changes aren't picked up automatically try:
     #
     # - committing changes to the local engine repo
-    # - running `nix flake lock --update-input graphql-engine-source` in this repo
+    # - running `nix flake update graphql-engine-source` in this repo
     # - arion up -d engine
     #
     graphql-engine-source = {
