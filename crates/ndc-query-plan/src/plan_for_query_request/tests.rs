@@ -526,6 +526,7 @@ fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
                         "count_id".into(),
                         plan::Aggregate::ColumnCount {
                             column: "last_name".into(),
+                            field_path: None,
                             distinct: true,
                         },
                     ),
@@ -533,6 +534,7 @@ fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
                         "avg_id".into(),
                         plan::Aggregate::SingleColumn {
                             column: "id".into(),
+                            field_path: None,
                             function: plan_test_helpers::AggregateFunction::Average,
                             result_type: plan::Type::Scalar(plan_test_helpers::ScalarType::Double),
                         },

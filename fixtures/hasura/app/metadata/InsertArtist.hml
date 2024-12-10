@@ -7,7 +7,7 @@ definition:
     - name: n
       type: Int!
     - name: ok
-      type: Double_1!
+      type: Double!
   graphql:
     typeName: InsertArtist
     inputTypeName: InsertArtistInput

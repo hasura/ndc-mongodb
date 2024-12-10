@@ -518,6 +518,120 @@ definition:
 kind: AggregateExpression
 version: v1
 definition:
+  name: MoviesAwardsAggExp
+  operand:
+    object:
+      aggregatedType: MoviesAwards
+      aggregatableFields:
+        - fieldName: nominations
+          aggregateExpression: IntAggExp
+        - fieldName: text
+          aggregateExpression: StringAggExp
+        - fieldName: wins
+          aggregateExpression: IntAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: MoviesAwardsAggExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: MoviesImdbAggExp
+  operand:
+    object:
+      aggregatedType: MoviesImdb
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: IntAggExp
+        - fieldName: rating
+          aggregateExpression: DoubleAggExp
+        - fieldName: votes
+          aggregateExpression: IntAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: MoviesImdbAggExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: MoviesTomatoesAggExp
+  operand:
+    object:
+      aggregatedType: MoviesTomatoes
+      aggregatableFields:
+        - fieldName: boxOffice
+          aggregateExpression: StringAggExp
+        - fieldName: consensus
+          aggregateExpression: StringAggExp
+        - fieldName: critic
+          aggregateExpression: MoviesTomatoesCriticAggExp
+        - fieldName: dvd
+          aggregateExpression: DateAggExp
+        - fieldName: fresh
+          aggregateExpression: IntAggExp
+        - fieldName: lastUpdated
+          aggregateExpression: DateAggExp
+        - fieldName: production
+          aggregateExpression: StringAggExp
+        - fieldName: rotten
+          aggregateExpression: IntAggExp
+        - fieldName: viewer
+          aggregateExpression: MoviesTomatoesViewerAggExp
+        - fieldName: website
+          aggregateExpression: StringAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: MoviesTomatoesAggExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: MoviesTomatoesCriticAggExp
+  operand:
+    object:
+      aggregatedType: MoviesTomatoesCritic
+      aggregatableFields:
+        - fieldName: meter
+          aggregateExpression: IntAggExp
+        - fieldName: numReviews
+          aggregateExpression: IntAggExp
+        - fieldName: rating
+          aggregateExpression: DoubleAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: MoviesTomatoesCriticAggExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: MoviesTomatoesViewerAggExp
+  operand:
+    object:
+      aggregatedType: MoviesTomatoesViewer
+      aggregatableFields:
+        - fieldName: meter
+          aggregateExpression: IntAggExp
+        - fieldName: numReviews
+          aggregateExpression: IntAggExp
+        - fieldName: rating
+          aggregateExpression: DoubleAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: MoviesTomatoesViewerAggExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
   name: MoviesAggExp
   operand:
     object:
@@ -549,6 +663,12 @@ definition:
           aggregateExpression: StringAggExp
         - fieldName: year
           aggregateExpression: IntAggExp
+        - fieldName: awards
+          aggregateExpression: MoviesAwardsAggExp
+        - fieldName: imdb
+          aggregateExpression: MoviesImdbAggExp
+        - fieldName: tomatoes
+          aggregateExpression: MoviesTomatoesAggExp
   count:
     enable: true
   graphql:
