@@ -14,7 +14,22 @@ This changelog documents the changes between release versions.
 
 ### Fixed
 
+- Upgrade dependencies to get fix for RUSTSEC-2024-0421, a vulnerability in domain name comparisons ([#138](https://github.com/hasura/ndc-mongodb/pull/138))
 - Aggregations on empty document sets now produce `null` instead of failing with an error ([#136](https://github.com/hasura/ndc-mongodb/pull/136))
+
+#### Fix for RUSTSEC-2024-0421 / CVE-2024-12224
+
+Updates dependencies to upgrade the library, idna, to get a version that is not
+affected by a vulnerability reported in [RUSTSEC-2024-0421][].
+
+[RUSTSEC-2024-0421]: https://rustsec.org/advisories/RUSTSEC-2024-0421
+
+The vulnerability allows an attacker to craft a domain name that older versions
+of idna interpret as identical to a legitimate domain name, but that is in fact
+a different name. We do not expect that this impacts the MongoDB connector since
+it uses the affected library exclusively to connect to MongoDB databases, and
+database URLs are supplied by trusted administrators. But better to be safe than
+sorry.
 
 ## [1.5.0] - 2024-12-05
 

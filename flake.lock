@@ -167,11 +167,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1724371276,
-        "narHash": "sha256-OOBl2szM8vhLoM3frworbEkK6kxv+96oy7SWKziuP8o=",
+        "lastModified": 1733604522,
+        "narHash": "sha256-9XNxIgOGq8MJ3a1GPE1lGaMBSz6Ossgv/Ec+KhyaC68=",
         "owner": "hasura",
         "repo": "ddn-cli-nix",
-        "rev": "ba1a7acb2eed8cec30c8527567b7bcb1a46888a1",
+        "rev": "8e9695beabd6d111a69ae288f8abba6ebf8d1c82",
         "type": "github"
       },
       "original": {

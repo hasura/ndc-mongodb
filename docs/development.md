@@ -305,7 +305,7 @@ It's important to keep the GraphQL Engine version updated to make sure that the
 connector is working with the latest engine version. To update run,
 
 ```sh
-$ nix flake lock --update-input graphql-engine-source
+$ nix flake update graphql-engine-source
 ```
 
 Then commit the changes to `flake.lock` to version control.
@@ -332,7 +332,7 @@ any order):
 To update `rust-overlay` run,
 
 ```sh
-$ nix flake lock --update-input rust-overlay
+$ nix flake update rust-overlay
 ```
 
 If you are using direnv to automatically apply the nix dev environment note that
