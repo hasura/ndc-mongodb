@@ -66,26 +66,6 @@ async fn filters_by_comparisons_on_elements_of_array_field() -> anyhow::Result<(
     Ok(())
 }
 
-// This doesn't seem to work anymore in the latest engine version
-// #[tokio::test]
-// async fn filters_by_comparisons_on_elements_of_array_of_scalars() -> anyhow::Result<()> {
-//     assert_yaml_snapshot!(
-//         graphql_query(
-//             r#"
-//             query MyQuery {
-//               movies(where: { cast: { _eq: "Albert Austin" } }) {
-//                 title
-//                 cast
-//               }
-//             }
-//             "#
-//         )
-//         .run()
-//         .await?
-//     );
-//     Ok(())
-// }
-
 #[tokio::test]
 async fn filters_by_comparisons_on_elements_of_array_of_scalars_against_variable(
 ) -> anyhow::Result<()> {
