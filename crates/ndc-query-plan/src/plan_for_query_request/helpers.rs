@@ -24,7 +24,7 @@ pub fn find_object_field<'a, S>(
 pub fn find_object_field_path<'a, S>(
     object_type: &'a plan::ObjectType<S>,
     field_name: &ndc::FieldName,
-    field_path: &Option<Vec<ndc::FieldName>>,
+    field_path: Option<&Vec<ndc::FieldName>>,
 ) -> Result<&'a plan::Type<S>> {
     match field_path {
         None => find_object_field(object_type, field_name),

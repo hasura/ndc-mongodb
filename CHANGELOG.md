@@ -4,9 +4,18 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+### Added
+
+- You can now aggregate values in nested object fields ([#136](https://github.com/hasura/ndc-mongodb/pull/136))
+
+### Changed
+
+- Result types for aggregation operations other than count are now nullable ([#136](https://github.com/hasura/ndc-mongodb/pull/136))
+
 ### Fixed
 
 - Upgrade dependencies to get fix for RUSTSEC-2024-0421, a vulnerability in domain name comparisons ([#138](https://github.com/hasura/ndc-mongodb/pull/138))
+- Aggregations on empty document sets now produce `null` instead of failing with an error ([#136](https://github.com/hasura/ndc-mongodb/pull/136))
 
 #### Fix for RUSTSEC-2024-0421 / CVE-2024-12224
 
