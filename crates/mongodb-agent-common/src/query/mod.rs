@@ -110,11 +110,11 @@ mod tests {
             {
                 "$facet": {
                     "avg": [
-                        { "$match": { "gpa": { "$exists": true, "$ne": null } } },
+                        { "$match": { "gpa": { "$ne": null } } },
                         { "$group": { "_id": null, "result": { "$avg": "$gpa" } } },
                     ],
                     "count": [
-                        { "$match": { "gpa": { "$exists": true, "$ne": null } } },
+                        { "$match": { "gpa": { "$ne": null } } },
                         { "$group": { "_id": "$gpa" } },
                         { "$count": "result" },
                     ],
@@ -123,10 +123,17 @@ mod tests {
             {
                 "$replaceWith": {
                     "aggregates": {
-                        "avg": { "$getField": {
-                            "field": "result",
-                            "input": { "$first": { "$getField": { "$literal": "avg" } } },
-                        } },
+                        "avg": {
+                            "$ifNull": [
+                                {
+                                    "$getField": {
+                                        "field": "result",
+                                        "input": { "$first": { "$getField": { "$literal": "avg" } } },
+                                    }
+                                },
+                                null
+                            ]
+                        },
                         "count": {
                             "$ifNull": [
                                 {
@@ -180,24 +187,31 @@ mod tests {
             { "$match": { "gpa": { "$lt": 4.0 } } },
             {
                 "$facet": {
-                    "avg": [
-                        { "$match": { "gpa": { "$exists": true, "$ne": null } } },
-                        { "$group": { "_id": null, "result": { "$avg": "$gpa" } } },
-                    ],
                     "__ROWS__": [{
                         "$replaceWith": {
                             "student_gpa": { "$ifNull": ["$gpa", null] },
                         },
                     }],
+                    "avg": [
+                        { "$match": { "gpa": { "$ne": null } } },
+                        { "$group": { "_id": null, "result": { "$avg": "$gpa" } } },
+                    ],
                 },
             },
             {
                 "$replaceWith": {
                     "aggregates": {
-                        "avg": { "$getField": {
-                            "field": "result",
-                            "input": { "$first": { "$getField": { "$literal": "avg" } } },
-                        } },
+                        "avg": {
+                            "$ifNull": [
+                                {
+                                    "$getField": {
+                                        "field": "result",
+                                        "input": { "$first": { "$getField": { "$literal": "avg" } } },
+                                    }
+                                },
+                                null
+                            ]
+                        },
                     },
                     "rows": "$__ROWS__",
                 },
