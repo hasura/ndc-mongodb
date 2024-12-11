@@ -6,10 +6,7 @@
     systems.url = "github:nix-systems/default";
 
     # Nix build system for Rust projects, delegates to cargo
-    crane = {
-      url = "github:ipetkov/crane";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    crane.url = "github:ipetkov/crane";
 
     hasura-ddn-cli.url = "github:hasura/ddn-cli-nix";
 
@@ -46,7 +43,7 @@
     # If source changes aren't picked up automatically try:
     #
     # - committing changes to the local engine repo
-    # - running `nix flake lock --update-input graphql-engine-source` in this repo
+    # - running `nix flake update graphql-engine-source` in this repo
     # - arion up -d engine
     #
     graphql-engine-source = {
@@ -106,7 +103,7 @@
           # This is useful for building Docker images on Mac developer machines.
           pkgsCross.linux = mkPkgsLinux final.buildPlatform.system;
 
-          ddn = hasura-ddn-cli.defaultPackage.${final.system};
+          ddn = hasura-ddn-cli.packages.${final.system}.default;
         })
       ];
 

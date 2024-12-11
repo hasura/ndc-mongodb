@@ -1,0 +1,66 @@
+{
+  "name": "Track",
+  "collections": {
+    "Track": {
+      "type": "Track"
+    }
+  },
+  "objectTypes": {
+    "Track": {
+      "fields": {
+        "AlbumId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "Bytes": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "Composer": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "GenreId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "MediaTypeId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "Milliseconds": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "Name": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "TrackId": {
+          "type": {
+            "scalar": "int"
+          }
+        },
+        "UnitPrice": {
+          "type": {
+            "scalar": "decimal"
+          }
+        },
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        }
+      }
+    }
+  }
+}

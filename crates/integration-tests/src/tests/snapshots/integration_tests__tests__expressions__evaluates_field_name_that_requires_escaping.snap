@@ -1,8 +1,8 @@
 ---
 source: crates/integration-tests/src/tests/expressions.rs
-expression: "graphql_query(r#\"\n                query {\n                  testCases_weirdFieldNames(where: { invalidName: { _eq: 3 } }) {\n                    invalidName\n                  }\n                }\n            \"#).run().await?"
+expression: "graphql_query(r#\"\n                query {\n                  weirdFieldNames(where: { invalidName: { _eq: 3 } }) {\n                    invalidName\n                  }\n                }\n            \"#).run().await?"
 ---
 data:
-  testCases_weirdFieldNames:
+  weirdFieldNames:
     - invalidName: 3
 errors: ~

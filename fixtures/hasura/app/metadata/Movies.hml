@@ -1,0 +1,663 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: MoviesAwards
+  fields:
+    - name: nominations
+      type: Int!
+    - name: text
+      type: String!
+    - name: wins
+      type: Int!
+  graphql:
+    typeName: MoviesAwards
+    inputTypeName: MoviesAwardsInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: movies_awards
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: MoviesAwards
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - nominations
+          - text
+          - wins
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: MoviesImdb
+  fields:
+    - name: id
+      type: Int!
+    - name: rating
+      type: Double!
+    - name: votes
+      type: Int!
+  graphql:
+    typeName: MoviesImdb
+    inputTypeName: MoviesImdbInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: movies_imdb
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: MoviesImdb
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - rating
+          - votes
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: MoviesTomatoesCritic
+  fields:
+    - name: meter
+      type: Int!
+    - name: numReviews
+      type: Int
+    - name: rating
+      type: Double
+  graphql:
+    typeName: MoviesTomatoesCritic
+    inputTypeName: MoviesTomatoesCriticInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: movies_tomatoes_critic
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: MoviesTomatoesCritic
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - meter
+          - numReviews
+          - rating
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: MoviesTomatoesViewer
+  fields:
+    - name: meter
+      type: Int
+    - name: numReviews
+      type: Int!
+    - name: rating
+      type: Double
+  graphql:
+    typeName: MoviesTomatoesViewer
+    inputTypeName: MoviesTomatoesViewerInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: movies_tomatoes_viewer
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: MoviesTomatoesViewer
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - meter
+          - numReviews
+          - rating
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: MoviesTomatoes
+  fields:
+    - name: boxOffice
+      type: String
+    - name: consensus
+      type: String
+    - name: critic
+      type: MoviesTomatoesCritic
+    - name: dvd
+      type: Date
+    - name: fresh
+      type: Int
+    - name: lastUpdated
+      type: Date!
+    - name: production
+      type: String
+    - name: rotten
+      type: Int
+    - name: viewer
+      type: MoviesTomatoesViewer!
+    - name: website
+      type: String
+  graphql:
+    typeName: MoviesTomatoes
+    inputTypeName: MoviesTomatoesInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: movies_tomatoes
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: MoviesTomatoes
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - boxOffice
+          - consensus
+          - critic
+          - dvd
+          - fresh
+          - lastUpdated
+          - production
+          - rotten
+          - viewer
+          - website
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: Movies
+  fields:
+    - name: id
+      type: ObjectId!
+    - name: awards
+      type: MoviesAwards!
+    - name: cast
+      type: "[String!]"
+    - name: countries
+      type: "[String!]!"
+    - name: directors
+      type: "[String!]"
+    - name: fullplot
+      type: String
+    - name: genres
+      type: "[String!]"
+    - name: imdb
+      type: MoviesImdb!
+    - name: languages
+      type: "[String!]"
+    - name: lastupdated
+      type: String!
+    - name: metacritic
+      type: Int
+    - name: numMflixComments
+      type: Int
+    - name: plot
+      type: String
+    - name: poster
+      type: String
+    - name: rated
+      type: String
+    - name: released
+      type: Date
+    - name: runtime
+      type: Int
+    - name: title
+      type: String!
+    - name: tomatoes
+      type: MoviesTomatoes
+    - name: type
+      type: String!
+    - name: writers
+      type: "[String!]"
+    - name: year
+      type: Int!
+  graphql:
+    typeName: Movies
+    inputTypeName: MoviesInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: movies
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        awards:
+          column:
+            name: awards
+        cast:
+          column:
+            name: cast
+        countries:
+          column:
+            name: countries
+        directors:
+          column:
+            name: directors
+        fullplot:
+          column:
+            name: fullplot
+        genres:
+          column:
+            name: genres
+        imdb:
+          column:
+            name: imdb
+        languages:
+          column:
+            name: languages
+        lastupdated:
+          column:
+            name: lastupdated
+        metacritic:
+          column:
+            name: metacritic
+        numMflixComments:
+          column:
+            name: num_mflix_comments
+        plot:
+          column:
+            name: plot
+        poster:
+          column:
+            name: poster
+        rated:
+          column:
+            name: rated
+        released:
+          column:
+            name: released
+        runtime:
+          column:
+            name: runtime
+        title:
+          column:
+            name: title
+        tomatoes:
+          column:
+            name: tomatoes
+        type:
+          column:
+            name: type
+        writers:
+          column:
+            name: writers
+        year:
+          column:
+            name: year
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Movies
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - awards
+          - cast
+          - countries
+          - directors
+          - fullplot
+          - genres
+          - imdb
+          - languages
+          - lastupdated
+          - metacritic
+          - numMflixComments
+          - plot
+          - poster
+          - rated
+          - released
+          - runtime
+          - title
+          - tomatoes
+          - type
+          - writers
+          - year
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: MoviesAwardsBoolExp
+  operand:
+    object:
+      type: MoviesAwards
+      comparableFields:
+        - fieldName: nominations
+          booleanExpressionType: IntBoolExp
+        - fieldName: text
+          booleanExpressionType: StringBoolExp
+        - fieldName: wins
+          booleanExpressionType: IntBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: MoviesAwardsBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: MoviesImdbBoolExp
+  operand:
+    object:
+      type: MoviesImdb
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: IntBoolExp
+        - fieldName: rating
+          booleanExpressionType: DoubleBoolExp
+        - fieldName: votes
+          booleanExpressionType: IntBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: MoviesImdbBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: MoviesTomatoesCriticBoolExp
+  operand:
+    object:
+      type: MoviesTomatoesCritic
+      comparableFields:
+        - fieldName: meter
+          booleanExpressionType: IntBoolExp
+        - fieldName: numReviews
+          booleanExpressionType: IntBoolExp
+        - fieldName: rating
+          booleanExpressionType: DoubleBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: MoviesTomatoesCriticBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: MoviesTomatoesViewerBoolExp
+  operand:
+    object:
+      type: MoviesTomatoesViewer
+      comparableFields:
+        - fieldName: meter
+          booleanExpressionType: IntBoolExp
+        - fieldName: numReviews
+          booleanExpressionType: IntBoolExp
+        - fieldName: rating
+          booleanExpressionType: DoubleBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: MoviesTomatoesViewerBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: MoviesTomatoesBoolExp
+  operand:
+    object:
+      type: MoviesTomatoes
+      comparableFields:
+        - fieldName: boxOffice
+          booleanExpressionType: StringBoolExp
+        - fieldName: consensus
+          booleanExpressionType: StringBoolExp
+        - fieldName: critic
+          booleanExpressionType: MoviesTomatoesCriticBoolExp
+        - fieldName: dvd
+          booleanExpressionType: DateBoolExp
+        - fieldName: fresh
+          booleanExpressionType: IntBoolExp
+        - fieldName: lastUpdated
+          booleanExpressionType: DateBoolExp
+        - fieldName: production
+          booleanExpressionType: StringBoolExp
+        - fieldName: rotten
+          booleanExpressionType: IntBoolExp
+        - fieldName: viewer
+          booleanExpressionType: MoviesTomatoesViewerBoolExp
+        - fieldName: website
+          booleanExpressionType: StringBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: MoviesTomatoesBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: MoviesBoolExp
+  operand:
+    object:
+      type: Movies
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp
+        - fieldName: awards
+          booleanExpressionType: MoviesAwardsBoolExp
+        - fieldName: fullplot
+          booleanExpressionType: StringBoolExp
+        - fieldName: imdb
+          booleanExpressionType: MoviesImdbBoolExp
+        - fieldName: lastupdated
+          booleanExpressionType: StringBoolExp
+        - fieldName: metacritic
+          booleanExpressionType: IntBoolExp
+        - fieldName: numMflixComments
+          booleanExpressionType: IntBoolExp
+        - fieldName: plot
+          booleanExpressionType: StringBoolExp
+        - fieldName: poster
+          booleanExpressionType: StringBoolExp
+        - fieldName: rated
+          booleanExpressionType: StringBoolExp
+        - fieldName: released
+          booleanExpressionType: DateBoolExp
+        - fieldName: runtime
+          booleanExpressionType: IntBoolExp
+        - fieldName: title
+          booleanExpressionType: StringBoolExp
+        - fieldName: tomatoes
+          booleanExpressionType: MoviesTomatoesBoolExp
+        - fieldName: type
+          booleanExpressionType: StringBoolExp
+        - fieldName: year
+          booleanExpressionType: IntBoolExp
+      comparableRelationships:
+        - relationshipName: comments
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: MoviesBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: MoviesAggExp
+  operand:
+    object:
+      aggregatedType: Movies
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: ObjectIdAggExp
+        - fieldName: fullplot
+          aggregateExpression: StringAggExp
+        - fieldName: lastupdated
+          aggregateExpression: StringAggExp
+        - fieldName: metacritic
+          aggregateExpression: IntAggExp
+        - fieldName: numMflixComments
+          aggregateExpression: IntAggExp
+        - fieldName: plot
+          aggregateExpression: StringAggExp
+        - fieldName: poster
+          aggregateExpression: StringAggExp
+        - fieldName: rated
+          aggregateExpression: StringAggExp
+        - fieldName: released
+          aggregateExpression: DateAggExp
+        - fieldName: runtime
+          aggregateExpression: IntAggExp
+        - fieldName: title
+          aggregateExpression: StringAggExp
+        - fieldName: type
+          aggregateExpression: StringAggExp
+        - fieldName: year
+          aggregateExpression: IntAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: MoviesAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: Movies
+  objectType: Movies
+  source:
+    dataConnectorName: sample_mflix
+    collection: movies
+  filterExpressionType: MoviesBoolExp
+  aggregateExpression: MoviesAggExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: awards
+      orderByDirections:
+        enableAll: true
+    - fieldName: cast
+      orderByDirections:
+        enableAll: true
+    - fieldName: countries
+      orderByDirections:
+        enableAll: true
+    - fieldName: directors
+      orderByDirections:
+        enableAll: true
+    - fieldName: fullplot
+      orderByDirections:
+        enableAll: true
+    - fieldName: genres
+      orderByDirections:
+        enableAll: true
+    - fieldName: imdb
+      orderByDirections:
+        enableAll: true
+    - fieldName: languages
+      orderByDirections:
+        enableAll: true
+    - fieldName: lastupdated
+      orderByDirections:
+        enableAll: true
+    - fieldName: metacritic
+      orderByDirections:
+        enableAll: true
+    - fieldName: numMflixComments
+      orderByDirections:
+        enableAll: true
+    - fieldName: plot
+      orderByDirections:
+        enableAll: true
+    - fieldName: poster
+      orderByDirections:
+        enableAll: true
+    - fieldName: rated
+      orderByDirections:
+        enableAll: true
+    - fieldName: released
+      orderByDirections:
+        enableAll: true
+    - fieldName: runtime
+      orderByDirections:
+        enableAll: true
+    - fieldName: title
+      orderByDirections:
+        enableAll: true
+    - fieldName: tomatoes
+      orderByDirections:
+        enableAll: true
+    - fieldName: type
+      orderByDirections:
+        enableAll: true
+    - fieldName: writers
+      orderByDirections:
+        enableAll: true
+    - fieldName: year
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: movies
+      subscription:
+        rootField: movies
+    selectUniques:
+      - queryRootField: moviesById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: moviesById
+    orderByExpressionType: MoviesOrderBy
+    filterInputTypeName: MoviesFilterInput
+    aggregate:
+      queryRootField: moviesAggregate
+      subscription:
+        rootField: moviesAggregate
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Movies
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+

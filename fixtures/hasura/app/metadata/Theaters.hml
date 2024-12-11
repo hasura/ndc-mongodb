@@ -1,0 +1,296 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: TheatersLocationAddress
+  fields:
+    - name: city
+      type: String!
+    - name: state
+      type: String!
+    - name: street1
+      type: String!
+    - name: street2
+      type: String
+    - name: zipcode
+      type: String!
+  graphql:
+    typeName: TheatersLocationAddress
+    inputTypeName: TheatersLocationAddressInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: theaters_location_address
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: TheatersLocationAddress
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - city
+          - state
+          - street1
+          - street2
+          - zipcode
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: TheatersLocationGeo
+  fields:
+    - name: coordinates
+      type: "[Double!]!"
+    - name: type
+      type: String!
+  graphql:
+    typeName: TheatersLocationGeo
+    inputTypeName: TheatersLocationGeoInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: theaters_location_geo
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: TheatersLocationGeo
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - coordinates
+          - type
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: TheatersLocation
+  fields:
+    - name: address
+      type: TheatersLocationAddress!
+    - name: geo
+      type: TheatersLocationGeo!
+  graphql:
+    typeName: TheatersLocation
+    inputTypeName: TheatersLocationInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: theaters_location
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: TheatersLocation
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - address
+          - geo
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: Theaters
+  fields:
+    - name: id
+      type: ObjectId!
+    - name: location
+      type: TheatersLocation!
+    - name: theaterId
+      type: Int!
+  graphql:
+    typeName: Theaters
+    inputTypeName: TheatersInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: theaters
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        location:
+          column:
+            name: location
+        theaterId:
+          column:
+            name: theaterId
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Theaters
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - location
+          - theaterId
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: TheatersLocationAddressBoolExp
+  operand:
+    object:
+      type: TheatersLocationAddress
+      comparableFields:
+        - fieldName: city
+          booleanExpressionType: StringBoolExp
+        - fieldName: state
+          booleanExpressionType: StringBoolExp
+        - fieldName: street1
+          booleanExpressionType: StringBoolExp
+        - fieldName: street2
+          booleanExpressionType: StringBoolExp
+        - fieldName: zipcode
+          booleanExpressionType: StringBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: TheatersLocationAddressBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: TheatersLocationGeoBoolExp
+  operand:
+    object:
+      type: TheatersLocationGeo
+      comparableFields:
+        - fieldName: type
+          booleanExpressionType: StringBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: TheatersLocationGeoBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: TheatersLocationBoolExp
+  operand:
+    object:
+      type: TheatersLocation
+      comparableFields:
+        - fieldName: address
+          booleanExpressionType: TheatersLocationAddressBoolExp
+        - fieldName: geo
+          booleanExpressionType: TheatersLocationGeoBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: TheatersLocationBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: TheatersBoolExp
+  operand:
+    object:
+      type: Theaters
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp
+        - fieldName: location
+          booleanExpressionType: TheatersLocationBoolExp
+        - fieldName: theaterId
+          booleanExpressionType: IntBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: TheatersBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: TheatersAggExp
+  operand:
+    object:
+      aggregatedType: Theaters
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: ObjectIdAggExp
+        - fieldName: theaterId
+          aggregateExpression: IntAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: TheatersAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: Theaters
+  objectType: Theaters
+  source:
+    dataConnectorName: sample_mflix
+    collection: theaters
+  filterExpressionType: TheatersBoolExp
+  aggregateExpression: TheatersAggExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: location
+      orderByDirections:
+        enableAll: true
+    - fieldName: theaterId
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: theaters
+      subscription:
+        rootField: theaters
+    selectUniques:
+      - queryRootField: theatersById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: theatersById
+    orderByExpressionType: TheatersOrderBy
+    filterInputTypeName: TheatersFilterInput
+    aggregate:
+      queryRootField: theatersAggregate
+      subscription:
+        rootField: theatersAggregate
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Theaters
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+

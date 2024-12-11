@@ -22,7 +22,7 @@ in
 {
   connector = import ./services/connector.nix {
     inherit pkgs otlp-endpoint;
-    configuration-dir = ../fixtures/hasura/sample_mflix/connector;
+    configuration-dir = ../fixtures/hasura/app/connector/sample_mflix;
     database-uri = "mongodb://mongodb/sample_mflix";
     port = connector-port;
     hostPort = hostPort connector-port;
@@ -33,7 +33,7 @@ in
 
   connector-chinook = import ./services/connector.nix {
     inherit pkgs otlp-endpoint;
-    configuration-dir = ../fixtures/hasura/chinook/connector;
+    configuration-dir = ../fixtures/hasura/app/connector/chinook;
     database-uri = "mongodb://mongodb/chinook";
     port = connector-chinook-port;
     hostPort = hostPort connector-chinook-port;
@@ -44,7 +44,7 @@ in
 
   connector-test-cases = import ./services/connector.nix {
     inherit pkgs otlp-endpoint;
-    configuration-dir = ../fixtures/hasura/test_cases/connector;
+    configuration-dir = ../fixtures/hasura/app/connector/test_cases;
     database-uri = "mongodb://mongodb/test_cases";
     port = connector-test-cases-port;
     hostPort = hostPort connector-test-cases-port;
@@ -75,10 +75,7 @@ in
       test_cases = "http://connector-test-cases:${connector-test-cases-port}";
     };
     ddn-dirs = [
-      ../fixtures/hasura/chinook/metadata
-      ../fixtures/hasura/sample_mflix/metadata
-      ../fixtures/hasura/test_cases/metadata
-      ../fixtures/hasura/common/metadata
+      ../fixtures/hasura/app/metadata
     ];
     service.depends_on = {
       auth-hook.condition = "service_started";
