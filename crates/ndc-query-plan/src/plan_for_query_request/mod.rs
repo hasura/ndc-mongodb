@@ -25,7 +25,7 @@ use query_plan_state::QueryPlanInfo;
 pub use self::plan_for_mutation_request::plan_for_mutation_request;
 use self::{
     helpers::{find_object_field, find_object_field_path, lookup_relationship},
-    plan_for_arguments::plan_for_arguments,
+    plan_for_arguments::{plan_arguments_from_plan_parameters, plan_for_arguments},
     query_context::QueryContext,
     query_plan_error::QueryPlanError,
     query_plan_state::QueryPlanState,
@@ -260,21 +260,33 @@ fn plan_for_order_by_element<T: QueryContext>(
 ) -> Result<plan::OrderByElement<T>> {
     let target = match element.target {
         ndc::OrderByTarget::Column {
-            name,
-            field_path,
             path,
-        } => plan::OrderByTarget::Column {
-            name: name.clone(),
+            name,
+            arguments,
             field_path,
-            path: plan_for_relationship_path(
+        } => {
+            let (relationship_names, collection_object_type) = plan_for_relationship_path(
                 plan_state,
                 root_collection_object_type,
                 object_type,
                 path,
                 vec![name],
-            )?
-            .0,
-        },
+            )?;
+            let object_field = collection_object_type.get(&name)?;
+
+            let plan_arguments = plan_arguments_from_plan_parameters(
+                plan_state,
+                &object_field.parameters,
+                arguments,
+            )?;
+
+            plan::OrderByTarget::Column {
+                path: relationship_names,
+                name: name.clone(),
+                arguments: plan_arguments,
+                field_path,
+            }
+        }
         ndc::OrderByTarget::SingleColumnAggregate {
             column,
             function,
