@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use ndc_models as ndc;
+use ndc_models::{self as ndc};
 
 use crate::{self as plan};
 
@@ -11,7 +11,7 @@ type Result<T> = std::result::Result<T, QueryPlanError>;
 pub fn find_object_field<'a, S>(
     object_type: &'a plan::ObjectType<S>,
     field_name: &ndc::FieldName,
-) -> Result<&'a plan::Type<S>> {
+) -> Result<&'a plan::ObjectField<S>> {
     object_type.fields.get(field_name).ok_or_else(|| {
         QueryPlanError::UnknownObjectTypeField {
             object_type: object_type.name.clone(),
@@ -21,28 +21,29 @@ pub fn find_object_field<'a, S>(
     })
 }
 
-pub fn find_object_field_path<'a, S>(
+pub fn get_object_field_by_path<'a, S>(
     object_type: &'a plan::ObjectType<S>,
     field_name: &ndc::FieldName,
     field_path: Option<&Vec<ndc::FieldName>>,
-) -> Result<&'a plan::Type<S>> {
+) -> Result<&'a plan::ObjectField<S>> {
     match field_path {
         None => find_object_field(object_type, field_name),
-        Some(field_path) => find_object_field_path_helper(object_type, field_name, field_path),
+        Some(field_path) => get_object_field_by_path_helper(object_type, field_name, field_path),
     }
 }
 
-fn find_object_field_path_helper<'a, S>(
+fn get_object_field_by_path_helper<'a, S>(
     object_type: &'a plan::ObjectType<S>,
     field_name: &ndc::FieldName,
     field_path: &[ndc::FieldName],
-) -> Result<&'a plan::Type<S>> {
-    let field_type = find_object_field(object_type, field_name)?;
+) -> Result<&'a plan::ObjectField<S>> {
+    let object_field = find_object_field(object_type, field_name)?;
+    let field_type = &object_field.r#type;
     match field_path {
-        [] => Ok(field_type),
+        [] => Ok(object_field),
         [nested_field_name, rest @ ..] => {
             let o = find_object_type(field_type, &object_type.name, field_name)?;
-            find_object_field_path_helper(o, nested_field_name, rest)
+            get_object_field_by_path_helper(o, nested_field_name, rest)
         }
     }
 }
@@ -94,8 +95,8 @@ where
     field_path
         .iter()
         .try_fold(collection_object_type, |obj_type, field_name| {
-            let field_type = find_object_field(&obj_type, field_name)?.clone();
-            normalize_object_type(field_path, field_type)
+            let object_field = find_object_field(&obj_type, field_name)?.clone();
+            normalize_object_type(field_path, object_field.r#type)
         })
 }
 
@@ -106,46 +107,4 @@ pub fn lookup_relationship<'a>(
     relationships
         .get(relationship)
         .ok_or_else(|| QueryPlanError::UnspecifiedRelation(relationship.to_owned()))
-}
-
-/// Special case handling for array comparisons! Normally we assume that the right operand of Equal
-/// is the same type as the left operand. BUT MongoDB allows comparing arrays to scalar values in
-/// which case the condition passes if any array element is equal to the given scalar value. So
-/// this function needs to return a scalar type if the user is expecting array-to-scalar
-/// comparison, or an array type if the user is expecting array-to-array comparison. Or if the
-/// column does not have an array type we fall back to the default assumption that the value type
-/// should be the same as the column type.
-///
-/// For now this assumes that if the column has an array type, the value type is a scalar type.
-/// That's the simplest option since we don't support array-to-array comparisons yet.
-///
-/// TODO: When we do support array-to-array comparisons we will need to either:
-///
-/// - input the [ndc::ComparisonValue] into this function, and any query request variables; check
-///   that the given JSON value or variable values are not array values, and if so assume the value
-///   type should be a scalar type
-/// - or get the GraphQL Engine to include a type with [ndc::ComparisonValue] in which case we can
-///   use that as the value type
-///
-/// It is important that queries behave the same when given an inline value or variables. So we
-/// can't just check the value of an [ndc::ComparisonValue::Scalar], and punt on an
-/// [ndc::ComparisonValue::Variable] input. The latter requires accessing query request variables,
-/// and it will take a little more work to thread those through the code to make them available
-/// here.
-pub fn value_type_in_possible_array_equality_comparison<S>(
-    column_type: plan::Type<S>,
-) -> plan::Type<S>
-where
-    S: Clone,
-{
-    match column_type {
-        plan::Type::ArrayOf(t) => *t,
-        plan::Type::Nullable(t) => match *t {
-            v @ plan::Type::ArrayOf(_) => {
-                value_type_in_possible_array_equality_comparison(v.clone())
-            }
-            t => plan::Type::Nullable(Box::new(t)),
-        },
-        _ => column_type,
-    }
 }

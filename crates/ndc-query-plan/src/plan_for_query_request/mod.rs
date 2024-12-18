@@ -15,16 +15,18 @@ mod tests;
 use std::{collections::VecDeque, iter::once};
 
 use crate::{self as plan, type_annotated_field, ObjectType, QueryPlan, Scope};
-use helpers::{find_nested_collection_type, value_type_in_possible_array_equality_comparison};
 use indexmap::IndexMap;
 use itertools::Itertools;
 use ndc::{ExistsInCollection, QueryRequest};
-use ndc_models as ndc;
+use ndc_models::{self as ndc};
 use query_plan_state::QueryPlanInfo;
 
 pub use self::plan_for_mutation_request::plan_for_mutation_request;
 use self::{
-    helpers::{find_object_field, find_object_field_path, lookup_relationship},
+    helpers::{
+        find_nested_collection_type, find_object_field, get_object_field_by_path,
+        lookup_relationship,
+    },
     plan_for_arguments::{plan_arguments_from_plan_parameters, plan_for_arguments},
     query_context::QueryContext,
     query_plan_error::QueryPlanError,
@@ -176,25 +178,56 @@ fn plan_for_aggregate<T: QueryContext>(
     match aggregate {
         ndc::Aggregate::ColumnCount {
             column,
+            arguments,
             distinct,
             field_path,
-        } => Ok(plan::Aggregate::ColumnCount {
-            column,
-            field_path,
-            distinct,
-        }),
+        } => {
+            let arguments = if arguments.is_empty() {
+                Default::default()
+            } else {
+                Err(QueryPlanError::NotImplemented(
+                    "arguments on column count aggregate".to_string(),
+                ))?
+            };
+
+            // TODO: To support aggregate arguments here we need a way to look up aggregate
+            // parameters (a map of supported argument names to types). When we have that replace
+            // the above `arguments` assignment with this one:
+            // let arguments = plan_for_arguments(plan_state, parameters, arguments)?;
+
+            Ok(plan::Aggregate::ColumnCount {
+                column,
+                arguments,
+                distinct,
+                field_path,
+            })
+        }
         ndc::Aggregate::SingleColumn {
             column,
+            arguments,
             function,
             field_path,
         } => {
+            let arguments = if arguments.is_empty() {
+                Default::default()
+            } else {
+                Err(QueryPlanError::NotImplemented(
+                    "arguments on single-column aggregate".to_string(),
+                ))?
+            };
+
+            // TODO: To support aggregate arguments here we need a way to look up aggregate
+            // parameters (a map of supported argument names to types). When we have that replace
+            // the above `arguments` assignment with this one:
+            // let arguments = plan_for_arguments(plan_state, parameters, arguments)?;
+
             let object_type_field_type =
-                find_object_field_path(collection_object_type, &column, field_path.as_ref())?;
-            // let column_scalar_type_name = get_scalar_type_name(&object_type_field.r#type)?;
+                get_object_field_by_path(collection_object_type, &column, field_path.as_ref())?;
             let (function, definition) =
                 context.find_aggregation_function_definition(object_type_field_type, &function)?;
             Ok(plan::Aggregate::SingleColumn {
                 column,
+                arguments,
                 field_path,
                 function,
                 result_type: definition.result_type.clone(),
@@ -445,6 +478,7 @@ fn plan_for_relationship_path_helper<T: QueryContext>(
     let is_last = tail.is_empty();
 
     let ndc::PathElement {
+        field_path,
         relationship,
         arguments,
         predicate,
@@ -567,6 +601,13 @@ fn plan_for_expression<T: QueryContext>(
             operator,
             value,
         ),
+        ndc::Expression::ArrayComparison { column, comparison } => plan_for_array_comparison(
+            plan_state,
+            root_collection_object_type,
+            object_type,
+            column,
+            comparison,
+        ),
         ndc::Expression::Exists {
             in_collection,
             predicate,
@@ -595,7 +636,7 @@ fn plan_for_binary_comparison<T: QueryContext>(
     let value_type = match operator_definition {
         plan::ComparisonOperatorDefinition::Equal => {
             let column_type = comparison_target.target_type().clone();
-            value_type_in_possible_array_equality_comparison(column_type)
+            column_type
         }
         plan::ComparisonOperatorDefinition::In => {
             plan::Type::ArrayOf(Box::new(comparison_target.target_type().clone()))
@@ -615,6 +656,37 @@ fn plan_for_binary_comparison<T: QueryContext>(
     })
 }
 
+fn plan_for_array_comparison<T: QueryContext>(
+    plan_state: &mut QueryPlanState<'_, T>,
+    root_collection_object_type: &plan::ObjectType<T::ScalarType>,
+    object_type: &plan::ObjectType<T::ScalarType>,
+    column: ndc::ComparisonTarget,
+    comparison: ndc::ArrayComparison,
+) -> Result<plan::Expression<T>> {
+    let comparison_target =
+        plan_for_comparison_target(plan_state, root_collection_object_type, object_type, column)?;
+    let plan_comparison = match comparison {
+        ndc::ArrayComparison::Contains { value } => {
+            let target_field = find_object_field(object_type, column)?;
+            let field_type = target_field.r#type;
+            let array_element_type = field_type.array_element_type()?;
+            let value = plan_for_comparison_value(
+                plan_state,
+                root_collection_object_type,
+                object_type,
+                array_element_type,
+                value,
+            )?;
+            plan::ArrayComparison::Contains { value }
+        }
+        ndc::ArrayComparison::IsEmpty => plan::ArrayComparison::IsEmpty,
+    };
+    Ok(plan::Expression::ArrayComparison {
+        column: comparison_target,
+        comparison: plan_comparison,
+    })
+}
+
 fn plan_for_comparison_target<T: QueryContext>(
     plan_state: &mut QueryPlanState<'_, T>,
     root_collection_object_type: &plan::ObjectType<T::ScalarType>,
@@ -624,35 +696,29 @@ fn plan_for_comparison_target<T: QueryContext>(
     match target {
         ndc::ComparisonTarget::Column {
             name,
+            arguments,
             field_path,
-            path,
         } => {
             let requested_columns = vec![name.clone()];
-            let (path, target_object_type) = plan_for_relationship_path(
+            let object_field =
+                get_object_field_by_path(object_type, &name, field_path.as_ref())?.clone();
+            let plan_arguments = plan_arguments_from_plan_parameters(
                 plan_state,
-                root_collection_object_type,
-                object_type,
-                path,
-                requested_columns,
+                &object_field.parameters,
+                arguments,
             )?;
-            let field_type =
-                find_object_field_path(&target_object_type, &name, field_path.as_ref())?.clone();
             Ok(plan::ComparisonTarget::Column {
                 name,
+                arguments: plan_arguments,
                 field_path,
-                path,
-                field_type,
+                field_type: object_field.r#type,
             })
         }
-        ndc::ComparisonTarget::RootCollectionColumn { name, field_path } => {
-            let field_type =
-                find_object_field_path(root_collection_object_type, &name, field_path.as_ref())?.clone();
-            Ok(plan::ComparisonTarget::ColumnInScope {
-                name,
-                field_path,
-                field_type,
-                scope: plan_state.scope.clone(),
-            })
+        ndc::ComparisonTarget::Aggregate { .. } => {
+            // TODO: ENG-1457 implement query.aggregates.filter_by
+            Err(QueryPlanError::NotImplemented(
+                "filter by aggregate".to_string(),
+            ))
         }
     }
 }
@@ -665,14 +731,34 @@ fn plan_for_comparison_value<T: QueryContext>(
     value: ndc::ComparisonValue,
 ) -> Result<plan::ComparisonValue<T>> {
     match value {
-        ndc::ComparisonValue::Column { column } => Ok(plan::ComparisonValue::Column {
-            column: plan_for_comparison_target(
+        ndc::ComparisonValue::Column {
+            path,
+            name,
+            arguments,
+            field_path,
+            scope,
+        } => {
+            let (plan_path, collection_object_type) = plan_for_relationship_path(
                 plan_state,
                 root_collection_object_type,
                 object_type,
-                column,
-            )?,
-        }),
+                path,
+                vec![name.clone()],
+            )?;
+            let object_field = collection_object_type.get(&name)?;
+            let plan_arguments = plan_arguments_from_plan_parameters(
+                plan_state,
+                &object_field.parameters,
+                arguments,
+            )?;
+            Ok(plan::ComparisonValue::Column {
+                path: plan_path,
+                name,
+                arguments: plan_arguments,
+                field_path,
+                scope,
+            })
+        }
         ndc::ComparisonValue::Scalar { value } => Ok(plan::ComparisonValue::Scalar {
             value,
             value_type: expected_type,
@@ -699,6 +785,7 @@ fn plan_for_exists<T: QueryContext>(
         ndc::ExistsInCollection::Related {
             relationship,
             arguments,
+            field_path,
         } => {
             let ndc_relationship =
                 lookup_relationship(plan_state.collection_relationships, &relationship)?;
@@ -834,6 +921,11 @@ fn plan_for_exists<T: QueryContext>(
 
             Ok((in_collection, predicate))
         }
+        ExistsInCollection::NestedScalarCollection {
+            column_name,
+            arguments,
+            field_path,
+        } => todo!(),
     }?;
 
     Ok(plan::Expression::Exists {
