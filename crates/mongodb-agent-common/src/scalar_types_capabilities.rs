@@ -131,9 +131,7 @@ fn bson_aggregation_functions(
 ) -> BTreeMap<AggregateFunctionName, AggregateFunctionDefinition> {
     aggregate_functions(bson_scalar_type)
         .map(|(fn_name, result_type)| {
-            let aggregation_definition = AggregateFunctionDefinition {
-                result_type: bson_to_named_type(result_type),
-            };
+            let aggregation_definition = AggregateFunctionDefinition { result_type };
             (fn_name.graphql_name().into(), aggregation_definition)
         })
         .collect()
@@ -147,20 +145,23 @@ fn bson_to_named_type(bson_scalar_type: BsonScalarType) -> Type {
 
 pub fn aggregate_functions(
     scalar_type: BsonScalarType,
-) -> impl Iterator<Item = (AggregationFunction, BsonScalarType)> {
-    [(A::Count, S::Int)]
+) -> impl Iterator<Item = (AggregationFunction, Type)> {
+    let nullable_scalar_type = move || Type::Nullable {
+        underlying_type: Box::new(bson_to_named_type(scalar_type)),
+    };
+    [(A::Count, bson_to_named_type(S::Int))]
         .into_iter()
         .chain(iter_if(
             scalar_type.is_orderable(),
             [A::Min, A::Max]
                 .into_iter()
-                .map(move |op| (op, scalar_type)),
+                .map(move |op| (op, nullable_scalar_type())),
         ))
         .chain(iter_if(
             scalar_type.is_numeric(),
             [A::Avg, A::Sum]
                 .into_iter()
-                .map(move |op| (op, scalar_type)),
+                .map(move |op| (op, nullable_scalar_type())),
         ))
 }
 

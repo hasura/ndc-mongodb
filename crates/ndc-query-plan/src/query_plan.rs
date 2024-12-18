@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, fmt::Debug, iter};
 use derivative::Derivative;
 use indexmap::IndexMap;
 use itertools::Either;
-use ndc_models::{self as ndc, OrderDirection, RelationshipType, UnaryComparisonOperator};
+use ndc_models::{self as ndc, FieldName, OrderDirection, RelationshipType, UnaryComparisonOperator};
 
 use crate::{vec_set::VecSet, Type};
 
@@ -168,12 +168,16 @@ pub enum Aggregate<T: ConnectorTypes> {
     ColumnCount {
         /// The column to apply the count aggregate function to
         column: ndc::FieldName,
+        /// Path to a nested field within an object column
+        field_path: Option<Vec<FieldName>>,
         /// Whether or not only distinct items should be counted
         distinct: bool,
     },
     SingleColumn {
         /// The column to apply the aggregation function to
         column: ndc::FieldName,
+        /// Path to a nested field within an object column
+        field_path: Option<Vec<FieldName>>,
         /// Single column aggregate function name.
         function: T::AggregateFunction,
         result_type: Type<T::ScalarType>,

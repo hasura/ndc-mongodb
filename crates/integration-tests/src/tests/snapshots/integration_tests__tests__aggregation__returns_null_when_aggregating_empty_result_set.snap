@@ -1,0 +1,9 @@
+---
+source: crates/integration-tests/src/tests/aggregation.rs
+expression: "graphql_query(r#\"\n            query {\n              moviesAggregate(filter_input: {where: {title: {_eq: \"no such movie\"}}}) {\n                runtime {\n                  avg\n                }\n              }\n            }\n            \"#).run().await?"
+---
+data:
+  moviesAggregate:
+    runtime:
+      avg: ~
+errors: ~

@@ -177,19 +177,25 @@ fn plan_for_aggregate<T: QueryContext>(
         ndc::Aggregate::ColumnCount {
             column,
             distinct,
-            field_path: _,
-        } => Ok(plan::Aggregate::ColumnCount { column, distinct }),
+            field_path,
+        } => Ok(plan::Aggregate::ColumnCount {
+            column,
+            field_path,
+            distinct,
+        }),
         ndc::Aggregate::SingleColumn {
             column,
             function,
-            field_path: _,
+            field_path,
         } => {
-            let object_type_field_type = find_object_field(collection_object_type, &column)?;
+            let object_type_field_type =
+                find_object_field_path(collection_object_type, &column, field_path.as_ref())?;
             // let column_scalar_type_name = get_scalar_type_name(&object_type_field.r#type)?;
             let (function, definition) =
                 context.find_aggregation_function_definition(object_type_field_type, &function)?;
             Ok(plan::Aggregate::SingleColumn {
                 column,
+                field_path,
                 function,
                 result_type: definition.result_type.clone(),
             })
@@ -559,7 +565,7 @@ fn plan_for_comparison_target<T: QueryContext>(
                 requested_columns,
             )?;
             let field_type =
-                find_object_field_path(&target_object_type, &name, &field_path)?.clone();
+                find_object_field_path(&target_object_type, &name, field_path.as_ref())?.clone();
             Ok(plan::ComparisonTarget::Column {
                 name,
                 field_path,
@@ -569,7 +575,7 @@ fn plan_for_comparison_target<T: QueryContext>(
         }
         ndc::ComparisonTarget::RootCollectionColumn { name, field_path } => {
             let field_type =
-                find_object_field_path(root_collection_object_type, &name, &field_path)?.clone();
+                find_object_field_path(root_collection_object_type, &name, field_path.as_ref())?.clone();
             Ok(plan::ComparisonTarget::ColumnInScope {
                 name,
                 field_path,
