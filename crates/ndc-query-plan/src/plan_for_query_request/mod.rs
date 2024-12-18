@@ -287,40 +287,99 @@ fn plan_for_order_by_element<T: QueryContext>(
                 field_path,
             }
         }
-        ndc::OrderByTarget::SingleColumnAggregate {
-            column,
-            function,
+        ndc::OrderByTarget::Aggregate {
             path,
-            field_path: _,
+            aggregate:
+                ndc::Aggregate::ColumnCount {
+                    column,
+                    arguments,
+                    field_path,
+                    distinct,
+                },
         } => {
-            let (plan_path, target_object_type) = plan_for_relationship_path(
+            let (plan_path, collection_object_type) = plan_for_relationship_path(
                 plan_state,
                 root_collection_object_type,
                 object_type,
                 path,
-                vec![], // TODO: MDB-156 propagate requested aggregate to relationship query
+                vec![], // TODO: ENG-1019 propagate requested aggregate to relationship query
             )?;
-            let column_type = find_object_field(&target_object_type, &column)?;
+
+            let object_field = collection_object_type.get(&column)?;
+
+            let plan_arguments = plan_arguments_from_plan_parameters(
+                plan_state,
+                &object_field.parameters,
+                arguments,
+            )?;
+
+            plan::OrderByTarget::Aggregate {
+                path: plan_path,
+                aggregate: plan::Aggregate::ColumnCount {
+                    column,
+                    arguments: plan_arguments,
+                    field_path,
+                    distinct,
+                },
+            }
+        }
+        ndc::OrderByTarget::Aggregate {
+            path,
+            aggregate:
+                ndc::Aggregate::SingleColumn {
+                    column,
+                    arguments,
+                    field_path,
+                    function,
+                },
+        } => {
+            let (plan_path, collection_object_type) = plan_for_relationship_path(
+                plan_state,
+                root_collection_object_type,
+                object_type,
+                path,
+                vec![], // TODO: ENG-1019 propagate requested aggregate to relationship query
+            )?;
+
+            let object_field = collection_object_type.get(&column)?;
+
+            let plan_arguments = plan_arguments_from_plan_parameters(
+                plan_state,
+                &object_field.parameters,
+                arguments,
+            )?;
+
+            let column_type = find_object_field(&collection_object_type, &column)?;
             let (function, function_definition) = plan_state
                 .context
                 .find_aggregation_function_definition(column_type, &function)?;
 
-            plan::OrderByTarget::SingleColumnAggregate {
-                column,
-                function,
-                result_type: function_definition.result_type.clone(),
+            plan::OrderByTarget::Aggregate {
                 path: plan_path,
+                aggregate: plan::Aggregate::SingleColumn {
+                    column,
+                    arguments: plan_arguments,
+                    field_path,
+                    function,
+                    result_type: function_definition.result_type.clone(),
+                },
             }
         }
-        ndc::OrderByTarget::StarCountAggregate { path } => {
+        ndc::OrderByTarget::Aggregate {
+            path,
+            aggregate: ndc::Aggregate::StarCount {},
+        } => {
             let (plan_path, _) = plan_for_relationship_path(
                 plan_state,
                 root_collection_object_type,
                 object_type,
                 path,
-                vec![], // TODO: MDB-157 propagate requested aggregate to relationship query
+                vec![], // TODO: ENG-1019 propagate requested aggregate to relationship query
             )?;
-            plan::OrderByTarget::StarCountAggregate { path: plan_path }
+            plan::OrderByTarget::Aggregate {
+                path: plan_path,
+                aggregate: plan::Aggregate::StarCount,
+            }
         }
     };
 
