@@ -199,7 +199,7 @@ fn make_binary_comparison_selector(
             // Special case for array-to-scalar comparisons - this is required because implicit
             // existential quantification over arrays for scalar comparisons does not work in
             // aggregation expressions.
-            let expression_doc = if target_column.get_field_type().is_array()
+            let expression_doc = if target_column.target_type().is_array()
                 && !value_type.is_array()
             {
                 doc! {
@@ -226,7 +226,7 @@ fn make_binary_comparison_selector(
                 // Special case for array-to-scalar comparisons - this is required because implicit
                 // existential quantification over arrays for scalar comparisons does not work in
                 // aggregation expressions.
-                if target_column.get_field_type().is_array() && !variable_type.is_array() {
+                if target_column.target_type().is_array() && !variable_type.is_array() {
                     doc! {
                         "$reduce": {
                             "input": column_expression(target_column),

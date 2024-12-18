@@ -532,14 +532,14 @@ fn plan_for_binary_comparison<T: QueryContext>(
         plan_for_comparison_target(plan_state, root_collection_object_type, object_type, column)?;
     let (operator, operator_definition) = plan_state
         .context
-        .find_comparison_operator(comparison_target.get_field_type(), &operator)?;
+        .find_comparison_operator(comparison_target.target_type(), &operator)?;
     let value_type = match operator_definition {
         plan::ComparisonOperatorDefinition::Equal => {
-            let column_type = comparison_target.get_field_type().clone();
+            let column_type = comparison_target.target_type().clone();
             value_type_in_possible_array_equality_comparison(column_type)
         }
         plan::ComparisonOperatorDefinition::In => {
-            plan::Type::ArrayOf(Box::new(comparison_target.get_field_type().clone()))
+            plan::Type::ArrayOf(Box::new(comparison_target.target_type().clone()))
         }
         plan::ComparisonOperatorDefinition::Custom { argument_type } => argument_type.clone(),
     };
@@ -658,19 +658,28 @@ fn plan_for_exists<T: QueryContext>(
                 })
                 .transpose()?;
 
+            // TODO: ENG-1457 When we implement query.aggregates.filter_by we'll need to collect aggregates
+            // here as well as fields.
             let fields = predicate.as_ref().map(|p| {
-                p.query_local_comparison_targets()
-                    .map(|comparison_target| {
-                        (
-                            comparison_target.column_name().to_owned(),
+                let mut fields = IndexMap::new();
+                for comparison_target in p.query_local_comparison_targets() {
+                    match comparison_target {
+                        plan::ComparisonTarget::Column {
+                            name,
+                            arguments: _,
+                            field_type,
+                            ..
+                        } => fields.insert(
+                            name.clone(),
                             plan::Field::Column {
-                                column: comparison_target.column_name().clone(),
-                                column_type: comparison_target.get_field_type().clone(),
+                                column: name.clone(),
                                 fields: None,
+                                column_type: field_type.clone(),
                             },
-                        )
-                    })
-                    .collect()
+                        ),
+                    };
+                }
+                fields
             });
 
             let relationship_query = plan::Query {
@@ -686,7 +695,7 @@ fn plan_for_exists<T: QueryContext>(
                 relationship: relationship_key,
             };
 
-            Ok((in_collection, predicate)) as Result<_>
+            Ok((in_collection, predicate))
         }
         ndc::ExistsInCollection::Unrelated {
             collection,
@@ -733,7 +742,7 @@ fn plan_for_exists<T: QueryContext>(
                 ))?
             };
 
-            // To support field arguments here we need a way to look up field parameters (a map of
+            // TODO: To support field arguments here we need a way to look up field parameters (a map of
             // supported argument names to types). When we have that replace the above `arguments`
             // assignment with this one:
             // let arguments = plan_for_arguments(plan_state, parameters, arguments)?;
