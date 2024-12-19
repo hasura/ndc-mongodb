@@ -24,7 +24,7 @@ pub fn find_object_field<'a, S>(
 pub fn get_object_field_by_path<'a, S>(
     object_type: &'a plan::ObjectType<S>,
     field_name: &ndc::FieldName,
-    field_path: Option<&Vec<ndc::FieldName>>,
+    field_path: Option<&[ndc::FieldName]>,
 ) -> Result<&'a plan::ObjectField<S>> {
     match field_path {
         None => find_object_field(object_type, field_name),
@@ -69,35 +69,44 @@ fn find_object_type<'a, S>(
     }
 }
 
+/// Given the type of a collection and a field path returns the type of the nested values in an
+/// array field at that path.
+pub fn find_nested_collection_type<S>(
+    collection_object_type: plan::ObjectType<S>,
+    field_path: &[ndc::FieldName],
+) -> Result<plan::Type<S>>
+where
+    S: Clone + std::fmt::Debug,
+{
+    let nested_field = match field_path {
+        [field_name] => get_object_field_by_path(&collection_object_type, field_name, None),
+        [field_name, rest_of_path @ ..] => {
+            get_object_field_by_path(&collection_object_type, field_name, Some(rest_of_path))
+        }
+        [] => Err(QueryPlanError::UnknownCollection(format!(
+            "{}",
+            field_path.join(".")
+        ))),
+    }?;
+    let element_type = nested_field.r#type.clone().into_array_element_type()?;
+    Ok(element_type)
+}
+
 /// Given the type of a collection and a field path returns the object type of the nested object at
 /// that path.
-pub fn find_nested_collection_type<S>(
+///
+/// This function differs from [find_nested_collection_type] in that it this one returns
+/// [plan::ObjectType] instead of [plan::Type], and returns an error if the nested type is not an
+/// object type.
+pub fn find_nested_collection_object_type<S>(
     collection_object_type: plan::ObjectType<S>,
     field_path: &[ndc::FieldName],
 ) -> Result<plan::ObjectType<S>>
 where
-    S: Clone,
+    S: Clone + std::fmt::Debug,
 {
-    fn normalize_object_type<S>(
-        field_path: &[ndc::FieldName],
-        t: plan::Type<S>,
-    ) -> Result<plan::ObjectType<S>> {
-        match t {
-            plan::Type::Object(t) => Ok(t),
-            plan::Type::ArrayOf(t) => normalize_object_type(field_path, *t),
-            plan::Type::Nullable(t) => normalize_object_type(field_path, *t),
-            _ => Err(QueryPlanError::ExpectedObject {
-                path: field_path.iter().map(|f| f.to_string()).collect(),
-            }),
-        }
-    }
-
-    field_path
-        .iter()
-        .try_fold(collection_object_type, |obj_type, field_name| {
-            let object_field = find_object_field(&obj_type, field_name)?.clone();
-            normalize_object_type(field_path, object_field.r#type)
-        })
+    let collection_element_type = find_nested_collection_type(collection_object_type, field_path)?;
+    collection_element_type.into_object_type()
 }
 
 pub fn lookup_relationship<'a>(

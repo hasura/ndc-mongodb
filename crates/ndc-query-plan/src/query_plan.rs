@@ -194,6 +194,16 @@ pub enum Aggregate<T: ConnectorTypes> {
     StarCount,
 }
 
+impl<T: ConnectorTypes> Aggregate<T> {
+    pub fn result_type(&self) -> Cow<Type<T::ScalarType>> {
+        match self {
+            Aggregate::ColumnCount { .. } => Cow::Owned(T::count_aggregate_type()),
+            Aggregate::SingleColumn { result_type, .. } => Cow::Borrowed(result_type),
+            Aggregate::StarCount => Cow::Owned(T::count_aggregate_type().into()),
+        }
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub struct NestedObject<T: ConnectorTypes> {
@@ -385,6 +395,8 @@ pub enum ComparisonTarget<T: ConnectorTypes> {
         /// Path to a nested field within an object column
         field_path: Option<Vec<ndc::FieldName>>,
 
+        /// Type of the field that you get *after* follwing `field_path` to a possibly-nested
+        /// field.
         field_type: Type<T::ScalarType>,
     },
     // TODO: ENG-1457 Add this variant to support query.aggregates.filter_by
@@ -392,7 +404,7 @@ pub enum ComparisonTarget<T: ConnectorTypes> {
     // /// Only used if the 'query.aggregates.filter_by' capability is supported.
     // Aggregate {
     //     /// Non-empty collection of relationships to traverse
-    //     path: Vec<PathElement<T>>,
+    //     path: Vec<RelationshipName>,
     //     /// The aggregation method to use
     //     aggregate: Aggregate<T>,
     // },
@@ -402,7 +414,8 @@ impl<T: ConnectorTypes> ComparisonTarget<T> {
     pub fn target_type(&self) -> &Type<T::ScalarType> {
         match self {
             ComparisonTarget::Column { field_type, .. } => field_type,
-            ComparisonTarget::Aggregate { aggregate, .. } => aggregate.result_type,
+            // TODO: ENG-1457
+            // ComparisonTarget::Aggregate { aggregate, .. } => aggregate.result_type,
         }
     }
 }
@@ -462,19 +475,36 @@ pub enum ComparisonOperatorDefinition<T: ConnectorTypes> {
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub enum ExistsInCollection<T: ConnectorTypes> {
+    /// The rows to evaluate the exists predicate against come from a related collection.
+    /// Only used if the 'relationships' capability is supported.
     Related {
         /// Key of the relation in the [Query] joins map. Relationships are scoped to the sub-query
         /// that defines the relation source.
         relationship: ndc::RelationshipName,
     },
+    /// The rows to evaluate the exists predicate against come from an unrelated collection
+    /// Only used if the 'query.exists.unrelated' capability is supported.
     Unrelated {
         /// Key of the relation in the [QueryPlan] joins map. Unrelated collections are not scoped
         /// to a sub-query, instead they are given in the root [QueryPlan].
         unrelated_collection: String,
     },
+    /// The rows to evaluate the exists predicate against come from a nested array field.
+    /// Only used if the 'query.exists.nested_collections' capability is supported.
     NestedCollection {
         column_name: ndc::FieldName,
         arguments: BTreeMap<ndc::ArgumentName, Argument<T>>,
+        /// Path to a nested collection via object columns
+        field_path: Vec<ndc::FieldName>,
+    },
+    /// Specifies a column that contains a nested array of scalars. The
+    /// array will be brought into scope of the nested expression where
+    /// each element becomes an object with one '__value' column that
+    /// contains the element value.
+    /// Only used if the 'query.exists.nested_scalar_collections' capability is supported.
+    NestedScalarCollection {
+        column_name: FieldName,
+        arguments: BTreeMap<ArgumentName, Argument<T>>,
         /// Path to a nested collection via object columns
         field_path: Vec<ndc::FieldName>,
     },

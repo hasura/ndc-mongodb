@@ -15,6 +15,7 @@ mod tests;
 use std::{collections::VecDeque, iter::once};
 
 use crate::{self as plan, type_annotated_field, ObjectType, QueryPlan, Scope};
+use helpers::find_nested_collection_type;
 use indexmap::IndexMap;
 use itertools::Itertools;
 use ndc::{ExistsInCollection, QueryRequest};
@@ -24,7 +25,7 @@ use query_plan_state::QueryPlanInfo;
 pub use self::plan_for_mutation_request::plan_for_mutation_request;
 use self::{
     helpers::{
-        find_nested_collection_type, find_object_field, get_object_field_by_path,
+        find_nested_collection_object_type, find_object_field, get_object_field_by_path,
         lookup_relationship,
     },
     plan_for_arguments::{plan_arguments_from_plan_parameters, plan_for_arguments},
@@ -102,7 +103,7 @@ pub fn plan_for_query<T: QueryContext>(
     let mut plan_state = plan_state.state_for_subquery();
 
     let aggregates =
-        plan_for_aggregates(plan_state.context, collection_object_type, query.aggregates)?;
+        plan_for_aggregates(&mut plan_state, collection_object_type, query.aggregates)?;
     let fields = plan_for_fields(
         &mut plan_state,
         root_collection_object_type,
@@ -151,7 +152,7 @@ pub fn plan_for_query<T: QueryContext>(
 }
 
 fn plan_for_aggregates<T: QueryContext>(
-    context: &T,
+    plan_state: &mut QueryPlanState<'_, T>,
     collection_object_type: &plan::ObjectType<T::ScalarType>,
     ndc_aggregates: Option<IndexMap<ndc::FieldName, ndc::Aggregate>>,
 ) -> Result<Option<IndexMap<ndc::FieldName, plan::Aggregate<T>>>> {
@@ -162,7 +163,7 @@ fn plan_for_aggregates<T: QueryContext>(
                 .map(|(name, aggregate)| {
                     Ok((
                         name,
-                        plan_for_aggregate(context, collection_object_type, aggregate)?,
+                        plan_for_aggregate(plan_state, collection_object_type, aggregate)?,
                     ))
                 })
                 .collect()
@@ -171,7 +172,7 @@ fn plan_for_aggregates<T: QueryContext>(
 }
 
 fn plan_for_aggregate<T: QueryContext>(
-    context: &T,
+    plan_state: &mut QueryPlanState<'_, T>,
     collection_object_type: &plan::ObjectType<T::ScalarType>,
     aggregate: ndc::Aggregate,
 ) -> Result<plan::Aggregate<T>> {
@@ -182,22 +183,15 @@ fn plan_for_aggregate<T: QueryContext>(
             distinct,
             field_path,
         } => {
-            let arguments = if arguments.is_empty() {
-                Default::default()
-            } else {
-                Err(QueryPlanError::NotImplemented(
-                    "arguments on column count aggregate".to_string(),
-                ))?
-            };
-
-            // TODO: To support aggregate arguments here we need a way to look up aggregate
-            // parameters (a map of supported argument names to types). When we have that replace
-            // the above `arguments` assignment with this one:
-            // let arguments = plan_for_arguments(plan_state, parameters, arguments)?;
-
+            let object_field = collection_object_type.get(&column)?;
+            let plan_arguments = plan_arguments_from_plan_parameters(
+                plan_state,
+                &object_field.parameters,
+                arguments,
+            )?;
             Ok(plan::Aggregate::ColumnCount {
                 column,
-                arguments,
+                arguments: plan_arguments,
                 distinct,
                 field_path,
             })
@@ -208,26 +202,18 @@ fn plan_for_aggregate<T: QueryContext>(
             function,
             field_path,
         } => {
-            let arguments = if arguments.is_empty() {
-                Default::default()
-            } else {
-                Err(QueryPlanError::NotImplemented(
-                    "arguments on single-column aggregate".to_string(),
-                ))?
-            };
-
-            // TODO: To support aggregate arguments here we need a way to look up aggregate
-            // parameters (a map of supported argument names to types). When we have that replace
-            // the above `arguments` assignment with this one:
-            // let arguments = plan_for_arguments(plan_state, parameters, arguments)?;
-
-            let object_type_field_type =
-                get_object_field_by_path(collection_object_type, &column, field_path.as_ref())?;
-            let (function, definition) =
-                context.find_aggregation_function_definition(object_type_field_type, &function)?;
+            let object_field = collection_object_type.get(&column)?;
+            let plan_arguments = plan_arguments_from_plan_parameters(
+                plan_state,
+                &object_field.parameters,
+                arguments,
+            )?;
+            let (function, definition) = plan_state
+                .context
+                .find_aggregation_function_definition(&object_field.r#type, &function)?;
             Ok(plan::Aggregate::SingleColumn {
                 column,
-                arguments,
+                arguments: plan_arguments,
                 field_path,
                 function,
                 result_type: definition.result_type.clone(),
@@ -382,10 +368,10 @@ fn plan_for_order_by_element<T: QueryContext>(
                 arguments,
             )?;
 
-            let column_type = find_object_field(&collection_object_type, &column)?;
+            let object_field = find_object_field(&collection_object_type, &column)?;
             let (function, function_definition) = plan_state
                 .context
-                .find_aggregation_function_definition(column_type, &function)?;
+                .find_aggregation_function_definition(&object_field.r#type, &function)?;
 
             plan::OrderByTarget::Aggregate {
                 path: plan_path,
@@ -478,7 +464,7 @@ fn plan_for_relationship_path_helper<T: QueryContext>(
     let is_last = tail.is_empty();
 
     let ndc::PathElement {
-        field_path,
+        field_path: _, // TODO: ENG-1458 support nested relationships
         relationship,
         arguments,
         predicate,
@@ -497,14 +483,14 @@ fn plan_for_relationship_path_helper<T: QueryContext>(
         let fields = requested_columns
             .into_iter()
             .map(|column_name| {
-                let column_type =
+                let object_field =
                     find_object_field(&related_collection_type, &column_name)?.clone();
                 Ok((
                     column_name.clone(),
                     plan::Field::Column {
                         column: column_name,
                         fields: None,
-                        column_type,
+                        column_type: object_field.r#type,
                     },
                 ))
             })
@@ -667,9 +653,10 @@ fn plan_for_array_comparison<T: QueryContext>(
         plan_for_comparison_target(plan_state, root_collection_object_type, object_type, column)?;
     let plan_comparison = match comparison {
         ndc::ArrayComparison::Contains { value } => {
-            let target_field = find_object_field(object_type, column)?;
-            let field_type = target_field.r#type;
-            let array_element_type = field_type.array_element_type()?;
+            let array_element_type = comparison_target
+                .target_type()
+                .array_element_type()?
+                .into_owned();
             let value = plan_for_comparison_value(
                 plan_state,
                 root_collection_object_type,
@@ -699,7 +686,6 @@ fn plan_for_comparison_target<T: QueryContext>(
             arguments,
             field_path,
         } => {
-            let requested_columns = vec![name.clone()];
             let object_field =
                 get_object_field_by_path(object_type, &name, field_path.as_ref())?.clone();
             let plan_arguments = plan_arguments_from_plan_parameters(
@@ -841,7 +827,7 @@ fn plan_for_exists<T: QueryContext>(
                 relationship: relationship_key,
             };
 
-            Ok((in_collection, predicate))
+            Ok((in_collection, predicate)) as Result<_>
         }
         ndc::ExistsInCollection::Unrelated {
             collection,
@@ -880,20 +866,14 @@ fn plan_for_exists<T: QueryContext>(
             arguments,
             field_path,
         } => {
-            let arguments = if arguments.is_empty() {
-                Default::default()
-            } else {
-                Err(QueryPlanError::NotImplemented(
-                    "arguments on nested fields".to_string(),
-                ))?
-            };
+            let object_field = root_collection_object_type.get(&column_name)?;
+            let plan_arguments = plan_arguments_from_plan_parameters(
+                &mut nested_state,
+                &object_field.parameters,
+                arguments,
+            )?;
 
-            // TODO: To support field arguments here we need a way to look up field parameters (a map of
-            // supported argument names to types). When we have that replace the above `arguments`
-            // assignment with this one:
-            // let arguments = plan_for_arguments(plan_state, parameters, arguments)?;
-
-            let nested_collection_type = find_nested_collection_type(
+            let nested_collection_type = find_nested_collection_object_type(
                 root_collection_object_type.clone(),
                 &field_path
                     .clone()
@@ -904,7 +884,7 @@ fn plan_for_exists<T: QueryContext>(
 
             let in_collection = plan::ExistsInCollection::NestedCollection {
                 column_name,
-                arguments,
+                arguments: plan_arguments,
                 field_path,
             };
 
@@ -925,7 +905,54 @@ fn plan_for_exists<T: QueryContext>(
             column_name,
             arguments,
             field_path,
-        } => todo!(),
+        } => {
+            let object_field = root_collection_object_type.get(&column_name)?;
+            let plan_arguments = plan_arguments_from_plan_parameters(
+                &mut nested_state,
+                &object_field.parameters,
+                arguments,
+            )?;
+
+            let nested_collection_type = find_nested_collection_type(
+                root_collection_object_type.clone(),
+                &field_path
+                    .clone()
+                    .into_iter()
+                    .chain(once(column_name.clone()))
+                    .collect_vec(),
+            )?;
+
+            let virtual_object_type = plan::ObjectType {
+                name: None,
+                fields: [(
+                    "__value".into(),
+                    plan::ObjectField {
+                        r#type: nested_collection_type,
+                        parameters: Default::default(),
+                    },
+                )]
+                .into(),
+            };
+
+            let in_collection = plan::ExistsInCollection::NestedScalarCollection {
+                column_name,
+                arguments: plan_arguments,
+                field_path,
+            };
+
+            let predicate = predicate
+                .map(|expression| {
+                    plan_for_expression(
+                        &mut nested_state,
+                        root_collection_object_type,
+                        &virtual_object_type,
+                        *expression,
+                    )
+                })
+                .transpose()?;
+
+            Ok((in_collection, predicate))
+        }
     }?;
 
     Ok(plan::Expression::Exists {

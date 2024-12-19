@@ -1,5 +1,5 @@
 use ref_cast::RefCast;
-use std::{borrow::Cow, collections::BTreeMap};
+use std::collections::BTreeMap;
 
 use itertools::Itertools as _;
 use ndc_models::{self as ndc, ArgumentName};
@@ -35,17 +35,28 @@ impl<S> Type<S> {
         }
     }
 
-    pub fn array_element_type(&self) -> Result<Cow<'_, Self>>
+    pub fn into_array_element_type(self) -> Result<Self>
     where
         S: Clone + std::fmt::Debug,
     {
         match self {
-            Type::ArrayOf(t) => Ok(Cow::Borrowed(&*t)),
-            Type::Nullable(t) => Ok(Cow::Owned(
-                t.array_element_type()?.into_owned().into_nullable(),
-            )),
+            Type::ArrayOf(t) => Ok(*t),
+            Type::Nullable(t) => t.into_array_element_type(),
             t => Err(QueryPlanError::TypeMismatch(format!(
                 "expected an array, but got type {t:?}"
+            ))),
+        }
+    }
+
+    pub fn into_object_type(self) -> Result<ObjectType<S>>
+    where
+        S: std::fmt::Debug,
+    {
+        match self {
+            Type::Object(object_type) => Ok(object_type),
+            Type::Nullable(t) => t.into_object_type(),
+            t => Err(QueryPlanError::TypeMismatch(format!(
+                "expected object type, but got {t:?}"
             ))),
         }
     }
@@ -153,12 +164,18 @@ fn lookup_object_type_helper<ScalarType>(
             .fields
             .iter()
             .map(|(name, field)| {
+                let field_type =
+                    inline_object_types(object_types, &field.r#type, lookup_scalar_type)?;
                 Ok((
                     name.to_owned(),
-                    inline_object_types(object_types, &field.r#type, lookup_scalar_type)?,
-                )) as Result<_>
+                    plan::ObjectField {
+                        r#type: field_type,
+                        parameters: Default::default(), // TODO: connect ndc arguments to plan
+                                                        // parameters
+                    },
+                ))
             })
-            .try_collect()?,
+            .try_collect::<_, _, QueryPlanError>()?,
     };
     Ok(plan_object_type)
 }
