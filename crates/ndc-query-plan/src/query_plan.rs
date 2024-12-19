@@ -282,10 +282,14 @@ pub enum Expression<T: ConnectorTypes> {
 
 impl<T: ConnectorTypes> Expression<T> {
     /// Get an iterator of columns referenced by the expression, not including columns of related
-    /// collections
+    /// collections. This is used to build a plan for joining the referenced collection - we need
+    /// to include fields in the join that the expression needs to access.
+    //
+    // TODO: ENG-1457 When we implement query.aggregates.filter_by we'll need to collect aggregates
+    // references. That's why this function returns [ComparisonTarget] instead of [Field].
     pub fn query_local_comparison_targets<'a>(
         &'a self,
-    ) -> Box<dyn Iterator<Item = &'a ComparisonTarget<T>> + 'a> {
+    ) -> Box<dyn Iterator<Item = Cow<'a, ComparisonTarget<T>>> + 'a> {
         match self {
             Expression::And { expressions } => Box::new(
                 expressions
@@ -299,33 +303,49 @@ impl<T: ConnectorTypes> Expression<T> {
             ),
             Expression::Not { expression } => expression.query_local_comparison_targets(),
             Expression::UnaryComparisonOperator { column, .. } => {
-                Box::new(Self::local_columns_from_comparison_target(column))
+                Box::new(std::iter::once(Cow::Borrowed(column)))
             }
-            Expression::BinaryComparisonOperator { column, value, .. } => {
-                let value_targets = match value {
-                    ComparisonValue::Column { column } => {
-                        Either::Left(Self::local_columns_from_comparison_target(column))
-                    }
-                    _ => Either::Right(iter::empty()),
+            Expression::BinaryComparisonOperator { column, value, .. } => Box::new(
+                std::iter::once(Cow::Borrowed(column))
+                    .chain(Self::local_targets_from_comparison_value(value).map(Cow::Owned)),
+            ),
+            Expression::ArrayComparison { column, comparison } => {
+                let value_targets = match comparison {
+                    ArrayComparison::Contains { value } => Either::Left(
+                        Self::local_targets_from_comparison_value(value).map(Cow::Owned),
+                    ),
+                    ArrayComparison::IsEmpty => Either::Right(std::iter::empty()),
                 };
-                Box::new(Self::local_columns_from_comparison_target(column).chain(value_targets))
+                Box::new(std::iter::once(Cow::Borrowed(column)).chain(value_targets))
             }
             Expression::Exists { .. } => Box::new(iter::empty()),
         }
     }
 
-    fn local_columns_from_comparison_target(
-        target: &ComparisonTarget<T>,
-    ) -> impl Iterator<Item = &ComparisonTarget<T>> {
-        match target {
-            t @ ComparisonTarget::Column { path, .. } => {
+    fn local_targets_from_comparison_value(
+        value: &ComparisonValue<T>,
+    ) -> impl Iterator<Item = ComparisonTarget<T>> {
+        match value {
+            ComparisonValue::Column {
+                path,
+                name,
+                arguments,
+                field_path,
+                field_type,
+                ..
+            } => {
                 if path.is_empty() {
-                    Either::Left(iter::once(t))
+                    Either::Left(iter::once(ComparisonTarget::Column {
+                        name: name.clone(),
+                        arguments: arguments.clone(),
+                        field_path: field_path.clone(),
+                        field_type: field_type.clone(),
+                    }))
                 } else {
                     Either::Right(iter::empty())
                 }
             }
-            t @ ComparisonTarget::ColumnInScope { .. } => Either::Left(iter::once(t)),
+            _ => Either::Right(std::iter::empty()),
         }
     }
 }
@@ -434,6 +454,9 @@ pub enum ComparisonValue<T: ConnectorTypes> {
         /// Path to a nested field within an object column.
         /// Only non-empty if the 'query.nested_fields.filter_by' capability is supported.
         field_path: Option<Vec<ndc::FieldName>>,
+        /// Type of the field that you get *after* follwing `field_path` to a possibly-nested
+        /// field.
+        field_type: Type<T::ScalarType>,
         /// The scope in which this column exists, identified
         /// by an top-down index into the stack of scopes.
         /// The stack grows inside each `Expression::Exists`,

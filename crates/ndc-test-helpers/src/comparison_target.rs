@@ -32,13 +32,3 @@ macro_rules! target {
         $target
     };
 }
-
-pub fn root<S>(name: S) -> ndc_models::ComparisonTarget
-where
-    S: ToString,
-{
-    ndc_models::ComparisonTarget::RootCollectionColumn {
-        name: name.to_string().into(),
-        field_path: None,
-    }
-}

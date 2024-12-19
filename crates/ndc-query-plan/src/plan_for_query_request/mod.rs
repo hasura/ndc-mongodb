@@ -289,7 +289,7 @@ fn plan_for_order_by_element<T: QueryContext>(
                 root_collection_object_type,
                 object_type,
                 path,
-                vec![name],
+                vec![name.clone()],
             )?;
             let object_field = collection_object_type.get(&name)?;
 
@@ -655,8 +655,8 @@ fn plan_for_array_comparison<T: QueryContext>(
         ndc::ArrayComparison::Contains { value } => {
             let array_element_type = comparison_target
                 .target_type()
-                .array_element_type()?
-                .into_owned();
+                .clone()
+                .into_array_element_type()?;
             let value = plan_for_comparison_value(
                 plan_state,
                 root_collection_object_type,
@@ -687,7 +687,8 @@ fn plan_for_comparison_target<T: QueryContext>(
             field_path,
         } => {
             let object_field =
-                get_object_field_by_path(object_type, &name, field_path.as_ref())?.clone();
+                get_object_field_by_path(object_type, &name, field_path.as_ref().map(|v| &**v))?
+                    .clone();
             let plan_arguments = plan_arguments_from_plan_parameters(
                 plan_state,
                 &object_field.parameters,
@@ -742,6 +743,7 @@ fn plan_for_comparison_value<T: QueryContext>(
                 name,
                 arguments: plan_arguments,
                 field_path,
+                field_type: object_field.r#type.clone(),
                 scope,
             })
         }
@@ -795,7 +797,7 @@ fn plan_for_exists<T: QueryContext>(
             let fields = predicate.as_ref().map(|p| {
                 let mut fields = IndexMap::new();
                 for comparison_target in p.query_local_comparison_targets() {
-                    match comparison_target {
+                    match comparison_target.into_owned() {
                         plan::ComparisonTarget::Column {
                             name,
                             arguments: _,
@@ -804,9 +806,9 @@ fn plan_for_exists<T: QueryContext>(
                         } => fields.insert(
                             name.clone(),
                             plan::Field::Column {
-                                column: name.clone(),
+                                column: name,
                                 fields: None,
-                                column_type: field_type.clone(),
+                                column_type: field_type,
                             },
                         ),
                     };

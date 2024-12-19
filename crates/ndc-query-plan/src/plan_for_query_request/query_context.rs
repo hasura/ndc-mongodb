@@ -54,9 +54,30 @@ pub trait QueryContext: ConnectorTypes {
         Ok((
             func,
             plan::AggregateFunctionDefinition {
-                result_type: self.ndc_to_plan_type(&definition.result_type)?,
+                result_type: self.aggregate_function_result_type(definition, input_type)?,
             },
         ))
+    }
+
+    fn aggregate_function_result_type(
+        &self,
+        definition: &ndc::AggregateFunctionDefinition,
+        input_type: &plan::Type<Self::ScalarType>,
+    ) -> Result<plan::Type<Self::ScalarType>> {
+        let t = match definition {
+            ndc::AggregateFunctionDefinition::Min => input_type.clone(),
+            ndc::AggregateFunctionDefinition::Max => input_type.clone(),
+            ndc::AggregateFunctionDefinition::Sum { result_type }
+            | ndc::AggregateFunctionDefinition::Average { result_type } => {
+                let scalar_type = Self::lookup_scalar_type(result_type)
+                    .ok_or_else(|| QueryPlanError::UnknownScalarType(result_type.clone()))?;
+                plan::Type::Scalar(scalar_type)
+            }
+            ndc::AggregateFunctionDefinition::Custom { result_type } => {
+                self.ndc_to_plan_type(result_type)?
+            }
+        };
+        Ok(t)
     }
 
     fn find_comparison_operator(
