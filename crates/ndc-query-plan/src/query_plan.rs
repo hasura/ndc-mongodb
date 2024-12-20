@@ -16,6 +16,8 @@ pub trait ConnectorTypes {
 
     /// Result type for count aggregations
     fn count_aggregate_type() -> Type<Self::ScalarType>;
+
+    fn string_type() -> Type<Self::ScalarType>;
 }
 
 #[derive(Derivative)]
@@ -489,10 +491,41 @@ pub struct AggregateFunctionDefinition<T: ConnectorTypes> {
 pub enum ComparisonOperatorDefinition<T: ConnectorTypes> {
     Equal,
     In,
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
+    Contains,
+    ContainsInsensitive,
+    StartsWith,
+    StartsWithInsensitive,
+    EndsWith,
+    EndsWithInsensitive,
     Custom {
         /// The type of the argument to this operator
         argument_type: Type<T::ScalarType>,
     },
+}
+
+impl<T: ConnectorTypes> ComparisonOperatorDefinition<T> {
+    pub fn argument_type(self, left_operand_type: &Type<T::ScalarType>) -> Type<T::ScalarType> {
+        use ComparisonOperatorDefinition as C;
+        match self {
+            C::In => Type::ArrayOf(Box::new(left_operand_type.clone())),
+            C::Equal
+            | C::LessThan
+            | C::LessThanOrEqual
+            | C::GreaterThan
+            | C::GreaterThanOrEqual => left_operand_type.clone(),
+            C::Contains
+            | C::ContainsInsensitive
+            | C::StartsWith
+            | C::StartsWithInsensitive
+            | C::EndsWith
+            | C::EndsWithInsensitive => T::string_type(),
+            C::Custom { argument_type } => argument_type,
+        }
+    }
 }
 
 #[derive(Derivative)]

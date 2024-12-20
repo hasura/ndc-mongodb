@@ -32,6 +32,16 @@ impl ConnectorTypes for MongoConfiguration {
     type AggregateFunction = AggregationFunction;
     type ComparisonOperator = ComparisonFunction;
     type ScalarType = MongoScalarType;
+
+    fn count_aggregate_type() -> ndc_query_plan::Type<Self::ScalarType> {
+        ndc_query_plan::Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Long))
+    }
+
+    fn string_type() -> ndc_query_plan::Type<Self::ScalarType> {
+        ndc_query_plan::Type::Scalar(MongoScalarType::Bson(
+            mongodb_support::BsonScalarType::String,
+        ))
+    }
 }
 
 impl QueryContext for MongoConfiguration {

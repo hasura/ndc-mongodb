@@ -58,16 +58,25 @@ fn extended_json_scalar_type() -> (ndc_models::ScalarTypeName, ScalarType) {
                 .into_iter()
                 .map(|comparison_fn| {
                     let name = comparison_fn.graphql_name().into();
-                    let definition = match comparison_fn {
-                        C::Equal => ComparisonOperatorDefinition::Equal,
+                    let ndc_definition = comparison_fn.ndc_definition(|func| match func {
+                        C::Equal => ext_json_type.clone(),
+                        C::In => Type::Array {
+                            element_type: ext_json_type.clone(),
+                        },
+                        C::LessThan => ext_json_type.clone(),
+                        C::LessThanOrEqual => ext_json_type.clone(),
+                        C::GreaterThan => ext_json_type.clone(),
+                        C::GreaterThanOrEqual => ext_json_type.clone(),
+                        C::Equal => ext_json_type.clone(),
+                        C::NotEqual => ext_json_type.clone(),
+                        C::NotIn => Type::Array {
+                            element_type: ext_json_type.clone(),
+                        },
                         C::Regex | C::IRegex => ComparisonOperatorDefinition::Custom {
-                            argument_type: bson_to_named_type(S::String),
+                            argument_type: bson_to_named_type(S::Regex),
                         },
-                        _ => ComparisonOperatorDefinition::Custom {
-                            argument_type: ext_json_type.clone(),
-                        },
-                    };
-                    (name, definition)
+                    });
+                    (name, ndc_definition)
                 })
                 .collect(),
         },
@@ -114,14 +123,7 @@ fn bson_comparison_operators(
     comparison_operators(bson_scalar_type)
         .map(|(comparison_fn, argument_type)| {
             let fn_name = comparison_fn.graphql_name().into();
-            match comparison_fn {
-                ComparisonFunction::Equal => (fn_name, ComparisonOperatorDefinition::Equal),
-                ComparisonFunction::In => (fn_name, ComparisonOperatorDefinition::In),
-                _ => (
-                    fn_name,
-                    ComparisonOperatorDefinition::Custom { argument_type },
-                ),
-            }
+            (fn_name, comparison_fn.ndc_definition(|_| argument_type))
         })
         .collect()
 }
@@ -203,8 +205,8 @@ pub fn comparison_operators(
     .chain(match scalar_type {
         S::String => Box::new(
             [
-                (C::Regex, bson_to_named_type(S::String)),
-                (C::IRegex, bson_to_named_type(S::String)),
+                (C::Regex, bson_to_named_type(S::Regex)),
+                (C::IRegex, bson_to_named_type(S::Regex)),
             ]
             .into_iter(),
         ),

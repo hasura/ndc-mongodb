@@ -619,16 +619,7 @@ fn plan_for_binary_comparison<T: QueryContext>(
     let (operator, operator_definition) = plan_state
         .context
         .find_comparison_operator(comparison_target.target_type(), &operator)?;
-    let value_type = match operator_definition {
-        plan::ComparisonOperatorDefinition::Equal => {
-            let column_type = comparison_target.target_type().clone();
-            column_type
-        }
-        plan::ComparisonOperatorDefinition::In => {
-            plan::Type::ArrayOf(Box::new(comparison_target.target_type().clone()))
-        }
-        plan::ComparisonOperatorDefinition::Custom { argument_type } => argument_type.clone(),
-    };
+    let value_type = operator_definition.argument_type(comparison_target.target_type());
     Ok(plan::Expression::BinaryComparisonOperator {
         operator,
         value: plan_for_comparison_value(

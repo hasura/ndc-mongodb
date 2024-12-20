@@ -1,14 +1,12 @@
 use enum_iterator::{all, Sequence};
 use mongodb::bson::{doc, Bson, Document};
+use ndc_models as ndc;
 
 /// Supported binary comparison operators. This type provides GraphQL names, MongoDB operator
 /// names, and aggregation pipeline code for each operator. Argument types are defined in
 /// mongodb-agent-common/src/scalar_types_capabilities.rs.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Sequence)]
 pub enum ComparisonFunction {
-    // Equality and inequality operators (except for `NotEqual`) are built into the v2 spec, but
-    // the only built-in operator in v3 is `Equal`. So we need at minimum definitions for
-    // inequality operators here.
     LessThan,
     LessThanOrEqual,
     GreaterThan,
@@ -55,6 +53,25 @@ impl ComparisonFunction {
             C::NotEqual => "$ne",
             C::Regex => "$regex",
             C::IRegex => "$regex",
+        }
+    }
+
+    pub fn ndc_definition(
+        self,
+        argument_type: impl FnOnce(Self) -> ndc::Type,
+    ) -> ndc::ComparisonOperatorDefinition {
+        use ndc::ComparisonOperatorDefinition as NDC;
+        match self {
+            C::Equal => NDC::Equal,
+            C::In => NDC::In,
+            C::LessThan => NDC::LessThan,
+            C::LessThanOrEqual => NDC::LessThanOrEqual,
+            C::GreaterThan => NDC::GreaterThan,
+            C::GreaterThanOrEqual => NDC::GreaterThanOrEqual,
+            C::NotEqual => NDC::Custom { argument_type },
+            C::NotIn => NDC::Custom { argument_type },
+            C::Regex => NDC::Custom { argument_type },
+            C::IRegex => NDC::Custom { argument_type },
         }
     }
 
