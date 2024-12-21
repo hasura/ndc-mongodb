@@ -22,7 +22,11 @@ use super::Result;
 pub struct AggregationExpression(pub Bson);
 
 impl AggregationExpression {
-    fn into_bson(self) -> Bson {
+    pub fn new(expression: impl Into<Bson>) -> Self {
+        Self(expression.into())
+    }
+
+    pub fn into_bson(self) -> Bson {
         self.0
     }
 }
@@ -150,7 +154,7 @@ pub fn make_aggregation_expression_for_exists(
             Some(predicate),
         ) => {
             let column_ref = ColumnRef::from_column_and_field_path(column_name, Some(field_path));
-            exists_in_array(column_ref, predicate)?
+            exists_in_array(column_ref, predicate)? // TODO: predicate expects objects with a __value field
         }
         (
             ExistsInCollection::NestedScalarCollection {
@@ -187,14 +191,9 @@ fn exists_in_array(
 }
 
 fn exists_in_array_no_predicate(array_ref: ColumnRef<'_>) -> AggregationExpression {
-    let index_zero = "0".into();
-    let first_element_ref = array_ref.into_nested_field(&index_zero);
-    AggregationExpression(
-        doc! {
-            "$ne": [first_element_ref.into_aggregate_expression(), null]
-        }
-        .into(),
-    )
+    AggregationExpression::new(doc! {
+        "$gt": [{ "$size": array_ref.into_aggregate_expression() }, 0]
+    })
 }
 
 fn make_binary_comparison_selector(
@@ -234,7 +233,9 @@ fn make_array_comparison_selector(
         ArrayComparison::Contains { value } => doc! {
             "$in": [value_expression(value)?, column_expression(column)]
         },
-        ArrayComparison::IsEmpty => todo!(),
+        ArrayComparison::IsEmpty => doc! {
+            "$eq": [{ "$size": column_expression(column) }, 0]
+        },
     };
     Ok(AggregationExpression(doc.into()))
 }
@@ -260,7 +261,9 @@ fn value_expression(value: &ComparisonValue) -> Result<AggregationExpression> {
         }
         ComparisonValue::Scalar { value, value_type } => {
             let comparison_value = bson_from_scalar_value(value, value_type)?;
-            Ok(AggregationExpression(comparison_value))
+            Ok(AggregationExpression::new(doc! {
+                "$literal": comparison_value
+            }))
         }
         ComparisonValue::Variable {
             name,

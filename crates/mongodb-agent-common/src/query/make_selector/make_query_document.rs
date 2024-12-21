@@ -1,14 +1,14 @@
-use std::iter::once;
-
 use anyhow::anyhow;
 use itertools::Itertools as _;
-use mongodb::bson::{self, doc};
+use mongodb::bson::{self, doc, Bson};
 use ndc_models::UnaryComparisonOperator;
 
 use crate::{
     comparison_function::ComparisonFunction,
     interface_types::MongoAgentError,
-    mongo_query_plan::{ComparisonTarget, ComparisonValue, ExistsInCollection, Expression, Type},
+    mongo_query_plan::{
+        ArrayComparison, ComparisonTarget, ComparisonValue, ExistsInCollection, Expression, Type,
+    },
     query::{column_ref::ColumnRef, serialization::json_to_bson},
 };
 
@@ -73,6 +73,9 @@ pub fn make_query_document(expr: &Expression) -> Result<Option<QueryDocument>> {
         Expression::UnaryComparisonOperator { column, operator } => {
             make_unary_comparison_selector(column, operator)
         }
+        Expression::ArrayComparison { column, comparison } => {
+            make_array_comparison_selector(column, comparison)
+        }
     }
 }
 
@@ -102,7 +105,7 @@ fn make_query_document_for_exists(
             },
             Some(predicate),
         ) => {
-            let column_ref = ColumnRef::from_field_path(field_path.iter().chain(once(column_name)));
+            let column_ref = ColumnRef::from_column_and_field_path(column_name, Some(field_path));
             exists_in_array(column_ref, predicate)?
         }
         (
@@ -113,7 +116,29 @@ fn make_query_document_for_exists(
             },
             None,
         ) => {
-            let column_ref = ColumnRef::from_field_path(field_path.iter().chain(once(column_name)));
+            let column_ref = ColumnRef::from_column_and_field_path(column_name, Some(field_path));
+            exists_in_array_no_predicate(column_ref)
+        }
+        (
+            ExistsInCollection::NestedScalarCollection {
+                column_name,
+                field_path,
+                ..
+            },
+            Some(predicate),
+        ) => {
+            let column_ref = ColumnRef::from_column_and_field_path(column_name, Some(field_path));
+            exists_in_array(column_ref, predicate)? // TODO: predicate expects objects with a __value field
+        }
+        (
+            ExistsInCollection::NestedScalarCollection {
+                column_name,
+                field_path,
+                ..
+            },
+            None,
+        ) => {
+            let column_ref = ColumnRef::from_column_and_field_path(column_name, Some(field_path));
             exists_in_array_no_predicate(column_ref)
         }
     };
@@ -151,25 +176,16 @@ fn make_binary_comparison_selector(
     operator: &ComparisonFunction,
     value: &ComparisonValue,
 ) -> Result<Option<QueryDocument>> {
-    let query_doc = match value {
-        ComparisonValue::Scalar { value, value_type } => {
-            let comparison_value = bson_from_scalar_value(value, value_type)?;
+    let selector =
+        value_expression(value)?.and_then(|value| {
             match ColumnRef::from_comparison_target(target_column) {
-                ColumnRef::MatchKey(key) => Some(QueryDocument(
-                    operator.mongodb_match_query(key, comparison_value),
-                )),
+                ColumnRef::MatchKey(key) => {
+                    Some(QueryDocument(operator.mongodb_match_query(key, value)))
+                }
                 _ => None,
             }
-        }
-        ComparisonValue::Column { .. } => None,
-        // Variables cannot be referenced in match documents
-        ComparisonValue::Variable { .. } => None,
-    };
-
-    let implicit_exists_over_relationship =
-        query_doc.and_then(|d| traverse_relationship_path(target_column.relationship_path(), d));
-
-    Ok(implicit_exists_over_relationship)
+        });
+    Ok(selector)
 }
 
 fn make_unary_comparison_selector(
@@ -184,11 +200,43 @@ fn make_unary_comparison_selector(
             _ => None,
         },
     };
+    Ok(query_doc)
+}
 
-    let implicit_exists_over_relationship =
-        query_doc.and_then(|d| traverse_relationship_path(target_column.relationship_path(), d));
+fn make_array_comparison_selector(
+    column: &ComparisonTarget,
+    comparison: &ArrayComparison,
+) -> Result<Option<QueryDocument>> {
+    let column_ref = ColumnRef::from_comparison_target(column);
+    let ColumnRef::MatchKey(key) = column_ref else {
+        return Ok(None);
+    };
+    let doc = match comparison {
+        ArrayComparison::Contains { value } => value_expression(value)?.map(|value| {
+            doc! {
+                key: { "$elemMatch": { "$eq": value } }
+            }
+        }),
+        ArrayComparison::IsEmpty => Some(doc! {
+            key: { "$size": 0 }
+        }),
+    };
+    Ok(doc.map(QueryDocument))
+}
 
-    Ok(implicit_exists_over_relationship)
+/// Only scalar comparison values can be represented in query documents. This function returns such
+/// a representation if there is a legal way to do so.
+fn value_expression(value: &ComparisonValue) -> Result<Option<Bson>> {
+    let expression = match value {
+        ComparisonValue::Scalar { value, value_type } => {
+            let bson_value = bson_from_scalar_value(value, value_type)?;
+            Some(bson_value)
+        }
+        ComparisonValue::Column { .. } => None,
+        // Variables cannot be referenced in match documents
+        ComparisonValue::Variable { .. } => None,
+    };
+    Ok(expression)
 }
 
 /// For simple cases the target of an expression is a field reference. But if the target is

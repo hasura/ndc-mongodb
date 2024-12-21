@@ -52,7 +52,7 @@ fn selection_for_field(
             ..
         } => {
             let col_ref = nested_column_reference(parent, column);
-            let col_ref_or_null = value_or_null(col_ref.into_aggregate_expression());
+            let col_ref_or_null = value_or_null(col_ref.into_aggregate_expression().into_bson());
             Ok(col_ref_or_null)
         }
         Field::Column {
@@ -90,7 +90,8 @@ fn selection_for_field(
                             field_name.to_string(),
                             ColumnRef::variable("this")
                                 .into_nested_field(field_name)
-                                .into_aggregate_expression(),
+                                .into_aggregate_expression()
+                                .into_bson(),
                         )
                     })
                     .collect()
