@@ -27,7 +27,7 @@ pub fn make_sort_stages(order_by: &OrderBy) -> Result<Vec<Stage>> {
     if !required_aliases.is_empty() {
         let fields = required_aliases
             .into_iter()
-            .map(|(alias, expression)| (alias, expression.into_aggregate_expression()))
+            .map(|(alias, expression)| (alias, expression.into_aggregate_expression().into_bson()))
             .collect();
         let stage = Stage::AddFields(fields);
         stages.push(stage);
@@ -80,6 +80,7 @@ fn safe_alias(target: &OrderByTarget) -> Result<String> {
             name,
             field_path,
             path,
+            ..
         } => {
             let name_and_path = once("__sort_key_")
                 .chain(path.iter().map(|n| n.as_str()))

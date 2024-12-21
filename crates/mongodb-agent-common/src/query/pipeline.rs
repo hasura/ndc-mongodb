@@ -252,9 +252,9 @@ fn pipeline_for_aggregate(
     fn mk_target_field(name: FieldName, field_path: Option<Vec<FieldName>>) -> ComparisonTarget {
         ComparisonTarget::Column {
             name,
+            arguments: Default::default(),
             field_path,
             field_type: Type::Scalar(MongoScalarType::ExtendedJSON), // type does not matter here
-            path: Default::default(),
         }
     }
 
@@ -278,6 +278,7 @@ fn pipeline_for_aggregate(
             column,
             field_path,
             distinct,
+            ..
         } if distinct => {
             let target_field = mk_target_field(column, field_path);
             Pipeline::from_iter(
@@ -286,7 +287,8 @@ fn pipeline_for_aggregate(
                     limit.map(Into::into).map(Stage::Limit),
                     Some(Stage::Group {
                         key_expression: ColumnRef::from_comparison_target(&target_field)
-                            .into_aggregate_expression(),
+                            .into_aggregate_expression()
+                            .into_bson(),
                         accumulators: [].into(),
                     }),
                     Some(Stage::Count(RESULT_FIELD.to_string())),
@@ -296,10 +298,12 @@ fn pipeline_for_aggregate(
             )
         }
 
+        // TODO: ENG-1465 count by distinct
         Aggregate::ColumnCount {
             column,
             field_path,
             distinct: _,
+            ..
         } => Pipeline::from_iter(
             [
                 Some(filter_to_documents_with_value(mk_target_field(
@@ -316,18 +320,19 @@ fn pipeline_for_aggregate(
             column,
             field_path,
             function,
-            result_type: _,
+            ..
         } => {
             use AggregationFunction::*;
 
             let target_field = ComparisonTarget::Column {
                 name: column.clone(),
-                field_path,
+                arguments: Default::default(),
+                field_path: field_path.clone(),
                 field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::Null)), // type does not matter here
-                path: Default::default(),
             };
-            let field_ref =
-                ColumnRef::from_comparison_target(&target_field).into_aggregate_expression();
+            let field_ref = ColumnRef::from_column_and_field_path(&column, field_path.as_ref())
+                .into_aggregate_expression()
+                .into_bson();
 
             let accumulator = match function {
                 Avg => Accumulator::Avg(field_ref),

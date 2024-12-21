@@ -215,7 +215,7 @@ fn fold_path_element<'a>(
 /// Unlike `column_ref` this expression cannot be used as a match query key - it can only be used
 /// as an expression.
 pub fn column_expression(column: &ComparisonTarget) -> Bson {
-    ColumnRef::from_comparison_target(column).into_aggregate_expression()
+    ColumnRef::from_comparison_target(column).into_aggregate_expression().into_bson()
 }
 
 #[cfg(test)]
