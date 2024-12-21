@@ -122,9 +122,16 @@ pub enum Argument<T: ConnectorTypes> {
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub struct Relationship<T: ConnectorTypes> {
-    pub column_mapping: BTreeMap<ndc::FieldName, ndc::FieldName>,
+    /// A mapping between columns on the source row to columns on the target collection.
+    /// The column on the target collection is specified via a field path (ie. an array of field
+    /// names that descend through nested object fields). The field path will only contain a single item,
+    /// meaning a column on the target collection's type, unless the 'relationships.nested'
+    /// capability is supported, in which case multiple items denotes a nested object field.
+    pub column_mapping: BTreeMap<ndc::FieldName, Vec<ndc::FieldName>>,
     pub relationship_type: RelationshipType,
+    /// The name of a collection
     pub target_collection: ndc::CollectionName,
+    /// Values to be provided to any collection arguments
     pub arguments: BTreeMap<ndc::ArgumentName, RelationshipArgument<T>>,
     pub query: Query<T>,
 }
@@ -223,6 +230,7 @@ pub struct NestedArray<T: ConnectorTypes> {
 pub enum NestedField<T: ConnectorTypes> {
     Object(NestedObject<T>),
     Array(NestedArray<T>),
+    // TODO: ENG-1464 add `Collection(NestedCollection)` variant
 }
 
 #[derive(Derivative)]
@@ -525,6 +533,31 @@ impl<T: ConnectorTypes> ComparisonOperatorDefinition<T> {
             | C::EndsWithInsensitive => T::string_type(),
             C::Custom { argument_type } => argument_type,
         }
+    }
+
+    pub fn from_ndc_definition<E>(
+        ndc_definition: &ndc::ComparisonOperatorDefinition,
+        map_type: impl FnOnce(&ndc::Type) -> Result<Type<T::ScalarType>, E>,
+    ) -> Result<Self, E> {
+        use ndc::ComparisonOperatorDefinition as NDC;
+        let definition = match ndc_definition {
+            NDC::Equal => Self::Equal,
+            NDC::In => Self::In,
+            NDC::LessThan => Self::LessThan,
+            NDC::LessThanOrEqual => Self::LessThanOrEqual,
+            NDC::GreaterThan => Self::GreaterThan,
+            NDC::GreaterThanOrEqual => Self::GreaterThanOrEqual,
+            NDC::Contains => Self::Contains,
+            NDC::ContainsInsensitive => Self::ContainsInsensitive,
+            NDC::StartsWith => Self::StartsWith,
+            NDC::StartsWithInsensitive => Self::StartsWithInsensitive,
+            NDC::EndsWith => Self::EndsWith,
+            NDC::EndsWithInsensitive => Self::EndsWithInsensitive,
+            NDC::Custom { argument_type } => Self::Custom {
+                argument_type: map_type(argument_type)?,
+            },
+        };
+        Ok(definition)
     }
 }
 

@@ -44,7 +44,8 @@ fn type_annotated_field_helper<T: QueryContext>(
             fields,
             arguments: _,
         } => {
-            let column_type = find_object_field(collection_object_type, &column)?;
+            let column_field = find_object_field(collection_object_type, &column)?;
+            let column_type = &column_field.r#type;
             let fields = fields
                 .map(|nested_field| {
                     type_annotated_nested_field_helper(
@@ -162,6 +163,10 @@ fn type_annotated_nested_field_helper<T: QueryContext>(
                 )?),
             })
         }
+        // TODO: ENG-1464
+        (ndc::NestedField::Collection(_), _) => Err(QueryPlanError::NotImplemented(
+            "query.nested_fields.nested_collections".to_string(),
+        ))?,
         (nested, Type::Nullable(t)) => {
             // let path = append_to_path(path, [])
             type_annotated_nested_field_helper(

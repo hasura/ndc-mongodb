@@ -93,15 +93,10 @@ pub trait QueryContext: ConnectorTypes {
     {
         let (operator, definition) =
             Self::lookup_comparison_operator(self, left_operand_type, op_name)?;
-        let plan_def = match definition {
-            ndc::ComparisonOperatorDefinition::Equal => plan::ComparisonOperatorDefinition::Equal,
-            ndc::ComparisonOperatorDefinition::In => plan::ComparisonOperatorDefinition::In,
-            ndc::ComparisonOperatorDefinition::Custom { argument_type } => {
-                plan::ComparisonOperatorDefinition::Custom {
-                    argument_type: self.ndc_to_plan_type(argument_type)?,
-                }
-            }
-        };
+        let plan_def =
+            plan::ComparisonOperatorDefinition::from_ndc_definition(definition, |ndc_type| {
+                self.ndc_to_plan_type(ndc_type)
+            })?;
         Ok((operator, plan_def))
     }
 

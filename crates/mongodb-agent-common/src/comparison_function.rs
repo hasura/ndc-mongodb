@@ -68,10 +68,18 @@ impl ComparisonFunction {
             C::LessThanOrEqual => NDC::LessThanOrEqual,
             C::GreaterThan => NDC::GreaterThan,
             C::GreaterThanOrEqual => NDC::GreaterThanOrEqual,
-            C::NotEqual => NDC::Custom { argument_type },
-            C::NotIn => NDC::Custom { argument_type },
-            C::Regex => NDC::Custom { argument_type },
-            C::IRegex => NDC::Custom { argument_type },
+            C::NotEqual => NDC::Custom {
+                argument_type: argument_type(self),
+            },
+            C::NotIn => NDC::Custom {
+                argument_type: argument_type(self),
+            },
+            C::Regex => NDC::Custom {
+                argument_type: argument_type(self),
+            },
+            C::IRegex => NDC::Custom {
+                argument_type: argument_type(self),
+            },
         }
     }
 
