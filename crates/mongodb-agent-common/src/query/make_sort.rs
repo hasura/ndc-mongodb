@@ -96,17 +96,9 @@ fn safe_alias(target: &OrderByTarget) -> Result<String> {
                 &combine_all_elements_into_one_name,
             ))
         }
-        ndc_query_plan::OrderByTarget::SingleColumnAggregate { .. } => {
-            // TODO: ENG-1011
-            Err(MongoAgentError::NotImplemented(
-                "ordering by single column aggregate".into(),
-            ))
-        }
-        ndc_query_plan::OrderByTarget::StarCountAggregate { .. } => {
-            // TODO: ENG-1010
-            Err(MongoAgentError::NotImplemented(
-                "ordering by star count aggregate".into(),
-            ))
+        ndc_query_plan::OrderByTarget::Aggregate { .. } => {
+            // TODO: ENG-1010, ENG-1011
+            Err(MongoAgentError::NotImplemented("order by aggregate".into()))
         }
     }
 }
@@ -132,6 +124,7 @@ mod tests {
                     name: "$schema".into(),
                     field_path: Default::default(),
                     path: Default::default(),
+                    arguments: Default::default(),
                 },
             }],
         };
@@ -159,6 +152,7 @@ mod tests {
                     name: "configuration".into(),
                     field_path: Some(vec!["$schema".into()]),
                     path: Default::default(),
+                    arguments: Default::default(),
                 },
             }],
         };

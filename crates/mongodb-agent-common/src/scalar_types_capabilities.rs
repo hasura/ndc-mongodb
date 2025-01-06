@@ -38,19 +38,26 @@ fn extended_json_scalar_type() -> (ndc_models::ScalarTypeName, ScalarType) {
     (
         mongodb_support::EXTENDED_JSON_TYPE_NAME.into(),
         ScalarType {
-            representation: Some(TypeRepresentation::JSON),
+            representation: TypeRepresentation::JSON,
             aggregate_functions: aggregation_functions
                 .into_iter()
                 .map(|aggregation_function| {
+                    use AggregateFunctionDefinition as NDC;
+                    use AggregationFunction as Plan;
                     let name = aggregation_function.graphql_name().into();
-                    let result_type = match aggregation_function {
-                        AggregationFunction::Avg => ext_json_type.clone(),
-                        AggregationFunction::Count => bson_to_named_type(S::Int),
-                        AggregationFunction::Min => ext_json_type.clone(),
-                        AggregationFunction::Max => ext_json_type.clone(),
-                        AggregationFunction::Sum => ext_json_type.clone(),
+                    let definition = match aggregation_function {
+                        Plan::Avg => NDC::Average {
+                            result_type: mongodb_support::EXTENDED_JSON_TYPE_NAME.into(),
+                        },
+                        Plan::Count => NDC::Custom {
+                            result_type: bson_to_named_type(S::Int),
+                        },
+                        Plan::Min => NDC::Min,
+                        Plan::Max => NDC::Max,
+                        Plan::Sum => NDC::Sum {
+                            result_type: mongodb_support::EXTENDED_JSON_TYPE_NAME.into(),
+                        },
                     };
-                    let definition = AggregateFunctionDefinition { result_type };
                     (name, definition)
                 })
                 .collect(),
@@ -61,20 +68,17 @@ fn extended_json_scalar_type() -> (ndc_models::ScalarTypeName, ScalarType) {
                     let ndc_definition = comparison_fn.ndc_definition(|func| match func {
                         C::Equal => ext_json_type.clone(),
                         C::In => Type::Array {
-                            element_type: ext_json_type.clone(),
+                            element_type: Box::new(ext_json_type.clone()),
                         },
                         C::LessThan => ext_json_type.clone(),
                         C::LessThanOrEqual => ext_json_type.clone(),
                         C::GreaterThan => ext_json_type.clone(),
                         C::GreaterThanOrEqual => ext_json_type.clone(),
-                        C::Equal => ext_json_type.clone(),
                         C::NotEqual => ext_json_type.clone(),
                         C::NotIn => Type::Array {
-                            element_type: ext_json_type.clone(),
+                            element_type: Box::new(ext_json_type.clone()),
                         },
-                        C::Regex | C::IRegex => ComparisonOperatorDefinition::Custom {
-                            argument_type: bson_to_named_type(S::Regex),
-                        },
+                        C::Regex | C::IRegex => bson_to_named_type(S::Regex),
                     });
                     (name, ndc_definition)
                 })
@@ -93,27 +97,28 @@ fn make_scalar_type(bson_scalar_type: BsonScalarType) -> (ndc_models::ScalarType
     (scalar_type_name.into(), scalar_type)
 }
 
-fn bson_scalar_type_representation(bson_scalar_type: BsonScalarType) -> Option<TypeRepresentation> {
+fn bson_scalar_type_representation(bson_scalar_type: BsonScalarType) -> TypeRepresentation {
+    use TypeRepresentation as R;
     match bson_scalar_type {
-        BsonScalarType::Double => Some(TypeRepresentation::Float64),
-        BsonScalarType::Decimal => Some(TypeRepresentation::BigDecimal), // Not quite.... Mongo Decimal is 128-bit, BigDecimal is unlimited
-        BsonScalarType::Int => Some(TypeRepresentation::Int32),
-        BsonScalarType::Long => Some(TypeRepresentation::Int64),
-        BsonScalarType::String => Some(TypeRepresentation::String),
-        BsonScalarType::Date => Some(TypeRepresentation::Timestamp), // Mongo Date is milliseconds since unix epoch
-        BsonScalarType::Timestamp => None, // Internal Mongo timestamp type
-        BsonScalarType::BinData => None,
-        BsonScalarType::ObjectId => Some(TypeRepresentation::String), // Mongo ObjectId is usually expressed as a 24 char hex string (12 byte number)
-        BsonScalarType::Bool => Some(TypeRepresentation::Boolean),
-        BsonScalarType::Null => None,
-        BsonScalarType::Regex => None,
-        BsonScalarType::Javascript => None,
-        BsonScalarType::JavascriptWithScope => None,
-        BsonScalarType::MinKey => None,
-        BsonScalarType::MaxKey => None,
-        BsonScalarType::Undefined => None,
-        BsonScalarType::DbPointer => None,
-        BsonScalarType::Symbol => None,
+        S::Double => R::Float64,
+        S::Decimal => R::BigDecimal, // Not quite.... Mongo Decimal is 128-bit, BigDecimal is unlimited
+        S::Int => R::Int32,
+        S::Long => R::Int64,
+        S::String => R::String,
+        S::Date => R::Timestamp, // Mongo Date is milliseconds since unix epoch
+        S::Timestamp => R::JSON, // Internal Mongo timestamp type
+        S::BinData => R::JSON,
+        S::ObjectId => R::String, // Mongo ObjectId is usually expressed as a 24 char hex string (12 byte number)
+        S::Bool => R::Boolean,
+        S::Null => R::JSON,
+        S::Regex => R::JSON,
+        S::Javascript => R::String,
+        S::JavascriptWithScope => R::JSON,
+        S::MinKey => R::JSON,
+        S::MaxKey => R::JSON,
+        S::Undefined => R::JSON,
+        S::DbPointer => R::JSON,
+        S::Symbol => R::String,
     }
 }
 
@@ -132,8 +137,7 @@ fn bson_aggregation_functions(
     bson_scalar_type: BsonScalarType,
 ) -> BTreeMap<AggregateFunctionName, AggregateFunctionDefinition> {
     aggregate_functions(bson_scalar_type)
-        .map(|(fn_name, result_type)| {
-            let aggregation_definition = AggregateFunctionDefinition { result_type };
+        .map(|(fn_name, aggregation_definition)| {
             (fn_name.graphql_name().into(), aggregation_definition)
         })
         .collect()
@@ -145,26 +149,43 @@ fn bson_to_named_type(bson_scalar_type: BsonScalarType) -> Type {
     }
 }
 
-pub fn aggregate_functions(
+fn bson_to_scalar_type_name(bson_scalar_type: BsonScalarType) -> ndc_models::ScalarTypeName {
+    bson_scalar_type.graphql_name().into()
+}
+
+fn aggregate_functions(
     scalar_type: BsonScalarType,
-) -> impl Iterator<Item = (AggregationFunction, Type)> {
-    let nullable_scalar_type = move || Type::Nullable {
-        underlying_type: Box::new(bson_to_named_type(scalar_type)),
-    };
-    [(A::Count, bson_to_named_type(S::Int))]
-        .into_iter()
-        .chain(iter_if(
-            scalar_type.is_orderable(),
-            [A::Min, A::Max]
-                .into_iter()
-                .map(move |op| (op, nullable_scalar_type())),
-        ))
-        .chain(iter_if(
-            scalar_type.is_numeric(),
-            [A::Avg, A::Sum]
-                .into_iter()
-                .map(move |op| (op, nullable_scalar_type())),
-        ))
+) -> impl Iterator<Item = (AggregationFunction, AggregateFunctionDefinition)> {
+    use AggregateFunctionDefinition as NDC;
+    [(
+        A::Count,
+        NDC::Custom {
+            result_type: bson_to_named_type(S::Int),
+        },
+    )]
+    .into_iter()
+    .chain(iter_if(
+        scalar_type.is_orderable(),
+        [(A::Min, NDC::Min), (A::Max, NDC::Max)].into_iter(),
+    ))
+    .chain(iter_if(
+        scalar_type.is_numeric(),
+        [
+            (
+                A::Avg,
+                NDC::Average {
+                    result_type: bson_to_scalar_type_name(scalar_type),
+                },
+            ),
+            (
+                A::Sum,
+                NDC::Average {
+                    result_type: bson_to_scalar_type_name(scalar_type),
+                },
+            ),
+        ]
+        .into_iter(),
+    ))
 }
 
 pub fn comparison_operators(

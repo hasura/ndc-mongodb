@@ -20,5 +20,6 @@ pub fn object_type(
                 )
             })
             .collect(),
+        foreign_keys: Default::default(),
     }
 }

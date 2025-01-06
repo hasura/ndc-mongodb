@@ -76,7 +76,7 @@ impl<'a> ColumnRef<'a> {
                 .into_iter()
                 .map(|field_name| field_name.as_ref() as &str),
         )
-        .unwrap()
+        .expect("field_path is not empty")
     }
 
     pub fn from_field(field_name: &ndc_models::FieldName) -> ColumnRef<'_> {
@@ -108,6 +108,13 @@ impl<'a> ColumnRef<'a> {
         };
         AggregationExpression(bson)
     }
+
+    pub fn into_match_key(self) -> Option<Cow<'a, str>> {
+        match self {
+            ColumnRef::MatchKey(key) => Some(key),
+            _ => None,
+        }
+    }
 }
 
 fn from_comparison_target(column: &ComparisonTarget) -> ColumnRef<'_> {
@@ -125,7 +132,7 @@ fn from_column_and_field_path<'a>(
     let name_and_path = once(name.as_ref() as &str).chain(
         field_path
             .iter()
-            .map(|x| *x)
+            .copied()
             .flatten()
             .map(|field_name| field_name.as_ref() as &str),
     );
@@ -215,7 +222,9 @@ fn fold_path_element<'a>(
 /// Unlike `column_ref` this expression cannot be used as a match query key - it can only be used
 /// as an expression.
 pub fn column_expression(column: &ComparisonTarget) -> Bson {
-    ColumnRef::from_comparison_target(column).into_aggregate_expression().into_bson()
+    ColumnRef::from_comparison_target(column)
+        .into_aggregate_expression()
+        .into_bson()
 }
 
 #[cfg(test)]

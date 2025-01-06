@@ -59,7 +59,7 @@ pub fn pipeline_for_relations(
 
 fn make_lookup_stage(
     from: ndc_models::CollectionName,
-    column_mapping: &BTreeMap<ndc_models::FieldName, ndc_models::FieldName>,
+    column_mapping: &BTreeMap<ndc_models::FieldName, Vec<ndc_models::FieldName>>,
     r#as: ndc_models::RelationshipName,
     lookup_pipeline: Pipeline,
     scope: Option<&Scope>,
@@ -67,41 +67,29 @@ fn make_lookup_stage(
     // If there is a single column mapping, and the source and target field references can be
     // expressed as match keys (we don't need to escape field names), then we can use a concise
     // correlated subquery. Otherwise we need to fall back to an uncorrelated subquery.
-    let safe_single_column_mapping = if column_mapping.len() == 1 {
-        // Safe to unwrap because we just checked the hashmap size
-        let (source_selector, target_selector) = column_mapping.iter().next().unwrap();
-
-        let source_ref = ColumnRef::from_field(source_selector);
-        let target_ref = ColumnRef::from_field(target_selector);
-
-        match (source_ref, target_ref) {
-            (ColumnRef::MatchKey(source_key), ColumnRef::MatchKey(target_key)) => {
-                Some((source_key.to_string(), target_key.to_string()))
-            }
-
-            // If the source and target refs cannot be expressed in required syntax then we need to
-            // fall back to a lookup pipeline that con compare arbitrary expressions.
-            // [multiple_column_mapping_lookup] does this.
-            _ => None,
-        }
+    let single_mapping = if column_mapping.len() == 1 {
+        column_mapping.iter().next()
     } else {
         None
     };
+    let source_selector = single_mapping.map(|(field_name, _)| field_name);
+    let target_selector = single_mapping.map(|(_, target_path)| target_path);
 
-    match safe_single_column_mapping {
-        Some((source_selector_key, target_selector_key)) => {
-            lookup_with_concise_correlated_subquery(
-                from,
-                source_selector_key,
-                target_selector_key,
-                r#as,
-                lookup_pipeline,
-                scope,
-            )
-        }
-        None => {
-            lookup_with_uncorrelated_subquery(from, column_mapping, r#as, lookup_pipeline, scope)
-        }
+    let source_key = source_selector.and_then(|f| ColumnRef::from_field(f).into_match_key());
+    let target_key =
+        target_selector.and_then(|path| ColumnRef::from_field_path(path).into_match_key());
+
+    match (source_key, target_key) {
+        (Some(source_key), Some(target_key)) => lookup_with_concise_correlated_subquery(
+            from,
+            source_key.into_owned(),
+            target_key.into_owned(),
+            r#as,
+            lookup_pipeline,
+            scope,
+        ),
+
+        _ => lookup_with_uncorrelated_subquery(from, column_mapping, r#as, lookup_pipeline, scope),
     }
 }
 
@@ -138,7 +126,7 @@ fn lookup_with_concise_correlated_subquery(
 /// cases like joining on field names that require escaping.
 fn lookup_with_uncorrelated_subquery(
     from: ndc_models::CollectionName,
-    column_mapping: &BTreeMap<ndc_models::FieldName, ndc_models::FieldName>,
+    column_mapping: &BTreeMap<ndc_models::FieldName, Vec<ndc_models::FieldName>>,
     r#as: ndc_models::RelationshipName,
     lookup_pipeline: Pipeline,
     scope: Option<&Scope>,
@@ -148,7 +136,9 @@ fn lookup_with_uncorrelated_subquery(
         .map(|local_field| {
             (
                 variable(local_field.as_str()),
-                ColumnRef::from_field(local_field).into_aggregate_expression(),
+                ColumnRef::from_field(local_field)
+                    .into_aggregate_expression()
+                    .into_bson(),
             )
         })
         .collect();
@@ -160,16 +150,16 @@ fn lookup_with_uncorrelated_subquery(
     // Creating an intermediate Vec and sorting it is done just to help with testing.
     // A stable order for matchers makes it easier to assert equality between actual
     // and expected pipelines.
-    let mut column_pairs: Vec<(&ndc_models::FieldName, &ndc_models::FieldName)> =
+    let mut column_pairs: Vec<(&ndc_models::FieldName, &Vec<ndc_models::FieldName>)> =
         column_mapping.iter().collect();
     column_pairs.sort();
 
     let matchers: Vec<Document> = column_pairs
         .into_iter()
-        .map(|(local_field, remote_field)| {
+        .map(|(local_field, remote_field_path)| {
             doc! { "$eq": [
                 ColumnRef::variable(variable(local_field.as_str())).into_aggregate_expression(),
-                ColumnRef::from_field(remote_field).into_aggregate_expression(),
+                ColumnRef::from_field_path(remote_field_path).into_aggregate_expression(),
             ] }
         })
         .collect();
@@ -800,6 +790,7 @@ mod tests {
                         ndc_models::ExistsInCollection::Related {
                             relationship: "movie".into(),
                             arguments: Default::default(),
+                            field_path: Default::default(),
                         },
                         binop(
                             "_eq",
@@ -913,6 +904,7 @@ mod tests {
                         ndc_models::ExistsInCollection::Related {
                             relationship: "movie".into(),
                             arguments: Default::default(),
+                            field_path: Default::default(),
                         },
                         binop(
                             "_eq",

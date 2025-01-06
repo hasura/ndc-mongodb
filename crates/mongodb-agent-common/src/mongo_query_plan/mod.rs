@@ -124,6 +124,7 @@ pub type MutationProcedureArgument = ndc_query_plan::MutationProcedureArgument<M
 pub type NestedField = ndc_query_plan::NestedField<MongoConfiguration>;
 pub type NestedArray = ndc_query_plan::NestedArray<MongoConfiguration>;
 pub type NestedObject = ndc_query_plan::NestedObject<MongoConfiguration>;
+pub type ObjectField = ndc_query_plan::ObjectField<MongoScalarType>;
 pub type ObjectType = ndc_query_plan::ObjectType<MongoScalarType>;
 pub type OrderBy = ndc_query_plan::OrderBy<MongoConfiguration>;
 pub type OrderByTarget = ndc_query_plan::OrderByTarget<MongoConfiguration>;

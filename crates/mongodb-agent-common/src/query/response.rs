@@ -12,8 +12,8 @@ use tracing::instrument;
 
 use crate::{
     mongo_query_plan::{
-        Aggregate, Field, NestedArray, NestedField, NestedObject, ObjectType, Query, QueryPlan,
-        Type,
+        Aggregate, Field, NestedArray, NestedField, NestedObject, ObjectField, ObjectType, Query,
+        QueryPlan, Type,
     },
     query::serialization::{bson_to_json, BsonToJsonError},
 };
@@ -106,6 +106,7 @@ fn serialize_row_set_rows_only(
     Ok(RowSet {
         aggregates: None,
         rows,
+        groups: None, // TODO: ENG-1486 implement group by
     })
 }
 
@@ -129,7 +130,11 @@ fn serialize_row_set_with_aggregates(
         .map(|fields| serialize_rows(mode, path, fields, row_set.rows))
         .transpose()?;
 
-    Ok(RowSet { aggregates, rows })
+    Ok(RowSet {
+        aggregates,
+        rows,
+        groups: None, // TODO: ENG-1486 implement group by
+    })
 }
 
 fn serialize_aggregates(
@@ -182,19 +187,31 @@ fn type_for_row_set(
     aggregates: &Option<IndexMap<ndc_models::FieldName, Aggregate>>,
     fields: &Option<IndexMap<ndc_models::FieldName, Field>>,
 ) -> Result<Type> {
-    let mut type_fields = BTreeMap::new();
+    let mut object_fields = BTreeMap::new();
 
     if let Some(aggregates) = aggregates {
-        type_fields.insert("aggregates".into(), type_for_aggregates(aggregates));
+        object_fields.insert(
+            "aggregates".into(),
+            ObjectField {
+                r#type: type_for_aggregates(aggregates),
+                parameters: Default::default(),
+            },
+        );
     }
 
     if let Some(query_fields) = fields {
         let row_type = type_for_row(path, query_fields)?;
-        type_fields.insert("rows".into(), Type::ArrayOf(Box::new(row_type)));
+        object_fields.insert(
+            "rows".into(),
+            ObjectField {
+                r#type: Type::ArrayOf(Box::new(row_type)),
+                parameters: Default::default(),
+            },
+        );
     }
 
     Ok(Type::Object(ObjectType {
-        fields: type_fields,
+        fields: object_fields,
         name: None,
     }))
 }
@@ -203,16 +220,20 @@ fn type_for_aggregates(query_aggregates: &IndexMap<ndc_models::FieldName, Aggreg
     let fields = query_aggregates
         .iter()
         .map(|(field_name, aggregate)| {
+            let result_type = match aggregate {
+                Aggregate::ColumnCount { .. } => {
+                    Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Int))
+                }
+                Aggregate::StarCount => {
+                    Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Int))
+                }
+                Aggregate::SingleColumn { result_type, .. } => result_type.clone(),
+            };
             (
                 field_name.to_string().into(),
-                match aggregate {
-                    Aggregate::ColumnCount { .. } => {
-                        Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Int))
-                    }
-                    Aggregate::StarCount => {
-                        Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Int))
-                    }
-                    Aggregate::SingleColumn { result_type, .. } => result_type.clone(),
+                ObjectField {
+                    r#type: result_type,
+                    parameters: Default::default(),
                 },
             )
         })
@@ -231,7 +252,11 @@ fn type_for_row(
                 &append_to_path(path, [field_name.as_str()]),
                 field_definition,
             )?;
-            Ok((field_name.clone(), field_type))
+            let object_field = ObjectField {
+                r#type: field_type,
+                parameters: Default::default() 
+           };
+            Ok((field_name.clone(), object_field))
         })
         .try_collect::<_, _, QueryResponseError>()?;
     Ok(Type::Object(ObjectType { fields, name: None }))
@@ -379,6 +404,7 @@ mod tests {
                     }))
                 )]
                 .into()]),
+                groups: Default::default(),
             }])
         );
         Ok(())
@@ -417,6 +443,7 @@ mod tests {
                     ]))
                 )]
                 .into()]),
+                groups: Default::default(),
             }])
         );
         Ok(())
@@ -473,6 +500,7 @@ mod tests {
                     )
                 ]
                 .into()]),
+                groups: Default::default(),
             }])
         );
         Ok(())
@@ -525,6 +553,7 @@ mod tests {
                     ),
                 ]
                 .into()]),
+                groups: Default::default(),
             }])
         );
         Ok(())
@@ -588,6 +617,7 @@ mod tests {
                     }))
                 )]
                 .into()]),
+                groups: Default::default(),
             }])
         );
         Ok(())
@@ -651,6 +681,7 @@ mod tests {
                     }))
                 )]
                 .into()]),
+                groups: Default::default(),
             }])
         );
         Ok(())
