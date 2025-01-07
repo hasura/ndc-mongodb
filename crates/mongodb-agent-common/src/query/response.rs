@@ -222,10 +222,10 @@ fn type_for_aggregates(query_aggregates: &IndexMap<ndc_models::FieldName, Aggreg
         .map(|(field_name, aggregate)| {
             let result_type = match aggregate {
                 Aggregate::ColumnCount { .. } => {
-                    Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Int))
+                    Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Long))
                 }
                 Aggregate::StarCount => {
-                    Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Int))
+                    Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Long))
                 }
                 Aggregate::SingleColumn { result_type, .. } => result_type.clone(),
             };

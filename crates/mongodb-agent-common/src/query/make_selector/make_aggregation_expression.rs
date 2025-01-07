@@ -154,7 +154,7 @@ pub fn make_aggregation_expression_for_exists(
             Some(predicate),
         ) => {
             let column_ref = ColumnRef::from_column_and_field_path(column_name, Some(field_path));
-            exists_in_array(column_ref, predicate)? // TODO: predicate expects objects with a __value field
+            exists_in_array(column_ref, predicate)? // TODO: ENG-1488 predicate expects objects with a __value field
         }
         (
             ExistsInCollection::NestedScalarCollection {

@@ -208,7 +208,7 @@ impl<T: ConnectorTypes> Aggregate<T> {
         match self {
             Aggregate::ColumnCount { .. } => Cow::Owned(T::count_aggregate_type()),
             Aggregate::SingleColumn { result_type, .. } => Cow::Borrowed(result_type),
-            Aggregate::StarCount => Cow::Owned(T::count_aggregate_type().into()),
+            Aggregate::StarCount => Cow::Owned(T::count_aggregate_type()),
         }
     }
 }

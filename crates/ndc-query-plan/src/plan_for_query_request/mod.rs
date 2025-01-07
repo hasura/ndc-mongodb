@@ -566,12 +566,7 @@ fn plan_for_expression<T: QueryContext>(
         }),
         ndc::Expression::UnaryComparisonOperator { column, operator } => {
             Ok(plan::Expression::UnaryComparisonOperator {
-                column: plan_for_comparison_target(
-                    plan_state,
-                    root_collection_object_type,
-                    object_type,
-                    column,
-                )?,
+                column: plan_for_comparison_target(plan_state, object_type, column)?,
                 operator,
             })
         }
@@ -614,8 +609,7 @@ fn plan_for_binary_comparison<T: QueryContext>(
     operator: ndc::ComparisonOperatorName,
     value: ndc::ComparisonValue,
 ) -> Result<plan::Expression<T>> {
-    let comparison_target =
-        plan_for_comparison_target(plan_state, root_collection_object_type, object_type, column)?;
+    let comparison_target = plan_for_comparison_target(plan_state, object_type, column)?;
     let (operator, operator_definition) = plan_state
         .context
         .find_comparison_operator(comparison_target.target_type(), &operator)?;
@@ -640,8 +634,7 @@ fn plan_for_array_comparison<T: QueryContext>(
     column: ndc::ComparisonTarget,
     comparison: ndc::ArrayComparison,
 ) -> Result<plan::Expression<T>> {
-    let comparison_target =
-        plan_for_comparison_target(plan_state, root_collection_object_type, object_type, column)?;
+    let comparison_target = plan_for_comparison_target(plan_state, object_type, column)?;
     let plan_comparison = match comparison {
         ndc::ArrayComparison::Contains { value } => {
             let array_element_type = comparison_target
@@ -667,7 +660,6 @@ fn plan_for_array_comparison<T: QueryContext>(
 
 fn plan_for_comparison_target<T: QueryContext>(
     plan_state: &mut QueryPlanState<'_, T>,
-    root_collection_object_type: &plan::ObjectType<T::ScalarType>,
     object_type: &plan::ObjectType<T::ScalarType>,
     target: ndc::ComparisonTarget,
 ) -> Result<plan::ComparisonTarget<T>> {
@@ -678,8 +670,7 @@ fn plan_for_comparison_target<T: QueryContext>(
             field_path,
         } => {
             let object_field =
-                get_object_field_by_path(object_type, &name, field_path.as_ref().map(|v| &**v))?
-                    .clone();
+                get_object_field_by_path(object_type, &name, field_path.as_deref())?.clone();
             let plan_arguments = plan_arguments_from_plan_parameters(
                 plan_state,
                 &object_field.parameters,
@@ -764,7 +755,7 @@ fn plan_for_exists<T: QueryContext>(
         ndc::ExistsInCollection::Related {
             relationship,
             arguments,
-            field_path,
+            field_path: _, // TODO: ENG-1490 requires propagating this, probably through the `register_relationship` call
         } => {
             let ndc_relationship =
                 lookup_relationship(plan_state.collection_relationships, &relationship)?;

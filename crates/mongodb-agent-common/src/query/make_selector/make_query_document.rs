@@ -239,30 +239,6 @@ fn value_expression(value: &ComparisonValue) -> Result<Option<Bson>> {
     Ok(expression)
 }
 
-/// For simple cases the target of an expression is a field reference. But if the target is
-/// a column of a related collection then we're implicitly making an array comparison (because
-/// related documents always come as an array, even for object relationships), so we have to wrap
-/// the starting expression with an `$elemMatch` for each relationship that is traversed to reach
-/// the target column.
-fn traverse_relationship_path(
-    path: &[ndc_models::RelationshipName],
-    QueryDocument(expression): QueryDocument,
-) -> Option<QueryDocument> {
-    let mut expression = Some(expression);
-    for path_element in path.iter().rev() {
-        let path_element_ref = ColumnRef::from_relationship(path_element);
-        expression = expression.and_then(|expr| match path_element_ref {
-            ColumnRef::MatchKey(key) => Some(doc! {
-                key: {
-                    "$elemMatch": expr
-                }
-            }),
-            _ => None,
-        });
-    }
-    expression.map(QueryDocument)
-}
-
 /// Convert a JSON Value into BSON using the provided type information.
 /// For example, parses values of type "Date" into BSON DateTime.
 fn bson_from_scalar_value(value: &serde_json::Value, value_type: &Type) -> Result<bson::Bson> {

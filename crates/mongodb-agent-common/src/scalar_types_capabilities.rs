@@ -50,7 +50,7 @@ fn extended_json_scalar_type() -> (ndc_models::ScalarTypeName, ScalarType) {
                             result_type: mongodb_support::EXTENDED_JSON_TYPE_NAME.into(),
                         },
                         Plan::Count => NDC::Custom {
-                            result_type: bson_to_named_type(S::Int),
+                            result_type: bson_to_named_type(S::Long),
                         },
                         Plan::Min => NDC::Min,
                         Plan::Max => NDC::Max,
@@ -160,7 +160,7 @@ fn aggregate_functions(
     [(
         A::Count,
         NDC::Custom {
-            result_type: bson_to_named_type(S::Int),
+            result_type: bson_to_named_type(S::Long),
         },
     )]
     .into_iter()

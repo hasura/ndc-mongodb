@@ -83,10 +83,7 @@ where
         [field_name, rest_of_path @ ..] => {
             get_object_field_by_path(&collection_object_type, field_name, Some(rest_of_path))
         }
-        [] => Err(QueryPlanError::UnknownCollection(format!(
-            "{}",
-            field_path.join(".")
-        ))),
+        [] => Err(QueryPlanError::UnknownCollection(field_path.join("."))),
     }?;
     let element_type = nested_field.r#type.clone().into_array_element_type()?;
     Ok(element_type)
