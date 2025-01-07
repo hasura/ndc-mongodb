@@ -96,6 +96,13 @@ pub struct ObjectField<ScalarType> {
 }
 
 impl<S> ObjectField<S> {
+    pub fn new(r#type: Type<S>) -> Self {
+        Self {
+            r#type,
+            parameters: Default::default(),
+        }
+    }
+
     pub fn into_nullable(self) -> Self {
         let new_field_type = match self.r#type {
             t @ Type::Nullable(_) => t,
@@ -105,6 +112,11 @@ impl<S> ObjectField<S> {
             r#type: new_field_type,
             parameters: self.parameters,
         }
+    }
+
+    pub fn with_parameters(mut self, parameters: BTreeMap<ArgumentName, Type<S>>) -> Self {
+        self.parameters = parameters;
+        self
     }
 }
 

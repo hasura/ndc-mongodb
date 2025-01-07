@@ -346,117 +346,121 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn produces_dot_separated_root_column_reference() -> anyhow::Result<()> {
-        let target = ComparisonTarget::ColumnInScope {
-            name: "field".into(),
-            field_path: Some(vec!["prop1".into(), "prop2".into()]),
-            field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
-            scope: Scope::Root,
-        };
-        let actual = ColumnRef::from_comparison_target(&target);
-        let expected =
-            ColumnRef::ExpressionStringShorthand("$$scope_root.field.prop1.prop2".into());
-        assert_eq!(actual, expected);
-        Ok(())
-    }
+    // TODO: ENG-1487 `ComparisonTarget::ColumnInScope` is gone, but there is new, similar
+    // functionality in the form of named scopes. It will be useful to modify these tests when
+    // named scopes are supported in this connector.
 
-    #[test]
-    fn escapes_unsafe_field_name_in_root_column_reference() -> anyhow::Result<()> {
-        let target = ComparisonTarget::ColumnInScope {
-            name: "$field".into(),
-            field_path: Default::default(),
-            field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
-            scope: Scope::Named("scope_0".into()),
-        };
-        let actual = ColumnRef::from_comparison_target(&target);
-        let expected = ColumnRef::Expression(
-            doc! {
-                "$getField": {
-                    "input": "$$scope_0",
-                    "field": { "$literal": "$field" },
-                }
-            }
-            .into(),
-        );
-        assert_eq!(actual, expected);
-        Ok(())
-    }
+    // #[test]
+    // fn produces_dot_separated_root_column_reference() -> anyhow::Result<()> {
+    //     let target = ComparisonTarget::ColumnInScope {
+    //         name: "field".into(),
+    //         field_path: Some(vec!["prop1".into(), "prop2".into()]),
+    //         field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+    //         scope: Scope::Root,
+    //     };
+    //     let actual = ColumnRef::from_comparison_target(&target);
+    //     let expected =
+    //         ColumnRef::ExpressionStringShorthand("$$scope_root.field.prop1.prop2".into());
+    //     assert_eq!(actual, expected);
+    //     Ok(())
+    // }
 
-    #[test]
-    fn escapes_unsafe_nested_property_name_in_root_column_reference() -> anyhow::Result<()> {
-        let target = ComparisonTarget::ColumnInScope {
-            name: "field".into(),
-            field_path: Some(vec!["$unsafe_name".into()]),
-            field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
-            scope: Scope::Root,
-        };
-        let actual = ColumnRef::from_comparison_target(&target);
-        let expected = ColumnRef::Expression(
-            doc! {
-                "$getField": {
-                    "input": "$$scope_root.field",
-                    "field": { "$literal": "$unsafe_name" },
-                }
-            }
-            .into(),
-        );
-        assert_eq!(actual, expected);
-        Ok(())
-    }
+    // #[test]
+    // fn escapes_unsafe_field_name_in_root_column_reference() -> anyhow::Result<()> {
+    //     let target = ComparisonTarget::ColumnInScope {
+    //         name: "$field".into(),
+    //         field_path: Default::default(),
+    //         field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+    //         scope: Scope::Named("scope_0".into()),
+    //     };
+    //     let actual = ColumnRef::from_comparison_target(&target);
+    //     let expected = ColumnRef::Expression(
+    //         doc! {
+    //             "$getField": {
+    //                 "input": "$$scope_0",
+    //                 "field": { "$literal": "$field" },
+    //             }
+    //         }
+    //         .into(),
+    //     );
+    //     assert_eq!(actual, expected);
+    //     Ok(())
+    // }
 
-    #[test]
-    fn escapes_multiple_layers_of_nested_property_names_in_root_column_reference(
-    ) -> anyhow::Result<()> {
-        let target = ComparisonTarget::ColumnInScope {
-            name: "$field".into(),
-            field_path: Some(vec!["$unsafe_name1".into(), "$unsafe_name2".into()]),
-            field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
-            scope: Scope::Root,
-        };
-        let actual = ColumnRef::from_comparison_target(&target);
-        let expected = ColumnRef::Expression(
-            doc! {
-                "$getField": {
-                    "input": {
-                        "$getField": {
-                            "input": {
-                                "$getField": {
-                                    "input": "$$scope_root",
-                                    "field": { "$literal": "$field" },
-                                }
-                            },
-                            "field": { "$literal": "$unsafe_name1" },
-                        }
-                    },
-                    "field": { "$literal": "$unsafe_name2" },
-                }
-            }
-            .into(),
-        );
-        assert_eq!(actual, expected);
-        Ok(())
-    }
+    // #[test]
+    // fn escapes_unsafe_nested_property_name_in_root_column_reference() -> anyhow::Result<()> {
+    //     let target = ComparisonTarget::ColumnInScope {
+    //         name: "field".into(),
+    //         field_path: Some(vec!["$unsafe_name".into()]),
+    //         field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+    //         scope: Scope::Root,
+    //     };
+    //     let actual = ColumnRef::from_comparison_target(&target);
+    //     let expected = ColumnRef::Expression(
+    //         doc! {
+    //             "$getField": {
+    //                 "input": "$$scope_root.field",
+    //                 "field": { "$literal": "$unsafe_name" },
+    //             }
+    //         }
+    //         .into(),
+    //     );
+    //     assert_eq!(actual, expected);
+    //     Ok(())
+    // }
 
-    #[test]
-    fn escapes_unsafe_deeply_nested_property_name_in_root_column_reference() -> anyhow::Result<()> {
-        let target = ComparisonTarget::ColumnInScope {
-            name: "field".into(),
-            field_path: Some(vec!["prop1".into(), "$unsafe_name".into()]),
-            field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
-            scope: Scope::Root,
-        };
-        let actual = ColumnRef::from_comparison_target(&target);
-        let expected = ColumnRef::Expression(
-            doc! {
-                "$getField": {
-                    "input": "$$scope_root.field.prop1",
-                    "field": { "$literal": "$unsafe_name" },
-                }
-            }
-            .into(),
-        );
-        assert_eq!(actual, expected);
-        Ok(())
-    }
+    // #[test]
+    // fn escapes_multiple_layers_of_nested_property_names_in_root_column_reference(
+    // ) -> anyhow::Result<()> {
+    //     let target = ComparisonTarget::ColumnInScope {
+    //         name: "$field".into(),
+    //         field_path: Some(vec!["$unsafe_name1".into(), "$unsafe_name2".into()]),
+    //         field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+    //         scope: Scope::Root,
+    //     };
+    //     let actual = ColumnRef::from_comparison_target(&target);
+    //     let expected = ColumnRef::Expression(
+    //         doc! {
+    //             "$getField": {
+    //                 "input": {
+    //                     "$getField": {
+    //                         "input": {
+    //                             "$getField": {
+    //                                 "input": "$$scope_root",
+    //                                 "field": { "$literal": "$field" },
+    //                             }
+    //                         },
+    //                         "field": { "$literal": "$unsafe_name1" },
+    //                     }
+    //                 },
+    //                 "field": { "$literal": "$unsafe_name2" },
+    //             }
+    //         }
+    //         .into(),
+    //     );
+    //     assert_eq!(actual, expected);
+    //     Ok(())
+    // }
+
+    // #[test]
+    // fn escapes_unsafe_deeply_nested_property_name_in_root_column_reference() -> anyhow::Result<()> {
+    //     let target = ComparisonTarget::ColumnInScope {
+    //         name: "field".into(),
+    //         field_path: Some(vec!["prop1".into(), "$unsafe_name".into()]),
+    //         field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+    //         scope: Scope::Root,
+    //     };
+    //     let actual = ColumnRef::from_comparison_target(&target);
+    //     let expected = ColumnRef::Expression(
+    //         doc! {
+    //             "$getField": {
+    //                 "input": "$$scope_root.field.prop1",
+    //                 "field": { "$literal": "$unsafe_name" },
+    //             }
+    //         }
+    //         .into(),
+    //     );
+    //     assert_eq!(actual, expected);
+    //     Ok(())
+    // }
 }

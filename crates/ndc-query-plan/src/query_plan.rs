@@ -441,6 +441,15 @@ pub enum ComparisonTarget<T: ConnectorTypes> {
 }
 
 impl<T: ConnectorTypes> ComparisonTarget<T> {
+    pub fn column(name: impl Into<ndc::FieldName>, field_type: Type<T::ScalarType>) -> Self {
+        Self::Column {
+            name: name.into(),
+            arguments: Default::default(),
+            field_path: Default::default(),
+            field_type,
+        }
+    }
+
     pub fn target_type(&self) -> &Type<T::ScalarType> {
         match self {
             ComparisonTarget::Column { field_type, .. } => field_type,
@@ -485,6 +494,19 @@ pub enum ComparisonValue<T: ConnectorTypes> {
         name: ndc::VariableName,
         variable_type: Type<T::ScalarType>,
     },
+}
+
+impl<T: ConnectorTypes> ComparisonValue<T> {
+    pub fn column(name: impl Into<ndc::FieldName>, field_type: Type<T::ScalarType>) -> Self {
+        Self::Column {
+            path: Default::default(),
+            name: name.into(),
+            arguments: Default::default(),
+            field_path: Default::default(),
+            field_type,
+            scope: Default::default(),
+        }
+    }
 }
 
 #[derive(Derivative)]

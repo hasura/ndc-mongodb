@@ -297,7 +297,7 @@ mod tests {
             ]))
             .relationships([(
                 "class_students",
-                relationship("students", [("_id", "classId")]),
+                relationship("students", [("_id", &["classId"])]),
             )])
             .into();
 
