@@ -46,16 +46,22 @@ fn extended_json_scalar_type() -> (ndc_models::ScalarTypeName, ScalarType) {
                     use AggregationFunction as Plan;
                     let name = aggregation_function.graphql_name().into();
                     let definition = match aggregation_function {
-                        Plan::Avg => NDC::Average {
-                            result_type: mongodb_support::EXTENDED_JSON_TYPE_NAME.into(),
+                        // Using custom instead of standard aggregations because we want the result
+                        // types to be ExtendedJSON instead of specific numeric types
+                        Plan::Avg => NDC::Custom {
+                            result_type: Type::Named {
+                                name: mongodb_support::EXTENDED_JSON_TYPE_NAME.into(),
+                            },
                         },
                         Plan::Count => NDC::Custom {
                             result_type: bson_to_named_type(S::Int),
                         },
                         Plan::Min => NDC::Min,
                         Plan::Max => NDC::Max,
-                        Plan::Sum => NDC::Sum {
-                            result_type: mongodb_support::EXTENDED_JSON_TYPE_NAME.into(),
+                        Plan::Sum => NDC::Custom {
+                            result_type: Type::Named {
+                                name: mongodb_support::EXTENDED_JSON_TYPE_NAME.into(),
+                            },
                         },
                     };
                     (name, definition)
@@ -174,13 +180,17 @@ fn aggregate_functions(
             (
                 A::Avg,
                 NDC::Average {
-                    result_type: bson_to_scalar_type_name(scalar_type),
+                    result_type: bson_to_scalar_type_name(S::Double),
                 },
             ),
             (
                 A::Sum,
-                NDC::Average {
-                    result_type: bson_to_scalar_type_name(scalar_type),
+                NDC::Sum {
+                    result_type: bson_to_scalar_type_name(if scalar_type.is_fractional() {
+                        S::Double
+                    } else {
+                        S::Long
+                    }),
                 },
             ),
         ]
