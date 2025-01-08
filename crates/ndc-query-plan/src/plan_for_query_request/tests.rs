@@ -1,12 +1,11 @@
 use ndc_models::{self as ndc, OrderByTarget, OrderDirection, RelationshipType};
 use ndc_test_helpers::*;
 use pretty_assertions::assert_eq;
-use serde_json::json;
 
 use crate::{
     self as plan, plan_for_query_request::plan_test_helpers::{
         self, make_flat_schema, make_nested_schema, TestContext,
-    }, query_plan::UnrelatedJoin, Aggregate, ExistsInCollection, Expression, Field, OrderBy, Query, QueryContext, QueryPlan, Relationship
+    }, ExistsInCollection, Expression, Field, OrderBy, Query, QueryContext, QueryPlan, Relationship
 };
 
 use super::plan_for_query_request;

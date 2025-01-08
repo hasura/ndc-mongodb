@@ -139,6 +139,7 @@ pub fn chinook_config() -> MongoConfiguration {
     })
 }
 
+#[allow(dead_code)]
 pub fn chinook_relationships() -> BTreeMap<String, ndc_models::Relationship> {
     [
         (
