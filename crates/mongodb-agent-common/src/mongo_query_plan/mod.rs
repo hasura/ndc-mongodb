@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use configuration::{
     native_mutation::NativeMutation, native_query::NativeQuery, Configuration, MongoScalarType,
 };
-use mongodb_support::{ExtendedJsonMode, EXTENDED_JSON_TYPE_NAME};
+use mongodb_support::{BsonScalarType, ExtendedJsonMode, EXTENDED_JSON_TYPE_NAME};
 use ndc_models as ndc;
 use ndc_query_plan::{ConnectorTypes, QueryContext, QueryPlanError};
 
@@ -34,13 +34,11 @@ impl ConnectorTypes for MongoConfiguration {
     type ScalarType = MongoScalarType;
 
     fn count_aggregate_type() -> ndc_query_plan::Type<Self::ScalarType> {
-        ndc_query_plan::Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Long))
+        ndc_query_plan::Type::scalar(BsonScalarType::Int)
     }
 
     fn string_type() -> ndc_query_plan::Type<Self::ScalarType> {
-        ndc_query_plan::Type::Scalar(MongoScalarType::Bson(
-            mongodb_support::BsonScalarType::String,
-        ))
+        ndc_query_plan::Type::scalar(BsonScalarType::String)
     }
 }
 
