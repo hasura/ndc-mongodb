@@ -2,7 +2,7 @@ use ref_cast::RefCast;
 use std::collections::BTreeMap;
 
 use itertools::Itertools as _;
-use ndc_models::{self as ndc, ArgumentName};
+use ndc_models::{self as ndc, ArgumentName, ObjectTypeName};
 
 use crate::{self as plan, QueryPlanError};
 
@@ -20,6 +20,31 @@ pub enum Type<ScalarType> {
 }
 
 impl<S> Type<S> {
+    pub fn array_of(t: Self) -> Self {
+        Self::ArrayOf(Box::new(t))
+    }
+
+    pub fn named_object(
+        name: impl Into<ObjectTypeName>,
+        fields: impl IntoIterator<Item = (impl Into<ndc::FieldName>, impl Into<ObjectField<S>>)>,
+    ) -> Self {
+        Self::Object(ObjectType::new(fields).named(name))
+    }
+
+    pub fn nullable(t: Self) -> Self {
+        t.into_nullable()
+    }
+
+    pub fn object(
+        fields: impl IntoIterator<Item = (impl Into<ndc::FieldName>, impl Into<ObjectField<S>>)>,
+    ) -> Self {
+        Self::Object(ObjectType::new(fields))
+    }
+
+    pub fn scalar(scalar_type: impl Into<S>) -> Self {
+        Self::Scalar(scalar_type.into())
+    }
+
     pub fn into_nullable(self) -> Self {
         match self {
             t @ Type::Nullable(_) => t,
@@ -71,6 +96,23 @@ pub struct ObjectType<ScalarType> {
 }
 
 impl<S> ObjectType<S> {
+    pub fn new(
+        fields: impl IntoIterator<Item = (impl Into<ndc::FieldName>, impl Into<ObjectField<S>>)>,
+    ) -> Self {
+        ObjectType {
+            name: None,
+            fields: fields
+                .into_iter()
+                .map(|(name, field)| (name.into(), field.into()))
+                .collect(),
+        }
+    }
+
+    pub fn named(mut self, name: impl Into<ndc::ObjectTypeName>) -> Self {
+        self.name = Some(name.into());
+        self
+    }
+
     pub fn named_fields(&self) -> impl Iterator<Item = (&ndc::FieldName, &Type<S>)> {
         self.fields
             .iter()
@@ -117,6 +159,15 @@ impl<S> ObjectField<S> {
     pub fn with_parameters(mut self, parameters: BTreeMap<ArgumentName, Type<S>>) -> Self {
         self.parameters = parameters;
         self
+    }
+}
+
+impl<S> From<Type<S>> for ObjectField<S> {
+    fn from(value: Type<S>) -> Self {
+        ObjectField {
+            r#type: value,
+            parameters: Default::default(),
+        }
     }
 }
 

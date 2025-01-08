@@ -213,7 +213,7 @@ mod tests {
             ]))
             .relationships([(
                 "class_students",
-                relationship("students", [("_id", "classId")]),
+                relationship("students", [("_id", &["classId"])]),
             )])
             .into();
 
@@ -296,7 +296,7 @@ mod tests {
             ]))
             .relationships([(
                 "student_class",
-                relationship("classes", [("classId", "_id")]),
+                relationship("classes", [("classId", &["_id"])]),
             )])
             .into();
 
@@ -388,7 +388,7 @@ mod tests {
             ]))
             .relationships([(
                 "students",
-                relationship("students", [("title", "class_title"), ("year", "year")]),
+                relationship("students", [("title", &["class_title"]), ("year", &["year"])]),
             )])
             .into();
 
@@ -479,7 +479,7 @@ mod tests {
             ]))
             .relationships([(
                 "join",
-                relationship("weird_field_names", [("$invalid.name", "$invalid.name")]),
+                relationship("weird_field_names", [("$invalid.name", &["$invalid.name"])]),
             )])
             .into();
 
@@ -552,10 +552,10 @@ mod tests {
                 ])),
             ]))
             .relationships([
-                ("students", relationship("students", [("_id", "class_id")])),
+                ("students", relationship("students", [("_id", &["class_id"])])),
                 (
                     "assignments",
-                    relationship("assignments", [("_id", "student_id")]),
+                    relationship("assignments", [("_id", &["student_id"])]),
                 ),
             ])
             .into();
@@ -684,7 +684,7 @@ mod tests {
                     star_count_aggregate!("aggregate_count")
                 ])),
             ]))
-            .relationships([("students", relationship("students", [("_id", "classId")]))])
+            .relationships([("students", relationship("students", [("_id", &["classId"])]))])
             .into();
 
         let expected_response = row_set()
@@ -801,7 +801,7 @@ mod tests {
             )
             .relationships([(
                 "movie",
-                relationship("movies", [("movie_id", "_id")]).object_type(),
+                relationship("movies", [("movie_id", &["_id"])]).object_type(),
             )])
             .into();
 
@@ -913,7 +913,7 @@ mod tests {
                         ),
                     )),
             )
-            .relationships([("movie", relationship("movies", [("movie_id", "_id")]))])
+            .relationships([("movie", relationship("movies", [("movie_id", &["_id"])]))])
             .into();
 
         let expected_response: QueryResponse = row_set()

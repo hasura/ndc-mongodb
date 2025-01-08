@@ -20,7 +20,6 @@ pub fn make_nested_schema() -> MongoConfiguration {
                     collection_type: "Author".into(),
                     arguments: Default::default(),
                     uniqueness_constraints: make_primary_key_uniqueness_constraint("authors"),
-                    foreign_keys: Default::default(),
                 },
             ),
             collection("appearances"), // new helper gives more concise syntax
@@ -87,6 +86,7 @@ pub fn make_nested_schema() -> MongoConfiguration {
 }
 
 /// Configuration for a MongoDB database with Chinook test data
+#[allow(dead_code)]
 pub fn chinook_config() -> MongoConfiguration {
     MongoConfiguration(Configuration {
         collections: [
@@ -143,15 +143,15 @@ pub fn chinook_relationships() -> BTreeMap<String, ndc_models::Relationship> {
     [
         (
             "Albums",
-            ndc_test_helpers::relationship("Album", [("ArtistId", "ArtistId")]),
+            ndc_test_helpers::relationship("Album", [("ArtistId", &["ArtistId"])]),
         ),
         (
             "Tracks",
-            ndc_test_helpers::relationship("Track", [("AlbumId", "AlbumId")]),
+            ndc_test_helpers::relationship("Track", [("AlbumId", &["AlbumId"])]),
         ),
         (
             "Genre",
-            ndc_test_helpers::relationship("Genre", [("GenreId", "GenreId")]).object_type(),
+            ndc_test_helpers::relationship("Genre", [("GenreId", &["GenreId"])]).object_type(),
         ),
     ]
     .into_iter()

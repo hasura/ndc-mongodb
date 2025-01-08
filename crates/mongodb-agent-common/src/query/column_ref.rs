@@ -232,7 +232,6 @@ mod tests {
     use configuration::MongoScalarType;
     use mongodb::bson::doc;
     use mongodb_support::BsonScalarType;
-    use ndc_query_plan::Scope;
     use pretty_assertions::assert_eq;
 
     use crate::mongo_query_plan::{ComparisonTarget, Type};

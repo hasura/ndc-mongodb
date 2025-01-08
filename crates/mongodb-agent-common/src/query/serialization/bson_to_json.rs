@@ -230,16 +230,13 @@ mod tests {
 
     #[test]
     fn serializes_document_with_missing_nullable_field() -> anyhow::Result<()> {
-        let expected_type = Type::Object(ObjectType {
-            name: Some("test_object".into()),
-            fields: [(
-                "field".into(),
-                Type::Nullable(Box::new(Type::Scalar(MongoScalarType::Bson(
-                    BsonScalarType::String,
-                )))),
-            )]
-            .into(),
-        });
+        let expected_type = Type::named_object(
+            "test_object",
+            [(
+                "field",
+                Type::nullable(Type::Scalar(MongoScalarType::Bson(BsonScalarType::String))),
+            )],
+        );
         let value = bson::doc! {};
         let actual = bson_to_json(ExtendedJsonMode::Canonical, &expected_type, value.into())?;
         assert_eq!(actual, json!({}));

@@ -1,5 +1,6 @@
 use ndc_models::{
-    ComparisonTarget, ComparisonValue, ExistsInCollection, Expression, UnaryComparisonOperator,
+    ComparisonTarget, ComparisonValue, ExistsInCollection, Expression, RelationshipName,
+    UnaryComparisonOperator,
 };
 
 pub fn and<I>(operands: I) -> Expression
@@ -61,5 +62,13 @@ pub fn exists(in_collection: ExistsInCollection, predicate: Expression) -> Expre
     Expression::Exists {
         in_collection,
         predicate: Some(Box::new(predicate)),
+    }
+}
+
+pub fn in_related(relationship: impl Into<RelationshipName>) -> ExistsInCollection {
+    ExistsInCollection::Related {
+        field_path: Default::default(),
+        relationship: relationship.into(),
+        arguments: Default::default(),
     }
 }

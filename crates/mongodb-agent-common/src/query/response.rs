@@ -254,8 +254,8 @@ fn type_for_row(
             )?;
             let object_field = ObjectField {
                 r#type: field_type,
-                parameters: Default::default() 
-           };
+                parameters: Default::default(),
+            };
             Ok((field_name.clone(), object_field))
         })
         .try_collect::<_, _, QueryResponseError>()?;
@@ -692,7 +692,7 @@ mod tests {
         let collection_name = "appearances";
         let request: QueryRequest = query_request()
             .collection(collection_name)
-            .relationships([("author", relationship("authors", [("authorId", "id")]))])
+            .relationships([("author", relationship("authors", [("authorId", &["id"])]))])
             .query(
                 query().fields([relation_field!("presenter" => "author", query().fields([
                     field!("addr" => "address", object!([
@@ -717,45 +717,50 @@ mod tests {
             &query_plan.query.fields,
         )?;
 
-        let expected = Type::Object(ObjectType {
-            name: None,
-            fields: [
-                ("rows".into(), Type::ArrayOf(Box::new(Type::Object(ObjectType {
-                    name: None,
-                    fields: [
-                        ("presenter".into(), Type::Object(ObjectType {
-                            name: None,
-                            fields: [
-                                ("rows".into(), Type::ArrayOf(Box::new(Type::Object(ObjectType {
-                                    name: None,
-                                    fields: [
-                                        ("addr".into(), Type::Object(ObjectType {
-                                            name: None,
-                                            fields: [
-                                                ("geocode".into(), Type::Nullable(Box::new(Type::Object(ObjectType {
-                                                    name: None,
-                                                    fields: [
-                                                        ("latitude".into(), Type::Scalar(MongoScalarType::Bson(BsonScalarType::Double))),
-                                                        ("long".into(), Type::Scalar(MongoScalarType::Bson(BsonScalarType::Double))),
-                                                    ].into(),
-                                                })))),
-                                                ("street".into(), Type::Scalar(MongoScalarType::Bson(BsonScalarType::String))),
-                                            ].into(),
-                                        })),
-                                        ("articles".into(), Type::ArrayOf(Box::new(Type::Object(ObjectType {
-                                            name: None,
-                                            fields: [
-                                                ("article_title".into(), Type::Scalar(MongoScalarType::Bson(BsonScalarType::String))),
-                                            ].into(),
-                                        })))),
-                                    ].into(),
-                                }))))
-                            ].into(),
-                        }))
-                    ].into()
-                }))))
-            ].into(),
-        });
+        let expected = Type::object([(
+            "rows",
+            Type::array_of(Type::Object(ObjectType::new([(
+                "presenter",
+                Type::object([(
+                    "rows",
+                    Type::array_of(Type::object([
+                        (
+                            "addr",
+                            Type::object([
+                                (
+                                    "geocode",
+                                    Type::nullable(Type::object([
+                                        (
+                                            "latitude",
+                                            Type::Scalar(MongoScalarType::Bson(
+                                                BsonScalarType::Double,
+                                            )),
+                                        ),
+                                        (
+                                            "long",
+                                            Type::Scalar(MongoScalarType::Bson(
+                                                BsonScalarType::Double,
+                                            )),
+                                        ),
+                                    ])),
+                                ),
+                                (
+                                    "street",
+                                    Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                                ),
+                            ]),
+                        ),
+                        (
+                            "articles",
+                            Type::array_of(Type::object([(
+                                "article_title",
+                                Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                            )])),
+                        ),
+                    ])),
+                )]),
+            )]))),
+        )]);
 
         assert_eq!(row_set_type, expected);
         Ok(())
