@@ -5,7 +5,7 @@ definition:
   name: AlbumWithTracks
   fields:
     - name: id
-      type: ObjectId_1!
+      type: ObjectId!
     - name: title
       type: String!
     - name: tracks
@@ -47,7 +47,7 @@ definition:
   name: ArtistWithAlbumsAndTracks
   fields:
     - name: id
-      type: ObjectId_1!
+      type: ObjectId!
     - name: albums
       type: "[AlbumWithTracks!]!"
     - name: name
@@ -92,7 +92,7 @@ definition:
       type: AlbumWithTracks
       comparableFields:
         - fieldName: id
-          booleanExpressionType: ObjectIdBoolExp_1
+          booleanExpressionType: ObjectIdBoolExp
         - fieldName: title
           booleanExpressionType: StringBoolExp
       comparableRelationships: []
@@ -113,7 +113,7 @@ definition:
       type: ArtistWithAlbumsAndTracks
       comparableFields:
         - fieldName: id
-          booleanExpressionType: ObjectIdBoolExp_1
+          booleanExpressionType: ObjectIdBoolExp
         - fieldName: albums
           booleanExpressionType: AlbumWithTracksBoolExp
         - fieldName: name
@@ -136,7 +136,7 @@ definition:
       aggregatedType: ArtistWithAlbumsAndTracks
       aggregatableFields:
         - fieldName: id
-          aggregateExpression: ObjectIdAggExp_1
+          aggregateExpression: ObjectIdAggExp
         - fieldName: name
           aggregateExpression: StringAggExp
   count:

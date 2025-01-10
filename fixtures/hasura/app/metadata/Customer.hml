@@ -5,7 +5,7 @@ definition:
   name: Customer
   fields:
     - name: id
-      type: ObjectId_1!
+      type: ObjectId!
     - name: address
       type: String!
     - name: city
@@ -116,7 +116,7 @@ definition:
       type: Customer
       comparableFields:
         - fieldName: id
-          booleanExpressionType: ObjectIdBoolExp_1
+          booleanExpressionType: ObjectIdBoolExp
         - fieldName: address
           booleanExpressionType: StringBoolExp
         - fieldName: city
@@ -163,7 +163,7 @@ definition:
       aggregatedType: Customer
       aggregatableFields:
         - fieldName: id
-          aggregateExpression: ObjectIdAggExp_1
+          aggregateExpression: ObjectIdAggExp
         - fieldName: address
           aggregateExpression: StringAggExp
         - fieldName: city

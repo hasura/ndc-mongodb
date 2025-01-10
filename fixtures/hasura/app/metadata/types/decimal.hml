@@ -1,0 +1,139 @@
+---
+kind: ScalarType
+version: v1
+definition:
+  name: Decimal
+  graphql:
+    typeName: Decimal
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: chinook
+  dataConnectorScalarType: Decimal
+  representation: Decimal
+  graphql:
+    comparisonExpressionTypeName: DecimalComparisonExp
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: sample_mflix
+  dataConnectorScalarType: Decimal
+  representation: Decimal
+  graphql:
+    comparisonExpressionTypeName: DecimalComparisonExp
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: test_cases
+  dataConnectorScalarType: Decimal
+  representation: Decimal
+  graphql:
+    comparisonExpressionTypeName: DecimalComparisonExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: DecimalBoolExp
+  operand:
+    scalar:
+      type: Decimal
+      comparisonOperators:
+        - name: _eq
+          argumentType: Decimal!
+        - name: _gt
+          argumentType: Decimal!
+        - name: _gte
+          argumentType: Decimal!
+        - name: _in
+          argumentType: "[Decimal!]!"
+        - name: _lt
+          argumentType: Decimal!
+        - name: _lte
+          argumentType: Decimal!
+        - name: _neq
+          argumentType: Decimal!
+        - name: _nin
+          argumentType: "[Decimal!]!"
+      dataConnectorOperatorMapping:
+        - dataConnectorName: chinook
+          dataConnectorScalarType: Decimal
+          operatorMapping: {}
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: DecimalBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: DecimalAggExp
+  operand:
+    scalar:
+      aggregatedType: Decimal
+      aggregationFunctions:
+        - name: avg
+          returnType: Double
+        - name: count
+          returnType: Int!
+        - name: max
+          returnType: Decimal
+        - name: min
+          returnType: Decimal
+        - name: sum
+          returnType: Double
+      dataConnectorAggregationFunctionMapping:
+        - dataConnectorName: chinook
+          dataConnectorScalarType: Decimal
+          functionMapping:
+            avg:
+              name: avg
+            count:
+              name: count
+            max:
+              name: max
+            min:
+              name: min
+            sum:
+              name: sum
+        - dataConnectorName: sample_mflix
+          dataConnectorScalarType: Decimal
+          functionMapping:
+            avg:
+              name: avg
+            count:
+              name: count
+            max:
+              name: max
+            min:
+              name: min
+            sum:
+              name: sum
+        - dataConnectorName: test_cases
+          dataConnectorScalarType: Decimal
+          functionMapping:
+            avg:
+              name: avg
+            count:
+              name: count
+            max:
+              name: max
+            min:
+              name: min
+            sum:
+              name: sum
+  count:
+    enable: true
+  countDistinct:
+    enable: true
+  graphql:
+    selectTypeName: DecimalAggExp

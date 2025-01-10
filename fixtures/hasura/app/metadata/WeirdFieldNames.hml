@@ -101,7 +101,7 @@ definition:
     - name: invalidObjectName
       type: WeirdFieldNamesInvalidObjectName!
     - name: id
-      type: ObjectId_2!
+      type: ObjectId!
     - name: validObjectName
       type: WeirdFieldNamesValidObjectName!
   graphql:
@@ -215,7 +215,7 @@ definition:
         - fieldName: invalidObjectName
           booleanExpressionType: WeirdFieldNamesInvalidObjectNameBoolExp
         - fieldName: id
-          booleanExpressionType: ObjectIdBoolExp_2
+          booleanExpressionType: ObjectIdBoolExp
         - fieldName: validObjectName
           booleanExpressionType: WeirdFieldNamesValidObjectNameBoolExp
       comparableRelationships: []
@@ -238,7 +238,7 @@ definition:
         - fieldName: invalidName
           aggregateExpression: IntAggExp
         - fieldName: id
-          aggregateExpression: ObjectIdAggExp_2
+          aggregateExpression: ObjectIdAggExp
   count:
     enable: true
   graphql:

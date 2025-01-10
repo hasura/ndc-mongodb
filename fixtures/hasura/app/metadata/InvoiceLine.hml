@@ -5,7 +5,7 @@ definition:
   name: InvoiceLine
   fields:
     - name: id
-      type: ObjectId_1!
+      type: ObjectId!
     - name: invoiceId
       type: Int!
     - name: invoiceLineId
@@ -68,7 +68,7 @@ definition:
       type: InvoiceLine
       comparableFields:
         - fieldName: id
-          booleanExpressionType: ObjectIdBoolExp_1
+          booleanExpressionType: ObjectIdBoolExp
         - fieldName: invoiceId
           booleanExpressionType: IntBoolExp
         - fieldName: invoiceLineId
@@ -99,7 +99,7 @@ definition:
       aggregatedType: InvoiceLine
       aggregatableFields:
         - fieldName: id
-          aggregateExpression: ObjectIdAggExp_1
+          aggregateExpression: ObjectIdAggExp
         - fieldName: invoiceId
           aggregateExpression: IntAggExp
         - fieldName: invoiceLineId
