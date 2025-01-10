@@ -67,18 +67,17 @@ async fn filters_by_comparisons_on_elements_of_array_field() -> anyhow::Result<(
 }
 
 #[tokio::test]
-async fn filters_by_comparisons_on_elements_of_array_of_scalars_against_variable(
-) -> anyhow::Result<()> {
+async fn filters_by_comparison_with_a_variable() -> anyhow::Result<()> {
     assert_yaml_snapshot!(
         run_connector_query(
             Connector::SampleMflix,
             query_request()
-                .variables([[("cast_member", "Albert Austin")]])
+                .variables([[("title", "The Blue Bird")]])
                 .collection("movies")
                 .query(
                     query()
-                        .predicate(binop("_eq", target!("cast"), variable!(cast_member)))
-                        .fields([field!("title"), field!("cast")]),
+                        .predicate(binop("_eq", target!("title"), variable!(title)))
+                        .fields([field!("title")]),
                 )
         )
         .await?
