@@ -26,7 +26,7 @@ data:
       avg: 333925.875
       max: 436453
       min: 221701
-      sum: 2671407
+      sum: "2671407"
     unitPrice:
       _count: 8
       _count_distinct: 1
