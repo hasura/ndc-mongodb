@@ -202,6 +202,8 @@ fn plan_for_aggregate<T: QueryContext>(
             function,
             field_path,
         } => {
+            let nested_object_field =
+                get_object_field_by_path(collection_object_type, &column, field_path.as_deref())?;
             let object_field = collection_object_type.get(&column)?;
             let plan_arguments = plan_arguments_from_plan_parameters(
                 plan_state,
@@ -210,7 +212,7 @@ fn plan_for_aggregate<T: QueryContext>(
             )?;
             let (function, definition) = plan_state
                 .context
-                .find_aggregation_function_definition(&object_field.r#type, &function)?;
+                .find_aggregation_function_definition(&nested_object_field.r#type, &function)?;
             Ok(plan::Aggregate::SingleColumn {
                 column,
                 arguments: plan_arguments,
