@@ -105,7 +105,11 @@ pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Resul
             Value::Null => Bson::Undefined,
             _ => incompatible_scalar_type(BsonScalarType::Undefined, value)?,
         },
-        BsonScalarType::Regex => deserialize::<json_formats::Regex>(expected_type, value)?.into(),
+        BsonScalarType::Regex => {
+            deserialize::<json_formats::Either<json_formats::Regex, String>>(expected_type, value)?
+                .into_left()
+                .into()
+        }
         BsonScalarType::Javascript => Bson::JavaScriptCode(deserialize(expected_type, value)?),
         BsonScalarType::JavascriptWithScope => {
             deserialize::<json_formats::JavaScriptCodeWithScope>(expected_type, value)?.into()

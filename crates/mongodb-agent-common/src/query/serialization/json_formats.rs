@@ -6,6 +6,25 @@ use mongodb::bson::{self, Bson};
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, hex::Hex, serde_as};
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Either<T, U> {
+    Left(T),
+    Right(U),
+}
+
+impl<T, U> Either<T, U> {
+    pub fn into_left(self) -> T
+    where
+        T: From<U>,
+    {
+        match self {
+            Either::Left(l) => l,
+            Either::Right(r) => r.into(),
+        }
+    }
+}
+
 #[serde_as]
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -80,6 +99,15 @@ impl From<bson::Regex> for Regex {
         Regex {
             pattern: value.pattern,
             options: value.options,
+        }
+    }
+}
+
+impl From<String> for Regex {
+    fn from(value: String) -> Self {
+        Regex {
+            pattern: value,
+            options: String::new(),
         }
     }
 }
