@@ -205,6 +205,7 @@
             arion.packages.${pkgs.system}.default
             cargo-insta
             ddn
+            graphql-engine
             just
             mongosh
             pkg-config
