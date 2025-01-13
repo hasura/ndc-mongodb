@@ -10,8 +10,8 @@ pub struct PathElementBuilder {
     predicate: Option<Box<Expression>>,
 }
 
-pub fn path_element(relationship: ndc_models::RelationshipName) -> PathElementBuilder {
-    PathElementBuilder::new(relationship)
+pub fn path_element(relationship: impl Into<ndc_models::RelationshipName>) -> PathElementBuilder {
+    PathElementBuilder::new(relationship.into())
 }
 
 impl PathElementBuilder {

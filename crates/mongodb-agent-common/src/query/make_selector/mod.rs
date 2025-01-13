@@ -318,7 +318,7 @@ mod tests {
         })?;
 
         let expected = doc! {
-            "site_info.staff": {
+            "staff.site_info": {
                 "$elemMatch": {
                     "last_name": { "$eq": "Hughes" }
                 }
