@@ -1,0 +1,1 @@
+{ "_id": { "$oid": "67857b7ef317ca21359981d4" }, "name": "West Valley", "departments": { "english_department_id": { "$oid": "67857bc2f317ca21359981d5" }, "math_department_id": { "$oid": "67857be3f317ca21359981d6" } } }

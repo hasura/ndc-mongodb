@@ -656,6 +656,49 @@ definition:
                   type: named
                   name: Undefined
       object_types:
+        departments:
+          fields:
+            _id:
+              type:
+                type: named
+                name: ObjectId
+            description:
+              type:
+                type: named
+                name: String
+          foreign_keys: {}
+        schools:
+          fields:
+            _id:
+              type:
+                type: named
+                name: ObjectId
+            departments:
+              type:
+                type: named
+                name: schools_departments
+            name:
+              type:
+                type: named
+                name: String
+          foreign_keys: {}
+        schools_departments:
+          fields:
+            english_department_id:
+              type:
+                type: named
+                name: ObjectId
+            math_department_id:
+              type:
+                type: named
+                name: ObjectId
+            description:
+              type:
+                type: nullable
+                underlying_type:
+                  type: named
+                  name: String
+          foreign_keys: {}
         nested_collection:
           fields:
             _id:
@@ -747,6 +790,20 @@ definition:
                 name: Int
           foreign_keys: {}
       collections:
+      - name: departments
+        arguments: {}
+        type: departments
+        uniqueness_constraints:
+          nested_field_with_dollar_id:
+            unique_columns:
+            - _id
+      - name: schools
+        arguments: {}
+        type: schools
+        uniqueness_constraints:
+          nested_field_with_dollar_id:
+            unique_columns:
+            - _id
       - name: nested_collection
         arguments: {}
         type: nested_collection
