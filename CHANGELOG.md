@@ -15,6 +15,7 @@ described by [ndc-spec](https://hasura.github.io/ndc-spec/). Version 0.2 makes
 a number of improvements to the spec, and enables features that were previously
 not possible. Highlights of those new features include:
 
+- relationships can use a nested object field on the target side as a join key
 - grouping result documents, and aggregating on groups of documents (pending implementation in the mongo connector)
 - queries on fields of nested collections (document fields that are arrays of objects)
 - filtering on scalar values inside array document fields - previously it was possible to filter on fields of objects inside arrays, but not on scalars

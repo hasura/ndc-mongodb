@@ -1,0 +1,8 @@
+---
+source: crates/integration-tests/src/tests/local_relationship.rs
+expression: "run_connector_query(Connector::TestCases,\nquery_request().collection(\"departments\").query(query().predicate(exists(related!(\"schools_departments\"),\nbinop(\"_eq\", target!(\"name\"),\nvalue!(\"West Valley\")))).fields([relation_field!(\"departments\" =>\n\"schools_departments\",\nquery().fields([field!(\"name\")]))]).order_by([asc!(\"_id\")])).relationships([(\"schools_departments\",\nrelationship(\"schools\",\n[(\"_id\", &[\"departments\", \"math_department_id\"])]))])).await?"
+---
+- rows:
+    - departments:
+        rows:
+          - name: West Valley
