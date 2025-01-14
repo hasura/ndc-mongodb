@@ -1,5 +1,7 @@
 use insta::assert_yaml_snapshot;
-use ndc_test_helpers::{binop, field, query, query_request, target, variable};
+use ndc_test_helpers::{
+    array_contains, binop, field, is_empty, query, query_request, target, value, variable,
+};
 
 use crate::{connector::Connector, graphql_query, run_connector_query};
 
@@ -79,6 +81,39 @@ async fn filters_by_comparison_with_a_variable() -> anyhow::Result<()> {
                         .predicate(binop("_eq", target!("title"), variable!(title)))
                         .fields([field!("title")]),
                 )
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn filters_by_array_comparison_contains() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::SampleMflix,
+            query_request().collection("movies").query(
+                query()
+                    .predicate(array_contains(target!("cast"), value!("Albert Austin")))
+                    .fields([field!("title"), field!("cast")]),
+            )
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn filters_by_array_comparison_is_empty() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::SampleMflix,
+            query_request().collection("movies").query(
+                query()
+                    .predicate(is_empty(target!("writers")))
+                    .fields([field!("writers")])
+                    .limit(1),
+            )
         )
         .await?
     );

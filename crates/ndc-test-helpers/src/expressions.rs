@@ -1,6 +1,6 @@
 use ndc_models::{
-    ComparisonTarget, ComparisonValue, ExistsInCollection, Expression, RelationshipName,
-    UnaryComparisonOperator,
+    ArrayComparison, ComparisonTarget, ComparisonValue, ExistsInCollection, Expression,
+    RelationshipName, UnaryComparisonOperator,
 };
 
 pub fn and<I>(operands: I) -> Expression
@@ -70,5 +70,24 @@ pub fn in_related(relationship: impl Into<RelationshipName>) -> ExistsInCollecti
         field_path: Default::default(),
         relationship: relationship.into(),
         arguments: Default::default(),
+    }
+}
+
+pub fn array_contains(
+    column: impl Into<ComparisonTarget>,
+    value: impl Into<ComparisonValue>,
+) -> Expression {
+    Expression::ArrayComparison {
+        column: column.into(),
+        comparison: ArrayComparison::Contains {
+            value: value.into(),
+        },
+    }
+}
+
+pub fn is_empty(column: impl Into<ComparisonTarget>) -> Expression {
+    Expression::ArrayComparison {
+        column: column.into(),
+        comparison: ArrayComparison::IsEmpty,
     }
 }

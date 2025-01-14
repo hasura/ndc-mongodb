@@ -1,0 +1,6 @@
+---
+source: crates/integration-tests/src/tests/filtering.rs
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").query(query().predicate(is_empty(target!(\"writers\"))).fields([field!(\"writers\")]).limit(1),)).await?"
+---
+- rows:
+    - writers: []

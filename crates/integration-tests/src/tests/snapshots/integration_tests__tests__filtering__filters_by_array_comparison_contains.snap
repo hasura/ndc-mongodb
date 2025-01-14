@@ -1,0 +1,11 @@
+---
+source: crates/integration-tests/src/tests/filtering.rs
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").query(query().predicate(array_contains(target!(\"cast\"),\nvalue!(\"Albert Austin\"))).fields([field!(\"title\"), field!(\"cast\")]),)).await?"
+---
+- rows:
+    - cast:
+        - Charles Chaplin
+        - Edna Purviance
+        - Eric Campbell
+        - Albert Austin
+      title: The Immigrant
