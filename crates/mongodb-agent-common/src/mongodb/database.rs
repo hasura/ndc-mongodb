@@ -4,15 +4,15 @@ use mongodb::results::CollectionSpecification;
 use mongodb::{bson::Document, error::Error, options::AggregateOptions, Database};
 use mongodb_support::aggregate::Pipeline;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-helpers"))]
 use mockall::automock;
 
 use super::CollectionTrait;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-helpers"))]
 use super::MockCollectionTrait;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-helpers"))]
 use super::test_helpers::MockCursor;
 
 /// Abstract MongoDB database methods. This lets us mock a database connection in tests. The
@@ -23,7 +23,7 @@ use super::test_helpers::MockCursor;
 /// I haven't figured out how to make generic associated types work with automock, so  the type
 /// argument for `Collection` values produced via `DatabaseTrait::collection` is fixed to to
 /// `Document`. That's the way we're using collections in this app anyway.
-#[cfg_attr(test, automock(
+#[cfg_attr(any(test, feature = "test-helpers"), automock(
     type Collection = MockCollectionTrait<Document>;
     type CollectionCursor = MockCursor<CollectionSpecification>;
     type DocumentCursor = MockCursor<Document>;

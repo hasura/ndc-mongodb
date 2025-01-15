@@ -3,6 +3,8 @@
 mod exit_codes;
 mod introspection;
 mod logging;
+#[cfg(test)]
+mod tests;
 
 #[cfg(feature = "native-query-subcommand")]
 mod native_query;
@@ -51,7 +53,7 @@ pub async fn run(command: Command, context: &Context) -> anyhow::Result<()> {
     match command {
         Command::Update(args) => {
             let connector_state = try_init_state_from_uri(context.connection_uri.as_ref()).await?;
-            update(context, connector_state.database(), &args).await?
+            update(context, &args, &connector_state.database()).await?
         }
 
         #[cfg(feature = "native-query-subcommand")]
@@ -63,8 +65,8 @@ pub async fn run(command: Command, context: &Context) -> anyhow::Result<()> {
 /// Update the configuration in the current directory by introspecting the database.
 async fn update(
     context: &Context,
-    database: impl DatabaseTrait + Clone,
     args: &UpdateArgs,
+    database: &impl DatabaseTrait,
 ) -> anyhow::Result<()> {
     let configuration_options =
         configuration::parse_configuration_options_file(&context.path).await?;
@@ -93,7 +95,7 @@ async fn update(
 
     if !no_validator_schema {
         let schemas_from_json_validation =
-            introspection::get_metadata_from_validation_schema(database.clone()).await?;
+            introspection::get_metadata_from_validation_schema(database).await?;
         configuration::write_schema_directory(&context.path, schemas_from_json_validation).await?;
     }
 

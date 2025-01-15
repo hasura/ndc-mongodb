@@ -14,7 +14,6 @@ use super::{MockCollectionTrait, MockDatabaseTrait};
 // is produced when calling `into_iter` on a `Vec`. - Jesse H.
 //
 // To produce a mock stream use the `mock_stream` function in this module.
-#[cfg(test)]
 pub type MockCursor<T> = futures::stream::Iter<<Vec<Result<T, Error>> as IntoIterator>::IntoIter>;
 
 /// Create a stream that can be returned from mock implementations for

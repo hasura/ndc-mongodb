@@ -19,7 +19,7 @@ type ObjectType = WithName<ndc_models::ObjectTypeName, schema::ObjectType>;
 type ObjectField = WithName<ndc_models::FieldName, schema::ObjectField>;
 
 pub async fn get_metadata_from_validation_schema(
-    db: impl DatabaseTrait,
+    db: &impl DatabaseTrait,
 ) -> Result<BTreeMap<String, Schema>, MongoAgentError> {
     let mut collections_cursor = db.list_collections().await?;
 

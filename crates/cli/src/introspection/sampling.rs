@@ -26,7 +26,7 @@ pub async fn sample_schema_from_db(
     sample_size: u32,
     all_schema_nullable: bool,
     config_file_changed: bool,
-    db: impl DatabaseTrait + Clone,
+    db: &impl DatabaseTrait,
     existing_schemas: &HashSet<std::string::String>,
 ) -> anyhow::Result<BTreeMap<std::string::String, Schema>> {
     let mut schemas = BTreeMap::new();
@@ -39,7 +39,7 @@ pub async fn sample_schema_from_db(
                 &collection_name,
                 sample_size,
                 all_schema_nullable,
-                db.clone(),
+                db,
             )
             .await?;
             if let Some(collection_schema) = collection_schema {
@@ -56,7 +56,7 @@ async fn sample_schema_from_collection(
     collection_name: &str,
     sample_size: u32,
     all_schema_nullable: bool,
-    db: impl DatabaseTrait,
+    db: &impl DatabaseTrait,
 ) -> anyhow::Result<Option<Schema>> {
     let options = None;
     let mut cursor = db
