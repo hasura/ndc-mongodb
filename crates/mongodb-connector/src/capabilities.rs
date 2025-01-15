@@ -22,7 +22,7 @@ pub fn mongo_capabilities() -> Capabilities {
                 }),
                 order_by: Some(LeafCapability {}),
                 aggregates: Some(LeafCapability {}),
-                nested_collections: Some(LeafCapability {}),
+                nested_collections: None, // TODO: ENG-1464
             },
             exists: ExistsCapabilities {
                 named_scopes: None, // TODO: ENG-1487
