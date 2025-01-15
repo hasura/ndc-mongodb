@@ -28,8 +28,8 @@ pub trait CollectionTrait<T>
 where
     T: DeserializeOwned + Unpin + Send + Sync + 'static,
 {
-    type DocumentCursor: Stream<Item = Result<Document, Error>> + 'static;
-    type RowCursor: Stream<Item = Result<T, Error>> + 'static;
+    type DocumentCursor: Stream<Item = Result<Document, Error>> + 'static + Unpin;
+    type RowCursor: Stream<Item = Result<T, Error>> + 'static + Unpin;
 
     async fn aggregate<Options>(
         &self,

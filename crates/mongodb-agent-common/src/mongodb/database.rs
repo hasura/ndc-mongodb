@@ -32,7 +32,7 @@ use super::test_helpers::MockCursor;
 pub trait DatabaseTrait {
     type Collection: CollectionTrait<Document>;
     type CollectionCursor: Stream<Item = Result<CollectionSpecification, Error>> + Unpin;
-    type DocumentCursor: Stream<Item = Result<Document, Error>>;
+    type DocumentCursor: Stream<Item = Result<Document, Error>> + Unpin;
 
     async fn aggregate<Options>(
         &self,
