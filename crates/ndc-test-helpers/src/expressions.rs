@@ -58,10 +58,13 @@ where
     }
 }
 
-pub fn exists(in_collection: ExistsInCollection, predicate: Expression) -> Expression {
+pub fn exists(
+    in_collection: impl Into<ExistsInCollection>,
+    predicate: impl Into<Expression>,
+) -> Expression {
     Expression::Exists {
-        in_collection,
-        predicate: Some(Box::new(predicate)),
+        in_collection: in_collection.into(),
+        predicate: Some(Box::new(predicate.into())),
     }
 }
 
