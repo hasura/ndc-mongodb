@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use futures_util::Stream;
+use mongodb::results::CollectionSpecification;
 use mongodb::{bson::Document, error::Error, options::AggregateOptions, Database};
 use mongodb_support::aggregate::Pipeline;
 
@@ -24,11 +25,13 @@ use super::test_helpers::MockCursor;
 /// `Document`. That's the way we're using collections in this app anyway.
 #[cfg_attr(test, automock(
     type Collection = MockCollectionTrait<Document>;
+    type CollectionCursor = MockCursor<CollectionSpecification>;
     type DocumentCursor = MockCursor<Document>;
 ))]
 #[async_trait]
 pub trait DatabaseTrait {
     type Collection: CollectionTrait<Document>;
+    type CollectionCursor: Stream<Item = Result<CollectionSpecification, Error>> + Unpin;
     type DocumentCursor: Stream<Item = Result<Document, Error>>;
 
     async fn aggregate<Options>(
@@ -40,11 +43,14 @@ pub trait DatabaseTrait {
         Options: Into<Option<AggregateOptions>> + Send + 'static;
 
     fn collection(&self, name: &str) -> Self::Collection;
+
+    async fn list_collections(&self) -> Result<Self::CollectionCursor, Error>;
 }
 
 #[async_trait]
 impl DatabaseTrait for Database {
     type Collection = mongodb::Collection<Document>;
+    type CollectionCursor = mongodb::Cursor<CollectionSpecification>;
     type DocumentCursor = mongodb::Cursor<Document>;
 
     async fn aggregate<Options>(
@@ -62,5 +68,9 @@ impl DatabaseTrait for Database {
 
     fn collection(&self, name: &str) -> Self::Collection {
         Database::collection::<Document>(self, name)
+    }
+
+    async fn list_collections(&self) -> Result<Self::CollectionCursor, Error> {
+        Database::list_collections(self).await
     }
 }

@@ -63,7 +63,7 @@ async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
 
     let configuration_options =
         configuration::parse_configuration_options_file(&context.path).await?;
-    // Prefer arguments passed to cli, and fallback to the configuration file
+    // Prefer arguments passed to cli, and fall back to the configuration file
     let sample_size = match args.sample_size {
         Some(size) => size,
         None => configuration_options.introspection_options.sample_size,
@@ -88,7 +88,7 @@ async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
 
     if !no_validator_schema {
         let schemas_from_json_validation =
-            introspection::get_metadata_from_validation_schema(&connector_state).await?;
+            introspection::get_metadata_from_validation_schema(connector_state.database()).await?;
         configuration::write_schema_directory(&context.path, schemas_from_json_validation).await?;
     }
 

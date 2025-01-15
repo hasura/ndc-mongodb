@@ -7,8 +7,8 @@ use configuration::{
 use futures_util::TryStreamExt;
 use mongodb::bson::from_bson;
 use mongodb_agent_common::{
+    mongodb::DatabaseTrait,
     schema::{get_property_description, Property, ValidatorSchema},
-    state::ConnectorState,
 };
 use mongodb_support::BsonScalarType;
 
@@ -19,9 +19,8 @@ type ObjectType = WithName<ndc_models::ObjectTypeName, schema::ObjectType>;
 type ObjectField = WithName<ndc_models::FieldName, schema::ObjectField>;
 
 pub async fn get_metadata_from_validation_schema(
-    state: &ConnectorState,
+    db: impl DatabaseTrait,
 ) -> Result<BTreeMap<String, Schema>, MongoAgentError> {
-    let db = state.database();
     let mut collections_cursor = db.list_collections().await?;
 
     let mut schemas: Vec<WithName<String, Schema>> = vec![];
