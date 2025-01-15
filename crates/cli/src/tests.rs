@@ -17,10 +17,13 @@ async fn required_field_from_validator_is_non_nullable() -> anyhow::Result<()> {
             "title": { "bsonType": "string", "maxLength": 100 },
             "author": { "bsonType": "string", "maxLength": 100 },
         }
-    }).await?;
+    })
+    .await?;
 
     assert_eq!(
-        collection_object_type.fields.get(&FieldName::new("title".into())),
+        collection_object_type
+            .fields
+            .get(&FieldName::new("title".into())),
         Some(&ObjectField {
             r#type: Type::Named {
                 name: "String".into()
@@ -31,11 +34,15 @@ async fn required_field_from_validator_is_non_nullable() -> anyhow::Result<()> {
     );
 
     assert_eq!(
-        collection_object_type.fields.get(&FieldName::new("author".into())),
+        collection_object_type
+            .fields
+            .get(&FieldName::new("author".into())),
         Some(&ObjectField {
-            r#type: Type::Nullable  { underlying_type: Box::new(Type::Named {
-                name: "String".into()
-            }) },
+            r#type: Type::Nullable {
+                underlying_type: Box::new(Type::Named {
+                    name: "String".into()
+                })
+            },
             arguments: Default::default(),
             description: Default::default(),
         })
@@ -54,13 +61,18 @@ async fn validator_object_with_no_properties_becomes_extended_json_object() -> a
         "properties": {
             "reactions": { "bsonType": "object" },
         }
-    }).await?;
+    })
+    .await?;
 
     assert_eq!(
-        collection_object_type.fields.get(&FieldName::new("reactions".into())),
+        collection_object_type
+            .fields
+            .get(&FieldName::new("reactions".into())),
         Some(&ObjectField {
-            r#type: Type::Named {
-                name: "ExtendedJSON".into()
+            r#type: Type::Nullable {
+                underlying_type: Box::new(Type::Named {
+                    name: "ExtendedJSON".into()
+                })
             },
             arguments: Default::default(),
             description: Default::default(),

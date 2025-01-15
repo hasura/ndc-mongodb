@@ -151,10 +151,13 @@ fn make_field_type(object_type_name: &str, prop_schema: &Property) -> (Vec<Objec
 
     match prop_schema {
         Property::Object {
+            properties: None, ..
+        } => (vec![], Type::ExtendedJSON),
+        Property::Object {
             bson_type: _,
             description: _,
             required,
-            properties,
+            properties: Some(properties),
         } => {
             let type_prefix = format!("{object_type_name}_");
             let (otds, otd_fields): (Vec<Vec<ObjectType>>, Vec<ObjectField>) = properties

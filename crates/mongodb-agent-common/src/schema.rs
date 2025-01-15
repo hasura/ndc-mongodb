@@ -28,7 +28,8 @@ pub enum Property {
         description: Option<String>,
         #[serde(skip_serializing_if = "Vec::is_empty", default)]
         required: Vec<String>,
-        properties: IndexMap<String, Property>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        properties: Option<IndexMap<String, Property>>,
     },
     Array {
         #[serde(rename = "bsonType", default = "default_bson_type")]
@@ -125,7 +126,7 @@ mod test {
                 bson_type: BsonType::Object,
                 description: Some("Name of places".to_owned()),
                 required: vec!["name".to_owned(), "description".to_owned()],
-                properties: IndexMap::from([
+                properties: Some(IndexMap::from([
                     (
                         "name".to_owned(),
                         Property::Scalar {
@@ -142,7 +143,7 @@ mod test {
                             )
                         }
                     )
-                ])
+                ]))
             }
         );
 
@@ -171,7 +172,7 @@ mod test {
                     bson_type: BsonType::Object,
                     description: None,
                     required: vec!["name".to_owned(), "size".to_owned()],
-                    properties: IndexMap::from([
+                    properties: Some(IndexMap::from([
                         (
                             "name".to_owned(),
                             Property::Scalar {
@@ -186,7 +187,7 @@ mod test {
                                 description: None
                             }
                         )
-                    ])
+                    ]))
                 }),
             }
         );
@@ -253,7 +254,7 @@ mod test {
                         bson_type: BsonType::Object,
                         description: None,
                         required: vec!["xs".to_owned()],
-                        properties: IndexMap::from([
+                        properties: Some(IndexMap::from([
                             (
                                 "xs".to_owned(),
                                 Property::Scalar {
@@ -268,7 +269,7 @@ mod test {
                                     description: None
                                 }
                             ),
-                        ])
+                        ]))
                     }
                 )])
             }
@@ -353,7 +354,7 @@ mod test {
                             bson_type: BsonType::Object,
                             description: None,
                             required: vec![],
-                            properties: IndexMap::from([
+                            properties: Some(IndexMap::from([
                                 (
                                     "city".to_owned(),
                                     Property::Scalar {
@@ -368,7 +369,7 @@ mod test {
                                         description: None,
                                     }
                                 )
-                            ])
+                            ]))
                         }
                     )
                 ]),
