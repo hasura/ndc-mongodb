@@ -56,7 +56,6 @@ async fn validator_object_with_no_properties_becomes_extended_json_object() -> a
     let collection_object_type = collection_schema_from_validator(doc! {
         "bsonType": "object",
         "title": "posts validator",
-        "required": ["title"],
         "additionalProperties": false,
         "properties": {
             "reactions": { "bsonType": "object" },
