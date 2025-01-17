@@ -4,6 +4,8 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+## [1.6.0] - 2025-01-17
+
 ### Added
 
 - You can now aggregate values in nested object fields ([#136](https://github.com/hasura/ndc-mongodb/pull/136))
