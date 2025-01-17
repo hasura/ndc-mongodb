@@ -1798,6 +1798,7 @@ name = "mongodb-cli-plugin"
 version = "1.5.0"
 dependencies = [
  "anyhow",
+ "async-tempfile",
  "clap",
  "configuration",
  "enum-iterator",
@@ -1821,7 +1822,6 @@ dependencies = [
  "test-helpers",
  "textwrap",
  "thiserror",
- "tmpdir",
  "tokio",
 ]
 
@@ -3366,17 +3366,6 @@ name = "tinyvec_macros"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
-
-[[package]]
-name = "tmpdir"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4d51942bbd63241e665ca0cc613f56dfaee117b41d5288a6cb3fca5cdab2415"
-dependencies = [
- "futures",
- "rand",
- "tokio",
-]
 
 [[package]]
 name = "tokio"
