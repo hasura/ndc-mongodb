@@ -154,7 +154,6 @@ fn make_field_type(object_type_name: &str, prop_schema: &Property) -> (Vec<Objec
             properties: None, ..
         } => (vec![], Type::ExtendedJSON),
         Property::Object {
-            bson_type: _,
             description: _,
             required,
             properties: Some(properties),
@@ -179,7 +178,6 @@ fn make_field_type(object_type_name: &str, prop_schema: &Property) -> (Vec<Objec
             (collected_otds, Type::Object(object_type_name.to_string()))
         }
         Property::Array {
-            bson_type: _,
             description: _,
             items,
         } => {

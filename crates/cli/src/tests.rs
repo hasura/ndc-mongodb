@@ -1,10 +1,9 @@
-use std::env::temp_dir;
-
 use configuration::read_directory;
 use mongodb::bson::{self, doc, from_document};
 use mongodb_agent_common::mongodb::{test_helpers::mock_stream, MockDatabaseTrait};
 use ndc_models::{CollectionName, FieldName, ObjectField, ObjectType, Type};
 use pretty_assertions::assert_eq;
+use tmpdir::TmpDir;
 
 use crate::{update, Context, UpdateArgs};
 
@@ -83,10 +82,10 @@ async fn validator_object_with_no_properties_becomes_extended_json_object() -> a
 
 async fn collection_schema_from_validator(validator: bson::Document) -> anyhow::Result<ObjectType> {
     let mut db = MockDatabaseTrait::new();
-    let config_dir = temp_dir();
+    let config_dir = TmpDir::new("collection_schema_from_validator").await?;
 
     let context = Context {
-        path: config_dir.clone(),
+        path: config_dir.to_path_buf(),
         connection_uri: None,
         display_color: false,
     };

@@ -38,3 +38,4 @@ googletest = "^0.12.0"
 pretty_assertions = "1"
 proptest = "1"
 test-helpers = { path = "../test-helpers" }
+tmpdir = "^1.0.0"

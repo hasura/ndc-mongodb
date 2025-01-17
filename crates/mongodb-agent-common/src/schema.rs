@@ -18,12 +18,9 @@ pub struct ValidatorSchema {
 
 #[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
-#[serde(untagged)]
+#[serde(tag = "bsonType", rename_all = "camelCase")]
 pub enum Property {
     Object {
-        #[serde(rename = "bsonType", default = "default_bson_type")]
-        #[allow(dead_code)]
-        bson_type: BsonType,
         #[serde(skip_serializing_if = "Option::is_none")]
         description: Option<String>,
         #[serde(skip_serializing_if = "Vec::is_empty", default)]
@@ -32,13 +29,11 @@ pub enum Property {
         properties: Option<IndexMap<String, Property>>,
     },
     Array {
-        #[serde(rename = "bsonType", default = "default_bson_type")]
-        #[allow(dead_code)]
-        bson_type: BsonType,
         #[serde(skip_serializing_if = "Option::is_none")]
         description: Option<String>,
         items: Box<Property>,
     },
+    #[serde(untagged)]
     Scalar {
         #[serde(rename = "bsonType", default = "default_bson_scalar_type")]
         bson_type: BsonScalarType,
@@ -50,13 +45,11 @@ pub enum Property {
 pub fn get_property_description(p: &Property) -> Option<String> {
     match p {
         Property::Object {
-            bson_type: _,
             description,
             required: _,
             properties: _,
         } => description.clone(),
         Property::Array {
-            bson_type: _,
             description,
             items: _,
         } => description.clone(),
@@ -79,8 +72,8 @@ fn default_bson_type() -> BsonType {
 mod test {
     use indexmap::IndexMap;
     use mongodb::bson::{bson, from_bson};
-
     use mongodb_support::{BsonScalarType, BsonType};
+    use pretty_assertions::assert_eq;
 
     use super::{Property, ValidatorSchema};
 
@@ -123,7 +116,6 @@ mod test {
         assert_eq!(
             from_bson::<Property>(input)?,
             Property::Object {
-                bson_type: BsonType::Object,
                 description: Some("Name of places".to_owned()),
                 required: vec!["name".to_owned(), "description".to_owned()],
                 properties: Some(IndexMap::from([
@@ -166,10 +158,8 @@ mod test {
         assert_eq!(
             from_bson::<Property>(input)?,
             Property::Array {
-                bson_type: BsonType::Array,
                 description: Some("Location must be an array of objects".to_owned()),
                 items: Box::new(Property::Object {
-                    bson_type: BsonType::Object,
                     description: None,
                     required: vec!["name".to_owned(), "size".to_owned()],
                     properties: Some(IndexMap::from([
@@ -251,7 +241,6 @@ mod test {
                 properties: IndexMap::from([(
                     "counts".to_owned(),
                     Property::Object {
-                        bson_type: BsonType::Object,
                         description: None,
                         required: vec!["xs".to_owned()],
                         properties: Some(IndexMap::from([
@@ -301,7 +290,7 @@ mod test {
                     "description": "\"gpa\" must be a double if the field exists"
                 },
                 "address": {
-                    "bsonType": ["object"],
+                    "bsonType": "object",
                     "properties": {
                         "city": { "bsonType": "string" },
                         "street": { "bsonType": "string" }
@@ -351,7 +340,6 @@ mod test {
                     (
                         "address".to_owned(),
                         Property::Object {
-                            bson_type: BsonType::Object,
                             description: None,
                             required: vec![],
                             properties: Some(IndexMap::from([
