@@ -3,6 +3,8 @@
 mod exit_codes;
 mod introspection;
 mod logging;
+#[cfg(test)]
+mod tests;
 
 #[cfg(feature = "native-query-subcommand")]
 mod native_query;
@@ -13,7 +15,7 @@ use clap::{Parser, Subcommand};
 
 // Exported for use in tests
 pub use introspection::type_from_bson;
-use mongodb_agent_common::state::try_init_state_from_uri;
+use mongodb_agent_common::{mongodb::DatabaseTrait, state::try_init_state_from_uri};
 #[cfg(feature = "native-query-subcommand")]
 pub use native_query::native_query_from_pipeline;
 
@@ -49,7 +51,10 @@ pub struct Context {
 /// Run a command in a given directory.
 pub async fn run(command: Command, context: &Context) -> anyhow::Result<()> {
     match command {
-        Command::Update(args) => update(context, &args).await?,
+        Command::Update(args) => {
+            let connector_state = try_init_state_from_uri(context.connection_uri.as_ref()).await?;
+            update(context, &args, &connector_state.database()).await?
+        }
 
         #[cfg(feature = "native-query-subcommand")]
         Command::NativeQuery(command) => native_query::run(context, command).await?,
@@ -58,12 +63,14 @@ pub async fn run(command: Command, context: &Context) -> anyhow::Result<()> {
 }
 
 /// Update the configuration in the current directory by introspecting the database.
-async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
-    let connector_state = try_init_state_from_uri(context.connection_uri.as_ref()).await?;
-
+async fn update(
+    context: &Context,
+    args: &UpdateArgs,
+    database: &impl DatabaseTrait,
+) -> anyhow::Result<()> {
     let configuration_options =
         configuration::parse_configuration_options_file(&context.path).await?;
-    // Prefer arguments passed to cli, and fallback to the configuration file
+    // Prefer arguments passed to cli, and fall back to the configuration file
     let sample_size = match args.sample_size {
         Some(size) => size,
         None => configuration_options.introspection_options.sample_size,
@@ -88,7 +95,7 @@ async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
 
     if !no_validator_schema {
         let schemas_from_json_validation =
-            introspection::get_metadata_from_validation_schema(&connector_state).await?;
+            introspection::get_metadata_from_validation_schema(database).await?;
         configuration::write_schema_directory(&context.path, schemas_from_json_validation).await?;
     }
 
@@ -97,7 +104,7 @@ async fn update(context: &Context, args: &UpdateArgs) -> anyhow::Result<()> {
         sample_size,
         all_schema_nullable,
         config_file_changed,
-        &connector_state,
+        database,
         &existing_schemas,
     )
     .await?;

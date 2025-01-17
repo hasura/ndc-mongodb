@@ -9,8 +9,11 @@ use configuration::{
 };
 use futures_util::TryStreamExt;
 use mongodb::bson::{doc, Bson, Document};
-use mongodb_agent_common::state::ConnectorState;
-use mongodb_support::BsonScalarType::{self, *};
+use mongodb_agent_common::mongodb::{CollectionTrait as _, DatabaseTrait};
+use mongodb_support::{
+    aggregate::{Pipeline, Stage},
+    BsonScalarType::{self, *},
+};
 
 type ObjectField = WithName<ndc_models::FieldName, schema::ObjectField>;
 type ObjectType = WithName<ndc_models::ObjectTypeName, schema::ObjectType>;
@@ -23,11 +26,10 @@ pub async fn sample_schema_from_db(
     sample_size: u32,
     all_schema_nullable: bool,
     config_file_changed: bool,
-    state: &ConnectorState,
+    db: &impl DatabaseTrait,
     existing_schemas: &HashSet<std::string::String>,
 ) -> anyhow::Result<BTreeMap<std::string::String, Schema>> {
     let mut schemas = BTreeMap::new();
-    let db = state.database();
     let mut collections_cursor = db.list_collections().await?;
 
     while let Some(collection_spec) = collections_cursor.try_next().await? {
@@ -37,7 +39,7 @@ pub async fn sample_schema_from_db(
                 &collection_name,
                 sample_size,
                 all_schema_nullable,
-                state,
+                db,
             )
             .await?;
             if let Some(collection_schema) = collection_schema {
@@ -54,14 +56,17 @@ async fn sample_schema_from_collection(
     collection_name: &str,
     sample_size: u32,
     all_schema_nullable: bool,
-    state: &ConnectorState,
+    db: &impl DatabaseTrait,
 ) -> anyhow::Result<Option<Schema>> {
-    let db = state.database();
     let options = None;
     let mut cursor = db
-        .collection::<Document>(collection_name)
-        .aggregate(vec![doc! {"$sample": { "size": sample_size }}])
-        .with_options(options)
+        .collection(collection_name)
+        .aggregate(
+            Pipeline::new(vec![Stage::Other(doc! {
+                "$sample": { "size": sample_size }
+            })]),
+            options,
+        )
         .await?;
     let mut collected_object_types = vec![];
     let is_collection_type = true;
