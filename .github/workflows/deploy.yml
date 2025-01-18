@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-      - jessehallett/fix-deploy-automation # for testing changes
+      - fix-deploy-automation # for testing changes
     tags:
       - 'v*'
 
