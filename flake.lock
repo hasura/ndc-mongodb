@@ -132,21 +132,6 @@
         "type": "github"
       }
     },
-    "crane": {
-      "locked": {
-        "lastModified": 1733286231,
-        "narHash": "sha256-mlIDSv1/jqWnH8JTiOV7GMUNPCXL25+6jmD+7hdxx5o=",
-        "owner": "ipetkov",
-        "repo": "crane",
-        "rev": "af1556ecda8bcf305820f68ec2f9d77b41d9cc80",
-        "type": "github"
-      },
-      "original": {
-        "owner": "ipetkov",
-        "repo": "crane",
-        "type": "github"
-      }
-    },
     "crate2nix": {
       "inputs": {
         "cachix": "cachix",
@@ -155,23 +140,21 @@
         "flake-compat": "flake-compat_3",
         "flake-parts": "flake-parts_5",
         "nix-test-runner": "nix-test-runner_3",
-        "nixpkgs": [
-          "nixpkgs"
-        ],
+        "nixpkgs": "nixpkgs_6",
         "pre-commit-hooks": "pre-commit-hooks_3"
       },
       "locked": {
         "lastModified": 1734429562,
         "narHash": "sha256-V2XNs3Ir8WXNHdocfzkR/fu0FzkZ9uTDJkVecxJrGmQ=",
-        "ref": "refs/heads/master",
+        "owner": "nix-community",
+        "repo": "crate2nix",
         "rev": "8537c2d7cb623679aaeff62c4c4c43a91566ab09",
-        "revCount": 1345,
-        "type": "git",
-        "url": "file:///home/jesse/projects/nix/crate2nix"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///home/jesse/projects/nix/crate2nix"
+        "owner": "nix-community",
+        "repo": "crate2nix",
+        "type": "github"
       }
     },
     "crate2nix_stable": {
@@ -691,7 +674,7 @@
     "hasura-ddn-cli": {
       "inputs": {
         "flake-utils": "flake-utils_6",
-        "nixpkgs": "nixpkgs_6"
+        "nixpkgs": "nixpkgs_7"
       },
       "locked": {
         "lastModified": 1733604522,
@@ -853,6 +836,19 @@
     },
     "nixpkgs_6": {
       "locked": {
+        "lastModified": 1736916166,
+        "narHash": "sha256-puPDoVKxkuNmYIGMpMQiK8bEjaACcCksolsG36gdaNQ=",
+        "path": "/nix/store/awsvw44jla0idziiks2zwgzslfd2dczn-source",
+        "rev": "e24b4c09e963677b1beea49d411cd315a024ad3a",
+        "type": "path"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
+      }
+    },
+    "nixpkgs_7": {
+      "locked": {
         "lastModified": 1723362943,
         "narHash": "sha256-dFZRVSgmJkyM0bkPpaYRtG/kRMRTorUIDj8BxoOt1T4=",
         "owner": "nixos",
@@ -867,7 +863,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_7": {
+    "nixpkgs_8": {
       "locked": {
         "lastModified": 1733212471,
         "narHash": "sha256-M1+uCoV5igihRfcUKrr1riygbe73/dzNnzPsmaLCmpo=",
@@ -987,12 +983,11 @@
       "inputs": {
         "advisory-db": "advisory-db",
         "arion": "arion",
-        "crane": "crane",
         "crate2nix": "crate2nix",
         "flake-compat": "flake-compat_4",
         "graphql-engine-source": "graphql-engine-source",
         "hasura-ddn-cli": "hasura-ddn-cli",
-        "nixpkgs": "nixpkgs_7",
+        "nixpkgs": "nixpkgs_8",
         "rust-overlay": "rust-overlay",
         "systems": "systems_7"
       }
