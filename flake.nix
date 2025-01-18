@@ -218,11 +218,11 @@
           # inputsFrom = builtins.attrValues self.checks.${pkgs.buildPlatform.system};
           nativeBuildInputs = with pkgs; [
             arion.packages.${pkgs.system}.default
-            cargo-insta
+            # cargo-insta
             crate2nix.packages.${pkgs.system}.default
             ddn
-            just
-            mongosh
+            # just
+            # mongosh
             pkg-config
           ] ++ nixpkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs; [
             libiconv
