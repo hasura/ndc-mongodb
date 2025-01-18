@@ -43,7 +43,10 @@ jobs:
   docker:
     name: deploy::docker
     needs: binary
-    runs-on: ubuntu-24.04
+
+    # This job doesn't work as written on ubuntu-24.04. The problem is described
+    # in this issue: https://github.com/actions/runner-images/issues/10443
+    runs-on: ubuntu-22.04
     steps:
     - name: Checkout 🛎️
       uses: actions/checkout@v3
@@ -63,13 +66,6 @@ jobs:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-
-    # This setting is necessary as of the ubuntu-24.04 runner. 
-    # See https://github.com/actions/runner-images/issues/10443
-    - name: Enable user namespace remapping
-      run: |
-          echo "kernel.unprivileged_userns_clone=1" | sudo tee /etc/sysctl.conf
-          sudo sysctl -p
 
     - name: Deploy 🚀
       run: nix run .#publish-docker-image ${{ github.ref }}
