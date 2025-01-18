@@ -89,10 +89,6 @@
           # the build system, and to produce outputs for the host system.
           rustToolchain = final.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 
-          # buildRustCrate/crate2nix depend on this.
-          rustc = rustToolchain;
-          cargo = rustToolchain;
-
           craneLib = (crane.mkLib final).overrideToolchain (pkgs: pkgs.rustToolchain);
 
           # Extend our package set with mongodb-connector, graphql-engine, and
@@ -121,6 +117,21 @@
           ddn = hasura-ddn-cli.packages.${final.system}.default;
         })
       ];
+
+      # Cargo.nix is a generated set of nix derivations that builds workspace
+      # crates and their dependencies crate-by-crate for best possible cache
+      # utilization.
+      #
+      # To apply the Rust toolchain described in `rust-toolchain.toml` we need
+      # to override `cargo` and `rustc` inputs. Note that `pkgs.rustToolchain`
+      # is set up in `overlays` above.
+      cargo-nix = pkgs: import ./Cargo.nix {
+        inherit pkgs;
+        buildRustCrateForPkgs = crate: pkgs.buildRustCrate.override {
+          cargo = pkgs.rustToolchain;
+          rustc = pkgs.rustToolchain;
+        };
+      };
 
       # Our default package set is configured to build for the same platform
       # the flake is evaluated on. So we leave `crossSystem` set to the default,
@@ -168,7 +179,9 @@
       # });
 
       packages = eachSystem (pkgs: rec {
-        default = pkgs.mongodb-connector;
+        # default = pkgs.mongodb-connector;
+        default = (cargo-nix pkgs).workspaceMembers.mongodb-connector.build;
+        configuration = (cargo-nix pkgs).workspaceMembers.configuration.build;
 
         # Note: these outputs are overridden to build statically-linked
         mongodb-connector-x86_64-linux = pkgs.pkgsCross.x86_64-linux.mongodb-connector.override { staticallyLinked = true; };
@@ -218,11 +231,11 @@
           # inputsFrom = builtins.attrValues self.checks.${pkgs.buildPlatform.system};
           nativeBuildInputs = with pkgs; [
             arion.packages.${pkgs.system}.default
-            # cargo-insta
+            cargo-insta
             crate2nix.packages.${pkgs.system}.default
             ddn
-            # just
-            # mongosh
+            just
+            mongosh
             pkg-config
           ] ++ nixpkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs; [
             libiconv
