@@ -5,14 +5,10 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     systems.url = "github:nix-systems/default";
 
-    # Nix build system for Rust projects, delegates to cargo
-    crane.url = "github:ipetkov/crane";
-
-    crate2nix = {
-      # url = "github:nix-community/crate2nix";
-      url = "git+file:///home/jesse/projects/nix/crate2nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # Nix build system for Rust projects. Builds each crate (including
+    # dependencies) as a separate nix derivation for best possible cache
+    # utilization.
+    crate2nix.url = "github:nix-community/crate2nix";
 
     hasura-ddn-cli.url = "github:hasura/ddn-cli-nix";
 
@@ -61,7 +57,6 @@
   outputs =
     { self
     , nixpkgs
-    , crane
     , crate2nix
     , hasura-ddn-cli
     , rust-overlay
@@ -76,7 +71,7 @@
       # packages or replace packages in that set.
       overlays = [
         (import rust-overlay)
-        (final: prev: rec {
+        (final: prev: {
           # What's the deal with `pkgsBuildHost`? It has to do with
           # cross-compiling.
           #
@@ -89,20 +84,33 @@
           # the build system, and to produce outputs for the host system.
           rustToolchain = final.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 
-          craneLib = (crane.mkLib final).overrideToolchain (pkgs: pkgs.rustToolchain);
+          # Cargo.nix is a generated set of nix derivations that builds workspace
+          # crates. We import it here to bring project crates into the overlayed
+          # package set.
+          #
+          # To apply the Rust toolchain described in `rust-toolchain.toml` we need
+          # to override `cargo` and `rustc` inputs. Note that `rustToolchain`
+          # is set up above.
+          cargo-nix = import ./Cargo.nix {
+            pkgs = final;
+            buildRustCrateForPkgs = crate: final.buildRustCrate.override {
+              cargo = final.rustToolchain;
+              rustc = final.rustToolchain;
+            };
+          };
 
           # Extend our package set with mongodb-connector, graphql-engine, and
           # other packages built by this flake to make these packages accessible
           # in arion-compose.nix.
-          mongodb-connector-workspace = final.callPackage ./nix/mongodb-connector-workspace.nix { inherit crate2nix; }; # builds all packages in this repo
-          mongodb-connector = mongodb-connector-workspace.workspaceMembers.mongodb-connector;
-          mongodb-cli-plugin = mongodb-connector-workspace.workspaceMembers.mongodb-cli-plugin;
+          mongodb-connector = final.cargo-nix.workspaceMembers.mongodb-connector.build;
+          mongodb-cli-plugin = final.cargo-nix.workspaceMembers.mongodb-cli-plugin.build;
 
+          # TODO:
           graphql-engine-workspace = final.callPackage ./nix/graphql-engine.nix { inherit crate2nix; src = "${graphql-engine-source}/v3"; };
-          graphql-engine = graphql-engine-workspace.workspaceMembers.engine;
-          dev-auth-webhook = graphql-engine-workspace.workspaceMembers.dev-auth-webhook;
+          graphql-engine = final.graphql-engine-workspace.workspaceMembers.engine;
+          dev-auth-webhook = final.graphql-engine-workspace.workspaceMembers.dev-auth-webhook;
 
-          integration-tests = final.callPackage ./nix/integration-tests.nix { };
+          integration-tests = final.cargo-nix.workspaceMembers.integration-tests.build.override { features = [ "integration" ]; };
 
           # Provide cross-compiled versions of each of our packages under
           # `pkgs.pkgsCross.${system}.${package-name}`
@@ -117,21 +125,6 @@
           ddn = hasura-ddn-cli.packages.${final.system}.default;
         })
       ];
-
-      # Cargo.nix is a generated set of nix derivations that builds workspace
-      # crates and their dependencies crate-by-crate for best possible cache
-      # utilization.
-      #
-      # To apply the Rust toolchain described in `rust-toolchain.toml` we need
-      # to override `cargo` and `rustc` inputs. Note that `pkgs.rustToolchain`
-      # is set up in `overlays` above.
-      cargo-nix = pkgs: import ./Cargo.nix {
-        inherit pkgs;
-        buildRustCrateForPkgs = crate: pkgs.buildRustCrate.override {
-          cargo = pkgs.rustToolchain;
-          rustc = pkgs.rustToolchain;
-        };
-      };
 
       # Our default package set is configured to build for the same platform
       # the flake is evaluated on. So we leave `crossSystem` set to the default,
@@ -179,9 +172,7 @@
       # });
 
       packages = eachSystem (pkgs: rec {
-        # default = pkgs.mongodb-connector;
-        default = (cargo-nix pkgs).workspaceMembers.mongodb-connector.build;
-        configuration = (cargo-nix pkgs).workspaceMembers.configuration.build;
+        default = pkgs.mongodb-connector;
 
         # Note: these outputs are overridden to build statically-linked
         mongodb-connector-x86_64-linux = pkgs.pkgsCross.x86_64-linux.mongodb-connector.override { staticallyLinked = true; };
