@@ -93,10 +93,12 @@
           # is set up above.
           cargo-nix = import ./Cargo.nix {
             pkgs = final;
-            buildRustCrateForPkgs = crate: final.buildRustCrate.override {
-              cargo = final.rustToolchain;
-              rustc = final.rustToolchain;
-            };
+            # buildRustCrateForPkgs = crate: final.buildRustCrate.override {
+            #   # cargo = final.pkgsBuildBuild.rustToolchain;
+            #   # rustc = final.pkgsBuildBuild.rustToolchain;
+            #   cargo = final.rustToolchain;
+            #   rustc = final.rustToolchain;
+            # };
           };
 
           # Extend our package set with mongodb-connector, graphql-engine, and
@@ -176,7 +178,8 @@
 
         # Note: these outputs are overridden to build statically-linked
         mongodb-connector-x86_64-linux = pkgs.pkgsCross.x86_64-linux.mongodb-connector.override { staticallyLinked = true; };
-        mongodb-connector-aarch64-linux = pkgs.pkgsCross.aarch64-linux.mongodb-connector.override { staticallyLinked = true; };
+        # mongodb-connector-aarch64-linux = pkgs.pkgsCross.aarch64-linux.mongodb-connector.override { staticallyLinked = true; };
+        mongodb-connector-aarch64-linux = pkgs.pkgsCross.aarch64-linux.mongodb-connector;
 
         # Builds a docker image for the MongoDB connector for amd64 Linux. To
         # get a multi-arch image run `publish-docker-image`.
