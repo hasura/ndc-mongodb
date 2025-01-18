@@ -9,7 +9,7 @@ on:
 jobs:
   binary:
     name: deploy::binary
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
     - name: Checkout 🛎️
       uses: actions/checkout@v3
@@ -42,7 +42,7 @@ jobs:
   docker:
     name: deploy::docker
     needs: binary
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
     - name: Checkout 🛎️
       uses: actions/checkout@v3
@@ -63,6 +63,13 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    # This setting is necessary as of the ubuntu-24.04 runner. 
+    # See https://github.com/actions/runner-images/issues/10443
+    - name: Enable user namespace remapping
+      run: |
+          echo "kernel.unprivileged_userns_clone=1" | sudo tee /etc/sysctl.conf
+          sudo sysctl -p
+
     - name: Deploy 🚀
       run: nix run .#publish-docker-image ${{ github.ref }}
 
@@ -70,7 +77,7 @@ jobs:
     # For now, only run on tagged releases because main builds generate a Docker image tag name that
     # is not easily accessible here
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -93,11 +100,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - runner: ubuntu-latest
+          - runner: ubuntu-24.04
             target: x86_64-unknown-linux-musl
             rustflags: -C target-feature=+crt-static
             linux-packages: musl-tools
-          - runner: ubuntu-latest
+          - runner: ubuntu-24.04
             target: aarch64-unknown-linux-musl
             rustflags: -C target-feature=+crt-static
             linux-packages: gcc-aarch64-linux-gnu musl-tools
@@ -185,7 +192,7 @@ jobs:
       - docker
       - connector-definition
       - build-cli-binaries
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     steps:
       - uses: actions/checkout@v4
