@@ -142,7 +142,7 @@
       # `crossSystem`.
       mkPkgsCross = localSystem: crossSystem: import nixpkgs { inherit localSystem crossSystem overlays; };
 
-      # Like the above, but build for Linux while matching the architecture we
+      # Like mkPkgsCross, but build for Linux while matching the architecture we
       # are building on.
       mkPkgsLinux = localSystem: import nixpkgs {
         inherit localSystem overlays;
@@ -178,10 +178,28 @@
       packages = eachSystem (pkgs: rec {
         default = pkgs.mongodb-connector;
 
+        # Some of the package definitions below are cross-compiled,
+        # statically-linked, or both. Here's how that works:
+        #
+        # - everything in `pkgsCross.${system}` is automatically cross-compiled for the named system
+        # - everything in `pkgsStatic` is statically-linked (note that static linking only works for linux builds)
+        #
+        # Those can be combined, but `pkgsCross` must be specified first. For
+        # example to get a cross-compiled, statically-linked build of the
+        # connector for ARM linux:
+        #
+        #     pkgs.pkgsCross.aarch64-linux.pkgsStatic.mongodb-connector
+        #
+        # If there is a build you want that is not listed here you can reference
+        # `pkgs` via the `legacyPackages` flake output. For example to get
+        # a connector build for ARM Linux that is **not** statically linked run,
+        #
+        #     $ nix build .#legacyPackages.${YOUR_SYSTEM}.pkgsCross.aarch64-linux.mongodb-connector
+        #
+
         # Note: these outputs are overridden to build statically-linked
-        mongodb-connector-x86_64-linux = pkgs.pkgsCross.x86_64-linux.mongodb-connector.override { staticallyLinked = true; };
-        # mongodb-connector-aarch64-linux = pkgs.pkgsCross.aarch64-linux.mongodb-connector.override { staticallyLinked = true; };
-        mongodb-connector-aarch64-linux = pkgs.pkgsCross.aarch64-linux.mongodb-connector;
+        mongodb-connector-x86_64-linux = pkgs.pkgsCross.x86_64-linux.pkgsStatic.mongodb-connector;
+        mongodb-connector-aarch64-linux = pkgs.pkgsCross.aarch64-linux.pkgsStatic.mongodb-connector;
 
         # Builds a docker image for the MongoDB connector for amd64 Linux. To
         # get a multi-arch image run `publish-docker-image`.
