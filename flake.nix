@@ -72,17 +72,7 @@
       overlays = [
         (import rust-overlay)
         (final: prev: {
-          # What's the deal with `pkgsBuildHost`? It has to do with
-          # cross-compiling.
-          #
-          # - "build" is the system we are building on
-          # - "host" is the system we are building for
-          #
-          # If a package set is configured  for cross-compiling then packages in
-          # the set by default are compiled to run on the "host" system. OTOH
-          # `pkgsBuildHost` contains copies of all packages compiled to run on
-          # the build system, and to produce outputs for the host system.
-          rustToolchain = final.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+          rustToolchain = final.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 
           # Cargo.nix is a generated set of nix derivations that builds workspace
           # crates. We import it here to bring project crates into the overlayed
@@ -91,28 +81,40 @@
           # To apply the Rust toolchain described in `rust-toolchain.toml` we need
           # to override `cargo` and `rustc` inputs. Note that `rustToolchain`
           # is set up above.
-          cargo-nix = import ./Cargo.nix {
+          ndc-mongodb-workspace = import ./Cargo.nix {
             pkgs = final;
-            # buildRustCrateForPkgs = crate: final.buildRustCrate.override {
-            #   # cargo = final.pkgsBuildBuild.rustToolchain;
-            #   # rustc = final.pkgsBuildBuild.rustToolchain;
-            #   cargo = final.rustToolchain;
-            #   rustc = final.rustToolchain;
-            # };
+            buildRustCrateForPkgs = pkgs: pkgs.buildRustCrate.override {
+              # What's the deal with `pkgsBuildHost`? It has to do with
+              # cross-compiling.
+              #
+              # - "build" is the system we are building on
+              # - "host" is the system we are building for
+              #
+              # If a package set is configured  for cross-compiling then
+              # packages in the set by default are compiled to run on the "host"
+              # system. OTOH `pkgsBuildHost` contains copies of all packages
+              # compiled to run on the build system, and to produce compiled
+              # output for the host system.
+              #
+              # So it's important to use packages in `pkgsBuildHost` to
+              # reference programs that run during the build process.
+              cargo = pkgs.pkgsBuildHost.rustToolchain;
+              rustc = pkgs.pkgsBuildHost.rustToolchain;
+            };
           };
 
           # Extend our package set with mongodb-connector, graphql-engine, and
           # other packages built by this flake to make these packages accessible
           # in arion-compose.nix.
-          mongodb-connector = final.cargo-nix.workspaceMembers.mongodb-connector.build;
-          mongodb-cli-plugin = final.cargo-nix.workspaceMembers.mongodb-cli-plugin.build;
+          mongodb-connector = final.ndc-mongodb-workspace.workspaceMembers.mongodb-connector.build;
+          mongodb-cli-plugin = final.ndc-mongodb-workspace.workspaceMembers.mongodb-cli-plugin.build;
 
           # TODO:
           graphql-engine-workspace = final.callPackage ./nix/graphql-engine.nix { inherit crate2nix; src = "${graphql-engine-source}/v3"; };
           graphql-engine = final.graphql-engine-workspace.workspaceMembers.engine;
           dev-auth-webhook = final.graphql-engine-workspace.workspaceMembers.dev-auth-webhook;
 
-          integration-tests = final.cargo-nix.workspaceMembers.integration-tests.build.override { features = [ "integration" ]; };
+          integration-tests = final.ndc-mongodb-workspace.workspaceMembers.integration-tests.build.override { features = [ "integration" ]; };
 
           # Provide cross-compiled versions of each of our packages under
           # `pkgs.pkgsCross.${system}.${package-name}`
@@ -205,7 +207,7 @@
         };
 
         # CLI plugin packages with cross-compilation options
-        mongodb-cli-plugin = pkgs.mongodb-cli-plugin.override { staticallyLinked = true; };
+        mongodb-cli-plugin = pkgs.mongodb-cli-plugin;
         mongodb-cli-plugin-x86_64-linux = pkgs.pkgsCross.x86_64-linux.mongodb-cli-plugin.override { staticallyLinked = true; };
         mongodb-cli-plugin-aarch64-linux = pkgs.pkgsCross.aarch64-linux.mongodb-cli-plugin.override { staticallyLinked = true; };
 
