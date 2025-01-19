@@ -90,11 +90,11 @@
               # - "build" is the system we are building on
               # - "host" is the system we are building for
               #
-              # If a package set is configured  for cross-compiling then
-              # packages in the set by default are compiled to run on the "host"
-              # system. OTOH `pkgsBuildHost` contains copies of all packages
-              # compiled to run on the build system, and to produce compiled
-              # output for the host system.
+              # If a package set is configured for cross-compiling then packages
+              # in the set by default are compiled to run on the "host" system.
+              # OTOH `pkgsBuildHost` contains copies of all packages compiled to
+              # run on the build system, and to produce compiled output for the
+              # host system.
               #
               # So it's important to use packages in `pkgsBuildHost` to
               # reference programs that run during the build process.
@@ -109,12 +109,22 @@
           mongodb-connector = final.ndc-mongodb-workspace.workspaceMembers.mongodb-connector.build;
           mongodb-cli-plugin = final.ndc-mongodb-workspace.workspaceMembers.mongodb-cli-plugin.build;
 
+          # Packages created by crate2nix like these can be customized in
+          # a number of ways. For example to create a debug build with
+          # extra features enabled use an expression like this:
+          #
+          #     final.ndc-mongodb-workspace.workspaceMembers.mongodb-connector.build.override {
+          #       features = [ "default" "optional-feature" "etc" ];
+          #       release = false;
+          #     }
+          #
+
           # TODO:
           graphql-engine-workspace = final.callPackage ./nix/graphql-engine.nix { inherit crate2nix; src = "${graphql-engine-source}/v3"; };
           graphql-engine = final.graphql-engine-workspace.workspaceMembers.engine;
           dev-auth-webhook = final.graphql-engine-workspace.workspaceMembers.dev-auth-webhook;
 
-          integration-tests = final.ndc-mongodb-workspace.workspaceMembers.integration-tests.build.override { features = [ "integration" ]; };
+          integration-tests = final.callPackage ./nix/integration-tests.nix {};
 
           # Provide cross-compiled versions of each of our packages under
           # `pkgs.pkgsCross.${system}.${package-name}`
@@ -194,7 +204,7 @@
         # `pkgs` via the `legacyPackages` flake output. For example to get
         # a connector build for ARM Linux that is **not** statically linked run,
         #
-        #     $ nix build .#legacyPackages.${YOUR_SYSTEM}.pkgsCross.aarch64-linux.mongodb-connector
+        #     $ nix build .#pkgsCross.aarch64-linux.mongodb-connector
         #
 
         # Note: these outputs are overridden to build statically-linked

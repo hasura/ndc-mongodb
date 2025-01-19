@@ -1,54 +1,38 @@
-{ callPackage
-, craneLib
-, jq
+# Create a standalone executable that runs integration tests when it is
+# executed.
+
+{ ndc-mongodb-workspace
+, defaultCrateOverrides
 , makeWrapper
 }:
 
-let
-  workspace = callPackage ./mongodb-connector-workspace.nix { };
-in
-craneLib.buildPackage
-  (workspace.buildArgs // {
-    pname = "mongodb-connector-integration-tests";
+ndc-mongodb-workspace.workspaceMembers.integration-tests.build.override {
+  features = [ "integration" ];
+  crateOverrides = defaultCrateOverrides // {
+    integration-tests = attrs: {
+      extraRustcOpts = [ "--test" ]; # builds a test binary in target/lib/
 
-    doCheck = false;
+      # Add programs we need for postInstall hook to nativeBuildInputs
+      nativeBuildInputs = [
+        makeWrapper
+      ];
 
-    # craneLib passes `--locked` by default - this is necessary for
-    # repdroducible builds.
-    #
-    # `--tests` builds an executable to run tests instead of compiling
-    # `main.rs`
-    #
-    # Integration tests are disabled by default - `--features integration`
-    # enables them.
-    #
-    # We only want the integration tests so we're limiting to building the test
-    # runner for that crate.
-    cargoExtraArgs = "--locked --tests --package integration-tests --features integration";
+      # The test binary is not automatically installed to the output nix store
+      # path so we do that here.
+      postInstall = ''
+        local bin="$out/bin/integration-tests"
 
-    # Add programs we need for postInstall hook to nativeBuildInputs
-    nativeBuildInputs = workspace.buildArgs.nativeBuildInputs ++ [
-      jq
-      makeWrapper
-    ];
+        for binary in target/lib/*; do
+          echo "installing '$binary' to '$bin'"
+          mkdir -p "$out/bin"
+          cp "$binary" "$bin"
+        done
 
-    # Copy compiled test harness to store path. craneLib automatically filters
-    # out test artifacts when installing binaries so we have to do this part
-    # ourselves.
-    postInstall = ''
-      local binaries=$(<"$cargoBuildLog" jq -Rr 'fromjson? | .executable | select(.!= null)')
-      local bin="$out/bin/integration-tests"
-
-      for binary in "$binaries"; do
-        echo "installing '$binary' to '$bin'"
-        mkdir -p "$out/bin"
-        cp "$binary" "$bin"
-      done
-
-      # Set environment variable to point to source workspace so that `insta`
-      # (the Rust snapshot test library) can find snapshot files.
-      wrapProgram "$bin" \
-        --set-default INSTA_WORKSPACE_ROOT "${./..}"
-    '';
-  })
-
+        # Set environment variable to point to source workspace so that `insta`
+        # (the Rust snapshot test library) can find snapshot files.
+        wrapProgram "$bin" \
+          --set-default INSTA_WORKSPACE_ROOT "${./..}"
+      '';
+    };
+  };
+}
