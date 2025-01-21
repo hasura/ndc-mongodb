@@ -9,17 +9,17 @@ use mongodb::{
 use mongodb_support::aggregate::Pipeline;
 use serde::de::DeserializeOwned;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-helpers"))]
 use mockall::automock;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-helpers"))]
 use super::test_helpers::MockCursor;
 
 /// Abstract MongoDB collection methods. This lets us mock a database connection in tests. The
 /// automock attribute generates a struct called MockCollectionTrait that implements this trait.
 /// The mock provides a variety of methods for mocking and spying on database behavior in tests.
 /// See https://docs.rs/mockall/latest/mockall/
-#[cfg_attr(test, automock(
+#[cfg_attr(any(test, feature = "test-helpers"), automock(
     type DocumentCursor=MockCursor<Document>;
     type RowCursor=MockCursor<T>;
 ))]
@@ -28,8 +28,8 @@ pub trait CollectionTrait<T>
 where
     T: DeserializeOwned + Unpin + Send + Sync + 'static,
 {
-    type DocumentCursor: Stream<Item = Result<Document, Error>> + 'static;
-    type RowCursor: Stream<Item = Result<T, Error>> + 'static;
+    type DocumentCursor: Stream<Item = Result<Document, Error>> + 'static + Unpin;
+    type RowCursor: Stream<Item = Result<T, Error>> + 'static + Unpin;
 
     async fn aggregate<Options>(
         &self,

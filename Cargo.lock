@@ -454,7 +454,7 @@ checksum = "97af0562545a7d7f3d9222fcf909963bec36dcb502afaacab98c6ffac8da47ce"
 
 [[package]]
 name = "configuration"
-version = "1.5.0"
+version = "1.6.0"
 dependencies = [
  "anyhow",
  "async-tempfile",
@@ -1476,7 +1476,7 @@ dependencies = [
 
 [[package]]
 name = "integration-tests"
-version = "1.5.0"
+version = "1.6.0"
 dependencies = [
  "anyhow",
  "assert_json",
@@ -1689,14 +1689,13 @@ dependencies = [
 
 [[package]]
 name = "mockall"
-version = "0.12.1"
+version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43766c2b5203b10de348ffe19f7e54564b64f3d6018ff7648d1e2d6d3a0f0a48"
+checksum = "39a6bfcc6c8c7eed5ee98b9c3e33adc726054389233e201c95dab2d41a3839d2"
 dependencies = [
  "cfg-if",
  "downcast",
  "fragile",
- "lazy_static",
  "mockall_derive",
  "predicates",
  "predicates-tree",
@@ -1704,9 +1703,9 @@ dependencies = [
 
 [[package]]
 name = "mockall_derive"
-version = "0.12.1"
+version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af7cbce79ec385a1d4f54baa90a76401eb15d9cab93685f62e7e9f942aa00ae2"
+checksum = "25ca3004c2efe9011bd4e461bd8256445052b9615405b4f7ea43fc8ca5c20898"
 dependencies = [
  "cfg-if",
  "proc-macro2",
@@ -1766,7 +1765,7 @@ dependencies = [
 
 [[package]]
 name = "mongodb-agent-common"
-version = "1.5.0"
+version = "1.6.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1806,9 +1805,10 @@ dependencies = [
 
 [[package]]
 name = "mongodb-cli-plugin"
-version = "1.5.0"
+version = "1.6.0"
 dependencies = [
  "anyhow",
+ "async-tempfile",
  "clap",
  "configuration",
  "enum-iterator",
@@ -1837,7 +1837,7 @@ dependencies = [
 
 [[package]]
 name = "mongodb-connector"
-version = "1.5.0"
+version = "1.6.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1875,7 +1875,7 @@ dependencies = [
 
 [[package]]
 name = "mongodb-support"
-version = "1.5.0"
+version = "1.6.0"
 dependencies = [
  "anyhow",
  "enum-iterator",
@@ -1920,7 +1920,7 @@ dependencies = [
 
 [[package]]
 name = "ndc-query-plan"
-version = "1.5.0"
+version = "1.6.0"
 dependencies = [
  "anyhow",
  "derivative",
@@ -2011,7 +2011,7 @@ dependencies = [
 
 [[package]]
 name = "ndc-test-helpers"
-version = "1.5.0"
+version = "1.6.0"
 dependencies = [
  "indexmap 2.2.6",
  "itertools 0.13.0",
@@ -3285,7 +3285,7 @@ checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 
 [[package]]
 name = "test-helpers"
-version = "1.5.0"
+version = "1.6.0"
 dependencies = [
  "configuration",
  "enum-iterator",

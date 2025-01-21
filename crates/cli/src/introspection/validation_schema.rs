@@ -7,8 +7,8 @@ use configuration::{
 use futures_util::TryStreamExt;
 use mongodb::bson::from_bson;
 use mongodb_agent_common::{
+    mongodb::DatabaseTrait,
     schema::{get_property_description, Property, ValidatorSchema},
-    state::ConnectorState,
 };
 use mongodb_support::BsonScalarType;
 
@@ -19,9 +19,8 @@ type ObjectType = WithName<ndc_models::ObjectTypeName, schema::ObjectType>;
 type ObjectField = WithName<ndc_models::FieldName, schema::ObjectField>;
 
 pub async fn get_metadata_from_validation_schema(
-    state: &ConnectorState,
+    db: &impl DatabaseTrait,
 ) -> Result<BTreeMap<String, Schema>, MongoAgentError> {
-    let db = state.database();
     let mut collections_cursor = db.list_collections().await?;
 
     let mut schemas: Vec<WithName<String, Schema>> = vec![];
@@ -152,10 +151,12 @@ fn make_field_type(object_type_name: &str, prop_schema: &Property) -> (Vec<Objec
 
     match prop_schema {
         Property::Object {
-            bson_type: _,
+            properties: None, ..
+        } => (vec![], Type::ExtendedJSON),
+        Property::Object {
             description: _,
             required,
-            properties,
+            properties: Some(properties),
         } => {
             let type_prefix = format!("{object_type_name}_");
             let (otds, otd_fields): (Vec<Vec<ObjectType>>, Vec<ObjectField>) = properties
@@ -177,7 +178,6 @@ fn make_field_type(object_type_name: &str, prop_schema: &Property) -> (Vec<Objec
             (collected_otds, Type::Object(object_type_name.to_string()))
         }
         Property::Array {
-            bson_type: _,
             description: _,
             items,
         } => {

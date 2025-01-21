@@ -26,8 +26,7 @@ changelog](https://hasura.github.io/ndc-spec/specification/changelog.html#020).
 Use of the new spec requires a version of GraphQL Engine that supports ndc-spec
 v0.2, and there are required metadata changes.
 
-
-## [Unreleased] - ndc-spec 0.1
+## [1.6.0] - 2025-01-17
 
 ### Added
 
@@ -41,6 +40,7 @@ v0.2, and there are required metadata changes.
 
 - Upgrade dependencies to get fix for RUSTSEC-2024-0421, a vulnerability in domain name comparisons ([#138](https://github.com/hasura/ndc-mongodb/pull/138))
 - Aggregations on empty document sets now produce `null` instead of failing with an error ([#136](https://github.com/hasura/ndc-mongodb/pull/136))
+- Handle collection validators with object fields that do not list properties ([#140](https://github.com/hasura/ndc-mongodb/pull/140))
 
 #### Fix for RUSTSEC-2024-0421 / CVE-2024-12224
 
@@ -55,6 +55,25 @@ a different name. We do not expect that this impacts the MongoDB connector since
 it uses the affected library exclusively to connect to MongoDB databases, and
 database URLs are supplied by trusted administrators. But better to be safe than
 sorry.
+
+#### Validators with object fields that do not list properties
+
+If a collection validator species an property of type `object`, but does not specify a list of nested properties for that object then we will infer the `ExtendedJSON` type for that property. For a collection created with this set of options would have the type `ExtendedJSON` for its `reactions` field:
+
+```json
+{
+  "validator": {
+    "$jsonSchema": {
+      "bsonType": "object",
+      "properties": {
+        "reactions": { "bsonType": "object" },
+      }
+    }
+  }
+}
+```
+
+If the validator specifies a map of nested properties, but that map is empty, then we interpret that as an empty object type.
 
 ## [1.5.0] - 2024-12-05
 
