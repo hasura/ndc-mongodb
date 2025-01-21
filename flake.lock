@@ -144,15 +144,16 @@
         "pre-commit-hooks": "pre-commit-hooks_3"
       },
       "locked": {
-        "lastModified": 1734429562,
-        "narHash": "sha256-V2XNs3Ir8WXNHdocfzkR/fu0FzkZ9uTDJkVecxJrGmQ=",
-        "owner": "nix-community",
+        "lastModified": 1737445492,
+        "narHash": "sha256-qBSS92FAE2k+5PEkOzbgcYPavlqpl+uHoLJAbO9UUfM=",
+        "owner": "hallettj",
         "repo": "crate2nix",
-        "rev": "8537c2d7cb623679aaeff62c4c4c43a91566ab09",
+        "rev": "8af1c29d8cd74b198ce9c1626573f511c9423801",
         "type": "github"
       },
       "original": {
-        "owner": "nix-community",
+        "owner": "hallettj",
+        "ref": "git-workspaces",
         "repo": "crate2nix",
         "type": "github"
       }
@@ -836,15 +837,18 @@
     },
     "nixpkgs_6": {
       "locked": {
-        "lastModified": 1736916166,
-        "narHash": "sha256-puPDoVKxkuNmYIGMpMQiK8bEjaACcCksolsG36gdaNQ=",
-        "path": "/nix/store/awsvw44jla0idziiks2zwgzslfd2dczn-source",
-        "rev": "e24b4c09e963677b1beea49d411cd315a024ad3a",
-        "type": "path"
+        "lastModified": 1737062831,
+        "narHash": "sha256-Tbk1MZbtV2s5aG+iM99U8FqwxU/YNArMcWAv6clcsBc=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "5df43628fdf08d642be8ba5b3625a6c70731c19c",
+        "type": "github"
       },
       "original": {
-        "id": "nixpkgs",
-        "type": "indirect"
+        "owner": "nixos",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
       }
     },
     "nixpkgs_7": {

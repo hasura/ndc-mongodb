@@ -8,7 +8,8 @@
     # Nix build system for Rust projects. Builds each crate (including
     # dependencies) as a separate nix derivation for best possible cache
     # utilization.
-    crate2nix.url = "github:nix-community/crate2nix";
+    # crate2nix.url = "github:nix-community/crate2nix";
+    crate2nix.url = "github:hallettj/crate2nix/git-workspaces";
 
     hasura-ddn-cli.url = "github:hasura/ddn-cli-nix";
 
@@ -119,12 +120,27 @@
           #     }
           #
 
-          # TODO:
-          graphql-engine-workspace = final.callPackage ./nix/graphql-engine.nix { inherit crate2nix; src = "${graphql-engine-source}/v3"; };
-          graphql-engine = final.graphql-engine-workspace.workspaceMembers.engine;
+          graphql-engine-workspace =
+            let
+              src = "${graphql-engine-source}/v3";
+              rust = final.pkgsBuildHost.rust-bin.fromRustupToolchainFile "${src}/rust-toolchain.toml";
+              cargo-nix = crate2nix.tools.${final.system}.generatedCargoNix {
+                name = "graphql-engine-workspace";
+                inherit src;
+              };
+            in
+            import cargo-nix {
+              pkgs = final;
+              buildRustCrateForPkgs = pkgs: pkgs.buildRustCrate.override {
+                cargo = rust;
+                rustc = rust;
+              };
+            };
+
+          graphql-engine = final.graphql-engine-workspace.workspaceMembers.engine.build;
           dev-auth-webhook = final.graphql-engine-workspace.workspaceMembers.dev-auth-webhook;
 
-          integration-tests = final.callPackage ./nix/integration-tests.nix {};
+          integration-tests = final.callPackage ./nix/integration-tests.nix { };
 
           # Provide cross-compiled versions of each of our packages under
           # `pkgs.pkgsCross.${system}.${package-name}`
