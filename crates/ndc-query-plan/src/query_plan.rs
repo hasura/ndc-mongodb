@@ -6,6 +6,7 @@ use itertools::Either;
 use ndc_models::{
     self as ndc, ArgumentName, FieldName, OrderDirection, RelationshipType, UnaryComparisonOperator,
 };
+use nonempty::NonEmpty;
 
 use crate::{vec_set::VecSet, Type};
 
@@ -127,7 +128,7 @@ pub struct Relationship<T: ConnectorTypes> {
     /// names that descend through nested object fields). The field path will only contain a single item,
     /// meaning a column on the target collection's type, unless the 'relationships.nested'
     /// capability is supported, in which case multiple items denotes a nested object field.
-    pub column_mapping: BTreeMap<ndc::FieldName, Vec<ndc::FieldName>>,
+    pub column_mapping: BTreeMap<ndc::FieldName, NonEmpty<ndc::FieldName>>,
     pub relationship_type: RelationshipType,
     /// The name of a collection
     pub target_collection: ndc::CollectionName,

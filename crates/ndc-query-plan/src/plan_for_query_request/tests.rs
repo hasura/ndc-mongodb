@@ -1,5 +1,6 @@
 use ndc_models::{self as ndc, OrderByTarget, OrderDirection, RelationshipType};
 use ndc_test_helpers::*;
+use nonempty::NonEmpty;
 use pretty_assertions::assert_eq;
 
 use crate::{
@@ -715,7 +716,7 @@ fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), a
                 "author_articles".into(),
                 plan::Relationship {
                     target_collection: "articles".into(),
-                    column_mapping: [("id".into(), vec!["author_id".into()])].into(),
+                    column_mapping: [("id".into(), NonEmpty::singleton("author_id".into()))].into(),
                     relationship_type: RelationshipType::Array,
                     arguments: Default::default(),
                     query: plan::Query {
@@ -934,7 +935,7 @@ fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Res
             relationships: [(
                 "author".into(),
                 plan::Relationship {
-                    column_mapping: [("authorId".into(), vec!["id".into()])].into(),
+                    column_mapping: [("authorId".into(), NonEmpty::singleton("id".into()))].into(),
                     relationship_type: RelationshipType::Array,
                     target_collection: "authors".into(),
                     arguments: Default::default(),

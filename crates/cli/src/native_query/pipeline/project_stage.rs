@@ -7,7 +7,7 @@ use itertools::Itertools as _;
 use mongodb::bson::{Bson, Decimal128, Document};
 use mongodb_support::BsonScalarType;
 use ndc_models::{FieldName, ObjectTypeName};
-use nonempty::{nonempty, NonEmpty};
+use nonempty::NonEmpty;
 
 use crate::native_query::{
     aggregation_expression::infer_type_from_aggregation_expression,
@@ -89,7 +89,7 @@ fn projection_tree_into_field_overrides(
                 ProjectionTree::Object(sub_specs) => {
                     let original_field_type = TypeConstraint::FieldOf {
                         target_type: Box::new(input_type.clone()),
-                        path: nonempty![name.clone()],
+                        path: NonEmpty::singleton(name.clone()),
                     };
                     Some(projection_tree_into_field_overrides(
                         original_field_type,
@@ -265,7 +265,7 @@ fn path_collision_error(path: impl IntoIterator<Item = impl std::fmt::Display>) 
 mod tests {
     use mongodb::bson::doc;
     use mongodb_support::BsonScalarType;
-    use nonempty::nonempty;
+    use nonempty::{nonempty, NonEmpty};
     use pretty_assertions::assert_eq;
     use test_helpers::configuration::mflix_config;
 
@@ -310,7 +310,7 @@ mod tests {
                             "title".into(),
                             TypeConstraint::FieldOf {
                                 target_type: Box::new(input_type.clone()),
-                                path: nonempty!["title".into()],
+                                path: NonEmpty::singleton("title".into()),
                             },
                         ),
                         (
@@ -321,7 +321,7 @@ mod tests {
                             "releaseDate".into(),
                             TypeConstraint::FieldOf {
                                 target_type: Box::new(input_type.clone()),
-                                path: nonempty!["released".into()],
+                                path: NonEmpty::singleton("released".into()),
                             },
                         ),
                     ]
@@ -410,7 +410,7 @@ mod tests {
                             augmented_object_type_name: "Movie_project_tomatoes".into(),
                             target_type: Box::new(TypeConstraint::FieldOf {
                                 target_type: Box::new(input_type.clone()),
-                                path: nonempty!["tomatoes".into()],
+                                path: NonEmpty::singleton("tomatoes".into()),
                             }),
                             fields: [
                                 ("lastUpdated".into(), None),
@@ -422,9 +422,9 @@ mod tests {
                                         target_type: Box::new(TypeConstraint::FieldOf {
                                             target_type: Box::new(TypeConstraint::FieldOf {
                                                 target_type: Box::new(input_type.clone()),
-                                                path: nonempty!["tomatoes".into()],
+                                                path: NonEmpty::singleton("tomatoes".into()),
                                             }),
-                                            path: nonempty!["critic".into()],
+                                            path: NonEmpty::singleton("critic".into()),
                                         }),
                                         fields: [("rating".into(), None), ("meter".into(), None),]
                                             .into(),

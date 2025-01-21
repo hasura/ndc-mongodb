@@ -7,6 +7,7 @@ use std::{borrow::Cow, iter::once};
 use mongodb::bson::{doc, Bson};
 use ndc_models::FieldName;
 use ndc_query_plan::Scope;
+use nonempty::NonEmpty;
 
 use crate::{
     interface_types::MongoAgentError,
@@ -67,16 +68,14 @@ impl<'a> ColumnRef<'a> {
         from_order_by_target(target)
     }
 
-    pub fn from_field_path<'b>(
-        field_path: impl IntoIterator<Item = &'b ndc_models::FieldName>,
-    ) -> ColumnRef<'b> {
+    pub fn from_field_path(field_path: NonEmpty<&ndc_models::FieldName>) -> ColumnRef<'_> {
         from_path(
             None,
             field_path
                 .into_iter()
                 .map(|field_name| field_name.as_ref() as &str),
         )
-        .expect("field_path is not empty")
+        .expect("field_path is not empty") // safety: NonEmpty cannot be empty
     }
 
     pub fn from_field(field_name: &ndc_models::FieldName) -> ColumnRef<'_> {

@@ -1,6 +1,5 @@
 use crate::{connector::Connector, run_connector_query};
 use insta::assert_yaml_snapshot;
-use ndc_models::{Field, NestedCollection, NestedField};
 use ndc_test_helpers::{
     array, asc, binop, exists, exists_in_nested, field, object, query, query_request, target, value,
 };

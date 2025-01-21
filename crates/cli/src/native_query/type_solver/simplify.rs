@@ -530,7 +530,7 @@ mod tests {
 
     use googletest::prelude::*;
     use mongodb_support::BsonScalarType;
-    use nonempty::nonempty;
+    use nonempty::NonEmpty;
     use test_helpers::configuration::mflix_config;
 
     use crate::native_query::{
@@ -592,7 +592,7 @@ mod tests {
             Some(TypeVariable::new(1, Variance::Covariant)),
             [TypeConstraint::FieldOf {
                 target_type: Box::new(TypeConstraint::Object("movies".into())),
-                path: nonempty!["title".into()],
+                path: NonEmpty::singleton("title".into()),
             }],
         );
         expect_that!(

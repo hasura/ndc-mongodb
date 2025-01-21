@@ -109,6 +109,7 @@ mod tests {
     use mongodb_support::aggregate::SortDocument;
     use ndc_models::{FieldName, OrderDirection};
     use ndc_query_plan::OrderByElement;
+    use nonempty::{nonempty, NonEmpty};
     use pretty_assertions::assert_eq;
 
     use crate::{mongo_query_plan::OrderBy, query::column_ref::ColumnRef};
@@ -128,7 +129,7 @@ mod tests {
                 },
             }],
         };
-        let path: [FieldName; 1] = ["$schema".into()];
+        let path: NonEmpty<FieldName> = NonEmpty::singleton("$schema".into());
 
         let actual = make_sort(&order_by)?;
         let expected_sort_doc = SortDocument(doc! {
@@ -136,7 +137,7 @@ mod tests {
         });
         let expected_aliases = [(
             "__sort_key__·24schema".into(),
-            ColumnRef::from_field_path(path.iter()),
+            ColumnRef::from_field_path(path.as_ref()),
         )]
         .into();
         assert_eq!(actual, (expected_sort_doc, expected_aliases));
@@ -156,7 +157,7 @@ mod tests {
                 },
             }],
         };
-        let path: [FieldName; 2] = ["configuration".into(), "$schema".into()];
+        let path: NonEmpty<FieldName> = nonempty!["configuration".into(), "$schema".into()];
 
         let actual = make_sort(&order_by)?;
         let expected_sort_doc = SortDocument(doc! {
@@ -164,7 +165,7 @@ mod tests {
         });
         let expected_aliases = [(
             "__sort_key__configuration_·24schema".into(),
-            ColumnRef::from_field_path(path.iter()),
+            ColumnRef::from_field_path(path.as_ref()),
         )]
         .into();
         assert_eq!(actual, (expected_sort_doc, expected_aliases));

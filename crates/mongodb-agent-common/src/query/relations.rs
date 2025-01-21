@@ -4,6 +4,7 @@ use itertools::Itertools as _;
 use mongodb::bson::{doc, Document};
 use mongodb_support::aggregate::{Pipeline, Stage};
 use ndc_query_plan::Scope;
+use nonempty::NonEmpty;
 
 use crate::mongo_query_plan::{MongoConfiguration, Query, QueryPlan};
 use crate::query::column_ref::name_from_scope;
@@ -59,7 +60,7 @@ pub fn pipeline_for_relations(
 
 fn make_lookup_stage(
     from: ndc_models::CollectionName,
-    column_mapping: &BTreeMap<ndc_models::FieldName, Vec<ndc_models::FieldName>>,
+    column_mapping: &BTreeMap<ndc_models::FieldName, NonEmpty<ndc_models::FieldName>>,
     r#as: ndc_models::RelationshipName,
     lookup_pipeline: Pipeline,
     scope: Option<&Scope>,
@@ -77,7 +78,7 @@ fn make_lookup_stage(
 
     let source_key = source_selector.and_then(|f| ColumnRef::from_field(f).into_match_key());
     let target_key =
-        target_selector.and_then(|path| ColumnRef::from_field_path(path).into_match_key());
+        target_selector.and_then(|path| ColumnRef::from_field_path(path.as_ref()).into_match_key());
 
     match (source_key, target_key) {
         (Some(source_key), Some(target_key)) => lookup_with_concise_correlated_subquery(
@@ -126,7 +127,7 @@ fn lookup_with_concise_correlated_subquery(
 /// cases like joining on field names that require escaping.
 fn lookup_with_uncorrelated_subquery(
     from: ndc_models::CollectionName,
-    column_mapping: &BTreeMap<ndc_models::FieldName, Vec<ndc_models::FieldName>>,
+    column_mapping: &BTreeMap<ndc_models::FieldName, NonEmpty<ndc_models::FieldName>>,
     r#as: ndc_models::RelationshipName,
     lookup_pipeline: Pipeline,
     scope: Option<&Scope>,
@@ -150,7 +151,7 @@ fn lookup_with_uncorrelated_subquery(
     // Creating an intermediate Vec and sorting it is done just to help with testing.
     // A stable order for matchers makes it easier to assert equality between actual
     // and expected pipelines.
-    let mut column_pairs: Vec<(&ndc_models::FieldName, &Vec<ndc_models::FieldName>)> =
+    let mut column_pairs: Vec<(&ndc_models::FieldName, &NonEmpty<ndc_models::FieldName>)> =
         column_mapping.iter().collect();
     column_pairs.sort();
 
@@ -159,7 +160,7 @@ fn lookup_with_uncorrelated_subquery(
         .map(|(local_field, remote_field_path)| {
             doc! { "$eq": [
                 ColumnRef::variable(variable(local_field.as_str())).into_aggregate_expression(),
-                ColumnRef::from_field_path(remote_field_path).into_aggregate_expression(),
+                ColumnRef::from_field_path(remote_field_path.as_ref()).into_aggregate_expression(),
             ] }
         })
         .collect();
@@ -388,7 +389,10 @@ mod tests {
             ]))
             .relationships([(
                 "students",
-                relationship("students", [("title", &["class_title"]), ("year", &["year"])]),
+                relationship(
+                    "students",
+                    [("title", &["class_title"]), ("year", &["year"])],
+                ),
             )])
             .into();
 
@@ -552,7 +556,10 @@ mod tests {
                 ])),
             ]))
             .relationships([
-                ("students", relationship("students", [("_id", &["class_id"])])),
+                (
+                    "students",
+                    relationship("students", [("_id", &["class_id"])]),
+                ),
                 (
                     "assignments",
                     relationship("assignments", [("_id", &["student_id"])]),
@@ -684,7 +691,10 @@ mod tests {
                     star_count_aggregate!("aggregate_count")
                 ])),
             ]))
-            .relationships([("students", relationship("students", [("_id", &["classId"])]))])
+            .relationships([(
+                "students",
+                relationship("students", [("_id", &["classId"])]),
+            )])
             .into();
 
         let expected_response = row_set()

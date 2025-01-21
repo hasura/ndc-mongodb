@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use ndc_models::{FieldName, RelationshipType};
+use nonempty::NonEmpty;
 
 use crate::{ConnectorTypes, Field, Relationship, RelationshipArgument};
 
@@ -8,7 +9,7 @@ use super::QueryBuilder;
 
 #[derive(Clone, Debug)]
 pub struct RelationshipBuilder<T: ConnectorTypes> {
-    column_mapping: BTreeMap<FieldName, Vec<FieldName>>,
+    column_mapping: BTreeMap<FieldName, NonEmpty<FieldName>>,
     relationship_type: RelationshipType,
     target_collection: ndc_models::CollectionName,
     arguments: BTreeMap<ndc_models::ArgumentName, RelationshipArgument<T>>,
@@ -51,7 +52,13 @@ impl<T: ConnectorTypes> RelationshipBuilder<T> {
     ) -> Self {
         self.column_mapping = column_mapping
             .into_iter()
-            .map(|(source, target)| (source.into(), target.into_iter().map(Into::into).collect()))
+            .map(|(source, target)| {
+                (
+                    source.into(),
+                    NonEmpty::collect(target.into_iter().map(Into::into))
+                        .expect("target path in relationship column mapping may not be empty"),
+                )
+            })
             .collect();
         self
     }

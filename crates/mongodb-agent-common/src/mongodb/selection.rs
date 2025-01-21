@@ -2,6 +2,7 @@ use indexmap::IndexMap;
 use mongodb::bson::{doc, Bson, Document};
 use mongodb_support::aggregate::Selection;
 use ndc_models::FieldName;
+use nonempty::NonEmpty;
 
 use crate::{
     interface_types::MongoAgentError,
@@ -172,7 +173,7 @@ fn nested_column_reference<'a>(
 ) -> ColumnRef<'a> {
     match parent {
         Some(parent) => parent.into_nested_field(column),
-        None => ColumnRef::from_field_path([column]),
+        None => ColumnRef::from_field_path(NonEmpty::singleton(column)),
     }
 }
 

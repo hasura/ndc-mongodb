@@ -147,7 +147,7 @@ mod tests {
     use anyhow::Result;
     use configuration::schema::{ObjectField, ObjectType, Type};
     use mongodb_support::BsonScalarType;
-    use nonempty::nonempty;
+    use nonempty::NonEmpty;
     use pretty_assertions::assert_eq;
     use test_helpers::configuration::mflix_config;
 
@@ -252,7 +252,7 @@ mod tests {
                     "selected_title".into(),
                     TypeConstraint::FieldOf {
                         target_type: Box::new(TypeConstraint::Variable(var0)),
-                        path: nonempty!["title".into()],
+                        path: NonEmpty::singleton("title".into()),
                     },
                 )]
                 .into(),
