@@ -33,8 +33,6 @@ test-integration: (_arion "arion-compose/integration-tests.nix" "test")
 
 test-ndc: (_arion "arion-compose/ndc-test.nix" "test")
 
-test-e2e: (_arion "arion-compose/e2e-testing.nix" "test")
-
 # Run `just test-integration` on several MongoDB versions
 test-mongodb-versions:
   MONGODB_IMAGE=mongo:6 just test-integration
