@@ -34,7 +34,7 @@ fn type_name(input_type: &Type) -> Cow<'static, str> {
 fn object_type_name(obj: &ObjectType) -> String {
     let mut output = "{".to_string();
     for (key, t) in &obj.fields {
-        output.push_str(&format!("{key}:{}", type_name(t)));
+        output.push_str(&format!("{key}:{}", type_name(&t.r#type)));
     }
     output.push('}');
     output

@@ -2,6 +2,7 @@ use indexmap::IndexMap;
 use mongodb::bson::{doc, Bson, Document};
 use mongodb_support::aggregate::Selection;
 use ndc_models::FieldName;
+use nonempty::NonEmpty;
 
 use crate::{
     interface_types::MongoAgentError,
@@ -52,7 +53,7 @@ fn selection_for_field(
             ..
         } => {
             let col_ref = nested_column_reference(parent, column);
-            let col_ref_or_null = value_or_null(col_ref.into_aggregate_expression());
+            let col_ref_or_null = value_or_null(col_ref.into_aggregate_expression().into_bson());
             Ok(col_ref_or_null)
         }
         Field::Column {
@@ -90,7 +91,8 @@ fn selection_for_field(
                             field_name.to_string(),
                             ColumnRef::variable("this")
                                 .into_nested_field(field_name)
-                                .into_aggregate_expression(),
+                                .into_aggregate_expression()
+                                .into_bson(),
                         )
                     })
                     .collect()
@@ -171,7 +173,7 @@ fn nested_column_reference<'a>(
 ) -> ColumnRef<'a> {
     match parent {
         Some(parent) => parent.into_nested_field(column),
-        None => ColumnRef::from_field_path([column]),
+        None => ColumnRef::from_field_path(NonEmpty::singleton(column)),
     }
 }
 
@@ -296,7 +298,7 @@ mod tests {
             ]))
             .relationships([(
                 "class_students",
-                relationship("students", [("_id", "classId")]),
+                relationship("students", [("_id", &["classId"])]),
             )])
             .into();
 

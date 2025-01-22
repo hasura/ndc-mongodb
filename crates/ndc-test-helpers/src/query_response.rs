@@ -30,6 +30,7 @@ impl QueryResponseBuilder {
         self.row_sets.push(RowSet {
             aggregates: None,
             rows: Some(vec![]),
+            groups: Default::default(),
         });
         self
     }
@@ -45,6 +46,7 @@ impl From<QueryResponseBuilder> for QueryResponse {
 pub struct RowSetBuilder {
     aggregates: IndexMap<ndc_models::FieldName, serde_json::Value>,
     rows: Vec<IndexMap<ndc_models::FieldName, RowFieldValue>>,
+    groups: Option<Vec<ndc_models::Group>>,
 }
 
 impl RowSetBuilder {
@@ -89,10 +91,24 @@ impl RowSetBuilder {
         );
         self
     }
+
+    pub fn groups(
+        mut self,
+        groups: impl IntoIterator<Item = impl Into<ndc_models::Group>>,
+    ) -> Self {
+        self.groups = Some(groups.into_iter().map(Into::into).collect());
+        self
+    }
 }
 
 impl From<RowSetBuilder> for RowSet {
-    fn from(RowSetBuilder { aggregates, rows }: RowSetBuilder) -> Self {
+    fn from(
+        RowSetBuilder {
+            aggregates,
+            rows,
+            groups,
+        }: RowSetBuilder,
+    ) -> Self {
         RowSet {
             aggregates: if aggregates.is_empty() {
                 None
@@ -100,6 +116,7 @@ impl From<RowSetBuilder> for RowSet {
                 Some(aggregates)
             },
             rows: if rows.is_empty() { None } else { Some(rows) },
+            groups,
         }
     }
 }

@@ -287,6 +287,7 @@ mod tests {
         let expected_response = QueryResponse(vec![RowSet {
             aggregates: None,
             rows: Some(vec![]),
+            groups: Default::default(),
         }]);
 
         let db = mock_collection_aggregate_response("comments", bson!([]));

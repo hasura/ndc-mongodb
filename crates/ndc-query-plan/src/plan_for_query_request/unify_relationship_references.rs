@@ -341,9 +341,9 @@ mod tests {
     use crate::{
         field, object,
         plan_for_query_request::plan_test_helpers::{
-            date, double, int, object_type, relationship, string, TestContext,
+            date, double, int, relationship, string, TestContext,
         },
-        Relationship,
+        Relationship, Type,
     };
 
     use super::unify_relationship_references;
@@ -395,10 +395,10 @@ mod tests {
 
     #[test]
     fn unifies_nested_field_selections() -> anyhow::Result<()> {
-        let tomatoes_type = object_type([
+        let tomatoes_type = Type::object([
             (
                 "viewer",
-                object_type([("numReviews", int()), ("rating", double())]),
+                Type::object([("numReviews", int()), ("rating", double())]),
             ),
             ("lastUpdated", date()),
         ]);

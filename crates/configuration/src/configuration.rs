@@ -276,7 +276,6 @@ fn collection_to_collection_info(
         collection_type: collection.r#type,
         description: collection.description,
         arguments: Default::default(),
-        foreign_keys: Default::default(),
         uniqueness_constraints: BTreeMap::from_iter(pk_constraint),
     }
 }
@@ -298,7 +297,6 @@ fn native_query_to_collection_info(
         collection_type: native_query.result_document_type.clone(),
         description: native_query.description.clone(),
         arguments: arguments_to_ndc_arguments(native_query.arguments.clone()),
-        foreign_keys: Default::default(),
         uniqueness_constraints: BTreeMap::from_iter(pk_constraint),
     }
 }

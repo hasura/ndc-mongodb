@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use configuration::{
     native_mutation::NativeMutation, native_query::NativeQuery, Configuration, MongoScalarType,
 };
-use mongodb_support::{ExtendedJsonMode, EXTENDED_JSON_TYPE_NAME};
+use mongodb_support::{BsonScalarType, ExtendedJsonMode, EXTENDED_JSON_TYPE_NAME};
 use ndc_models as ndc;
 use ndc_query_plan::{ConnectorTypes, QueryContext, QueryPlanError};
 
@@ -32,6 +32,14 @@ impl ConnectorTypes for MongoConfiguration {
     type AggregateFunction = AggregationFunction;
     type ComparisonOperator = ComparisonFunction;
     type ScalarType = MongoScalarType;
+
+    fn count_aggregate_type() -> ndc_query_plan::Type<Self::ScalarType> {
+        ndc_query_plan::Type::scalar(BsonScalarType::Int)
+    }
+
+    fn string_type() -> ndc_query_plan::Type<Self::ScalarType> {
+        ndc_query_plan::Type::scalar(BsonScalarType::String)
+    }
 }
 
 impl QueryContext for MongoConfiguration {
@@ -102,6 +110,7 @@ fn scalar_type_name(t: &Type) -> Option<&'static str> {
 pub type Aggregate = ndc_query_plan::Aggregate<MongoConfiguration>;
 pub type Argument = ndc_query_plan::Argument<MongoConfiguration>;
 pub type Arguments = ndc_query_plan::Arguments<MongoConfiguration>;
+pub type ArrayComparison = ndc_query_plan::ArrayComparison<MongoConfiguration>;
 pub type ComparisonTarget = ndc_query_plan::ComparisonTarget<MongoConfiguration>;
 pub type ComparisonValue = ndc_query_plan::ComparisonValue<MongoConfiguration>;
 pub type ExistsInCollection = ndc_query_plan::ExistsInCollection<MongoConfiguration>;
@@ -113,6 +122,7 @@ pub type MutationProcedureArgument = ndc_query_plan::MutationProcedureArgument<M
 pub type NestedField = ndc_query_plan::NestedField<MongoConfiguration>;
 pub type NestedArray = ndc_query_plan::NestedArray<MongoConfiguration>;
 pub type NestedObject = ndc_query_plan::NestedObject<MongoConfiguration>;
+pub type ObjectField = ndc_query_plan::ObjectField<MongoScalarType>;
 pub type ObjectType = ndc_query_plan::ObjectType<MongoScalarType>;
 pub type OrderBy = ndc_query_plan::OrderBy<MongoConfiguration>;
 pub type OrderByTarget = ndc_query_plan::OrderByTarget<MongoConfiguration>;

@@ -47,6 +47,7 @@ pub struct QueryRequestBuilder {
     arguments: Option<BTreeMap<ndc_models::ArgumentName, Argument>>,
     collection_relationships: Option<BTreeMap<ndc_models::RelationshipName, Relationship>>,
     variables: Option<Vec<BTreeMap<ndc_models::VariableName, serde_json::Value>>>,
+    groups: Option<ndc_models::Grouping>,
 }
 
 pub fn query_request() -> QueryRequestBuilder {
@@ -61,6 +62,7 @@ impl QueryRequestBuilder {
             arguments: None,
             collection_relationships: None,
             variables: None,
+            groups: None,
         }
     }
 
@@ -116,6 +118,11 @@ impl QueryRequestBuilder {
         );
         self
     }
+
+    pub fn groups(mut self, groups: impl Into<ndc_models::Grouping>) -> Self {
+        self.groups = Some(groups.into());
+        self
+    }
 }
 
 impl From<QueryRequestBuilder> for QueryRequest {
@@ -142,6 +149,7 @@ pub struct QueryBuilder {
     offset: Option<u32>,
     order_by: Option<OrderBy>,
     predicate: Option<Expression>,
+    groups: Option<ndc_models::Grouping>,
 }
 
 pub fn query() -> QueryBuilder {
@@ -157,6 +165,7 @@ impl QueryBuilder {
             offset: None,
             order_by: None,
             predicate: None,
+            groups: None,
         }
     }
 
@@ -210,6 +219,7 @@ impl From<QueryBuilder> for Query {
             offset: value.offset,
             order_by: value.order_by,
             predicate: value.predicate,
+            groups: value.groups,
         }
     }
 }

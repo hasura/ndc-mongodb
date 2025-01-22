@@ -1,0 +1,24 @@
+{
+  "name": "departments",
+  "collections": {
+    "departments": {
+      "type": "departments"
+    }
+  },
+  "objectTypes": {
+    "departments": {
+      "fields": {
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        },
+        "description": {
+          "type": {
+            "scalar": "string"
+          }
+        }
+      }
+    }
+  }
+}

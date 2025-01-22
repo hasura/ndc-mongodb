@@ -12,4 +12,4 @@ pub use plan_for_query_request::{
     type_annotated_field::{type_annotated_field, type_annotated_nested_field},
 };
 pub use query_plan::*;
-pub use type_system::{inline_object_types, ObjectType, Type};
+pub use type_system::{inline_object_types, ObjectField, ObjectType, Type};

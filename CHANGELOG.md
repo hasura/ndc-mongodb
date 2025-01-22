@@ -4,6 +4,28 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING:** Update to ndc-spec v0.2 ([#139](https://github.com/hasura/ndc-mongodb/pull/139))
+
+#### ndc-spec v0.2
+
+This database connector communicates with the GraphQL Engine using an IR
+described by [ndc-spec](https://hasura.github.io/ndc-spec/). Version 0.2 makes
+a number of improvements to the spec, and enables features that were previously
+not possible. Highlights of those new features include:
+
+- relationships can use a nested object field on the target side as a join key
+- grouping result documents, and aggregating on groups of documents (pending implementation in the mongo connector)
+- queries on fields of nested collections (document fields that are arrays of objects)
+- filtering on scalar values inside array document fields - previously it was possible to filter on fields of objects inside arrays, but not on scalars
+
+For more details on what has changed in the spec see [the
+changelog](https://hasura.github.io/ndc-spec/specification/changelog.html#020).
+
+Use of the new spec requires a version of GraphQL Engine that supports ndc-spec
+v0.2, and there are required metadata changes.
+
 ## [1.6.0] - 2025-01-17
 
 ### Added

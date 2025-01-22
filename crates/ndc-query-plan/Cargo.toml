@@ -9,7 +9,7 @@ indent = "^0.1"
 indexmap = { workspace = true }
 itertools = { workspace = true }
 ndc-models = { workspace = true }
-nonempty = "^0.10"
+nonempty = { workspace = true }
 serde_json = { workspace = true }
 thiserror = "1"
 ref-cast = { workspace = true }

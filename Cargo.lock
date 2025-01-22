@@ -460,7 +460,7 @@ dependencies = [
  "async-tempfile",
  "futures",
  "googletest",
- "itertools",
+ "itertools 0.13.0",
  "mongodb",
  "mongodb-support",
  "ndc-models",
@@ -1524,6 +1524,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1769,7 +1778,7 @@ dependencies = [
  "http 0.2.12",
  "indent",
  "indexmap 2.2.6",
- "itertools",
+ "itertools 0.13.0",
  "lazy_static",
  "mockall",
  "mongodb",
@@ -1778,6 +1787,7 @@ dependencies = [
  "ndc-models",
  "ndc-query-plan",
  "ndc-test-helpers",
+ "nonempty",
  "once_cell",
  "pretty_assertions",
  "proptest",
@@ -1805,7 +1815,7 @@ dependencies = [
  "futures-util",
  "googletest",
  "indexmap 2.2.6",
- "itertools",
+ "itertools 0.13.0",
  "mongodb",
  "mongodb-agent-common",
  "mongodb-support",
@@ -1836,7 +1846,7 @@ dependencies = [
  "futures",
  "http 0.2.12",
  "indexmap 2.2.6",
- "itertools",
+ "itertools 0.13.0",
  "mongodb",
  "mongodb-agent-common",
  "mongodb-support",
@@ -1896,8 +1906,8 @@ dependencies = [
 
 [[package]]
 name = "ndc-models"
-version = "0.1.6"
-source = "git+http://github.com/hasura/ndc-spec.git?tag=v0.1.6#d1be19e9cdd86ac7b6ad003ff82b7e5b4e96b84f"
+version = "0.2.0"
+source = "git+http://github.com/hasura/ndc-spec.git?tag=v0.2.0-rc.2#2fad1c699df79890dbb3877d1035ffd8bd0abfc2"
 dependencies = [
  "indexmap 2.2.6",
  "ref-cast",
@@ -1917,7 +1927,7 @@ dependencies = [
  "enum-iterator",
  "indent",
  "indexmap 2.2.6",
- "itertools",
+ "itertools 0.13.0",
  "lazy_static",
  "ndc-models",
  "ndc-test-helpers",
@@ -1930,17 +1940,16 @@ dependencies = [
 
 [[package]]
 name = "ndc-sdk"
-version = "0.4.0"
-source = "git+https://github.com/hasura/ndc-sdk-rs.git?tag=v0.4.0#665509f7d3b47ce4f014fc23f817a3599ba13933"
+version = "0.5.0"
+source = "git+https://github.com/hasura/ndc-sdk-rs.git?rev=643b96b8ee4c8b372b44433167ce2ac4de193332#643b96b8ee4c8b372b44433167ce2ac4de193332"
 dependencies = [
  "async-trait",
  "axum",
  "axum-extra",
- "bytes",
  "clap",
  "http 0.2.12",
- "mime",
  "ndc-models",
+ "ndc-sdk-core",
  "ndc-test",
  "opentelemetry",
  "opentelemetry-http",
@@ -1950,7 +1959,7 @@ dependencies = [
  "opentelemetry_sdk",
  "prometheus",
  "reqwest 0.11.27",
- "serde",
+ "semver",
  "serde_json",
  "thiserror",
  "tokio",
@@ -1962,9 +1971,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "ndc-sdk-core"
+version = "0.5.0"
+source = "git+https://github.com/hasura/ndc-sdk-rs.git?rev=643b96b8ee4c8b372b44433167ce2ac4de193332#643b96b8ee4c8b372b44433167ce2ac4de193332"
+dependencies = [
+ "async-trait",
+ "axum",
+ "bytes",
+ "http 0.2.12",
+ "mime",
+ "ndc-models",
+ "ndc-test",
+ "prometheus",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "ndc-test"
-version = "0.1.6"
-source = "git+http://github.com/hasura/ndc-spec.git?tag=v0.1.6#d1be19e9cdd86ac7b6ad003ff82b7e5b4e96b84f"
+version = "0.2.0"
+source = "git+http://github.com/hasura/ndc-spec.git?tag=v0.2.0-rc.2#2fad1c699df79890dbb3877d1035ffd8bd0abfc2"
 dependencies = [
  "async-trait",
  "clap",
@@ -1972,14 +2001,12 @@ dependencies = [
  "indexmap 2.2.6",
  "ndc-models",
  "rand",
- "reqwest 0.11.27",
+ "reqwest 0.12.4",
  "semver",
  "serde",
  "serde_json",
- "smol_str",
  "thiserror",
  "tokio",
- "url",
 ]
 
 [[package]]
@@ -1987,7 +2014,7 @@ name = "ndc-test-helpers"
 version = "1.6.0"
 dependencies = [
  "indexmap 2.2.6",
- "itertools",
+ "itertools 0.13.0",
  "ndc-models",
  "serde_json",
  "smol_str",
@@ -2005,9 +2032,9 @@ dependencies = [
 
 [[package]]
 name = "nonempty"
-version = "0.10.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "303e8749c804ccd6ca3b428de7fe0d86cb86bc7606bc15291f100fd487960bb8"
+checksum = "549e471b99ccaf2f89101bec68f4d244457d5a95a9c3d0672e9564124397741d"
 
 [[package]]
 name = "nu-ansi-term"
@@ -2426,7 +2453,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
 dependencies = [
  "anyhow",
- "itertools",
+ "itertools 0.12.1",
  "proc-macro2",
  "quote",
  "syn 2.0.66",
@@ -2591,7 +2618,6 @@ dependencies = [
  "js-sys",
  "log",
  "mime",
- "mime_guess",
  "native-tls",
  "once_cell",
  "percent-encoding",
@@ -2634,6 +2660,7 @@ dependencies = [
  "js-sys",
  "log",
  "mime",
+ "mime_guess",
  "native-tls",
  "once_cell",
  "percent-encoding",

@@ -1,6 +1,9 @@
 use crate::{connector::Connector, graphql_query, run_connector_query};
 use insta::assert_yaml_snapshot;
-use ndc_test_helpers::{asc, field, query, query_request, relation_field, relationship};
+use ndc_test_helpers::{
+    asc, binop, exists, field, query, query_request, related, relation_field,
+    relationship, target, value,
+};
 
 #[tokio::test]
 async fn joins_local_relationships() -> anyhow::Result<()> {
@@ -203,7 +206,37 @@ async fn joins_on_field_names_that_require_escaping() -> anyhow::Result<()> {
                 )
                 .relationships([(
                     "join",
-                    relationship("weird_field_names", [("$invalid.name", "$invalid.name")])
+                    relationship("weird_field_names", [("$invalid.name", &["$invalid.name"])])
+                )])
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn joins_relationships_on_nested_key() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::TestCases,
+            query_request()
+                .collection("departments")
+                .query(
+                    query()
+                        .predicate(exists(
+                            related!("schools_departments"),
+                            binop("_eq", target!("name"), value!("West Valley"))
+                        ))
+                        .fields([
+                            relation_field!("departments" => "schools_departments", query().fields([
+                              field!("name")
+                            ]))
+                        ])
+                        .order_by([asc!("_id")])
+                )
+                .relationships([(
+                    "schools_departments",
+                    relationship("schools", [("_id", &["departments", "math_department_id"])])
                 )])
         )
         .await?

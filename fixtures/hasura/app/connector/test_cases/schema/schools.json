@@ -1,0 +1,43 @@
+{
+  "name": "schools",
+  "collections": {
+    "schools": {
+      "type": "schools"
+    }
+  },
+  "objectTypes": {
+    "schools": {
+      "fields": {
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        },
+        "departments": {
+          "type": {
+            "object": "schools_departments"
+          }
+        },
+        "name": {
+          "type": {
+            "scalar": "string"
+          }
+        }
+      }
+    },
+    "schools_departments": {
+      "fields": {
+        "english_department_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        },
+        "math_department_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        }
+      }
+    }
+  }
+}

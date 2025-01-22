@@ -5,7 +5,7 @@ definition:
   name: Playlist
   fields:
     - name: id
-      type: ObjectId_1!
+      type: ObjectId!
     - name: name
       type: String!
     - name: playlistId
@@ -50,7 +50,7 @@ definition:
       type: Playlist
       comparableFields:
         - fieldName: id
-          booleanExpressionType: ObjectIdBoolExp_1
+          booleanExpressionType: ObjectIdBoolExp
         - fieldName: name
           booleanExpressionType: StringBoolExp
         - fieldName: playlistId
@@ -74,7 +74,7 @@ definition:
       aggregatedType: Playlist
       aggregatableFields:
         - fieldName: id
-          aggregateExpression: ObjectIdAggExp_1
+          aggregateExpression: ObjectIdAggExp
         - fieldName: name
           aggregateExpression: StringAggExp
         - fieldName: playlistId

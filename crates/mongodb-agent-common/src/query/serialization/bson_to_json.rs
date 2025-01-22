@@ -71,7 +71,9 @@ fn bson_scalar_to_json(
         (BsonScalarType::Double, v) => convert_small_number(expected_type, v),
         (BsonScalarType::Int, v) => convert_small_number(expected_type, v),
         (BsonScalarType::Long, Bson::Int64(n)) => Ok(Value::String(n.to_string())),
+        (BsonScalarType::Long, Bson::Int32(n)) => Ok(Value::String(n.to_string())),
         (BsonScalarType::Decimal, Bson::Decimal128(n)) => Ok(Value::String(n.to_string())),
+        (BsonScalarType::Decimal, Bson::Double(n)) => Ok(Value::String(n.to_string())),
         (BsonScalarType::String, Bson::String(s)) => Ok(Value::String(s)),
         (BsonScalarType::Symbol, Bson::Symbol(s)) => Ok(Value::String(s)),
         (BsonScalarType::Date, Bson::DateTime(date)) => convert_date(date),
@@ -230,16 +232,13 @@ mod tests {
 
     #[test]
     fn serializes_document_with_missing_nullable_field() -> anyhow::Result<()> {
-        let expected_type = Type::Object(ObjectType {
-            name: Some("test_object".into()),
-            fields: [(
-                "field".into(),
-                Type::Nullable(Box::new(Type::Scalar(MongoScalarType::Bson(
-                    BsonScalarType::String,
-                )))),
-            )]
-            .into(),
-        });
+        let expected_type = Type::named_object(
+            "test_object",
+            [(
+                "field",
+                Type::nullable(Type::Scalar(MongoScalarType::Bson(BsonScalarType::String))),
+            )],
+        );
         let value = bson::doc! {};
         let actual = bson_to_json(ExtendedJsonMode::Canonical, &expected_type, value.into())?;
         assert_eq!(actual, json!({}));

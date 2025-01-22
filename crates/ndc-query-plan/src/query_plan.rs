@@ -1,9 +1,12 @@
-use std::{collections::BTreeMap, fmt::Debug, iter};
+use std::{borrow::Cow, collections::BTreeMap, fmt::Debug, iter};
 
 use derivative::Derivative;
 use indexmap::IndexMap;
 use itertools::Either;
-use ndc_models::{self as ndc, FieldName, OrderDirection, RelationshipType, UnaryComparisonOperator};
+use ndc_models::{
+    self as ndc, ArgumentName, FieldName, OrderDirection, RelationshipType, UnaryComparisonOperator,
+};
+use nonempty::NonEmpty;
 
 use crate::{vec_set::VecSet, Type};
 
@@ -11,6 +14,11 @@ pub trait ConnectorTypes {
     type ScalarType: Clone + Debug + PartialEq + Eq;
     type AggregateFunction: Clone + Debug + PartialEq;
     type ComparisonOperator: Clone + Debug + PartialEq;
+
+    /// Result type for count aggregations
+    fn count_aggregate_type() -> Type<Self::ScalarType>;
+
+    fn string_type() -> Type<Self::ScalarType>;
 }
 
 #[derive(Derivative)]
@@ -115,9 +123,16 @@ pub enum Argument<T: ConnectorTypes> {
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub struct Relationship<T: ConnectorTypes> {
-    pub column_mapping: BTreeMap<ndc::FieldName, ndc::FieldName>,
+    /// A mapping between columns on the source row to columns on the target collection.
+    /// The column on the target collection is specified via a field path (ie. an array of field
+    /// names that descend through nested object fields). The field path will only contain a single item,
+    /// meaning a column on the target collection's type, unless the 'relationships.nested'
+    /// capability is supported, in which case multiple items denotes a nested object field.
+    pub column_mapping: BTreeMap<ndc::FieldName, NonEmpty<ndc::FieldName>>,
     pub relationship_type: RelationshipType,
+    /// The name of a collection
     pub target_collection: ndc::CollectionName,
+    /// Values to be provided to any collection arguments
     pub arguments: BTreeMap<ndc::ArgumentName, RelationshipArgument<T>>,
     pub query: Query<T>,
 }
@@ -168,6 +183,8 @@ pub enum Aggregate<T: ConnectorTypes> {
     ColumnCount {
         /// The column to apply the count aggregate function to
         column: ndc::FieldName,
+        /// Arguments to satisfy the column specified by 'column'
+        arguments: BTreeMap<ArgumentName, Argument<T>>,
         /// Path to a nested field within an object column
         field_path: Option<Vec<FieldName>>,
         /// Whether or not only distinct items should be counted
@@ -176,6 +193,8 @@ pub enum Aggregate<T: ConnectorTypes> {
     SingleColumn {
         /// The column to apply the aggregation function to
         column: ndc::FieldName,
+        /// Arguments to satisfy the column specified by 'column'
+        arguments: BTreeMap<ArgumentName, Argument<T>>,
         /// Path to a nested field within an object column
         field_path: Option<Vec<FieldName>>,
         /// Single column aggregate function name.
@@ -183,6 +202,16 @@ pub enum Aggregate<T: ConnectorTypes> {
         result_type: Type<T::ScalarType>,
     },
     StarCount,
+}
+
+impl<T: ConnectorTypes> Aggregate<T> {
+    pub fn result_type(&self) -> Cow<Type<T::ScalarType>> {
+        match self {
+            Aggregate::ColumnCount { .. } => Cow::Owned(T::count_aggregate_type()),
+            Aggregate::SingleColumn { result_type, .. } => Cow::Borrowed(result_type),
+            Aggregate::StarCount => Cow::Owned(T::count_aggregate_type()),
+        }
+    }
 }
 
 #[derive(Derivative)]
@@ -202,6 +231,7 @@ pub struct NestedArray<T: ConnectorTypes> {
 pub enum NestedField<T: ConnectorTypes> {
     Object(NestedObject<T>),
     Array(NestedArray<T>),
+    // TODO: ENG-1464 add `Collection(NestedCollection)` variant
 }
 
 #[derive(Derivative)]
@@ -249,6 +279,12 @@ pub enum Expression<T: ConnectorTypes> {
         operator: T::ComparisonOperator,
         value: ComparisonValue<T>,
     },
+    /// A comparison against a nested array column.
+    /// Only used if the 'query.nested_fields.filter_by.nested_arrays' capability is supported.
+    ArrayComparison {
+        column: ComparisonTarget<T>,
+        comparison: ArrayComparison<T>,
+    },
     Exists {
         in_collection: ExistsInCollection<T>,
         predicate: Option<Box<Expression<T>>>,
@@ -257,10 +293,14 @@ pub enum Expression<T: ConnectorTypes> {
 
 impl<T: ConnectorTypes> Expression<T> {
     /// Get an iterator of columns referenced by the expression, not including columns of related
-    /// collections
+    /// collections. This is used to build a plan for joining the referenced collection - we need
+    /// to include fields in the join that the expression needs to access.
+    //
+    // TODO: ENG-1457 When we implement query.aggregates.filter_by we'll need to collect aggregates
+    // references. That's why this function returns [ComparisonTarget] instead of [Field].
     pub fn query_local_comparison_targets<'a>(
         &'a self,
-    ) -> Box<dyn Iterator<Item = &'a ComparisonTarget<T>> + 'a> {
+    ) -> Box<dyn Iterator<Item = Cow<'a, ComparisonTarget<T>>> + 'a> {
         match self {
             Expression::And { expressions } => Box::new(
                 expressions
@@ -274,35 +314,62 @@ impl<T: ConnectorTypes> Expression<T> {
             ),
             Expression::Not { expression } => expression.query_local_comparison_targets(),
             Expression::UnaryComparisonOperator { column, .. } => {
-                Box::new(Self::local_columns_from_comparison_target(column))
+                Box::new(std::iter::once(Cow::Borrowed(column)))
             }
-            Expression::BinaryComparisonOperator { column, value, .. } => {
-                let value_targets = match value {
-                    ComparisonValue::Column { column } => {
-                        Either::Left(Self::local_columns_from_comparison_target(column))
-                    }
-                    _ => Either::Right(iter::empty()),
+            Expression::BinaryComparisonOperator { column, value, .. } => Box::new(
+                std::iter::once(Cow::Borrowed(column))
+                    .chain(Self::local_targets_from_comparison_value(value).map(Cow::Owned)),
+            ),
+            Expression::ArrayComparison { column, comparison } => {
+                let value_targets = match comparison {
+                    ArrayComparison::Contains { value } => Either::Left(
+                        Self::local_targets_from_comparison_value(value).map(Cow::Owned),
+                    ),
+                    ArrayComparison::IsEmpty => Either::Right(std::iter::empty()),
                 };
-                Box::new(Self::local_columns_from_comparison_target(column).chain(value_targets))
+                Box::new(std::iter::once(Cow::Borrowed(column)).chain(value_targets))
             }
             Expression::Exists { .. } => Box::new(iter::empty()),
         }
     }
 
-    fn local_columns_from_comparison_target(
-        target: &ComparisonTarget<T>,
-    ) -> impl Iterator<Item = &ComparisonTarget<T>> {
-        match target {
-            t @ ComparisonTarget::Column { path, .. } => {
+    fn local_targets_from_comparison_value(
+        value: &ComparisonValue<T>,
+    ) -> impl Iterator<Item = ComparisonTarget<T>> {
+        match value {
+            ComparisonValue::Column {
+                path,
+                name,
+                arguments,
+                field_path,
+                field_type,
+                ..
+            } => {
                 if path.is_empty() {
-                    Either::Left(iter::once(t))
+                    Either::Left(iter::once(ComparisonTarget::Column {
+                        name: name.clone(),
+                        arguments: arguments.clone(),
+                        field_path: field_path.clone(),
+                        field_type: field_type.clone(),
+                    }))
                 } else {
                     Either::Right(iter::empty())
                 }
             }
-            t @ ComparisonTarget::ColumnInScope { .. } => Either::Left(iter::once(t)),
+            _ => Either::Right(std::iter::empty()),
         }
     }
+}
+
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
+pub enum ArrayComparison<T: ConnectorTypes> {
+    /// Check if the array contains the specified value.
+    /// Only used if the 'query.nested_fields.filter_by.nested_arrays.contains' capability is supported.
+    Contains { value: ComparisonValue<T> },
+    /// Check is the array is empty.
+    /// Only used if the 'query.nested_fields.filter_by.nested_arrays.is_empty' capability is supported.
+    IsEmpty,
 }
 
 #[derive(Derivative)]
@@ -323,91 +390,72 @@ pub struct OrderByElement<T: ConnectorTypes> {
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub enum OrderByTarget<T: ConnectorTypes> {
     Column {
-        /// The name of the column
-        name: ndc::FieldName,
-
-        /// Path to a nested field within an object column
-        field_path: Option<Vec<ndc::FieldName>>,
-
         /// Any relationships to traverse to reach this column. These are translated from
         /// [ndc::OrderByElement] values in the [ndc::QueryRequest] to names of relation
         /// fields for the [QueryPlan].
         path: Vec<ndc::RelationshipName>,
-    },
-    SingleColumnAggregate {
-        /// The column to apply the aggregation function to
-        column: ndc::FieldName,
-        /// Single column aggregate function name.
-        function: T::AggregateFunction,
 
-        result_type: Type<T::ScalarType>,
+        /// The name of the column
+        name: ndc::FieldName,
 
-        /// Any relationships to traverse to reach this aggregate. These are translated from
-        /// [ndc::OrderByElement] values in the [ndc::QueryRequest] to names of relation
-        /// fields for the [QueryPlan].
-        path: Vec<ndc::RelationshipName>,
+        /// Arguments to satisfy the column specified by 'name'
+        arguments: BTreeMap<ArgumentName, Argument<T>>,
+
+        /// Path to a nested field within an object column
+        field_path: Option<Vec<ndc::FieldName>>,
     },
-    StarCountAggregate {
-        /// Any relationships to traverse to reach this aggregate. These are translated from
-        /// [ndc::OrderByElement] values in the [ndc::QueryRequest] to names of relation
-        /// fields for the [QueryPlan].
+    Aggregate {
+        /// Non-empty collection of relationships to traverse
         path: Vec<ndc::RelationshipName>,
+        /// The aggregation method to use
+        aggregate: Aggregate<T>,
     },
 }
 
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub enum ComparisonTarget<T: ConnectorTypes> {
+    /// The comparison targets a column.
     Column {
         /// The name of the column
         name: ndc::FieldName,
 
-        /// Path to a nested field within an object column
-        field_path: Option<Vec<ndc::FieldName>>,
-
-        field_type: Type<T::ScalarType>,
-
-        /// Any relationships to traverse to reach this column. These are translated from
-        /// [ndc::PathElement] values in the [ndc::QueryRequest] to names of relation
-        /// fields for the [QueryPlan].
-        path: Vec<ndc::RelationshipName>,
-    },
-    ColumnInScope {
-        /// The name of the column
-        name: ndc::FieldName,
-
-        /// The named scope that identifies the collection to reference. This corresponds to the
-        /// `scope` field of the [Query] type.
-        scope: Scope,
+        /// Arguments to satisfy the column specified by 'name'
+        arguments: BTreeMap<ArgumentName, Argument<T>>,
 
         /// Path to a nested field within an object column
         field_path: Option<Vec<ndc::FieldName>>,
 
+        /// Type of the field that you get *after* follwing `field_path` to a possibly-nested
+        /// field.
         field_type: Type<T::ScalarType>,
     },
+    // TODO: ENG-1457 Add this variant to support query.aggregates.filter_by
+    // /// The comparison targets the result of aggregation.
+    // /// Only used if the 'query.aggregates.filter_by' capability is supported.
+    // Aggregate {
+    //     /// Non-empty collection of relationships to traverse
+    //     path: Vec<RelationshipName>,
+    //     /// The aggregation method to use
+    //     aggregate: Aggregate<T>,
+    // },
 }
 
 impl<T: ConnectorTypes> ComparisonTarget<T> {
-    pub fn column_name(&self) -> &ndc::FieldName {
-        match self {
-            ComparisonTarget::Column { name, .. } => name,
-            ComparisonTarget::ColumnInScope { name, .. } => name,
+    pub fn column(name: impl Into<ndc::FieldName>, field_type: Type<T::ScalarType>) -> Self {
+        Self::Column {
+            name: name.into(),
+            arguments: Default::default(),
+            field_path: Default::default(),
+            field_type,
         }
     }
 
-    pub fn relationship_path(&self) -> &[ndc::RelationshipName] {
-        match self {
-            ComparisonTarget::Column { path, .. } => path,
-            ComparisonTarget::ColumnInScope { .. } => &[],
-        }
-    }
-}
-
-impl<T: ConnectorTypes> ComparisonTarget<T> {
-    pub fn get_field_type(&self) -> &Type<T::ScalarType> {
+    pub fn target_type(&self) -> &Type<T::ScalarType> {
         match self {
             ComparisonTarget::Column { field_type, .. } => field_type,
-            ComparisonTarget::ColumnInScope { field_type, .. } => field_type,
+            // TODO: ENG-1457
+            // ComparisonTarget::Aggregate { aggregate, .. } => aggregate.result_type,
         }
     }
 }
@@ -416,7 +464,28 @@ impl<T: ConnectorTypes> ComparisonTarget<T> {
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub enum ComparisonValue<T: ConnectorTypes> {
     Column {
-        column: ComparisonTarget<T>,
+        /// Any relationships to traverse to reach this column.
+        /// Only non-empty if the 'relationships.relation_comparisons' is supported.
+        path: Vec<ndc::RelationshipName>,
+        /// The name of the column
+        name: ndc::FieldName,
+        /// Arguments to satisfy the column specified by 'name'
+        arguments: BTreeMap<ArgumentName, Argument<T>>,
+        /// Path to a nested field within an object column.
+        /// Only non-empty if the 'query.nested_fields.filter_by' capability is supported.
+        field_path: Option<Vec<ndc::FieldName>>,
+        /// Type of the field that you get *after* follwing `field_path` to a possibly-nested
+        /// field.
+        field_type: Type<T::ScalarType>,
+        /// The scope in which this column exists, identified
+        /// by an top-down index into the stack of scopes.
+        /// The stack grows inside each `Expression::Exists`,
+        /// so scope 0 (the default) refers to the current collection,
+        /// and each subsequent index refers to the collection outside
+        /// its predecessor's immediately enclosing `Expression::Exists`
+        /// expression.
+        /// Only used if the 'query.exists.named_scopes' capability is supported.
+        scope: Option<usize>,
     },
     Scalar {
         value: serde_json::Value,
@@ -426,6 +495,19 @@ pub enum ComparisonValue<T: ConnectorTypes> {
         name: ndc::VariableName,
         variable_type: Type<T::ScalarType>,
     },
+}
+
+impl<T: ConnectorTypes> ComparisonValue<T> {
+    pub fn column(name: impl Into<ndc::FieldName>, field_type: Type<T::ScalarType>) -> Self {
+        Self::Column {
+            path: Default::default(),
+            name: name.into(),
+            arguments: Default::default(),
+            field_path: Default::default(),
+            field_type,
+            scope: Default::default(),
+        }
+    }
 }
 
 #[derive(Derivative)]
@@ -440,28 +522,101 @@ pub struct AggregateFunctionDefinition<T: ConnectorTypes> {
 pub enum ComparisonOperatorDefinition<T: ConnectorTypes> {
     Equal,
     In,
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
+    Contains,
+    ContainsInsensitive,
+    StartsWith,
+    StartsWithInsensitive,
+    EndsWith,
+    EndsWithInsensitive,
     Custom {
         /// The type of the argument to this operator
         argument_type: Type<T::ScalarType>,
     },
 }
 
+impl<T: ConnectorTypes> ComparisonOperatorDefinition<T> {
+    pub fn argument_type(self, left_operand_type: &Type<T::ScalarType>) -> Type<T::ScalarType> {
+        use ComparisonOperatorDefinition as C;
+        match self {
+            C::In => Type::ArrayOf(Box::new(left_operand_type.clone())),
+            C::Equal
+            | C::LessThan
+            | C::LessThanOrEqual
+            | C::GreaterThan
+            | C::GreaterThanOrEqual => left_operand_type.clone(),
+            C::Contains
+            | C::ContainsInsensitive
+            | C::StartsWith
+            | C::StartsWithInsensitive
+            | C::EndsWith
+            | C::EndsWithInsensitive => T::string_type(),
+            C::Custom { argument_type } => argument_type,
+        }
+    }
+
+    pub fn from_ndc_definition<E>(
+        ndc_definition: &ndc::ComparisonOperatorDefinition,
+        map_type: impl FnOnce(&ndc::Type) -> Result<Type<T::ScalarType>, E>,
+    ) -> Result<Self, E> {
+        use ndc::ComparisonOperatorDefinition as NDC;
+        let definition = match ndc_definition {
+            NDC::Equal => Self::Equal,
+            NDC::In => Self::In,
+            NDC::LessThan => Self::LessThan,
+            NDC::LessThanOrEqual => Self::LessThanOrEqual,
+            NDC::GreaterThan => Self::GreaterThan,
+            NDC::GreaterThanOrEqual => Self::GreaterThanOrEqual,
+            NDC::Contains => Self::Contains,
+            NDC::ContainsInsensitive => Self::ContainsInsensitive,
+            NDC::StartsWith => Self::StartsWith,
+            NDC::StartsWithInsensitive => Self::StartsWithInsensitive,
+            NDC::EndsWith => Self::EndsWith,
+            NDC::EndsWithInsensitive => Self::EndsWithInsensitive,
+            NDC::Custom { argument_type } => Self::Custom {
+                argument_type: map_type(argument_type)?,
+            },
+        };
+        Ok(definition)
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub enum ExistsInCollection<T: ConnectorTypes> {
+    /// The rows to evaluate the exists predicate against come from a related collection.
+    /// Only used if the 'relationships' capability is supported.
     Related {
         /// Key of the relation in the [Query] joins map. Relationships are scoped to the sub-query
         /// that defines the relation source.
         relationship: ndc::RelationshipName,
     },
+    /// The rows to evaluate the exists predicate against come from an unrelated collection
+    /// Only used if the 'query.exists.unrelated' capability is supported.
     Unrelated {
         /// Key of the relation in the [QueryPlan] joins map. Unrelated collections are not scoped
         /// to a sub-query, instead they are given in the root [QueryPlan].
         unrelated_collection: String,
     },
+    /// The rows to evaluate the exists predicate against come from a nested array field.
+    /// Only used if the 'query.exists.nested_collections' capability is supported.
     NestedCollection {
         column_name: ndc::FieldName,
         arguments: BTreeMap<ndc::ArgumentName, Argument<T>>,
+        /// Path to a nested collection via object columns
+        field_path: Vec<ndc::FieldName>,
+    },
+    /// Specifies a column that contains a nested array of scalars. The
+    /// array will be brought into scope of the nested expression where
+    /// each element becomes an object with one '__value' column that
+    /// contains the element value.
+    /// Only used if the 'query.exists.nested_scalar_collections' capability is supported.
+    NestedScalarCollection {
+        column_name: FieldName,
+        arguments: BTreeMap<ArgumentName, Argument<T>>,
         /// Path to a nested collection via object columns
         field_path: Vec<ndc::FieldName>,
     },

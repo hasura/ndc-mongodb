@@ -5,6 +5,7 @@ use std::{
 };
 
 use ndc_models as ndc;
+use nonempty::NonEmpty;
 
 use crate::{
     plan_for_query_request::helpers::lookup_relationship,
@@ -96,8 +97,23 @@ impl<T: QueryContext> QueryPlanState<'_, T> {
             Default::default()
         };
 
+        let column_mapping = ndc_relationship
+            .column_mapping
+            .iter()
+            .map(|(source, target_path)| {
+                Ok((
+                    source.clone(),
+                    NonEmpty::collect(target_path.iter().cloned()).ok_or_else(|| {
+                        QueryPlanError::RelationshipEmptyTarget {
+                            relationship_name: ndc_relationship_name.clone(),
+                        }
+                    })?,
+                ))
+            })
+            .collect::<Result<BTreeMap<_, _>>>()?;
+
         let relationship = Relationship {
-            column_mapping: ndc_relationship.column_mapping.clone(),
+            column_mapping,
             relationship_type: ndc_relationship.relationship_type,
             target_collection: ndc_relationship.target_collection.clone(),
             arguments,

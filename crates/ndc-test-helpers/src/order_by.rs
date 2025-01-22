@@ -5,6 +5,7 @@ macro_rules! asc {
             order_direction: $crate::ndc_models::OrderDirection::Asc,
             target: $crate::ndc_models::OrderByTarget::Column {
                 name: $crate::ndc_models::FieldName::new($crate::smol_str::SmolStr::new($name)),
+                arguments: Default::default(),
                 field_path: None,
                 path: vec![],
             },
@@ -19,6 +20,7 @@ macro_rules! desc {
             order_direction: $crate::ndc_models::OrderDirection::Desc,
             target: $crate::ndc_models::OrderByTarget::Column {
                 name: $crate::ndc_models::FieldName::new($crate::smol_str::SmolStr::new($name)),
+                arguments: Default::default(),
                 field_path: None,
                 path: vec![],
             },

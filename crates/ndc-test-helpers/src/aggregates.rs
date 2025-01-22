@@ -5,6 +5,7 @@ macro_rules! column_aggregate {
             $name,
             $crate::ndc_models::Aggregate::SingleColumn {
                 column: $column.into(),
+                arguments: Default::default(),
                 function: $function.into(),
                 field_path: None,
             },
@@ -26,6 +27,7 @@ macro_rules! column_count_aggregate {
             $name,
             $crate::ndc_models::Aggregate::ColumnCount {
                 column: $column.into(),
+                arguments: Default::default(),
                 distinct: $distinct.to_owned(),
                 field_path: None,
             },

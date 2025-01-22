@@ -20,6 +20,12 @@ impl MongoScalarType {
     }
 }
 
+impl From<BsonScalarType> for MongoScalarType {
+    fn from(value: BsonScalarType) -> Self {
+        Self::Bson(value)
+    }
+}
+
 impl TryFrom<&ndc_models::ScalarTypeName> for MongoScalarType {
     type Error = QueryPlanError;
 

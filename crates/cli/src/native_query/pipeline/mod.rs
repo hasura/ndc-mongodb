@@ -341,7 +341,7 @@ mod tests {
         aggregate::{Pipeline, Selection, Stage},
         BsonScalarType,
     };
-    use nonempty::nonempty;
+    use nonempty::NonEmpty;
     use pretty_assertions::assert_eq;
     use test_helpers::configuration::mflix_config;
 
@@ -462,7 +462,7 @@ mod tests {
                         Some(TypeConstraint::ElementOf(Box::new(
                             TypeConstraint::FieldOf {
                                 target_type: Box::new(TypeConstraint::Variable(input_doc_variable)),
-                                path: nonempty!["words".into()],
+                                path: NonEmpty::singleton("words".into()),
                             }
                         )))
                     )
