@@ -2,7 +2,7 @@ use std::{borrow::Cow, collections::BTreeMap, iter};
 
 use derivative::Derivative;
 use itertools::Either;
-use ndc_models::{self as ndc, ArgumentName, FieldName, UnaryComparisonOperator};
+use ndc_models::{self as ndc, ArgumentName, FieldName};
 
 use crate::Type;
 
@@ -22,7 +22,7 @@ pub enum Expression<T: ConnectorTypes> {
     },
     UnaryComparisonOperator {
         column: ComparisonTarget<T>,
-        operator: UnaryComparisonOperator,
+        operator: ndc::UnaryComparisonOperator,
     },
     BinaryComparisonOperator {
         column: ComparisonTarget<T>,
