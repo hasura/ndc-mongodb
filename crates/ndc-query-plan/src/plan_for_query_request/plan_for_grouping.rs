@@ -44,11 +44,16 @@ pub fn plan_for_grouping<T: QueryContext>(
         .map(|predicate| plan_for_group_expression(plan_state, collection_object_type, predicate))
         .transpose()?;
 
+    let order_by = grouping
+        .order_by
+        .map(|order_by| plan_for_group_order_by(plan_state, collection_object_type, order_by))
+        .transpose()?;
+
     let plan_grouping = plan::Grouping {
         dimensions,
         aggregates,
         predicate,
-        order_by: (),
+        order_by,
         limit: (),
         offset: (),
     };
@@ -181,6 +186,52 @@ fn plan_for_group_comparison_value<T: QueryContext>(
             Ok(plan::GroupComparisonValue::Variable {
                 name,
                 variable_type: expected_type,
+            })
+        }
+    }
+}
+
+fn plan_for_group_order_by<T: QueryContext>(
+    plan_state: &mut QueryPlanState<'_, T>,
+    collection_object_type: &plan::ObjectType<T::ScalarType>,
+    order_by: ndc::GroupOrderBy,
+) -> Result<crate::GroupOrderBy<T>> {
+    Ok(plan::GroupOrderBy {
+        elements: order_by
+            .elements
+            .into_iter()
+            .map(|elem| plan_for_group_order_by_element(plan_state, collection_object_type, elem))
+            .collect::<Result<_>>()?,
+    })
+}
+
+fn plan_for_group_order_by_element<T: QueryContext>(
+    plan_state: &mut QueryPlanState<'_, T>,
+    collection_object_type: &plan::ObjectType<<T as ConnectorTypes>::ScalarType>,
+    element: ndc::GroupOrderByElement,
+) -> Result<plan::GroupOrderByElement<T>> {
+    Ok(plan::GroupOrderByElement {
+        order_direction: element.order_direction,
+        target: plan_for_group_order_by_target(plan_state, collection_object_type, element.target)?,
+    })
+}
+
+fn plan_for_group_order_by_target<T: QueryContext>(
+    plan_state: &mut QueryPlanState<'_, T>,
+    collection_object_type: &plan::ObjectType<T::ScalarType>,
+    target: ndc::GroupOrderByTarget,
+) -> Result<plan::GroupOrderByTarget<T>> {
+    match target {
+        ndc::GroupOrderByTarget::Dimension { index } => {
+            Ok(plan::GroupOrderByTarget::Dimension { index })
+        }
+        ndc::GroupOrderByTarget::Aggregate { aggregate } => {
+            // TODO: Do we expect the target aggregate to correspond to one of the grouping aggregates?
+            // Or can it be independent?
+            let target_aggregate =
+                plan_for_aggregate(plan_state, collection_object_type, aggregate)?;
+            Ok(plan::GroupOrderByTarget::Aggregate {
+                aggregate: target_aggregate,
             })
         }
     }
