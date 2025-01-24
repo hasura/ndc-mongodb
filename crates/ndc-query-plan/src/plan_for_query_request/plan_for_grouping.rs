@@ -54,8 +54,8 @@ pub fn plan_for_grouping<T: QueryContext>(
         aggregates,
         predicate,
         order_by,
-        limit: (),
-        offset: (),
+        limit: grouping.limit,
+        offset: grouping.offset,
     };
     Ok(plan_grouping)
 }
