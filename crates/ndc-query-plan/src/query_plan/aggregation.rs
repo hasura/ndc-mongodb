@@ -6,7 +6,7 @@ use ndc_models::{self as ndc, ArgumentName, FieldName};
 
 use crate::Type;
 
-use super::{Argument, ConnectorTypes, PathElement};
+use super::{Argument, ConnectorTypes};
 
 pub type Arguments<T> = BTreeMap<ndc::ArgumentName, Argument<T>>;
 
@@ -53,7 +53,7 @@ pub struct Grouping<T: ConnectorTypes> {
     /// Dimensions along which to partition the data
     pub dimensions: Vec<Dimension<T>>,
     /// Aggregates to compute in each group
-    pub aggregates: IndexMap<String, Aggregate<T>>,
+    pub aggregates: IndexMap<ndc::FieldName, Aggregate<T>>,
     /// Optionally specify a predicate to apply after grouping rows.
     /// Only used if the 'query.aggregates.group_by.filter' capability is supported.
     pub predicate: Option<GroupExpression<T>>,
@@ -68,6 +68,8 @@ pub struct Grouping<T: ConnectorTypes> {
     pub offset: Option<u32>,
 }
 
+/// [GroupExpression] is like [Expression] but without [Expression::ArrayComparison] or
+/// [Expression::Exists] variants.
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub enum GroupExpression<T: ConnectorTypes> {
@@ -97,6 +99,14 @@ pub enum GroupComparisonTarget<T: ConnectorTypes> {
     Aggregate { aggregate: Aggregate<T> },
 }
 
+impl<T: ConnectorTypes> GroupComparisonTarget<T> {
+    pub fn result_type(&self) -> Cow<Type<T::ScalarType>> {
+        match self {
+            GroupComparisonTarget::Aggregate { aggregate } => aggregate.result_type(),
+        }
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub enum GroupComparisonValue<T: ConnectorTypes> {
@@ -109,7 +119,7 @@ pub enum GroupComparisonValue<T: ConnectorTypes> {
     /// Only used if the 'query.variables' capability is supported.
     Variable {
         name: ndc::VariableName,
-        value_type: Type<T::ScalarType>,
+        variable_type: Type<T::ScalarType>,
     },
 }
 
@@ -119,13 +129,19 @@ pub enum Dimension<T: ConnectorTypes> {
     Column {
         /// Any (object) relationships to traverse to reach this column.
         /// Only non-empty if the 'relationships' capability is supported.
-        path: Vec<PathElement<T>>,
+        ///
+        /// These are translated from [ndc::PathElement] values in the to names of relation fields
+        /// for the [crate::QueryPlan].
+        path: Vec<ndc::RelationshipName>,
         /// The name of the column
         column_name: FieldName,
         /// Arguments to satisfy the column specified by 'column_name'
         arguments: BTreeMap<ArgumentName, Argument<T>>,
         /// Path to a nested field within an object column
         field_path: Option<Vec<FieldName>>,
+        /// Type of the field that you get *after* follwing `field_path` to a possibly-nested
+        /// field.
+        field_type: Type<T::ScalarType>,
     },
 }
 

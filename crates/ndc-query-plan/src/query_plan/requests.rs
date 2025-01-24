@@ -7,7 +7,7 @@ use nonempty::NonEmpty;
 
 use crate::{vec_set::VecSet, Type};
 
-use super::{Aggregate, ConnectorTypes, Expression, Field, OrderBy};
+use super::{Aggregate, ConnectorTypes, Expression, Field, Grouping, OrderBy};
 
 #[derive(Derivative)]
 #[derivative(
@@ -57,6 +57,7 @@ pub struct Query<T: ConnectorTypes> {
     pub offset: Option<u32>,
     pub order_by: Option<OrderBy<T>>,
     pub predicate: Option<Expression<T>>,
+    pub groups: Option<Grouping<T>>,
 
     /// Relationships referenced by fields and expressions in this query or sub-query. Does not
     /// include relationships in sub-queries nested under this one.

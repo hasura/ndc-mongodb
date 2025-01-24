@@ -25,7 +25,7 @@ pub enum OrderByTarget<T: ConnectorTypes> {
     Column {
         /// Any relationships to traverse to reach this column. These are translated from
         /// [ndc::OrderByElement] values in the [ndc::QueryRequest] to names of relation
-        /// fields for the [QueryPlan].
+        /// fields for the [crate::QueryPlan].
         path: Vec<ndc::RelationshipName>,
 
         /// The name of the column
