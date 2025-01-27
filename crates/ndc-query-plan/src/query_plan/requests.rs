@@ -91,7 +91,9 @@ impl<T: ConnectorTypes> Query<T> {
 #[derivative(
     Clone(bound = ""),
     Debug(bound = ""),
-    PartialEq(bound = "T::ScalarType: PartialEq")
+    Hash(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = "")
 )]
 pub enum Argument<T: ConnectorTypes> {
     /// The argument is provided by reference to a variable

@@ -124,7 +124,13 @@ pub enum GroupComparisonValue<T: ConnectorTypes> {
 }
 
 #[derive(Derivative)]
-#[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
+#[derivative(
+    Clone(bound = ""),
+    Debug(bound = ""),
+    Hash(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = "")
+)]
 pub enum Dimension<T: ConnectorTypes> {
     Column {
         /// Any (object) relationships to traverse to reach this column.

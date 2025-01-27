@@ -9,7 +9,13 @@ use crate::Type;
 use super::{Argument, ConnectorTypes};
 
 #[derive(Derivative)]
-#[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
+#[derivative(
+    Clone(bound = ""),
+    Debug(bound = ""),
+    Hash(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = "")
+)]
 pub enum Expression<T: ConnectorTypes> {
     And {
         expressions: Vec<Expression<T>>,
@@ -112,7 +118,13 @@ impl<T: ConnectorTypes> Expression<T> {
 }
 
 #[derive(Derivative)]
-#[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
+#[derivative(
+    Clone(bound = ""),
+    Debug(bound = ""),
+    Hash(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = "")
+)]
 pub enum ArrayComparison<T: ConnectorTypes> {
     /// Check if the array contains the specified value.
     /// Only used if the 'query.nested_fields.filter_by.nested_arrays.contains' capability is supported.
@@ -123,7 +135,13 @@ pub enum ArrayComparison<T: ConnectorTypes> {
 }
 
 #[derive(Derivative)]
-#[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
+#[derivative(
+    Clone(bound = ""),
+    Debug(bound = ""),
+    Hash(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = "")
+)]
 pub enum ComparisonTarget<T: ConnectorTypes> {
     /// The comparison targets a column.
     Column {
@@ -171,7 +189,13 @@ impl<T: ConnectorTypes> ComparisonTarget<T> {
 }
 
 #[derive(Derivative)]
-#[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
+#[derivative(
+    Clone(bound = ""),
+    Debug(bound = ""),
+    Hash(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = "")
+)]
 pub enum ComparisonValue<T: ConnectorTypes> {
     Column {
         /// Any relationships to traverse to reach this column.
@@ -221,7 +245,13 @@ impl<T: ConnectorTypes> ComparisonValue<T> {
 }
 
 #[derive(Derivative)]
-#[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
+#[derivative(
+    Clone(bound = ""),
+    Debug(bound = ""),
+    Hash(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = "")
+)]
 pub enum ExistsInCollection<T: ConnectorTypes> {
     /// The rows to evaluate the exists predicate against come from a related collection.
     /// Only used if the 'relationships' capability is supported.

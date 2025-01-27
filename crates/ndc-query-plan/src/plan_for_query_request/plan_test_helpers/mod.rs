@@ -102,7 +102,7 @@ impl QueryContext for TestContext {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Sequence)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, Sequence)]
 pub enum AggregateFunction {
     Average,
 }
@@ -115,7 +115,7 @@ impl NamedEnum for AggregateFunction {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Sequence)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, Sequence)]
 pub enum ComparisonOperator {
     Equal,
     Regex,
@@ -130,7 +130,7 @@ impl NamedEnum for ComparisonOperator {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Sequence)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, Sequence)]
 pub enum ScalarType {
     Bool,
     Date,

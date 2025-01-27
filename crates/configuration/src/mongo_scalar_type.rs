@@ -1,7 +1,7 @@
 use mongodb_support::{BsonScalarType, EXTENDED_JSON_TYPE_NAME};
 use ndc_query_plan::QueryPlanError;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum MongoScalarType {
     /// One of the predefined BSON scalar types
     Bson(BsonScalarType),

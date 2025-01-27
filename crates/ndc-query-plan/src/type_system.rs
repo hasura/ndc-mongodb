@@ -9,7 +9,7 @@ use crate::{self as plan, QueryPlanError};
 type Result<T> = std::result::Result<T, QueryPlanError>;
 
 /// The type of values that a column, field, or argument may take.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum Type<ScalarType> {
     Scalar(ScalarType),
     /// The name of an object type declared in `objectTypes`
@@ -87,7 +87,7 @@ impl<S> Type<S> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ObjectType<ScalarType> {
     /// A type name may be tracked for error reporting. The name does not affect how query plans
     /// are generated.
@@ -130,7 +130,7 @@ impl<S> ObjectType<S> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct ObjectField<ScalarType> {
     pub r#type: Type<ScalarType>,
     /// The arguments available to the field - Matches implementation from CollectionInfo

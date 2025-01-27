@@ -1,7 +1,7 @@
 use enum_iterator::{all, Sequence};
 
 // TODO: How can we unify this with the Accumulator type in the mongodb module?
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Sequence)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Sequence)]
 pub enum AggregationFunction {
     Avg,
     Count,
