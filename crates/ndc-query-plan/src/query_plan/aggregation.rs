@@ -93,6 +93,18 @@ pub enum GroupExpression<T: ConnectorTypes> {
     },
 }
 
+impl<T: ConnectorTypes> GroupExpression<T> {
+    /// In some cases we receive the predicate expression `Some(Expression::And [])` which does not
+    /// filter out anything, but fails equality checks with `None`. Simplifying that expression to
+    /// `None` allows us to unify relationship references that we wouldn't otherwise be able to.
+    pub fn simplify(self) -> Option<Self> {
+        match self {
+            GroupExpression::And { expressions } if expressions.is_empty() => None,
+            e => Some(e),
+        }
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub enum GroupComparisonTarget<T: ConnectorTypes> {

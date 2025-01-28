@@ -48,6 +48,16 @@ pub enum Expression<T: ConnectorTypes> {
 }
 
 impl<T: ConnectorTypes> Expression<T> {
+    /// In some cases we receive the predicate expression `Some(Expression::And [])` which does not
+    /// filter out anything, but fails equality checks with `None`. Simplifying that expression to
+    /// `None` allows us to unify relationship references that we wouldn't otherwise be able to.
+    pub fn simplify(self) -> Option<Self> {
+        match self {
+            Expression::And { expressions } if expressions.is_empty() => None,
+            e => Some(e),
+        }
+    }
+
     /// Get an iterator of columns referenced by the expression, not including columns of related
     /// collections. This is used to build a plan for joining the referenced collection - we need
     /// to include fields in the join that the expression needs to access.
