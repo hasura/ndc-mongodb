@@ -60,7 +60,15 @@ impl<'a> ColumnRef<'a> {
         name: &'b FieldName,
         field_path: Option<&'b Vec<FieldName>>,
     ) -> ColumnRef<'b> {
-        from_column_and_field_path(name, field_path)
+        from_column_and_field_path(&[], name, field_path)
+    }
+
+    pub fn from_relationship_path_column_and_field_path<'b>(
+        relationship_path: &'b [ndc_models::RelationshipName],
+        name: &'b FieldName,
+        field_path: Option<&'b Vec<FieldName>>,
+    ) -> ColumnRef<'b> {
+        from_column_and_field_path(relationship_path, name, field_path)
     }
 
     /// TODO: This will hopefully become infallible once ENG-1011 & ENG-1010 are implemented.
@@ -120,21 +128,26 @@ fn from_comparison_target(column: &ComparisonTarget) -> ColumnRef<'_> {
     match column {
         ComparisonTarget::Column {
             name, field_path, ..
-        } => from_column_and_field_path(name, field_path.as_ref()),
+        } => from_column_and_field_path(&[], name, field_path.as_ref()),
     }
 }
 
 fn from_column_and_field_path<'a>(
+    relationship_path: &'a [ndc_models::RelationshipName],
     name: &'a FieldName,
     field_path: Option<&'a Vec<FieldName>>,
 ) -> ColumnRef<'a> {
-    let name_and_path = once(name.as_ref() as &str).chain(
-        field_path
-            .iter()
-            .copied()
-            .flatten()
-            .map(|field_name| field_name.as_ref() as &str),
-    );
+    let name_and_path = relationship_path
+        .iter()
+        .map(|r| r.as_ref() as &str)
+        .chain(once(name.as_ref() as &str))
+        .chain(
+            field_path
+                .iter()
+                .copied()
+                .flatten()
+                .map(|field_name| field_name.as_ref() as &str),
+        );
     // The None case won't come up if the input to [from_target_helper] has at least
     // one element, and we know it does because we start the iterable with `name`
     from_path(None, name_and_path).unwrap()

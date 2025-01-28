@@ -1,7 +1,9 @@
+mod aggregates;
 pub mod column_ref;
 mod constants;
 mod execute_query_request;
 mod foreach;
+mod groups;
 mod make_selector;
 mod make_sort;
 mod native_query;
@@ -89,150 +91,6 @@ mod tests {
 
         let result = execute_query_request(db, &students_config(), query_request).await?;
         assert_eq!(expected_response, result);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn executes_aggregation() -> Result<(), anyhow::Error> {
-        let query_request = query_request()
-            .collection("students")
-            .query(query().aggregates([
-                column_count_aggregate!("count" => "gpa", distinct: true),
-                column_aggregate!("avg" => "gpa", "avg"),
-            ]))
-            .into();
-
-        let expected_response = row_set()
-            .aggregates([("count", json!(11)), ("avg", json!(3))])
-            .into_response();
-
-        let expected_pipeline = bson!([
-            {
-                "$facet": {
-                    "avg": [
-                        { "$match": { "gpa": { "$ne": null } } },
-                        { "$group": { "_id": null, "result": { "$avg": "$gpa" } } },
-                    ],
-                    "count": [
-                        { "$match": { "gpa": { "$ne": null } } },
-                        { "$group": { "_id": "$gpa" } },
-                        { "$count": "result" },
-                    ],
-                },
-            },
-            {
-                "$replaceWith": {
-                    "aggregates": {
-                        "avg": {
-                            "$ifNull": [
-                                {
-                                    "$getField": {
-                                        "field": "result",
-                                        "input": { "$first": { "$getField": { "$literal": "avg" } } },
-                                    }
-                                },
-                                null
-                            ]
-                        },
-                        "count": {
-                            "$ifNull": [
-                                {
-                                    "$getField": {
-                                        "field": "result",
-                                        "input": { "$first": { "$getField": { "$literal": "count" } } },
-                                    }
-                                },
-                                0,
-                            ]
-                        },
-                    },
-                },
-            },
-        ]);
-
-        let db = mock_collection_aggregate_response_for_pipeline(
-            "students",
-            expected_pipeline,
-            bson!([{
-                "aggregates": {
-                    "count": 11,
-                    "avg": 3,
-                },
-            }]),
-        );
-
-        let result = execute_query_request(db, &students_config(), query_request).await?;
-        assert_eq!(result, expected_response);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn executes_aggregation_with_fields() -> Result<(), anyhow::Error> {
-        let query_request = query_request()
-            .collection("students")
-            .query(
-                query()
-                    .aggregates([column_aggregate!("avg" => "gpa", "avg")])
-                    .fields([field!("student_gpa" => "gpa")])
-                    .predicate(binop("_lt", target!("gpa"), value!(4.0))),
-            )
-            .into();
-
-        let expected_response = row_set()
-            .aggregates([("avg", json!(3.1))])
-            .row([("student_gpa", 3.1)])
-            .into_response();
-
-        let expected_pipeline = bson!([
-            { "$match": { "gpa": { "$lt": 4.0 } } },
-            {
-                "$facet": {
-                    "__ROWS__": [{
-                        "$replaceWith": {
-                            "student_gpa": { "$ifNull": ["$gpa", null] },
-                        },
-                    }],
-                    "avg": [
-                        { "$match": { "gpa": { "$ne": null } } },
-                        { "$group": { "_id": null, "result": { "$avg": "$gpa" } } },
-                    ],
-                },
-            },
-            {
-                "$replaceWith": {
-                    "aggregates": {
-                        "avg": {
-                            "$ifNull": [
-                                {
-                                    "$getField": {
-                                        "field": "result",
-                                        "input": { "$first": { "$getField": { "$literal": "avg" } } },
-                                    }
-                                },
-                                null
-                            ]
-                        },
-                    },
-                    "rows": "$__ROWS__",
-                },
-            },
-        ]);
-
-        let db = mock_collection_aggregate_response_for_pipeline(
-            "students",
-            expected_pipeline,
-            bson!([{
-                "aggregates": {
-                    "avg": 3.1,
-                },
-                "rows": [{
-                    "student_gpa": 3.1,
-                }],
-            }]),
-        );
-
-        let result = execute_query_request(db, &students_config(), query_request).await?;
-        assert_eq!(result, expected_response);
         Ok(())
     }
 

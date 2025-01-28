@@ -53,9 +53,6 @@ fn extended_json_scalar_type() -> (ndc_models::ScalarTypeName, ScalarType) {
                                 name: mongodb_support::EXTENDED_JSON_TYPE_NAME.into(),
                             },
                         },
-                        Plan::Count => NDC::Custom {
-                            result_type: bson_to_named_type(S::Int),
-                        },
                         Plan::Min => NDC::Min,
                         Plan::Max => NDC::Max,
                         Plan::Sum => NDC::Custom {
@@ -112,7 +109,7 @@ fn bson_scalar_type_representation(bson_scalar_type: BsonScalarType) -> TypeRepr
         S::Long => R::Int64,
         S::String => R::String,
         S::Date => R::TimestampTZ, // Mongo Date is milliseconds since unix epoch, but we serialize to JSON as an ISO string
-        S::Timestamp => R::JSON, // Internal Mongo timestamp type
+        S::Timestamp => R::JSON,   // Internal Mongo timestamp type
         S::BinData => R::JSON,
         S::ObjectId => R::String, // Mongo ObjectId is usually expressed as a 24 char hex string (12 byte number) - not using R::Bytes because that expects base64
         S::Bool => R::Boolean,
