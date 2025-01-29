@@ -2,12 +2,15 @@
 #![allow(unused_imports)]
 
 mod aggregates;
+pub use aggregates::*;
 mod collection_info;
+mod column;
 mod comparison_target;
 mod comparison_value;
 mod exists_in_collection;
 mod expressions;
 mod field;
+mod groups;
 mod object_type;
 mod order_by;
 mod path_element;
@@ -33,6 +36,7 @@ pub use comparison_value::*;
 pub use exists_in_collection::*;
 pub use expressions::*;
 pub use field::*;
+pub use groups::*;
 pub use object_type::*;
 pub use order_by::*;
 pub use path_element::*;
@@ -47,7 +51,6 @@ pub struct QueryRequestBuilder {
     arguments: Option<BTreeMap<ndc_models::ArgumentName, Argument>>,
     collection_relationships: Option<BTreeMap<ndc_models::RelationshipName, Relationship>>,
     variables: Option<Vec<BTreeMap<ndc_models::VariableName, serde_json::Value>>>,
-    groups: Option<ndc_models::Grouping>,
 }
 
 pub fn query_request() -> QueryRequestBuilder {
@@ -62,7 +65,6 @@ impl QueryRequestBuilder {
             arguments: None,
             collection_relationships: None,
             variables: None,
-            groups: None,
         }
     }
 
@@ -116,11 +118,6 @@ impl QueryRequestBuilder {
                 })
                 .collect(),
         );
-        self
-    }
-
-    pub fn groups(mut self, groups: impl Into<ndc_models::Grouping>) -> Self {
-        self.groups = Some(groups.into());
         self
     }
 }
@@ -206,6 +203,11 @@ impl QueryBuilder {
 
     pub fn predicate(mut self, expression: Expression) -> Self {
         self.predicate = Some(expression);
+        self
+    }
+
+    pub fn groups(mut self, groups: impl Into<ndc_models::Grouping>) -> Self {
+        self.groups = Some(groups.into());
         self
     }
 }

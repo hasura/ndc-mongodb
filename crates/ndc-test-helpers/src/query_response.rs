@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use ndc_models::{QueryResponse, RowFieldValue, RowSet};
+use ndc_models::{FieldName, Group, QueryResponse, RowFieldValue, RowSet};
 
 #[derive(Clone, Debug, Default)]
 pub struct QueryResponseBuilder {
@@ -56,13 +56,10 @@ impl RowSetBuilder {
 
     pub fn aggregates(
         mut self,
-        aggregates: impl IntoIterator<Item = (impl ToString, impl Into<serde_json::Value>)>,
+        aggregates: impl IntoIterator<Item = (impl Into<FieldName>, impl Into<serde_json::Value>)>,
     ) -> Self {
-        self.aggregates.extend(
-            aggregates
-                .into_iter()
-                .map(|(k, v)| (k.to_string().into(), v.into())),
-        );
+        self.aggregates
+            .extend(aggregates.into_iter().map(|(k, v)| (k.into(), v.into())));
         self
     }
 
@@ -133,4 +130,17 @@ pub fn query_response() -> QueryResponseBuilder {
 
 pub fn row_set() -> RowSetBuilder {
     Default::default()
+}
+
+pub fn group(
+    dimensions: impl IntoIterator<Item = impl Into<serde_json::Value>>,
+    aggregates: impl IntoIterator<Item = (impl ToString, impl Into<serde_json::Value>)>,
+) -> Group {
+    Group {
+        dimensions: dimensions.into_iter().map(Into::into).collect(),
+        aggregates: aggregates
+            .into_iter()
+            .map(|(name, value)| (name.to_string(), value.into()))
+            .collect(),
+    }
 }

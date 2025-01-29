@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 
 use configuration::MongoScalarType;
-use indexmap::IndexMap;
 use mongodb::bson::{self, doc, Bson};
 use mongodb_support::{
     aggregate::{Accumulator, Pipeline, Selection, Stage},
@@ -131,7 +130,7 @@ fn is_count(aggregate: &Aggregate) -> bool {
 // - column count, distinct
 //
 // The issue with non-distinct column count is we want to exclude null and non-existent values.
-// That could probably be done with an accumulator like, 
+// That could probably be done with an accumulator like,
 //
 //     count: if $exists: ["$column", true] then 1 else 0
 //
@@ -254,6 +253,20 @@ fn filter_to_documents_with_value(target_field: ComparisonTarget) -> Result<Stag
 
 #[cfg(test)]
 mod tests {
+    use configuration::Configuration;
+    use mongodb::bson::bson;
+    use ndc_test_helpers::{
+        binop, collection, column_aggregate, column_count_aggregate, dimension_column, field,
+        group, grouping, named_type, object_type, query, query_request, row_set, target, value,
+    };
+    use serde_json::json;
+
+    use crate::{
+        mongo_query_plan::MongoConfiguration,
+        mongodb::test_helpers::mock_collection_aggregate_response_for_pipeline,
+        query::execute_query_request::execute_query_request, test_helpers::mflix_config,
+    };
+
     #[tokio::test]
     async fn executes_aggregation() -> Result<(), anyhow::Error> {
         let query_request = query_request()
@@ -396,5 +409,92 @@ mod tests {
         let result = execute_query_request(db, &students_config(), query_request).await?;
         assert_eq!(result, expected_response);
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn executes_query_with_groups_with_single_column_aggregates() -> Result<(), anyhow::Error>
+    {
+        let query_request = query_request()
+            .collection("movies")
+            .query(
+                query().groups(
+                    grouping()
+                        .dimensions([dimension_column("year")])
+                        .aggregates([
+                            (
+                                "average_viewer_rating",
+                                column_aggregate("tomatoes.viewer.rating", "avg"),
+                            ),
+                            ("max_runtime", column_aggregate("runtime", "max")),
+                        ]),
+                ),
+            )
+            .into();
+
+        let expected_response = row_set()
+            .groups([
+                group(
+                    [2007],
+                    [
+                        ("average_viewer_rating", json!(7.5)),
+                        ("max_runtime", json!(207)),
+                    ],
+                ),
+                group(
+                    [2015],
+                    [
+                        ("average_viewer_rating", json!(6.9)),
+                        ("max_runtime", json!(412)),
+                    ],
+                ),
+            ])
+            .into_response();
+
+        let expected_pipeline = bson!([
+            {
+                "$group": {
+                    "_id": "$year",
+                    "average_viewer_rating": { "$avg": "$tomatoes.viewer.rating" } ,
+                    "max_runtime": { "$max": "$runtime" },
+                }
+            },
+        ]);
+
+        let db = mock_collection_aggregate_response_for_pipeline(
+            "movies",
+            expected_pipeline,
+            bson!([
+                {
+                    "_id": 2007,
+                    "average_viewer_rating": 7.5,
+                    "max_runtime": 207,
+                },
+                {
+                    "_id": 2015,
+                    "average_viewer_rating": 6.9,
+                    "max_runtime": 412,
+                },
+            ]),
+        );
+
+        let result = execute_query_request(db, &mflix_config(), query_request).await?;
+        assert_eq!(result, expected_response);
+        Ok(())
+    }
+
+    fn students_config() -> MongoConfiguration {
+        MongoConfiguration(Configuration {
+            collections: [collection("students")].into(),
+            object_types: [(
+                "students".into(),
+                object_type([("gpa", named_type("Double"))]),
+            )]
+            .into(),
+            functions: Default::default(),
+            procedures: Default::default(),
+            native_mutations: Default::default(),
+            native_queries: Default::default(),
+            options: Default::default(),
+        })
     }
 }

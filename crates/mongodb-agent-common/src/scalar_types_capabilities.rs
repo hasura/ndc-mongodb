@@ -160,17 +160,10 @@ fn aggregate_functions(
     scalar_type: BsonScalarType,
 ) -> impl Iterator<Item = (AggregationFunction, AggregateFunctionDefinition)> {
     use AggregateFunctionDefinition as NDC;
-    [(
-        A::Count,
-        NDC::Custom {
-            result_type: bson_to_named_type(S::Int),
-        },
-    )]
-    .into_iter()
-    .chain(iter_if(
+    iter_if(
         scalar_type.is_orderable(),
         [(A::Min, NDC::Min), (A::Max, NDC::Max)].into_iter(),
-    ))
+    )
     .chain(iter_if(
         scalar_type.is_numeric(),
         [
