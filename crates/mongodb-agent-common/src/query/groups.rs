@@ -93,7 +93,7 @@ fn aggregate_to_accumulator(aggregate: &Aggregate) -> Accumulator {
 }
 
 fn selection(grouping: &Grouping) -> Selection {
-    let dimensions = ("dimensions".to_string(), bson!("$_id"));
+    let dimensions = ("_id".to_string(), bson!("$_id"));
     let selected_aggregates = grouping.aggregates.keys().map(|key| {
         (
             key.to_string(),

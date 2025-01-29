@@ -163,6 +163,14 @@ pub enum Dimension<T: ConnectorTypes> {
     },
 }
 
+impl<T: ConnectorTypes> Dimension<T> {
+    pub fn value_type(&self) -> &Type<T::ScalarType> {
+        match self {
+            Dimension::Column { field_type, .. } => field_type,
+        }
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
 pub struct GroupOrderBy<T: ConnectorTypes> {

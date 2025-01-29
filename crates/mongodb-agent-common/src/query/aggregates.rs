@@ -460,7 +460,7 @@ mod tests {
             },
             {
                 "$replaceWith": {
-                    "dimensions": "$_id",
+                    "_id": "$_id",
                     "average_viewer_rating": { "$ifNull": ["$average_viewer_rating", null] },
                     "max.runtime": { "$ifNull": [{ "$getField": { "$literal": "max.runtime" } }, null] },
                 }
@@ -493,6 +493,7 @@ mod tests {
     // - fields & group by
     // - group by & aggregates
     // - various counts on groups
+    // - groups and variables
     // - groups and relationships
 
     fn students_config() -> MongoConfiguration {
