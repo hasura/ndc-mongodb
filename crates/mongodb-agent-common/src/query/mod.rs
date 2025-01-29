@@ -46,11 +46,10 @@ mod tests {
     use mongodb::bson::{self, bson};
     use ndc_models::{QueryResponse, RowSet};
     use ndc_test_helpers::{
-        binop, collection, column_aggregate, column_count_aggregate, field, named_type,
-        object_type, query, query_request, row_set, target, value,
+        binop, collection, field, named_type, object_type, query, query_request, row_set, target,
+        value,
     };
     use pretty_assertions::assert_eq;
-    use serde_json::json;
 
     use super::execute_query_request;
     use crate::{
