@@ -425,7 +425,7 @@ mod tests {
                                 "average_viewer_rating",
                                 column_aggregate("tomatoes.viewer.rating", "avg"),
                             ),
-                            ("max_runtime", column_aggregate("runtime", "max")),
+                            ("max.runtime", column_aggregate("runtime", "max")),
                         ]),
                 ),
             )
@@ -437,14 +437,14 @@ mod tests {
                     [2007],
                     [
                         ("average_viewer_rating", json!(7.5)),
-                        ("max_runtime", json!(207)),
+                        ("max.runtime", json!(207)),
                     ],
                 ),
                 group(
                     [2015],
                     [
                         ("average_viewer_rating", json!(6.9)),
-                        ("max_runtime", json!(412)),
+                        ("max.runtime", json!(412)),
                     ],
                 ),
             ])
@@ -453,9 +453,16 @@ mod tests {
         let expected_pipeline = bson!([
             {
                 "$group": {
-                    "_id": "$year",
-                    "average_viewer_rating": { "$avg": "$tomatoes.viewer.rating" } ,
-                    "max_runtime": { "$max": "$runtime" },
+                    "_id": ["$year"],
+                    "average_viewer_rating": { "$avg": "$tomatoes.viewer.rating" },
+                    "max.runtime": { "$max": "$runtime" },
+                }
+            },
+            {
+                "$replaceWith": {
+                    "dimensions": "$_id",
+                    "average_viewer_rating": { "$ifNull": ["$average_viewer_rating", null] },
+                    "max.runtime": { "$ifNull": [{ "$getField": { "$literal": "max.runtime" } }, null] },
                 }
             },
         ]);
@@ -467,12 +474,12 @@ mod tests {
                 {
                     "_id": 2007,
                     "average_viewer_rating": 7.5,
-                    "max_runtime": 207,
+                    "max.runtime": 207,
                 },
                 {
                     "_id": 2015,
                     "average_viewer_rating": 6.9,
-                    "max_runtime": 412,
+                    "max.runtime": 412,
                 },
             ]),
         );
@@ -481,6 +488,12 @@ mod tests {
         assert_eq!(result, expected_response);
         Ok(())
     }
+
+    // TODO: Test:
+    // - fields & group by
+    // - group by & aggregates
+    // - various counts on groups
+    // - groups and relationships
 
     fn students_config() -> MongoConfiguration {
         MongoConfiguration(Configuration {

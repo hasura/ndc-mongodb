@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    aggregates::facet_pipelines_for_query, foreach::pipeline_for_foreach, make_selector, make_sort::make_sort_stages, native_query::pipeline_for_native_query, query_level::QueryLevel, relations::pipeline_for_relations
+    aggregates::facet_pipelines_for_query, foreach::pipeline_for_foreach, groups::pipeline_for_groups, make_selector, make_sort::make_sort_stages, native_query::pipeline_for_native_query, query_level::QueryLevel, relations::pipeline_for_relations
 };
 
 /// A query that includes aggregates will be run using a $facet pipeline stage, while a query
@@ -19,7 +19,10 @@ use super::{
 /// one) in a single facet stage. If we have fields, and no aggregates then the fields pipeline
 /// can instead be appended to `pipeline`.
 pub fn is_response_faceted(query: &Query) -> bool {
-    query.has_aggregates()
+    let aggregates = if query.has_aggregates() { 2 } else { 0 };
+    let fields = if query.has_fields() { 1 } else { 0 };
+    let groups = if query.has_groups() { 1 } else { 0 };
+    aggregates + fields + groups > 1
 }
 
 /// Shared logic to produce a MongoDB aggregation pipeline for a query request.
@@ -85,6 +88,8 @@ pub fn pipeline_for_non_foreach(
         let aggregation_stages = Stage::Facet(facet_pipelines);
         let replace_with_stage = Stage::ReplaceWith(select_facet_results);
         Pipeline::from_iter([aggregation_stages, replace_with_stage])
+    } else if let Some(grouping) = &query.groups {
+        pipeline_for_groups(grouping)
     } else {
         pipeline_for_fields_facet(query_plan, query_level)?
     };

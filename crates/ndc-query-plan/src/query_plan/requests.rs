@@ -85,6 +85,10 @@ impl<T: ConnectorTypes> Query<T> {
             false
         }
     }
+
+    pub fn has_groups(&self) -> bool {
+        self.groups.is_some()
+    }
 }
 
 #[derive(Derivative)]
