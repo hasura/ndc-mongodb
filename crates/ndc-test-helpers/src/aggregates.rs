@@ -4,22 +4,6 @@ use ndc_models::{Aggregate, AggregateFunctionName, Argument, ArgumentName, Field
 
 use crate::column::Column;
 
-#[deprecated]
-#[macro_export()]
-macro_rules! column_aggregate {
-    ($name:literal => $column:literal, $function:literal) => {
-        (
-            $name,
-            $crate::ndc_models::Aggregate::SingleColumn {
-                column: $column.into(),
-                arguments: Default::default(),
-                function: $function.into(),
-                field_path: None,
-            },
-        )
-    };
-}
-
 pub struct AggregateColumnBuilder {
     column: FieldName,
     arguments: BTreeMap<ArgumentName, Argument>,

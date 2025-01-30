@@ -1,13 +1,12 @@
 use std::collections::BTreeMap;
 
 use indexmap::IndexMap;
-use mongodb::bson::{self, bson, doc};
+use mongodb::bson::{self, bson};
 use mongodb_support::aggregate::{Accumulator, Pipeline, Selection, Stage};
 use ndc_models::FieldName;
 
 use crate::{
     aggregation_function::AggregationFunction,
-    interface_types::MongoAgentError,
     mongo_query_plan::{Aggregate, Dimension, Grouping},
 };
 

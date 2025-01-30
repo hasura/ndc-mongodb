@@ -521,7 +521,7 @@ fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
         .query(query().aggregates([
             star_count_aggregate!("count_star"),
             column_count_aggregate!("count_id" => "last_name", distinct: true),
-            column_aggregate!("avg_id" => "id", "Average"),
+            ("avg_id", column_aggregate("id", "Average").into()),
         ]))
         .into();
     let query_plan = plan_for_query_request(&query_context, query)?;

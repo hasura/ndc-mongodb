@@ -273,7 +273,7 @@ mod tests {
             .collection("students")
             .query(query().aggregates([
                 column_count_aggregate!("count" => "gpa", distinct: true),
-                column_aggregate!("avg" => "gpa", "avg"),
+                ("avg", column_aggregate("gpa", "avg").into()),
             ]))
             .into();
 
@@ -347,7 +347,7 @@ mod tests {
             .collection("students")
             .query(
                 query()
-                    .aggregates([column_aggregate!("avg" => "gpa", "avg")])
+                    .aggregates([("avg", column_aggregate("gpa", "avg"))])
                     .fields([field!("student_gpa" => "gpa")])
                     .predicate(binop("_lt", target!("gpa"), value!(4.0))),
             )

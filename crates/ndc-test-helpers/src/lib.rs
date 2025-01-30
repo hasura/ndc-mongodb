@@ -22,7 +22,7 @@ use std::collections::BTreeMap;
 
 use indexmap::IndexMap;
 use ndc_models::{
-    Aggregate, Argument, Expression, Field, OrderBy, OrderByElement, PathElement, Query,
+    Aggregate, Argument, Expression, Field, FieldName, OrderBy, OrderByElement, PathElement, Query,
     QueryRequest, Relationship, RelationshipArgument, RelationshipType,
 };
 
@@ -176,11 +176,14 @@ impl QueryBuilder {
         self
     }
 
-    pub fn aggregates<const S: usize>(mut self, aggregates: [(&str, Aggregate); S]) -> Self {
+    pub fn aggregates(
+        mut self,
+        aggregates: impl IntoIterator<Item = (impl Into<FieldName>, impl Into<Aggregate>)>,
+    ) -> Self {
         self.aggregates = Some(
             aggregates
                 .into_iter()
-                .map(|(name, aggregate)| (name.to_owned().into(), aggregate))
+                .map(|(name, aggregate)| (name.into(), aggregate.into()))
                 .collect(),
         );
         self
