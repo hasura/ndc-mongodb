@@ -10,7 +10,7 @@ native-query-subcommand = ["dep:pretty", "dep:nom", "dep:textwrap"]
 [dependencies]
 configuration = { path = "../configuration" }
 mongodb-agent-common = { path = "../mongodb-agent-common" }
-mongodb = { workspace = true }
+mongodb = { workspace = true, features = ["tokio-runtime", "aws-auth"] }
 mongodb-support = { path = "../mongodb-support" }
 
 anyhow = "1.0.80"

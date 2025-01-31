@@ -10,7 +10,7 @@ ndc-query-plan = { path = "../ndc-query-plan" }
 anyhow = "1"
 futures = "^0.3"
 itertools = { workspace = true }
-mongodb = { workspace = true }
+mongodb = { workspace = true, features = ["tokio-runtime", "aws-auth"] }
 ndc-models = { workspace = true }
 ref-cast = { workspace = true }
 schemars = { workspace = true }

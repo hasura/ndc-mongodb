@@ -7,7 +7,7 @@ version.workspace = true
 anyhow = "1"
 enum-iterator = "^2.0.0"
 indexmap = { workspace = true }
-mongodb = { workspace = true }
+mongodb = { workspace = true, features = ["tokio-runtime", "aws-auth"] }
 schemars = "^0.8.12"
 serde = { workspace = true }
 serde_json = { workspace = true }

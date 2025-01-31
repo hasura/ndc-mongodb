@@ -16,7 +16,7 @@ futures = "^0.3"
 http = "^0.2"
 indexmap = { workspace = true }
 itertools = { workspace = true }
-mongodb = { workspace = true }
+mongodb = { workspace = true, features = ["tokio-runtime", "aws-auth"] }
 ndc-sdk = { workspace = true }
 prometheus = "*" # share version from ndc-sdk
 serde = { workspace = true }
