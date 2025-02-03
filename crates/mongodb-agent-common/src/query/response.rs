@@ -51,6 +51,8 @@ struct BsonRowSet {
     #[serde(default)]
     aggregates: Bson,
     #[serde(default)]
+    groups: Vec<bson::Document>,
+    #[serde(default)]
     rows: Vec<bson::Document>,
 }
 
@@ -151,6 +153,12 @@ fn serialize_row_set(
         .map(|aggregates| serialize_aggregates(mode, path, aggregates, row_set.aggregates))
         .transpose()?;
 
+    let groups = query
+        .groups
+        .as_ref()
+        .map(|grouping| serialize_groups(mode, path, grouping, row_set.groups))
+        .transpose()?;
+
     let rows = query
         .fields
         .as_ref()
@@ -160,7 +168,7 @@ fn serialize_row_set(
     Ok(RowSet {
         aggregates,
         rows,
-        groups: None, // TODO: ENG-1486 implement group by
+        groups,
     })
 }
 
