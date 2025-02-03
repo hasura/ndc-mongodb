@@ -1,4 +1,6 @@
 // TODO: check for collision with aggregation field names
-pub const GROUPS_FIELD: &str = "__GROUPS__";
-pub const ROWS_FIELD: &str = "__ROWS__";
 pub const RESULT_FIELD: &str = "__RESULT__";
+
+pub const BSON_ROW_SET_AGGREGATES: &str = "aggregates";
+pub const BSON_ROW_SET_GROUPS: &str = "groups";
+pub const BSON_ROW_SET_ROWS: &str = "rows";

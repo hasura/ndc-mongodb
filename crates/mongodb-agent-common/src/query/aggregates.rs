@@ -19,12 +19,8 @@ use crate::{
 };
 
 use super::{
-    column_ref::ColumnRef,
-    constants::{GROUPS_FIELD, RESULT_FIELD, ROWS_FIELD},
-    groups::pipeline_for_groups,
-    make_selector,
-    pipeline::pipeline_for_fields_facet,
-    query_level::QueryLevel,
+    column_ref::ColumnRef, constants::RESULT_FIELD, groups::pipeline_for_groups, make_selector,
+    pipeline::pipeline_for_fields_facet, query_level::QueryLevel,
 };
 
 type Result<T> = std::result::Result<T, MongoAgentError>;
@@ -97,12 +93,10 @@ pub fn facet_pipelines_for_query(
 
     let (groups_pipeline_facet, select_groups) = match groups {
         Some(grouping) => {
+            let internal_key = "__GROUPS__";
             let groups_pipeline = pipeline_for_groups(grouping);
-            let facet = (GROUPS_FIELD.to_owned(), groups_pipeline);
-            let selection = (
-                "groups".to_owned(),
-                Bson::String(format!("${GROUPS_FIELD}")),
-            );
+            let facet = (internal_key.to_string(), groups_pipeline);
+            let selection = ("groups".to_owned(), Bson::String(internal_key.to_string()));
             (Some(facet), Some(selection))
         }
         None => (None, None),
@@ -110,9 +104,10 @@ pub fn facet_pipelines_for_query(
 
     let (rows_pipeline_facet, select_rows) = match fields {
         Some(_) => {
+            let internal_key = "__ROWS__";
             let rows_pipeline = pipeline_for_fields_facet(query_plan, query_level)?;
-            let facet = (ROWS_FIELD.to_owned(), rows_pipeline);
-            let selection = ("rows".to_owned(), Bson::String(format!("${ROWS_FIELD}")));
+            let facet = (internal_key.to_string(), rows_pipeline);
+            let selection = ("rows".to_owned(), Bson::String(internal_key.to_string()));
             (Some(facet), Some(selection))
         }
         None => (None, None),

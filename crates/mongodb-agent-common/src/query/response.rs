@@ -21,7 +21,10 @@ use crate::{
     },
 };
 
-use super::serialization::is_nullable;
+use super::{
+    constants::{BSON_ROW_SET_AGGREGATES, BSON_ROW_SET_GROUPS, BSON_ROW_SET_ROWS},
+    serialization::is_nullable,
+};
 
 #[derive(Debug, Error)]
 pub enum QueryResponseError {
@@ -49,11 +52,11 @@ type Result<T> = std::result::Result<T, QueryResponseError>;
 #[derive(Debug, Deserialize)]
 struct BsonRowSet {
     #[serde(default)]
-    aggregates: Bson,
+    aggregates: Bson, // name matches BSON_ROW_SET_AGGREGATES
     #[serde(default)]
-    groups: Vec<bson::Document>,
+    groups: Vec<bson::Document>, // name matches BSON_ROW_SET_GROUPS
     #[serde(default)]
-    rows: Vec<bson::Document>,
+    rows: Vec<bson::Document>, // name matches BSON_ROW_SET_ROWS
 }
 
 #[instrument(name = "Serialize Query Response", skip_all, fields(internal.visibility = "user"))]
@@ -269,15 +272,26 @@ fn serialize_groups(
 fn type_for_row_set(
     path: &[&str],
     aggregates: &Option<IndexMap<ndc_models::FieldName, Aggregate>>,
+    groups: &Option<Grouping>,
     fields: &Option<IndexMap<ndc_models::FieldName, Field>>,
 ) -> Result<Type> {
     let mut object_fields = BTreeMap::new();
 
     if let Some(aggregates) = aggregates {
         object_fields.insert(
-            "aggregates".into(),
+            BSON_ROW_SET_AGGREGATES.into(),
             ObjectField {
                 r#type: Type::Object(type_for_aggregates(aggregates)),
+                parameters: Default::default(),
+            },
+        );
+    }
+
+    if let Some(grouping) = groups {
+        object_fields.insert(
+            BSON_ROW_SET_GROUPS.into(),
+            ObjectField {
+                r#type: Type::Object(type_for_aggregates(&grouping.aggregates)),
                 parameters: Default::default(),
             },
         );
@@ -286,7 +300,7 @@ fn type_for_row_set(
     if let Some(query_fields) = fields {
         let row_type = type_for_row(path, query_fields)?;
         object_fields.insert(
-            "rows".into(),
+            BSON_ROW_SET_ROWS.into(),
             ObjectField {
                 r#type: Type::ArrayOf(Box::new(row_type)),
                 parameters: Default::default(),
