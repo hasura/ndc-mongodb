@@ -211,11 +211,13 @@ where
                 relationship: relationship_a,
                 aggregates: aggregates_a,
                 fields: fields_a,
+                groups: groups_a,
             },
             Field::Relationship {
                 relationship: relationship_b,
                 aggregates: aggregates_b,
                 fields: fields_b,
+                groups: groups_b,
             },
         ) => {
             if relationship_a != relationship_b {
@@ -227,6 +229,7 @@ where
                     relationship: relationship_b,
                     aggregates: unify_options(aggregates_a, aggregates_b, unify_aggregates)?,
                     fields: unify_fields(fields_a, fields_b)?,
+                    groups: unify_options(groups_a, groups_b, unify_groups)?,
                 })
             }
         }

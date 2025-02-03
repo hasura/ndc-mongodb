@@ -680,6 +680,7 @@ fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), a
                         plan::Field::Relationship {
                             relationship: "author_articles".into(),
                             aggregates: None,
+                            groups: None,
                             fields: Some(
                                 [
                                     (
@@ -915,6 +916,7 @@ fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Res
                     plan::Field::Relationship {
                         relationship: "author".into(),
                         aggregates: None,
+                        groups: None,
                         fields: Some(
                             [(
                                 "name".into(),

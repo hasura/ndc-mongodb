@@ -90,6 +90,7 @@ fn type_annotated_field_helper<T: QueryContext>(
             // with fields and aggregates from other references to the same relationship.
             let aggregates = query_plan.aggregates.clone();
             let fields = query_plan.fields.clone();
+            let groups = query_plan.groups.clone();
 
             let relationship_key =
                 plan_state.register_relationship(relationship, arguments, query_plan)?;
@@ -97,6 +98,7 @@ fn type_annotated_field_helper<T: QueryContext>(
                 relationship: relationship_key,
                 aggregates,
                 fields,
+                groups,
             }
         }
     };

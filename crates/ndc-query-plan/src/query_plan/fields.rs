@@ -4,7 +4,7 @@ use ndc_models as ndc;
 
 use crate::Type;
 
-use super::{Aggregate, ConnectorTypes};
+use super::{Aggregate, ConnectorTypes, Grouping};
 
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""), PartialEq(bound = ""))]
@@ -27,6 +27,7 @@ pub enum Field<T: ConnectorTypes> {
         relationship: ndc::RelationshipName,
         aggregates: Option<IndexMap<ndc::FieldName, Aggregate<T>>>,
         fields: Option<IndexMap<ndc::FieldName, Field<T>>>,
+        groups: Option<Grouping<T>>,
     },
 }
 

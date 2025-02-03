@@ -272,8 +272,8 @@ fn serialize_groups(
 fn type_for_row_set(
     path: &[&str],
     aggregates: &Option<IndexMap<ndc_models::FieldName, Aggregate>>,
-    groups: &Option<Grouping>,
     fields: &Option<IndexMap<ndc_models::FieldName, Field>>,
+    groups: &Option<Grouping>,
 ) -> Result<Type> {
     let mut object_fields = BTreeMap::new();
 
@@ -287,22 +287,22 @@ fn type_for_row_set(
         );
     }
 
-    if let Some(grouping) = groups {
-        object_fields.insert(
-            BSON_ROW_SET_GROUPS.into(),
-            ObjectField {
-                r#type: Type::Object(type_for_aggregates(&grouping.aggregates)),
-                parameters: Default::default(),
-            },
-        );
-    }
-
     if let Some(query_fields) = fields {
         let row_type = type_for_row(path, query_fields)?;
         object_fields.insert(
             BSON_ROW_SET_ROWS.into(),
             ObjectField {
                 r#type: Type::ArrayOf(Box::new(row_type)),
+                parameters: Default::default(),
+            },
+        );
+    }
+
+    if let Some(grouping) = groups {
+        object_fields.insert(
+            BSON_ROW_SET_GROUPS.into(),
+            ObjectField {
+                r#type: Type::Object(type_for_aggregates(&grouping.aggregates)),
                 parameters: Default::default(),
             },
         );
@@ -375,8 +375,11 @@ fn type_for_field(path: &[&str], field_definition: &Field) -> Result<Type> {
             ..
         } => type_for_nested_field(path, column_type, nested_field)?,
         Field::Relationship {
-            aggregates, fields, ..
-        } => type_for_row_set(path, aggregates, fields)?,
+            aggregates,
+            fields,
+            groups,
+            ..
+        } => type_for_row_set(path, aggregates, fields, groups)?,
     };
     Ok(field_type)
 }
@@ -815,6 +818,7 @@ mod tests {
             &path,
             &query_plan.query.aggregates,
             &query_plan.query.fields,
+            &query_plan.query.groups,
         )?;
 
         let expected = Type::object([(
