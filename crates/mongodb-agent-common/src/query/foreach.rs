@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use itertools::Itertools as _;
-use mongodb::bson::{self, doc, Bson};
+use mongodb::bson::{self, bson, doc, Bson};
 use mongodb_support::aggregate::{Pipeline, Selection, Stage};
 use ndc_query_plan::VariableSet;
 
@@ -8,7 +8,7 @@ use super::pipeline::pipeline_for_non_foreach;
 use super::query_level::QueryLevel;
 use super::query_variable_name::query_variable_name;
 use super::serialization::json_to_bson;
-use super::QueryTarget;
+use super::{is_response_faceted, QueryTarget};
 use crate::constants::{ROW_SET_AGGREGATES_KEY, ROW_SET_GROUPS_KEY, ROW_SET_ROWS_KEY};
 use crate::interface_types::MongoAgentError;
 use crate::mongo_query_plan::{MongoConfiguration, QueryPlan, Type, VariableTypes};
@@ -46,14 +46,32 @@ pub fn pipeline_for_foreach(
         r#as: "query".to_string(),
     };
 
-    let selection = if query_request.query.has_aggregates() && query_request.query.has_fields() {
-        doc! {
-            ROW_SET_AGGREGATES_KEY: { "$getField": { "input": { "$first": "$query" }, "field": ROW_SET_AGGREGATES_KEY } },
-            ROW_SET_ROWS_KEY: { "$getField": { "input": { "$first": "$query" }, "field": ROW_SET_ROWS_KEY } },
+    let selection = if is_response_faceted(&query_request.query) {
+        let mut keys = vec![];
+        if query_request.query.has_aggregates() {
+            keys.push(ROW_SET_AGGREGATES_KEY);
         }
+        if query_request.query.has_fields() {
+            keys.push(ROW_SET_ROWS_KEY);
+        }
+        if query_request.query.has_groups() {
+            keys.push(ROW_SET_GROUPS_KEY)
+        }
+        keys.into_iter()
+            .map(|key| {
+                (
+                    key.to_string(),
+                    bson!({ "$getField": { "input": { "$first": "$query" }, "field": key } }),
+                )
+            })
+            .collect()
     } else if query_request.query.has_aggregates() {
         doc! {
             ROW_SET_AGGREGATES_KEY: { "$getField": { "input": { "$first": "$query" }, "field": ROW_SET_AGGREGATES_KEY } },
+        }
+    } else if query_request.query.has_groups() {
+        doc! {
+            ROW_SET_GROUPS_KEY: "$query"
         }
     } else {
         doc! {
