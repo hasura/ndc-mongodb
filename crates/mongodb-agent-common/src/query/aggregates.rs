@@ -20,7 +20,8 @@ use crate::{
 
 use super::{
     column_ref::ColumnRef,
-    constants::{RESULT_FIELD, ROWS_FIELD},
+    constants::{GROUPS_FIELD, RESULT_FIELD, ROWS_FIELD},
+    groups::pipeline_for_groups,
     make_selector,
     pipeline::pipeline_for_fields_facet,
     query_level::QueryLevel,
@@ -40,6 +41,7 @@ pub fn facet_pipelines_for_query(
         aggregates,
         aggregates_limit,
         fields,
+        groups,
         ..
     } = query;
     let mut facet_pipelines = aggregates
@@ -52,11 +54,6 @@ pub fn facet_pipelines_for_query(
             ))
         })
         .collect::<Result<BTreeMap<_, _>>>()?;
-
-    if fields.is_some() {
-        let fields_pipeline = pipeline_for_fields_facet(query_plan, query_level)?;
-        facet_pipelines.insert(ROWS_FIELD.to_owned(), fields_pipeline);
-    }
 
     // This builds a map that feeds into a `$replaceWith` pipeline stage to build a map of
     // aggregation results.
@@ -98,13 +95,38 @@ pub fn facet_pipelines_for_query(
         None
     };
 
-    let select_rows = match fields {
-        Some(_) => Some(("rows".to_owned(), Bson::String(format!("${ROWS_FIELD}")))),
-        _ => None,
+    let (groups_pipeline_facet, select_groups) = match groups {
+        Some(grouping) => {
+            let groups_pipeline = pipeline_for_groups(grouping);
+            let facet = (GROUPS_FIELD.to_owned(), groups_pipeline);
+            let selection = (
+                "groups".to_owned(),
+                Bson::String(format!("${GROUPS_FIELD}")),
+            );
+            (Some(facet), Some(selection))
+        }
+        None => (None, None),
     };
 
+    let (rows_pipeline_facet, select_rows) = match fields {
+        Some(_) => {
+            let rows_pipeline = pipeline_for_fields_facet(query_plan, query_level)?;
+            let facet = (ROWS_FIELD.to_owned(), rows_pipeline);
+            let selection = ("rows".to_owned(), Bson::String(format!("${ROWS_FIELD}")));
+            (Some(facet), Some(selection))
+        }
+        None => (None, None),
+    };
+
+    for (key, pipeline) in [groups_pipeline_facet, rows_pipeline_facet]
+        .into_iter()
+        .flatten()
+    {
+        facet_pipelines.insert(key, pipeline);
+    }
+
     let selection = Selection::new(
-        [select_aggregates, select_rows]
+        [select_aggregates, select_groups, select_rows]
             .into_iter()
             .flatten()
             .collect(),
