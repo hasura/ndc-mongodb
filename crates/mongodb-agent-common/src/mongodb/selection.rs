@@ -5,10 +5,7 @@ use ndc_models::FieldName;
 use nonempty::NonEmpty;
 
 use crate::{
-    interface_types::MongoAgentError,
-    mongo_query_plan::{Field, NestedArray, NestedField, NestedObject, QueryPlan},
-    mongodb::sanitize::get_field,
-    query::column_ref::ColumnRef,
+    constants::{BSON_ROW_SET_AGGREGATES, BSON_ROW_SET_ROWS}, interface_types::MongoAgentError, mongo_query_plan::{Field, NestedArray, NestedField, NestedObject, QueryPlan}, mongodb::sanitize::get_field, query::column_ref::ColumnRef
 };
 
 pub fn selection_from_query_request(
@@ -77,6 +74,7 @@ fn selection_for_field(
             relationship,
             aggregates,
             fields,
+            groups,
             ..
         } => {
             // The pipeline for the relationship has already selected the requested fields with the
@@ -108,11 +106,11 @@ fn selection_for_field(
                         )
                     })
                     .collect();
-                let mut new_row_set = doc! { "aggregates": aggregate_selecion };
+                let mut new_row_set = doc! { BSON_ROW_SET_AGGREGATES: aggregate_selecion };
 
                 if let Some(field_selection) = field_selection {
                     new_row_set.insert(
-                        "rows",
+                        BSON_ROW_SET_ROWS,
                         doc! {
                             "$map": {
                                 "input": "$$row_set.rows",
@@ -131,7 +129,7 @@ fn selection_for_field(
                 .into())
             } else if let Some(field_selection) = field_selection {
                 Ok(doc! {
-                    "rows": {
+                    BSON_ROW_SET_ROWS: {
                         "$map": {
                             "input": get_field(relationship.as_str()),
                             "in": field_selection,
@@ -140,7 +138,7 @@ fn selection_for_field(
                 }
                 .into())
             } else {
-                Ok(doc! { "rows": [] }.into())
+                Ok(doc! { BSON_ROW_SET_ROWS: [] }.into())
             }
         }
     }

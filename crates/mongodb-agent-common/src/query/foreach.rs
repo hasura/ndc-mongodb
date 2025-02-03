@@ -9,6 +9,7 @@ use super::query_level::QueryLevel;
 use super::query_variable_name::query_variable_name;
 use super::serialization::json_to_bson;
 use super::QueryTarget;
+use crate::constants::{ROW_SET_AGGREGATES_KEY, ROW_SET_GROUPS_KEY, ROW_SET_ROWS_KEY};
 use crate::interface_types::MongoAgentError;
 use crate::mongo_query_plan::{MongoConfiguration, QueryPlan, Type, VariableTypes};
 
@@ -47,16 +48,16 @@ pub fn pipeline_for_foreach(
 
     let selection = if query_request.query.has_aggregates() && query_request.query.has_fields() {
         doc! {
-            "aggregates": { "$getField": { "input": { "$first": "$query" }, "field": "aggregates" } },
-            "rows": { "$getField": { "input": { "$first": "$query" }, "field": "rows" } },
+            ROW_SET_AGGREGATES_KEY: { "$getField": { "input": { "$first": "$query" }, "field": ROW_SET_AGGREGATES_KEY } },
+            ROW_SET_ROWS_KEY: { "$getField": { "input": { "$first": "$query" }, "field": ROW_SET_ROWS_KEY } },
         }
     } else if query_request.query.has_aggregates() {
         doc! {
-            "aggregates": { "$getField": { "input": { "$first": "$query" }, "field": "aggregates" } },
+            ROW_SET_AGGREGATES_KEY: { "$getField": { "input": { "$first": "$query" }, "field": ROW_SET_AGGREGATES_KEY } },
         }
     } else {
         doc! {
-            "rows": "$query"
+            ROW_SET_ROWS_KEY: "$query"
         }
     };
     let selection_stage = Stage::ReplaceWith(Selection::new(selection));

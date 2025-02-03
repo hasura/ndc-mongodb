@@ -11,6 +11,7 @@ use ndc_models::FieldName;
 use crate::{
     aggregation_function::AggregationFunction,
     comparison_function::ComparisonFunction,
+    constants::{ROW_SET_AGGREGATES_KEY, ROW_SET_GROUPS_KEY, ROW_SET_ROWS_KEY},
     interface_types::MongoAgentError,
     mongo_query_plan::{
         Aggregate, ComparisonTarget, ComparisonValue, Expression, Query, QueryPlan, Type,
@@ -86,7 +87,10 @@ pub fn facet_pipelines_for_query(
         .collect();
 
     let select_aggregates = if !aggregate_selections.is_empty() {
-        Some(("aggregates".to_owned(), aggregate_selections.into()))
+        Some((
+            ROW_SET_AGGREGATES_KEY.to_string(),
+            aggregate_selections.into(),
+        ))
     } else {
         None
     };
@@ -96,7 +100,10 @@ pub fn facet_pipelines_for_query(
             let internal_key = "__GROUPS__";
             let groups_pipeline = pipeline_for_groups(grouping);
             let facet = (internal_key.to_string(), groups_pipeline);
-            let selection = ("groups".to_owned(), Bson::String(internal_key.to_string()));
+            let selection = (
+                ROW_SET_GROUPS_KEY.to_string(),
+                Bson::String(internal_key.to_string()),
+            );
             (Some(facet), Some(selection))
         }
         None => (None, None),
@@ -107,7 +114,10 @@ pub fn facet_pipelines_for_query(
             let internal_key = "__ROWS__";
             let rows_pipeline = pipeline_for_fields_facet(query_plan, query_level)?;
             let facet = (internal_key.to_string(), rows_pipeline);
-            let selection = ("rows".to_owned(), Bson::String(internal_key.to_string()));
+            let selection = (
+                ROW_SET_ROWS_KEY.to_string().to_string(),
+                Bson::String(internal_key.to_string()),
+            );
             (Some(facet), Some(selection))
         }
         None => (None, None),

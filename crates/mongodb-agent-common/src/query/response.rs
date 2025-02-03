@@ -52,11 +52,11 @@ type Result<T> = std::result::Result<T, QueryResponseError>;
 #[derive(Debug, Deserialize)]
 struct BsonRowSet {
     #[serde(default)]
-    aggregates: Bson, // name matches BSON_ROW_SET_AGGREGATES
+    aggregates: Bson, // name matches ROW_SET_AGGREGATES_KEY
     #[serde(default)]
-    groups: Vec<bson::Document>, // name matches BSON_ROW_SET_GROUPS
+    groups: Vec<bson::Document>, // name matches ROW_SET_GROUPS_KEY
     #[serde(default)]
-    rows: Vec<bson::Document>, // name matches BSON_ROW_SET_ROWS
+    rows: Vec<bson::Document>, // name matches ROW_SET_ROWS_KEY
 }
 
 #[instrument(name = "Serialize Query Response", skip_all, fields(internal.visibility = "user"))]
