@@ -11,6 +11,7 @@ use ndc_models::FieldName;
 use crate::{
     aggregation_function::AggregationFunction,
     comparison_function::ComparisonFunction,
+    constants::RESULT_FIELD,
     constants::{ROW_SET_AGGREGATES_KEY, ROW_SET_GROUPS_KEY, ROW_SET_ROWS_KEY},
     interface_types::MongoAgentError,
     mongo_query_plan::{
@@ -20,7 +21,7 @@ use crate::{
 };
 
 use super::{
-    column_ref::ColumnRef, constants::RESULT_FIELD, groups::pipeline_for_groups, make_selector,
+    column_ref::ColumnRef, groups::pipeline_for_groups, make_selector,
     pipeline::pipeline_for_fields_facet, query_level::QueryLevel,
 };
 
@@ -102,7 +103,7 @@ pub fn facet_pipelines_for_query(
             let facet = (internal_key.to_string(), groups_pipeline);
             let selection = (
                 ROW_SET_GROUPS_KEY.to_string(),
-                Bson::String(internal_key.to_string()),
+                Bson::String(format!("${internal_key}")),
             );
             (Some(facet), Some(selection))
         }
@@ -116,7 +117,7 @@ pub fn facet_pipelines_for_query(
             let facet = (internal_key.to_string(), rows_pipeline);
             let selection = (
                 ROW_SET_ROWS_KEY.to_string().to_string(),
-                Bson::String(internal_key.to_string()),
+                Bson::String(format!("${internal_key}")),
             );
             (Some(facet), Some(selection))
         }

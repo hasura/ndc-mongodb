@@ -5,7 +5,7 @@ use ndc_models::FieldName;
 use nonempty::NonEmpty;
 
 use crate::{
-    constants::{BSON_ROW_SET_AGGREGATES, BSON_ROW_SET_ROWS}, interface_types::MongoAgentError, mongo_query_plan::{Field, NestedArray, NestedField, NestedObject, QueryPlan}, mongodb::sanitize::get_field, query::column_ref::ColumnRef
+    constants::{ROW_SET_AGGREGATES_KEY, ROW_SET_ROWS_KEY}, interface_types::MongoAgentError, mongo_query_plan::{Field, NestedArray, NestedField, NestedObject, QueryPlan}, mongodb::sanitize::get_field, query::column_ref::ColumnRef
 };
 
 pub fn selection_from_query_request(
@@ -106,11 +106,11 @@ fn selection_for_field(
                         )
                     })
                     .collect();
-                let mut new_row_set = doc! { BSON_ROW_SET_AGGREGATES: aggregate_selecion };
+                let mut new_row_set = doc! { ROW_SET_AGGREGATES_KEY: aggregate_selecion };
 
                 if let Some(field_selection) = field_selection {
                     new_row_set.insert(
-                        BSON_ROW_SET_ROWS,
+                        ROW_SET_ROWS_KEY,
                         doc! {
                             "$map": {
                                 "input": "$$row_set.rows",
@@ -129,7 +129,7 @@ fn selection_for_field(
                 .into())
             } else if let Some(field_selection) = field_selection {
                 Ok(doc! {
-                    BSON_ROW_SET_ROWS: {
+                    ROW_SET_ROWS_KEY: {
                         "$map": {
                             "input": get_field(relationship.as_str()),
                             "in": field_selection,
@@ -138,7 +138,7 @@ fn selection_for_field(
                 }
                 .into())
             } else {
-                Ok(doc! { BSON_ROW_SET_ROWS: [] }.into())
+                Ok(doc! { ROW_SET_ROWS_KEY: [] }.into())
             }
         }
     }
