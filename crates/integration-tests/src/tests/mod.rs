@@ -11,6 +11,7 @@ mod aggregation;
 mod basic;
 mod expressions;
 mod filtering;
+mod grouping;
 mod local_relationship;
 mod native_mutation;
 mod native_query;

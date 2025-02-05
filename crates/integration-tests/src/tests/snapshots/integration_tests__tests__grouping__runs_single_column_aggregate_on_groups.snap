@@ -1,0 +1,90 @@
+---
+source: crates/integration-tests/src/tests/grouping.rs
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").query(query().predicate(binop(\"_gte\",\ntarget!(\"year\"),\nvalue!(2000))).groups(grouping().dimensions([dimension_column(\"year\")]).aggregates([(\"average_viewer_rating\",\ncolumn_aggregate(\"tomatoes.viewer.rating\", \"avg\"),),\n(\"max_runtime\", column_aggregate(\"runtime\", \"max\")),]),),),).await?"
+---
+- groups:
+    - dimensions:
+        - 2015
+      aggregates:
+        average_viewer_rating: 2.7807692307692307
+        max_runtime: 334
+    - dimensions:
+        - 2002
+      aggregates:
+        average_viewer_rating: 3.330030959752322
+        max_runtime: 877
+    - dimensions:
+        - 2001
+      aggregates:
+        average_viewer_rating: 3.324137931034483
+        max_runtime: 705
+    - dimensions:
+        - 2009
+      aggregates:
+        average_viewer_rating: 3.2404786680541102
+        max_runtime: 240
+    - dimensions:
+        - 2016
+      aggregates:
+        average_viewer_rating: 0
+        max_runtime: 111
+    - dimensions:
+        - 2003
+      aggregates:
+        average_viewer_rating: 3.34012474012474
+        max_runtime: 550
+    - dimensions:
+        - 2004
+      aggregates:
+        average_viewer_rating: 3.3562499999999997
+        max_runtime: 540
+    - dimensions:
+        - 2014
+      aggregates:
+        average_viewer_rating: 3.2435114503816793
+        max_runtime: 233
+    - dimensions:
+        - 2008
+      aggregates:
+        average_viewer_rating: 3.308783068783069
+        max_runtime: 501
+    - dimensions:
+        - 2007
+      aggregates:
+        average_viewer_rating: 3.409585798816568
+        max_runtime: 394
+    - dimensions:
+        - 2013
+      aggregates:
+        average_viewer_rating: 3.203333333333333
+        max_runtime: 600
+    - dimensions:
+        - 2006
+      aggregates:
+        average_viewer_rating: 3.4110834371108343
+        max_runtime: 270
+    - dimensions:
+        - 2005
+      aggregates:
+        average_viewer_rating: 3.374792703150912
+        max_runtime: 552
+    - dimensions:
+        - 2012
+      aggregates:
+        average_viewer_rating: 3.189432485322896
+        max_runtime: 360
+    - dimensions:
+        - 2000
+      aggregates:
+        average_viewer_rating: 3.3652459016393443
+        max_runtime: 417
+    - dimensions:
+        - 2010
+      aggregates:
+        average_viewer_rating: 3.2456273764258556
+        max_runtime: 334
+    - dimensions:
+        - 2011
+      aggregates:
+        average_viewer_rating: 3.130639730639731
+        max_runtime: 360
