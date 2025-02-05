@@ -76,10 +76,10 @@ impl ResponseFacets<'_> {
 /// one) in a single facet stage. If we have fields, and no aggregates then the fields pipeline
 /// can instead be appended to `pipeline`.
 pub fn is_response_faceted(query: &Query) -> bool {
-    match ResponseFacets::from_query(query) {
-        ResponseFacets::Combination { .. } => true,
-        _ => false,
-    }
+    matches!(
+        ResponseFacets::from_query(query),
+        ResponseFacets::Combination { .. }
+    )
 }
 
 fn has_aggregates(aggregates: Option<&IndexMap<FieldName, Aggregate>>) -> bool {

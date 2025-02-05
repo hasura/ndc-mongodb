@@ -79,7 +79,7 @@ pub fn pipeline_for_non_foreach(
         let replace_with_stage = Stage::ReplaceWith(select_facet_results);
         Pipeline::from_iter([aggregation_stages, replace_with_stage])
     } else if let Some(grouping) = &query.groups {
-        pipeline_for_groups(grouping)
+        pipeline_for_groups(grouping)?
     } else {
         pipeline_for_fields_facet(query_plan, query_level)?
     };

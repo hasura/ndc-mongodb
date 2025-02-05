@@ -99,7 +99,7 @@ pub fn facet_pipelines_for_query(
     let (groups_pipeline_facet, select_groups) = match groups {
         Some(grouping) => {
             let internal_key = "__GROUPS__";
-            let groups_pipeline = pipeline_for_groups(grouping);
+            let groups_pipeline = pipeline_for_groups(grouping)?;
             let facet = (internal_key.to_string(), groups_pipeline);
             let selection = (
                 ROW_SET_GROUPS_KEY.to_string(),

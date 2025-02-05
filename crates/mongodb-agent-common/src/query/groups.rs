@@ -1,29 +1,48 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
 use indexmap::IndexMap;
 use mongodb::bson::{self, bson};
-use mongodb_support::aggregate::{Accumulator, Pipeline, Selection, Stage};
-use ndc_models::FieldName;
+use mongodb_support::aggregate::{Accumulator, Pipeline, Selection, SortDocument, Stage};
+use ndc_models::{FieldName, OrderDirection};
 
 use crate::{
     aggregation_function::AggregationFunction,
-    mongo_query_plan::{Aggregate, Dimension, Grouping},
+    interface_types::MongoAgentError,
+    mongo_query_plan::{Aggregate, Dimension, GroupOrderBy, GroupOrderByTarget, Grouping},
 };
 
 use super::column_ref::ColumnRef;
 
-pub fn pipeline_for_groups(grouping: &Grouping) -> Pipeline {
+type Result<T> = std::result::Result<T, MongoAgentError>;
+
+// TODO: This function can be infallible once ENG-1562 is implemented.
+pub fn pipeline_for_groups(grouping: &Grouping) -> Result<Pipeline> {
     let group_stage = Stage::Group {
         key_expression: dimensions_to_expression(&grouping.dimensions).into(),
-        accumulators: accumulators_for_aggregates(&grouping.aggregates),
+        accumulators: accumulators_for_aggregates(&grouping.aggregates)?,
     };
 
-    // TODO: to implement 'query.aggregates.group_by.paginate' apply grouping.limit and
+    // TODO: ENG-1562 This implementation does not fully implement the
+    // 'query.aggregates.group_by.order' capability! This only orders by dimensions. Before
+    // enabling the capability we also need to be able to order by aggregates. We need partial
+    // support for order by to get consistent integration test snapshots.
+    let sort_stage = grouping
+        .order_by
+        .as_ref()
+        .map(sort_stage_for_grouping)
+        .transpose()?;
+
+    // TODO: ENG-1563 to implement 'query.aggregates.group_by.paginate' apply grouping.limit and
     // grouping.offset **after** group stage because those options count groups, not documents
 
     let replace_with_stage = Stage::ReplaceWith(selection_for_grouping(grouping));
 
-    Pipeline::new(vec![group_stage, replace_with_stage])
+    Ok(Pipeline::new(
+        [Some(group_stage), sort_stage, Some(replace_with_stage)]
+            .into_iter()
+            .flatten()
+            .collect(),
+    ))
 }
 
 /// Converts each dimension to a MongoDB aggregate expression that evaluates to the appropriate
@@ -50,24 +69,23 @@ fn dimensions_to_expression(dimensions: &[Dimension]) -> bson::Array {
         .collect()
 }
 
+// TODO: This function can be infallible once counts are implemented
 fn accumulators_for_aggregates(
     aggregates: &IndexMap<FieldName, Aggregate>,
-) -> BTreeMap<String, Accumulator> {
+) -> Result<BTreeMap<String, Accumulator>> {
     aggregates
         .into_iter()
-        .map(|(name, aggregate)| (name.to_string(), aggregate_to_accumulator(aggregate)))
+        .map(|(name, aggregate)| Ok((name.to_string(), aggregate_to_accumulator(aggregate)?)))
         .collect()
 }
 
-fn aggregate_to_accumulator(aggregate: &Aggregate) -> Accumulator {
+// TODO: This function can be infallible once counts are implemented
+fn aggregate_to_accumulator(aggregate: &Aggregate) -> Result<Accumulator> {
     use Aggregate as A;
     match aggregate {
-        A::ColumnCount {
-            column,
-            arguments,
-            field_path,
-            distinct,
-        } => todo!(),
+        A::ColumnCount { .. } => Err(MongoAgentError::NotImplemented(Cow::Borrowed(
+            "count aggregates in groups",
+        ))),
         A::SingleColumn {
             column,
             field_path,
@@ -80,14 +98,16 @@ fn aggregate_to_accumulator(aggregate: &Aggregate) -> Accumulator {
                 .into_aggregate_expression()
                 .into_bson();
 
-            match function {
+            Ok(match function {
                 A::Avg => Accumulator::Avg(field_ref),
                 A::Min => Accumulator::Min(field_ref),
                 A::Max => Accumulator::Max(field_ref),
                 A::Sum => Accumulator::Sum(field_ref),
-            }
+            })
         }
-        A::StarCount => todo!(),
+        A::StarCount => Err(MongoAgentError::NotImplemented(Cow::Borrowed(
+            "count aggregates in groups",
+        ))),
     }
 }
 
@@ -105,4 +125,26 @@ pub fn selection_for_grouping(grouping: &Grouping) -> Selection {
         .chain(selected_aggregates)
         .collect();
     Selection::new(selection_doc)
+}
+
+// TODO: ENG-1562 This is where we need to implement sorting by aggregates
+fn sort_stage_for_grouping(order_by: &GroupOrderBy) -> Result<Stage> {
+    let sort_doc = order_by
+        .elements
+        .iter()
+        .map(|element| match element.target {
+            GroupOrderByTarget::Dimension { index } => {
+                let key = format!("_id.{index}");
+                let direction = match element.order_direction {
+                    OrderDirection::Asc => bson!(1),
+                    OrderDirection::Desc => bson!(-1),
+                };
+                Ok((key, direction))
+            }
+            GroupOrderByTarget::Aggregate { .. } => Err(MongoAgentError::NotImplemented(
+                Cow::Borrowed("sorting groups by aggregate"),
+            )),
+        })
+        .collect::<Result<_>>()?;
+    Ok(Stage::Sort(SortDocument::from_doc(sort_doc)))
 }
