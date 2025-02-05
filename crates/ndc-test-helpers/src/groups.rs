@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use indexmap::IndexMap;
 use ndc_models::{
     Aggregate, Argument, ArgumentName, Dimension, FieldName, GroupExpression, GroupOrderBy,
-    Grouping, PathElement,
+    GroupOrderByElement, Grouping, OrderBy, OrderDirection, PathElement,
 };
 
 use crate::column::Column;
@@ -128,5 +128,17 @@ impl From<DimensionColumnBuilder> for Dimension {
             arguments: value.arguments,
             field_path: value.field_path,
         }
+    }
+}
+
+/// Produces a consistent ordering for up to 10 dimensions
+pub fn ordered_dimensions() -> GroupOrderBy {
+    GroupOrderBy {
+        elements: (0..10)
+            .map(|index| GroupOrderByElement {
+                order_direction: OrderDirection::Asc,
+                target: ndc_models::GroupOrderByTarget::Dimension { index },
+            })
+            .collect(),
     }
 }

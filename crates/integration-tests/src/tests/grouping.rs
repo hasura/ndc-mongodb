@@ -1,7 +1,7 @@
 use insta::assert_yaml_snapshot;
 use ndc_test_helpers::{
-    binop, column_aggregate, dimension_column, field, grouping, is_in, query, query_request,
-    target, value,
+    binop, column_aggregate, dimension_column, grouping, or, ordered_dimensions, query,
+    query_request, target, value,
 };
 
 use crate::{connector::Connector, run_connector_query};
@@ -15,7 +15,10 @@ async fn runs_single_column_aggregate_on_groups() -> anyhow::Result<()> {
                 query()
                     // The predicate avoids an error when encountering documents where `year` is
                     // a string instead of a number.
-                    .predicate(binop("_gte", target!("year"), value!(2000)))
+                    .predicate(or([
+                        binop("_eq", target!("year"), value!(0)),
+                        binop("_ne", target!("year"), value!(0)),
+                    ]))
                     .groups(
                         grouping()
                             .dimensions([dimension_column("year")])
@@ -25,7 +28,8 @@ async fn runs_single_column_aggregate_on_groups() -> anyhow::Result<()> {
                                     column_aggregate("tomatoes.viewer.rating", "avg"),
                                 ),
                                 ("max_runtime", column_aggregate("runtime", "max")),
-                            ]),
+                            ])
+                            .order_by(ordered_dimensions()),
                     ),
             ),
         )
@@ -52,7 +56,8 @@ async fn groups_by_multiple_dimensions() -> anyhow::Result<()> {
                             .aggregates([(
                                 "average_viewer_rating",
                                 column_aggregate("tomatoes.viewer.rating", "avg"),
-                            )]),
+                            )])
+                            .order_by(ordered_dimensions()),
                     ),
             ),
         )
@@ -79,7 +84,8 @@ async fn combines_aggregates_and_groups_in_one_query() -> anyhow::Result<()> {
                             .aggregates([(
                                 "average_viewer_rating_by_year",
                                 column_aggregate("tomatoes.viewer.rating", "avg"),
-                            )]),
+                            )])
+                            .order_by(ordered_dimensions()),
                     ),
             ),
         )
