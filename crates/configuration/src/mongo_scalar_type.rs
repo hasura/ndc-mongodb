@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use mongodb_support::{BsonScalarType, EXTENDED_JSON_TYPE_NAME};
 use ndc_query_plan::QueryPlanError;
 
@@ -37,6 +39,17 @@ impl TryFrom<&ndc_models::ScalarTypeName> for MongoScalarType {
             let t = BsonScalarType::from_bson_name(&name_str)
                 .map_err(|_| QueryPlanError::UnknownScalarType(name.to_owned()))?;
             Ok(MongoScalarType::Bson(t))
+        }
+    }
+}
+
+impl Display for MongoScalarType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MongoScalarType::ExtendedJSON => write!(f, "extendedJSON"),
+            MongoScalarType::Bson(bson_scalar_type) => {
+                write!(f, "{}", bson_scalar_type.bson_name())
+            }
         }
     }
 }

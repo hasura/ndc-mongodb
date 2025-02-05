@@ -18,14 +18,14 @@ pub enum BsonToJsonError {
     #[error("error converting 64-bit floating point number from BSON to JSON: {0}")]
     DoubleConversion(f64),
 
-    #[error("input object of type {0:?} is missing a field, \"{1}\"")]
+    #[error("input object of type {0} is missing a field, \"{1}\"")]
     MissingObjectField(Type, String),
 
     #[error("error converting value to JSON: {0}")]
     Serde(#[from] serde_json::Error),
 
     // TODO: It would be great if we could capture a path into the larger BSON value here
-    #[error("expected a value of type {0:?}, but got {1}")]
+    #[error("expected a value of type {0}, but got {1}")]
     TypeMismatch(Type, Bson),
 
     #[error("unknown object type, \"{0}\"")]

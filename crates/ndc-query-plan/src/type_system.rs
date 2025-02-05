@@ -1,5 +1,5 @@
 use ref_cast::RefCast;
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, fmt::Display};
 
 use itertools::Itertools as _;
 use ndc_models::{self as ndc, ArgumentName, ObjectTypeName};
@@ -87,6 +87,30 @@ impl<S> Type<S> {
     }
 }
 
+impl<ScalarType: Display> Display for Type<ScalarType> {
+    /// Display types using GraphQL-style syntax
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fn helper<S>(t: &Type<S>, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+        where
+            S: Display,
+        {
+            match t {
+                Type::Scalar(s) => write!(f, "{}", s),
+                Type::Object(ot) => write!(f, "{ot}"),
+                Type::ArrayOf(t) => write!(f, "[{t}]"),
+                Type::Nullable(t) => write!(f, "{t}"),
+            }
+        }
+        match self {
+            Type::Nullable(t) => helper(t, f),
+            t => {
+                helper(t, f)?;
+                write!(f, "!")
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ObjectType<ScalarType> {
     /// A type name may be tracked for error reporting. The name does not affect how query plans
@@ -127,6 +151,20 @@ impl<S> ObjectType<S> {
                 field_name: field_name.clone(),
                 path: Default::default(),
             })
+    }
+}
+
+impl<S: Display> Display for ObjectType<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{ ")?;
+        for (index, (name, field)) in self.fields.iter().enumerate() {
+            write!(f, "{name}: {}", field.r#type)?;
+            if index < self.fields.len() - 1 {
+                write!(f, ", ")?;
+            }
+        }
+        write!(f, " }}")?;
+        Ok(())
     }
 }
 
