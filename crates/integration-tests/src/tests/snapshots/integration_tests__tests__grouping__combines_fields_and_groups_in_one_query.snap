@@ -1,0 +1,460 @@
+---
+source: crates/integration-tests/src/tests/grouping.rs
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").query(query().predicate(or([binop(\"_gt\",\ntarget!(\"year\"), value!(0)),\nbinop(\"_lte\", target!(\"year\"),\nvalue!(0)),])).fields([field!(\"title\"),\nfield!(\"year\")]).order_by([asc!(\"_id\")]).groups(grouping().dimensions([dimension_column(\"year\")]).aggregates([(\"average_viewer_rating_by_year\",\ncolumn_aggregate(\"tomatoes.viewer.rating\",\n\"avg\"),)]).order_by(ordered_dimensions()),).limit(3),),).await?"
+---
+- rows:
+    - title: Blacksmith Scene
+      year: 1893
+    - title: The Great Train Robbery
+      year: 1903
+    - title: The Land Beyond the Sunset
+      year: 1912
+  groups:
+    - dimensions:
+        - 1891
+      aggregates:
+        average_viewer_rating_by_year: ~
+    - dimensions:
+        - 1893
+      aggregates:
+        average_viewer_rating_by_year: 3
+    - dimensions:
+        - 1894
+      aggregates:
+        average_viewer_rating_by_year: 3.8
+    - dimensions:
+        - 1896
+      aggregates:
+        average_viewer_rating_by_year: 4
+    - dimensions:
+        - 1903
+      aggregates:
+        average_viewer_rating_by_year: 3.7
+    - dimensions:
+        - 1909
+      aggregates:
+        average_viewer_rating_by_year: 3.6
+    - dimensions:
+        - 1911
+      aggregates:
+        average_viewer_rating_by_year: 3.4
+    - dimensions:
+        - 1912
+      aggregates:
+        average_viewer_rating_by_year: 3.7
+    - dimensions:
+        - 1913
+      aggregates:
+        average_viewer_rating_by_year: 3
+    - dimensions:
+        - 1914
+      aggregates:
+        average_viewer_rating_by_year: 3.0666666666666664
+    - dimensions:
+        - 1915
+      aggregates:
+        average_viewer_rating_by_year: 3.5200000000000005
+    - dimensions:
+        - 1916
+      aggregates:
+        average_viewer_rating_by_year: 2.525
+    - dimensions:
+        - 1917
+      aggregates:
+        average_viewer_rating_by_year: 4
+    - dimensions:
+        - 1918
+      aggregates:
+        average_viewer_rating_by_year: 3.6
+    - dimensions:
+        - 1919
+      aggregates:
+        average_viewer_rating_by_year: 3.5
+    - dimensions:
+        - 1920
+      aggregates:
+        average_viewer_rating_by_year: 2.983333333333333
+    - dimensions:
+        - 1921
+      aggregates:
+        average_viewer_rating_by_year: 3.533333333333333
+    - dimensions:
+        - 1922
+      aggregates:
+        average_viewer_rating_by_year: 3.857142857142857
+    - dimensions:
+        - 1923
+      aggregates:
+        average_viewer_rating_by_year: 3.766666666666667
+    - dimensions:
+        - 1924
+      aggregates:
+        average_viewer_rating_by_year: 3.855555555555556
+    - dimensions:
+        - 1925
+      aggregates:
+        average_viewer_rating_by_year: 3.8230769230769233
+    - dimensions:
+        - 1926
+      aggregates:
+        average_viewer_rating_by_year: 3.288888888888889
+    - dimensions:
+        - 1927
+      aggregates:
+        average_viewer_rating_by_year: 3.89090909090909
+    - dimensions:
+        - 1928
+      aggregates:
+        average_viewer_rating_by_year: 3.922222222222222
+    - dimensions:
+        - 1929
+      aggregates:
+        average_viewer_rating_by_year: 3.2700000000000005
+    - dimensions:
+        - 1930
+      aggregates:
+        average_viewer_rating_by_year: 3.591666666666667
+    - dimensions:
+        - 1931
+      aggregates:
+        average_viewer_rating_by_year: 3.658333333333333
+    - dimensions:
+        - 1932
+      aggregates:
+        average_viewer_rating_by_year: 3.764
+    - dimensions:
+        - 1933
+      aggregates:
+        average_viewer_rating_by_year: 3.6296296296296298
+    - dimensions:
+        - 1934
+      aggregates:
+        average_viewer_rating_by_year: 3.64375
+    - dimensions:
+        - 1935
+      aggregates:
+        average_viewer_rating_by_year: 3.53
+    - dimensions:
+        - 1936
+      aggregates:
+        average_viewer_rating_by_year: 3.405
+    - dimensions:
+        - 1937
+      aggregates:
+        average_viewer_rating_by_year: 3.592307692307692
+    - dimensions:
+        - 1938
+      aggregates:
+        average_viewer_rating_by_year: 3.6318181818181823
+    - dimensions:
+        - 1939
+      aggregates:
+        average_viewer_rating_by_year: 3.685714285714286
+    - dimensions:
+        - 1940
+      aggregates:
+        average_viewer_rating_by_year: 3.6666666666666665
+    - dimensions:
+        - 1941
+      aggregates:
+        average_viewer_rating_by_year: 3.6548387096774193
+    - dimensions:
+        - 1942
+      aggregates:
+        average_viewer_rating_by_year: 3.4027777777777777
+    - dimensions:
+        - 1943
+      aggregates:
+        average_viewer_rating_by_year: 3.4444444444444446
+    - dimensions:
+        - 1944
+      aggregates:
+        average_viewer_rating_by_year: 3.5966666666666667
+    - dimensions:
+        - 1945
+      aggregates:
+        average_viewer_rating_by_year: 3.520512820512821
+    - dimensions:
+        - 1946
+      aggregates:
+        average_viewer_rating_by_year: 3.7295454545454545
+    - dimensions:
+        - 1947
+      aggregates:
+        average_viewer_rating_by_year: 3.5789473684210527
+    - dimensions:
+        - 1948
+      aggregates:
+        average_viewer_rating_by_year: 3.602941176470588
+    - dimensions:
+        - 1949
+      aggregates:
+        average_viewer_rating_by_year: 3.7095238095238097
+    - dimensions:
+        - 1950
+      aggregates:
+        average_viewer_rating_by_year: 3.3823529411764706
+    - dimensions:
+        - 1951
+      aggregates:
+        average_viewer_rating_by_year: 3.5825396825396822
+    - dimensions:
+        - 1952
+      aggregates:
+        average_viewer_rating_by_year: 3.7
+    - dimensions:
+        - 1953
+      aggregates:
+        average_viewer_rating_by_year: 3.5975
+    - dimensions:
+        - 1954
+      aggregates:
+        average_viewer_rating_by_year: 3.420967741935484
+    - dimensions:
+        - 1955
+      aggregates:
+        average_viewer_rating_by_year: 3.631645569620253
+    - dimensions:
+        - 1956
+      aggregates:
+        average_viewer_rating_by_year: 3.55625
+    - dimensions:
+        - 1957
+      aggregates:
+        average_viewer_rating_by_year: 3.6
+    - dimensions:
+        - 1958
+      aggregates:
+        average_viewer_rating_by_year: 3.3853932584269666
+    - dimensions:
+        - 1959
+      aggregates:
+        average_viewer_rating_by_year: 3.714942528735632
+    - dimensions:
+        - 1960
+      aggregates:
+        average_viewer_rating_by_year: 3.634065934065934
+    - dimensions:
+        - 1961
+      aggregates:
+        average_viewer_rating_by_year: 3.638297872340426
+    - dimensions:
+        - 1962
+      aggregates:
+        average_viewer_rating_by_year: 3.6618556701030927
+    - dimensions:
+        - 1963
+      aggregates:
+        average_viewer_rating_by_year: 3.517171717171717
+    - dimensions:
+        - 1964
+      aggregates:
+        average_viewer_rating_by_year: 3.6259259259259258
+    - dimensions:
+        - 1965
+      aggregates:
+        average_viewer_rating_by_year: 3.618181818181818
+    - dimensions:
+        - 1966
+      aggregates:
+        average_viewer_rating_by_year: 3.4982300884955753
+    - dimensions:
+        - 1967
+      aggregates:
+        average_viewer_rating_by_year: 3.394444444444445
+    - dimensions:
+        - 1968
+      aggregates:
+        average_viewer_rating_by_year: 3.567272727272727
+    - dimensions:
+        - 1969
+      aggregates:
+        average_viewer_rating_by_year: 3.5587719298245615
+    - dimensions:
+        - 1970
+      aggregates:
+        average_viewer_rating_by_year: 3.4991869918699186
+    - dimensions:
+        - 1971
+      aggregates:
+        average_viewer_rating_by_year: 3.604385964912281
+    - dimensions:
+        - 1972
+      aggregates:
+        average_viewer_rating_by_year: 3.55703125
+    - dimensions:
+        - 1973
+      aggregates:
+        average_viewer_rating_by_year: 3.599186991869918
+    - dimensions:
+        - 1974
+      aggregates:
+        average_viewer_rating_by_year: 3.544859813084112
+    - dimensions:
+        - 1975
+      aggregates:
+        average_viewer_rating_by_year: 3.456880733944954
+    - dimensions:
+        - 1976
+      aggregates:
+        average_viewer_rating_by_year: 3.4511999999999996
+    - dimensions:
+        - 1977
+      aggregates:
+        average_viewer_rating_by_year: 3.502325581395349
+    - dimensions:
+        - 1978
+      aggregates:
+        average_viewer_rating_by_year: 3.304615384615385
+    - dimensions:
+        - 1979
+      aggregates:
+        average_viewer_rating_by_year: 3.481203007518797
+    - dimensions:
+        - 1980
+      aggregates:
+        average_viewer_rating_by_year: 3.4017543859649124
+    - dimensions:
+        - 1981
+      aggregates:
+        average_viewer_rating_by_year: 3.4079545454545452
+    - dimensions:
+        - 1982
+      aggregates:
+        average_viewer_rating_by_year: 3.4505813953488373
+    - dimensions:
+        - 1983
+      aggregates:
+        average_viewer_rating_by_year: 3.451428571428571
+    - dimensions:
+        - 1984
+      aggregates:
+        average_viewer_rating_by_year: 3.476923076923077
+    - dimensions:
+        - 1985
+      aggregates:
+        average_viewer_rating_by_year: 3.3555555555555556
+    - dimensions:
+        - 1986
+      aggregates:
+        average_viewer_rating_by_year: 3.523529411764706
+    - dimensions:
+        - 1987
+      aggregates:
+        average_viewer_rating_by_year: 3.396
+    - dimensions:
+        - 1988
+      aggregates:
+        average_viewer_rating_by_year: 3.3442307692307693
+    - dimensions:
+        - 1989
+      aggregates:
+        average_viewer_rating_by_year: 3.338655462184874
+    - dimensions:
+        - 1990
+      aggregates:
+        average_viewer_rating_by_year: 3.3615062761506276
+    - dimensions:
+        - 1991
+      aggregates:
+        average_viewer_rating_by_year: 3.3329317269076304
+    - dimensions:
+        - 1992
+      aggregates:
+        average_viewer_rating_by_year: 3.3707746478873237
+    - dimensions:
+        - 1993
+      aggregates:
+        average_viewer_rating_by_year: 3.332291666666667
+    - dimensions:
+        - 1994
+      aggregates:
+        average_viewer_rating_by_year: 3.369745222929936
+    - dimensions:
+        - 1995
+      aggregates:
+        average_viewer_rating_by_year: 3.270694087403599
+    - dimensions:
+        - 1996
+      aggregates:
+        average_viewer_rating_by_year: 3.3314685314685315
+    - dimensions:
+        - 1997
+      aggregates:
+        average_viewer_rating_by_year: 3.3460176991150443
+    - dimensions:
+        - 1998
+      aggregates:
+        average_viewer_rating_by_year: 3.3237918215613385
+    - dimensions:
+        - 1999
+      aggregates:
+        average_viewer_rating_by_year: 3.34263862332696
+    - dimensions:
+        - 2000
+      aggregates:
+        average_viewer_rating_by_year: 3.3652459016393443
+    - dimensions:
+        - 2001
+      aggregates:
+        average_viewer_rating_by_year: 3.324137931034483
+    - dimensions:
+        - 2002
+      aggregates:
+        average_viewer_rating_by_year: 3.330030959752322
+    - dimensions:
+        - 2003
+      aggregates:
+        average_viewer_rating_by_year: 3.34012474012474
+    - dimensions:
+        - 2004
+      aggregates:
+        average_viewer_rating_by_year: 3.3562499999999997
+    - dimensions:
+        - 2005
+      aggregates:
+        average_viewer_rating_by_year: 3.374792703150912
+    - dimensions:
+        - 2006
+      aggregates:
+        average_viewer_rating_by_year: 3.4110834371108343
+    - dimensions:
+        - 2007
+      aggregates:
+        average_viewer_rating_by_year: 3.409585798816568
+    - dimensions:
+        - 2008
+      aggregates:
+        average_viewer_rating_by_year: 3.308783068783069
+    - dimensions:
+        - 2009
+      aggregates:
+        average_viewer_rating_by_year: 3.2404786680541102
+    - dimensions:
+        - 2010
+      aggregates:
+        average_viewer_rating_by_year: 3.2456273764258556
+    - dimensions:
+        - 2011
+      aggregates:
+        average_viewer_rating_by_year: 3.130639730639731
+    - dimensions:
+        - 2012
+      aggregates:
+        average_viewer_rating_by_year: 3.189432485322896
+    - dimensions:
+        - 2013
+      aggregates:
+        average_viewer_rating_by_year: 3.203333333333333
+    - dimensions:
+        - 2014
+      aggregates:
+        average_viewer_rating_by_year: 3.2435114503816793
+    - dimensions:
+        - 2015
+      aggregates:
+        average_viewer_rating_by_year: 2.7807692307692307
+    - dimensions:
+        - 2016
+      aggregates:
+        average_viewer_rating_by_year: 0

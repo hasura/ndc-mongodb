@@ -5,6 +5,7 @@ mod aggregates;
 pub use aggregates::*;
 mod collection_info;
 mod column;
+pub use column::*;
 mod comparison_target;
 mod comparison_value;
 mod exists_in_collection;

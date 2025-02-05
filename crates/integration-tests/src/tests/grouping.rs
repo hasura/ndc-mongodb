@@ -1,6 +1,6 @@
 use insta::assert_yaml_snapshot;
 use ndc_test_helpers::{
-    binop, column_aggregate, dimension_column, grouping, or, ordered_dimensions, query,
+    asc, binop, column_aggregate, dimension_column, field, grouping, or, ordered_dimensions, query,
     query_request, target, value,
 };
 
@@ -87,6 +87,38 @@ async fn combines_aggregates_and_groups_in_one_query() -> anyhow::Result<()> {
                             )])
                             .order_by(ordered_dimensions()),
                     ),
+            ),
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn combines_fields_and_groups_in_one_query() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::SampleMflix,
+            query_request().collection("movies").query(
+                query()
+                    // The predicate avoids an error when encountering documents where `year` is
+                    // a string instead of a number.
+                    .predicate(or([
+                        binop("_gt", target!("year"), value!(0)),
+                        binop("_lte", target!("year"), value!(0)),
+                    ]))
+                    .fields([field!("title"), field!("year")])
+                    .order_by([asc!("_id")])
+                    .groups(
+                        grouping()
+                            .dimensions([dimension_column("year")])
+                            .aggregates([(
+                                "average_viewer_rating_by_year",
+                                column_aggregate("tomatoes.viewer.rating", "avg"),
+                            )])
+                            .order_by(ordered_dimensions()),
+                    )
+                    .limit(3),
             ),
         )
         .await?

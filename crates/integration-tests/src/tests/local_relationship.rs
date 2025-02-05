@@ -1,8 +1,8 @@
 use crate::{connector::Connector, graphql_query, run_connector_query};
 use insta::assert_yaml_snapshot;
 use ndc_test_helpers::{
-    asc, binop, exists, field, query, query_request, related, relation_field,
-    relationship, target, value,
+    asc, binop, column, column_aggregate, dimension_column, exists, field, grouping,
+    ordered_dimensions, query, query_request, related, relation_field, relationship, target, value,
 };
 
 #[tokio::test]
@@ -238,6 +238,42 @@ async fn joins_relationships_on_nested_key() -> anyhow::Result<()> {
                     "schools_departments",
                     relationship("schools", [("_id", &["departments", "math_department_id"])])
                 )])
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn gets_groups_through_relationship() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::Chinook,
+            query_request()
+                .collection("Album")
+                .query(
+                    query()
+                    .limit(5)
+                    .fields([relation_field!("tracks" => "album_tracks", query()
+                      .groups(grouping()
+                        .dimensions([dimension_column(column("Name").from_relationship("track_genre"))])
+                          .aggregates([(
+                            "average_price", column_aggregate("UnitPrice", "avg")
+                          )])
+                          .order_by(ordered_dimensions()),
+                      )
+                    )])
+                )
+                .relationships([
+                    (
+                        "album_tracks",
+                        relationship("Track", [("albumId", &["albumId"])])
+                    ),
+                    (
+                        "track_genre",
+                        relationship("Genre", [("genreId", &["genreId"])]).object_type()
+                    )
+                ])
         )
         .await?
     );
