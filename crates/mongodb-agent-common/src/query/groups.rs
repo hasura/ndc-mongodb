@@ -21,7 +21,7 @@ pub fn pipeline_for_groups(grouping: &Grouping) -> Pipeline {
     // TODO: to implement 'query.aggregates.group_by.paginate' apply grouping.limit and
     // grouping.offset **after** group stage because those options count groups, not documents
 
-    let replace_with_stage = Stage::ReplaceWith(selection(grouping));
+    let replace_with_stage = Stage::ReplaceWith(selection_for_grouping(grouping));
 
     Pipeline::new(vec![group_stage, replace_with_stage])
 }
@@ -91,7 +91,7 @@ fn aggregate_to_accumulator(aggregate: &Aggregate) -> Accumulator {
     }
 }
 
-fn selection(grouping: &Grouping) -> Selection {
+pub fn selection_for_grouping(grouping: &Grouping) -> Selection {
     let dimensions = ("_id".to_string(), bson!("$_id"));
     let selected_aggregates = grouping.aggregates.keys().map(|key| {
         (

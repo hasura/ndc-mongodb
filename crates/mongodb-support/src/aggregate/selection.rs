@@ -36,6 +36,12 @@ impl Extend<(String, Bson)> for Selection {
     }
 }
 
+impl From<Selection> for Bson {
+    fn from(value: Selection) -> Self {
+        value.0.into()
+    }
+}
+
 impl From<Selection> for bson::Document {
     fn from(value: Selection) -> Self {
         value.0

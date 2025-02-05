@@ -4,11 +4,12 @@ use mongodb::bson::{self, bson, doc, Bson};
 use mongodb_support::aggregate::{Pipeline, Selection, Stage};
 use ndc_query_plan::VariableSet;
 
+use super::is_response_faceted::ResponseFacets;
 use super::pipeline::pipeline_for_non_foreach;
 use super::query_level::QueryLevel;
 use super::query_variable_name::query_variable_name;
 use super::serialization::json_to_bson;
-use super::{is_response_faceted, QueryTarget};
+use super::QueryTarget;
 use crate::constants::{ROW_SET_AGGREGATES_KEY, ROW_SET_GROUPS_KEY, ROW_SET_ROWS_KEY};
 use crate::interface_types::MongoAgentError;
 use crate::mongo_query_plan::{MongoConfiguration, QueryPlan, Type, VariableTypes};
@@ -46,36 +47,36 @@ pub fn pipeline_for_foreach(
         r#as: "query".to_string(),
     };
 
-    let selection = if is_response_faceted(&query_request.query) {
-        let mut keys = vec![];
-        if query_request.query.has_aggregates() {
-            keys.push(ROW_SET_AGGREGATES_KEY);
+    let selection = match ResponseFacets::from_query(&query_request.query) {
+        ResponseFacets::Combination {
+            aggregates,
+            fields,
+            groups,
+        } => {
+            let mut keys = vec![];
+            if aggregates.is_some() {
+                keys.push(ROW_SET_AGGREGATES_KEY);
+            }
+            if fields.is_some() {
+                keys.push(ROW_SET_ROWS_KEY);
+            }
+            if groups.is_some() {
+                keys.push(ROW_SET_GROUPS_KEY)
+            }
+            keys.into_iter()
+                .map(|key| {
+                    (
+                        key.to_string(),
+                        bson!({ "$getField": { "input": { "$first": "$query" }, "field": key } }),
+                    )
+                })
+                .collect()
         }
-        if query_request.query.has_fields() {
-            keys.push(ROW_SET_ROWS_KEY);
+        ResponseFacets::FieldsOnly(_) => {
+            doc! { ROW_SET_ROWS_KEY: "$query" }
         }
-        if query_request.query.has_groups() {
-            keys.push(ROW_SET_GROUPS_KEY)
-        }
-        keys.into_iter()
-            .map(|key| {
-                (
-                    key.to_string(),
-                    bson!({ "$getField": { "input": { "$first": "$query" }, "field": key } }),
-                )
-            })
-            .collect()
-    } else if query_request.query.has_aggregates() {
-        doc! {
-            ROW_SET_AGGREGATES_KEY: { "$getField": { "input": { "$first": "$query" }, "field": ROW_SET_AGGREGATES_KEY } },
-        }
-    } else if query_request.query.has_groups() {
-        doc! {
-            ROW_SET_GROUPS_KEY: "$query"
-        }
-    } else {
-        doc! {
-            ROW_SET_ROWS_KEY: "$query"
+        ResponseFacets::GroupsOnly(_) => {
+            doc! { ROW_SET_GROUPS_KEY: "$query" }
         }
     };
     let selection_stage = Stage::ReplaceWith(Selection::new(selection));

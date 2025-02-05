@@ -5,25 +5,15 @@ use tracing::instrument;
 use crate::{
     interface_types::MongoAgentError,
     mongo_query_plan::{MongoConfiguration, Query, QueryPlan},
-    mongodb::{sanitize::get_field, selection_from_query_request},
+    mongodb::sanitize::get_field,
 };
 
 use super::{
-    aggregates::facet_pipelines_for_query, foreach::pipeline_for_foreach, groups::pipeline_for_groups, make_selector, make_sort::make_sort_stages, native_query::pipeline_for_native_query, query_level::QueryLevel, relations::pipeline_for_relations
+    aggregates::facet_pipelines_for_query, foreach::pipeline_for_foreach,
+    groups::pipeline_for_groups, is_response_faceted::is_response_faceted, make_selector,
+    make_sort::make_sort_stages, native_query::pipeline_for_native_query, query_level::QueryLevel,
+    relations::pipeline_for_relations, selection::selection_for_fields,
 };
-
-/// A query that includes aggregates will be run using a $facet pipeline stage, while a query
-/// without aggregates will not. The choice affects how result rows are mapped to a QueryResponse.
-///
-/// If we have aggregate pipelines they should be combined with the fields pipeline (if there is
-/// one) in a single facet stage. If we have fields, and no aggregates then the fields pipeline
-/// can instead be appended to `pipeline`.
-pub fn is_response_faceted(query: &Query) -> bool {
-    let aggregates = if query.has_aggregates() { 2 } else { 0 };
-    let fields = if query.has_fields() { 1 } else { 0 };
-    let groups = if query.has_groups() { 1 } else { 0 };
-    aggregates + fields + groups > 1
-}
 
 /// Shared logic to produce a MongoDB aggregation pipeline for a query request.
 #[instrument(name = "Build Query Pipeline" skip_all, fields(internal.visibility = "user"))]
@@ -112,7 +102,7 @@ pub fn pipeline_for_fields_facet(
         ..
     } = &query_plan.query;
 
-    let mut selection = selection_from_query_request(query_plan)?;
+    let mut selection = selection_for_fields(query_plan.query.fields.as_ref())?;
     if query_level != QueryLevel::Top {
         // Queries higher up the chain might need to reference relationships from this query. So we
         // forward relationship arrays if this is not the top-level query.

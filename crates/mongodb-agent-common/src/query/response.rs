@@ -6,25 +6,22 @@ use itertools::Itertools;
 use mongodb::bson::{self, Bson};
 use mongodb_support::ExtendedJsonMode;
 use ndc_models::{Group, QueryResponse, RowFieldValue, RowSet};
-use serde::Deserialize;
 use thiserror::Error;
 use tracing::instrument;
 
 use crate::{
+    constants::{BsonRowSet, ROW_SET_AGGREGATES_KEY, ROW_SET_GROUPS_KEY, ROW_SET_ROWS_KEY},
     mongo_query_plan::{
         Aggregate, Field, Grouping, NestedArray, NestedField, NestedObject, ObjectField,
         ObjectType, Query, QueryPlan, Type,
     },
     query::{
-        is_response_faceted,
+        is_response_faceted::is_response_faceted,
         serialization::{bson_to_json, BsonToJsonError},
     },
 };
 
-use super::{
-    constants::{BSON_ROW_SET_AGGREGATES, BSON_ROW_SET_GROUPS, BSON_ROW_SET_ROWS},
-    serialization::is_nullable,
-};
+use super::serialization::is_nullable;
 
 #[derive(Debug, Error)]
 pub enum QueryResponseError {
@@ -48,16 +45,6 @@ pub enum QueryResponseError {
 }
 
 type Result<T> = std::result::Result<T, QueryResponseError>;
-
-#[derive(Debug, Deserialize)]
-struct BsonRowSet {
-    #[serde(default)]
-    aggregates: Bson, // name matches ROW_SET_AGGREGATES_KEY
-    #[serde(default)]
-    groups: Vec<bson::Document>, // name matches ROW_SET_GROUPS_KEY
-    #[serde(default)]
-    rows: Vec<bson::Document>, // name matches ROW_SET_ROWS_KEY
-}
 
 #[instrument(name = "Serialize Query Response", skip_all, fields(internal.visibility = "user"))]
 pub fn serialize_query_response(
@@ -279,7 +266,7 @@ fn type_for_row_set(
 
     if let Some(aggregates) = aggregates {
         object_fields.insert(
-            BSON_ROW_SET_AGGREGATES.into(),
+            ROW_SET_AGGREGATES_KEY.into(),
             ObjectField {
                 r#type: Type::Object(type_for_aggregates(aggregates)),
                 parameters: Default::default(),
@@ -290,7 +277,7 @@ fn type_for_row_set(
     if let Some(query_fields) = fields {
         let row_type = type_for_row(path, query_fields)?;
         object_fields.insert(
-            BSON_ROW_SET_ROWS.into(),
+            ROW_SET_ROWS_KEY.into(),
             ObjectField {
                 r#type: Type::ArrayOf(Box::new(row_type)),
                 parameters: Default::default(),
@@ -300,7 +287,7 @@ fn type_for_row_set(
 
     if let Some(grouping) = groups {
         object_fields.insert(
-            BSON_ROW_SET_GROUPS.into(),
+            ROW_SET_GROUPS_KEY.into(),
             ObjectField {
                 r#type: Type::Object(type_for_aggregates(&grouping.aggregates)),
                 parameters: Default::default(),

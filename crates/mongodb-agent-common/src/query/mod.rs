@@ -3,6 +3,7 @@ pub mod column_ref;
 mod execute_query_request;
 mod foreach;
 mod groups;
+mod is_response_faceted;
 mod make_selector;
 mod make_sort;
 mod native_query;
@@ -12,6 +13,7 @@ mod query_target;
 mod query_variable_name;
 mod relations;
 pub mod response;
+mod selection;
 pub mod serialization;
 
 use ndc_models::{QueryRequest, QueryResponse};
@@ -20,7 +22,7 @@ use self::execute_query_request::execute_query_request;
 pub use self::{
     make_selector::make_selector,
     make_sort::make_sort_stages,
-    pipeline::{is_response_faceted, pipeline_for_non_foreach, pipeline_for_query_request},
+    pipeline::{pipeline_for_non_foreach, pipeline_for_query_request},
     query_target::QueryTarget,
     response::QueryResponseError,
 };
