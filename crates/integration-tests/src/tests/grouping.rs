@@ -16,8 +16,8 @@ async fn runs_single_column_aggregate_on_groups() -> anyhow::Result<()> {
                     // The predicate avoids an error when encountering documents where `year` is
                     // a string instead of a number.
                     .predicate(or([
-                        binop("_eq", target!("year"), value!(0)),
-                        binop("_ne", target!("year"), value!(0)),
+                        binop("_gt", target!("year"), value!(0)),
+                        binop("_lte", target!("year"), value!(0)),
                     ]))
                     .groups(
                         grouping()
