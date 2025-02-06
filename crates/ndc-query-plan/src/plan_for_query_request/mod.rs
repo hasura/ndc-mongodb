@@ -212,6 +212,7 @@ fn plan_for_aggregate<T: QueryContext>(
         } => {
             let nested_object_field =
                 get_object_field_by_path(collection_object_type, &column, field_path.as_deref())?;
+            let column_type = &nested_object_field.r#type;
             let object_field = collection_object_type.get(&column)?;
             let plan_arguments = plan_arguments_from_plan_parameters(
                 plan_state,
@@ -220,9 +221,10 @@ fn plan_for_aggregate<T: QueryContext>(
             )?;
             let (function, definition) = plan_state
                 .context
-                .find_aggregation_function_definition(&nested_object_field.r#type, &function)?;
+                .find_aggregation_function_definition(column_type, &function)?;
             Ok(plan::Aggregate::SingleColumn {
                 column,
+                column_type: column_type.clone(),
                 arguments: plan_arguments,
                 field_path,
                 function,
@@ -379,14 +381,16 @@ fn plan_for_order_by_element<T: QueryContext>(
             )?;
 
             let object_field = find_object_field(&collection_object_type, &column)?;
+            let column_type = &object_field.r#type;
             let (function, function_definition) = plan_state
                 .context
-                .find_aggregation_function_definition(&object_field.r#type, &function)?;
+                .find_aggregation_function_definition(column_type, &function)?;
 
             plan::OrderByTarget::Aggregate {
                 path: plan_path,
                 aggregate: plan::Aggregate::SingleColumn {
                     column,
+                    column_type: column_type.clone(),
                     arguments: plan_arguments,
                     field_path,
                     function,

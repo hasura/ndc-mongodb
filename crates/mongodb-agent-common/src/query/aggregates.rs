@@ -197,12 +197,6 @@ fn pipeline_for_aggregate(aggregate: Aggregate) -> Result<Pipeline> {
         } => {
             use AggregationFunction as A;
 
-            let target_field = ComparisonTarget::Column {
-                name: column.clone(),
-                arguments: Default::default(),
-                field_path: field_path.clone(),
-                field_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::Null)), // type does not matter here
-            };
             let field_ref = ColumnRef::from_column_and_field_path(&column, field_path.as_ref())
                 .into_aggregate_expression()
                 .into_bson();
@@ -213,13 +207,10 @@ fn pipeline_for_aggregate(aggregate: Aggregate) -> Result<Pipeline> {
                 A::Max => Accumulator::Max(field_ref),
                 A::Sum => Accumulator::Sum(field_ref),
             };
-            Pipeline::new(vec![
-                filter_to_documents_with_value(target_field)?,
-                Stage::Group {
-                    key_expression: Bson::Null,
-                    accumulators: [(RESULT_FIELD.to_string(), accumulator)].into(),
-                },
-            ])
+            Pipeline::new(vec![Stage::Group {
+                key_expression: Bson::Null,
+                accumulators: [(RESULT_FIELD.to_string(), accumulator)].into(),
+            }])
         }
 
         Aggregate::StarCount {} => Pipeline::new(vec![Stage::Count(RESULT_FIELD.to_string())]),
@@ -283,7 +274,6 @@ mod tests {
             {
                 "$facet": {
                     "avg": [
-                        { "$match": { "gpa": { "$ne": null } } },
                         { "$group": { "_id": null, "result": { "$avg": "$gpa" } } },
                     ],
                     "count": [
@@ -366,7 +356,6 @@ mod tests {
                         },
                     }],
                     "avg": [
-                        { "$match": { "gpa": { "$ne": null } } },
                         { "$group": { "_id": null, "result": { "$avg": "$gpa" } } },
                     ],
                 },
@@ -459,7 +448,7 @@ mod tests {
             {
                 "$replaceWith": {
                     "_id": "$_id",
-                    "average_viewer_rating": { "$ifNull": ["$average_viewer_rating", null] },
+                    "average_viewer_rating": { "$convert": { "input": "$average_viewer_rating", "to": "double" } },
                     "max.runtime": { "$ifNull": [{ "$getField": { "$literal": "max.runtime" } }, null] },
                 }
             },

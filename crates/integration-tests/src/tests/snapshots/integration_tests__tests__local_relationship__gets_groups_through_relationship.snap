@@ -1,0 +1,20 @@
+---
+source: crates/integration-tests/src/tests/local_relationship.rs
+expression: "run_connector_query(Connector::Chinook,\nquery_request().collection(\"Album\").query(query().limit(5).fields([relation_field!(\"tracks\"\n=> \"album_tracks\",\nquery().groups(grouping().dimensions([dimension_column(column(\"Name\").from_relationship(\"track_genre\"))]).aggregates([(\"average_price\",\ncolumn_aggregate(\"UnitPrice\",\n\"avg\"))]).order_by(ordered_dimensions()),))])).relationships([(\"album_tracks\",\nrelationship(\"Track\", [(\"albumId\", &[\"albumId\"])])),\n(\"track_genre\",\nrelationship(\"Genre\", [(\"genreId\", &[\"genreId\"])]).object_type())])).await?"
+---
+- rows:
+    - tracks:
+        groups:
+          - average_price: 1.0508050242649158
+    - tracks:
+        groups:
+          - average_price: 1.0602255209820155
+    - tracks:
+        groups:
+          - average_price: 1.0602255209820155
+    - tracks:
+        groups:
+          - average_price: 1.0602255209820155
+    - tracks:
+        groups:
+          - average_price: 1.0602255209820155

@@ -26,6 +26,7 @@ pub enum Aggregate<T: ConnectorTypes> {
     SingleColumn {
         /// The column to apply the aggregation function to
         column: ndc::FieldName,
+        column_type: Type<T::ScalarType>,
         /// Arguments to satisfy the column specified by 'column'
         arguments: BTreeMap<ArgumentName, Argument<T>>,
         /// Path to a nested field within an object column

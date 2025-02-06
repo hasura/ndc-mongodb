@@ -38,10 +38,14 @@ pub fn pipeline_for_groups(grouping: &Grouping) -> Result<Pipeline> {
     let replace_with_stage = Stage::ReplaceWith(selection_for_grouping(grouping));
 
     Ok(Pipeline::new(
-        [Some(group_stage), sort_groups_stage, Some(replace_with_stage)]
-            .into_iter()
-            .flatten()
-            .collect(),
+        [
+            Some(group_stage),
+            sort_groups_stage,
+            Some(replace_with_stage),
+        ]
+        .into_iter()
+        .flatten()
+        .collect(),
     ))
 }
 
@@ -113,13 +117,30 @@ fn aggregate_to_accumulator(aggregate: &Aggregate) -> Result<Accumulator> {
 
 pub fn selection_for_grouping(grouping: &Grouping) -> Selection {
     let dimensions = ("_id".to_string(), bson!("$_id"));
-    let selected_aggregates = grouping.aggregates.keys().map(|key| {
-        (
-            key.to_string(),
-            bson!({
+    let selected_aggregates = grouping.aggregates.iter().map(|(key, aggregate)| {
+        // The system expects specific return types for specific aggregates. That means we may need
+        // to do a numeric type conversion here. The conversion applies to the aggregated result,
+        // not to input values.
+        let convert_to = match aggregate {
+            Aggregate::ColumnCount { .. } => None,
+            Aggregate::SingleColumn { column_type, function, .. } => {
+                function.expected_result_type(column_type)
+            }
+            Aggregate::StarCount => None,
+        };
+        let column_ref = ColumnRef::from_field(key).into_aggregate_expression();
+        let selection = match convert_to {
+            Some(scalar_type) => bson!({
+                "$convert": {
+                    "input": column_ref,
+                    "to": scalar_type.bson_name(),
+                }
+            }),
+            None => bson!({
                 "$ifNull": [ColumnRef::from_field(key).into_aggregate_expression(), null]
             }),
-        )
+        };
+        (key.to_string(), selection)
     });
     let selection_doc = std::iter::once(dimensions)
         .chain(selected_aggregates)
