@@ -19,6 +19,7 @@ async fn runs_single_column_aggregate_on_groups() -> anyhow::Result<()> {
                         binop("_gt", target!("year"), value!(0)),
                         binop("_lte", target!("year"), value!(0)),
                     ]))
+                    .limit(10)
                     .groups(
                         grouping()
                             .dimensions([dimension_column("year")])
@@ -45,7 +46,8 @@ async fn groups_by_multiple_dimensions() -> anyhow::Result<()> {
             Connector::SampleMflix,
             query_request().collection("movies").query(
                 query()
-                    .predicate(binop("_lt", target!("year"), value!(1920)))
+                    .predicate(binop("_lt", target!("year"), value!(1950)))
+                    .limit(10)
                     .groups(
                         grouping()
                             .dimensions([
@@ -74,6 +76,7 @@ async fn combines_aggregates_and_groups_in_one_query() -> anyhow::Result<()> {
             query_request().collection("movies").query(
                 query()
                     .predicate(binop("_gte", target!("year"), value!(2000)))
+                    .limit(10)
                     .aggregates([(
                         "average_viewer_rating",
                         column_aggregate("tomatoes.viewer.rating", "avg")

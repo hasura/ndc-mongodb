@@ -1,75 +1,27 @@
 ---
 source: crates/integration-tests/src/tests/grouping.rs
-expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").query(query().predicate(binop(\"_gte\",\ntarget!(\"year\"),\nvalue!(2000))).aggregates([(\"average_viewer_rating\",\ncolumn_aggregate(\"tomatoes.viewer.rating\",\n\"avg\"))]).groups(grouping().dimensions([dimension_column(\"year\"),]).aggregates([(\"average_viewer_rating_by_year\",\ncolumn_aggregate(\"tomatoes.viewer.rating\",\n\"avg\"),)]).order_by(ordered_dimensions()),),),).await?"
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").query(query().predicate(binop(\"_gte\",\ntarget!(\"year\"),\nvalue!(2000))).limit(10).aggregates([(\"average_viewer_rating\",\ncolumn_aggregate(\"tomatoes.viewer.rating\",\n\"avg\"))]).groups(grouping().dimensions([dimension_column(\"year\"),]).aggregates([(\"average_viewer_rating_by_year\",\ncolumn_aggregate(\"tomatoes.viewer.rating\",\n\"avg\"),)]).order_by(ordered_dimensions()),),),).await?"
 ---
 - aggregates:
-    average_viewer_rating: 3.2806882870450234
+    average_viewer_rating: 3.05
   groups:
     - dimensions:
         - 2000
       aggregates:
-        average_viewer_rating_by_year: 3.3652459016393443
+        average_viewer_rating_by_year: 3.825
     - dimensions:
         - 2001
       aggregates:
-        average_viewer_rating_by_year: 3.324137931034483
+        average_viewer_rating_by_year: 2.55
     - dimensions:
         - 2002
       aggregates:
-        average_viewer_rating_by_year: 3.330030959752322
+        average_viewer_rating_by_year: 1.8
     - dimensions:
         - 2003
       aggregates:
-        average_viewer_rating_by_year: 3.34012474012474
-    - dimensions:
-        - 2004
-      aggregates:
-        average_viewer_rating_by_year: 3.3562499999999997
+        average_viewer_rating_by_year: 3
     - dimensions:
         - 2005
       aggregates:
-        average_viewer_rating_by_year: 3.374792703150912
-    - dimensions:
-        - 2006
-      aggregates:
-        average_viewer_rating_by_year: 3.4110834371108343
-    - dimensions:
-        - 2007
-      aggregates:
-        average_viewer_rating_by_year: 3.409585798816568
-    - dimensions:
-        - 2008
-      aggregates:
-        average_viewer_rating_by_year: 3.308783068783069
-    - dimensions:
-        - 2009
-      aggregates:
-        average_viewer_rating_by_year: 3.2404786680541102
-    - dimensions:
-        - 2010
-      aggregates:
-        average_viewer_rating_by_year: 3.2456273764258556
-    - dimensions:
-        - 2011
-      aggregates:
-        average_viewer_rating_by_year: 3.130639730639731
-    - dimensions:
-        - 2012
-      aggregates:
-        average_viewer_rating_by_year: 3.189432485322896
-    - dimensions:
-        - 2013
-      aggregates:
-        average_viewer_rating_by_year: 3.203333333333333
-    - dimensions:
-        - 2014
-      aggregates:
-        average_viewer_rating_by_year: 3.2435114503816793
-    - dimensions:
-        - 2015
-      aggregates:
-        average_viewer_rating_by_year: 2.7807692307692307
-    - dimensions:
-        - 2016
-      aggregates:
-        average_viewer_rating_by_year: 0
+        average_viewer_rating_by_year: 3.5

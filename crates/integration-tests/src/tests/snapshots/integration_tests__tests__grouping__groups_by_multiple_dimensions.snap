@@ -1,14 +1,8 @@
 ---
 source: crates/integration-tests/src/tests/grouping.rs
-expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").query(query().predicate(binop(\"_lt\",\ntarget!(\"year\"),\nvalue!(1920))).groups(grouping().dimensions([dimension_column(\"year\"),\ndimension_column(\"languages\"),\ndimension_column(\"rated\"),]).aggregates([(\"average_viewer_rating\",\ncolumn_aggregate(\"tomatoes.viewer.rating\",\n\"avg\"),)]).order_by(ordered_dimensions()),),),).await?"
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").query(query().predicate(binop(\"_lt\",\ntarget!(\"year\"),\nvalue!(1950))).limit(10).groups(grouping().dimensions([dimension_column(\"year\"),\ndimension_column(\"languages\"),\ndimension_column(\"rated\"),]).aggregates([(\"average_viewer_rating\",\ncolumn_aggregate(\"tomatoes.viewer.rating\",\n\"avg\"),)]).order_by(ordered_dimensions()),),),).await?"
 ---
 - groups:
-    - dimensions:
-        - 1891
-        - - English
-        - NOT RATED
-      aggregates:
-        average_viewer_rating: ~
     - dimensions:
         - 1893
         - ~
@@ -16,39 +10,9 @@ expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collec
       aggregates:
         average_viewer_rating: 3
     - dimensions:
-        - 1894
-        - - English
-        - NOT RATED
-      aggregates:
-        average_viewer_rating: 3.8
-    - dimensions:
-        - 1896
-        - ~
-        - ~
-      aggregates:
-        average_viewer_rating: 4
-    - dimensions:
         - 1903
         - - English
         - TV-G
-      aggregates:
-        average_viewer_rating: 3.7
-    - dimensions:
-        - 1909
-        - - English
-        - G
-      aggregates:
-        average_viewer_rating: 3.6
-    - dimensions:
-        - 1911
-        - - English
-        - ~
-      aggregates:
-        average_viewer_rating: 3.4
-    - dimensions:
-        - 1912
-        - - English
-        - UNRATED
       aggregates:
         average_viewer_rating: 3.7
     - dimensions:
@@ -62,37 +26,13 @@ expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collec
         - - English
         - ~
       aggregates:
-        average_viewer_rating: 3.0666666666666664
-    - dimensions:
-        - 1915
-        - ~
-        - NOT RATED
-      aggregates:
-        average_viewer_rating: 3.2
-    - dimensions:
-        - 1915
-        - - English
-        - NOT RATED
-      aggregates:
-        average_viewer_rating: 3.2
+        average_viewer_rating: 2.7
     - dimensions:
         - 1915
         - - English
         - PASSED
       aggregates:
-        average_viewer_rating: 3.7
-    - dimensions:
-        - 1915
-        - - French
-        - NOT RATED
-      aggregates:
-        average_viewer_rating: 3.8
-    - dimensions:
-        - 1916
-        - ~
-        - ~
-      aggregates:
-        average_viewer_rating: 0
+        average_viewer_rating: 4
     - dimensions:
         - 1916
         - ~
@@ -106,12 +46,6 @@ expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collec
       aggregates:
         average_viewer_rating: 3.1
     - dimensions:
-        - 1916
-        - - English
-        - UNRATED
-      aggregates:
-        average_viewer_rating: 3.2
-    - dimensions:
         - 1917
         - - English
         - ~
@@ -123,21 +57,3 @@ expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collec
         - UNRATED
       aggregates:
         average_viewer_rating: 4.1
-    - dimensions:
-        - 1918
-        - - English
-        - ~
-      aggregates:
-        average_viewer_rating: 3.6
-    - dimensions:
-        - 1919
-        - ~
-        - NOT RATED
-      aggregates:
-        average_viewer_rating: 3.7
-    - dimensions:
-        - 1919
-        - - English
-        - TV-G
-      aggregates:
-        average_viewer_rating: 3.3
