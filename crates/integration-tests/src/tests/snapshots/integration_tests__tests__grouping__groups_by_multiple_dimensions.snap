@@ -1,6 +1,6 @@
 ---
 source: crates/integration-tests/src/tests/grouping.rs
-expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").query(query().predicate(binop(\"_lt\",\ntarget!(\"year\"),\nvalue!(1950))).limit(10).groups(grouping().dimensions([dimension_column(\"year\"),\ndimension_column(\"languages\"),\ndimension_column(\"rated\"),]).aggregates([(\"average_viewer_rating\",\ncolumn_aggregate(\"tomatoes.viewer.rating\",\n\"avg\"),)]).order_by(ordered_dimensions()),),),).await?"
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").query(query().predicate(binop(\"_lt\",\ntarget!(\"year\"),\nvalue!(1950))).order_by([asc!(\"_id\")]).limit(10).groups(grouping().dimensions([dimension_column(\"year\"),\ndimension_column(\"languages\"),\ndimension_column(\"rated\"),]).aggregates([(\"average_viewer_rating\",\ncolumn_aggregate(\"tomatoes.viewer.rating\",\n\"avg\"),)]).order_by(ordered_dimensions()),),),).await?"
 ---
 - groups:
     - dimensions:
@@ -16,6 +16,24 @@ expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collec
       aggregates:
         average_viewer_rating: 3.7
     - dimensions:
+        - 1909
+        - - English
+        - G
+      aggregates:
+        average_viewer_rating: 3.6
+    - dimensions:
+        - 1911
+        - - English
+        - ~
+      aggregates:
+        average_viewer_rating: 3.4
+    - dimensions:
+        - 1912
+        - - English
+        - UNRATED
+      aggregates:
+        average_viewer_rating: 3.7
+    - dimensions:
         - 1913
         - - English
         - TV-PG
@@ -26,34 +44,10 @@ expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collec
         - - English
         - ~
       aggregates:
-        average_viewer_rating: 2.7
+        average_viewer_rating: 3.0666666666666664
     - dimensions:
         - 1915
-        - - English
-        - PASSED
-      aggregates:
-        average_viewer_rating: 4
-    - dimensions:
-        - 1916
         - ~
         - NOT RATED
       aggregates:
-        average_viewer_rating: 3.8
-    - dimensions:
-        - 1916
-        - - English
-        - APPROVED
-      aggregates:
-        average_viewer_rating: 3.1
-    - dimensions:
-        - 1917
-        - - English
-        - ~
-      aggregates:
-        average_viewer_rating: 3.9
-    - dimensions:
-        - 1917
-        - - English
-        - UNRATED
-      aggregates:
-        average_viewer_rating: 4.1
+        average_viewer_rating: 3.2

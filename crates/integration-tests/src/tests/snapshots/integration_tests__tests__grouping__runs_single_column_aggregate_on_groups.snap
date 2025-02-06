@@ -1,6 +1,6 @@
 ---
 source: crates/integration-tests/src/tests/grouping.rs
-expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").query(query().predicate(or([binop(\"_gt\",\ntarget!(\"year\"), value!(0)),\nbinop(\"_lte\", target!(\"year\"),\nvalue!(0)),])).limit(10).groups(grouping().dimensions([dimension_column(\"year\")]).aggregates([(\"average_viewer_rating\",\ncolumn_aggregate(\"tomatoes.viewer.rating\", \"avg\"),),\n(\"max_runtime\",\ncolumn_aggregate(\"runtime\",\n\"max\")),]).order_by(ordered_dimensions()),),),).await?"
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").query(query().predicate(or([binop(\"_gt\",\ntarget!(\"year\"), value!(0)),\nbinop(\"_lte\", target!(\"year\"),\nvalue!(0)),])).order_by([asc!(\"_id\")]).limit(10).groups(grouping().dimensions([dimension_column(\"year\")]).aggregates([(\"average_viewer_rating\",\ncolumn_aggregate(\"tomatoes.viewer.rating\", \"avg\"),),\n(\"max_runtime\",\ncolumn_aggregate(\"runtime\",\n\"max\")),]).order_by(ordered_dimensions()),),),).await?"
 ---
 - groups:
     - dimensions:
@@ -14,6 +14,21 @@ expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collec
         average_viewer_rating: 3.7
         max_runtime: 11
     - dimensions:
+        - 1909
+      aggregates:
+        average_viewer_rating: 3.6
+        max_runtime: 14
+    - dimensions:
+        - 1911
+      aggregates:
+        average_viewer_rating: 3.4
+        max_runtime: 7
+    - dimensions:
+        - 1912
+      aggregates:
+        average_viewer_rating: 3.7
+        max_runtime: 14
+    - dimensions:
         - 1913
       aggregates:
         average_viewer_rating: 3
@@ -21,20 +36,10 @@ expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collec
     - dimensions:
         - 1914
       aggregates:
-        average_viewer_rating: 2.7
-        max_runtime: 65
+        average_viewer_rating: 3.0666666666666664
+        max_runtime: 199
     - dimensions:
         - 1915
       aggregates:
-        average_viewer_rating: 4
-        max_runtime: 78
-    - dimensions:
-        - 1916
-      aggregates:
-        average_viewer_rating: 3.45
-        max_runtime: 197
-    - dimensions:
-        - 1917
-      aggregates:
-        average_viewer_rating: 4
-        max_runtime: 72
+        average_viewer_rating: 3.2
+        max_runtime: 165

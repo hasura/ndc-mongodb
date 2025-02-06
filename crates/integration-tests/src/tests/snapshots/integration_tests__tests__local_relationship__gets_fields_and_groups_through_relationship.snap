@@ -1,0 +1,47 @@
+---
+source: crates/integration-tests/src/tests/local_relationship.rs
+expression: "run_connector_query(Connector::Chinook,\nquery_request().collection(\"Album\").query(query().order_by([asc!(\"_id\")]).limit(3).fields([field!(\"AlbumId\"),\nrelation_field!(\"tracks\" => \"album_tracks\",\nquery().order_by([asc!(\"_id\")]).limit(3).fields([field!(\"AlbumId\"),\nfield!(\"Name\"),\nfield!(\"UnitPrice\")]).groups(grouping().dimensions([dimension_column(column(\"Name\").from_relationship(\"track_genre\"))]).aggregates([(\"average_price\",\ncolumn_aggregate(\"UnitPrice\",\n\"avg\"))]).order_by(ordered_dimensions()),))])).relationships([(\"album_tracks\",\nrelationship(\"Track\", [(\"AlbumId\", &[\"AlbumId\"])])),\n(\"track_genre\",\nrelationship(\"Genre\", [(\"GenreId\", &[\"GenreId\"])]).object_type())])).await?"
+---
+- rows:
+    - AlbumId: 3
+      tracks:
+        groups:
+          - average_price: 0.99
+        rows:
+          - AlbumId: 3
+            Name: Fast As a Shark
+            UnitPrice: "0.99"
+          - AlbumId: 3
+            Name: Restless and Wild
+            UnitPrice: "0.99"
+          - AlbumId: 3
+            Name: Princess of the Dawn
+            UnitPrice: "0.99"
+    - AlbumId: 5
+      tracks:
+        groups:
+          - average_price: 0.99
+        rows:
+          - AlbumId: 5
+            Name: Walk On Water
+            UnitPrice: "0.99"
+          - AlbumId: 5
+            Name: Love In An Elevator
+            UnitPrice: "0.99"
+          - AlbumId: 5
+            Name: Rag Doll
+            UnitPrice: "0.99"
+    - AlbumId: 6
+      tracks:
+        groups:
+          - average_price: 0.99
+        rows:
+          - AlbumId: 6
+            Name: All I Really Want
+            UnitPrice: "0.99"
+          - AlbumId: 6
+            Name: You Oughta Know
+            UnitPrice: "0.99"
+          - AlbumId: 6
+            Name: Perfect
+            UnitPrice: "0.99"

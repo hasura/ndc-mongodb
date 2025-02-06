@@ -293,6 +293,7 @@ async fn gets_fields_and_groups_through_relationship() -> anyhow::Result<()> {
                     .order_by([asc!("_id")])
                     .limit(3)
                     .fields([field!("AlbumId"), relation_field!("tracks" => "album_tracks", query()
+                      .order_by([asc!("_id")])
                       .limit(3)
                       .fields([field!("AlbumId"), field!("Name"), field!("UnitPrice")])
                       .groups(grouping()
