@@ -4,9 +4,15 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+### Added
+
+- You can now group documents for aggregation according to multiple grouping criteria ([#144](https://github.com/hasura/ndc-mongodb/pull/144))
+
 ### Changed
 
 - **BREAKING:** Update to ndc-spec v0.2 ([#139](https://github.com/hasura/ndc-mongodb/pull/139))
+- **BREAKING:** Remove custom count aggregation - use standard count instead ([#144](https://github.com/hasura/ndc-mongodb/pull/144))
+- Results for `avg` and `sum` aggregations are coerced to consistent result types ([#144](https://github.com/hasura/ndc-mongodb/pull/144))
 
 #### ndc-spec v0.2
 
@@ -25,6 +31,21 @@ changelog](https://hasura.github.io/ndc-spec/specification/changelog.html#020).
 
 Use of the new spec requires a version of GraphQL Engine that supports ndc-spec
 v0.2, and there are required metadata changes.
+
+#### Removed custom count aggregation
+
+Previously there were two options for getting document counts named `count` and
+`_count`. These did the same thing. `count` has been removed - use `_count`
+instead.
+
+#### Results for `avg` and `sum` aggregations are coerced to consistent result types
+
+This change is required for compliance with ndc-spec.
+
+Results for `avg` are always coerced to `double`.
+
+Results for `sum` are coerced to `double` if the summed inputs use a fractional
+numeric type, or to `long` if inputs use an integral numeric type.
 
 ## [1.6.0] - 2025-01-17
 
