@@ -253,6 +253,7 @@ async fn gets_groups_through_relationship() -> anyhow::Result<()> {
                 .collection("Album")
                 .query(
                     query()
+                    .order_by([asc!("_id")])
                     .limit(5)
                     .fields([relation_field!("tracks" => "album_tracks", query()
                       .groups(grouping()
@@ -272,6 +273,45 @@ async fn gets_groups_through_relationship() -> anyhow::Result<()> {
                     (
                         "track_genre",
                         relationship("Genre", [("genreId", &["genreId"])]).object_type()
+                    )
+                ])
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn gets_fields_and_groups_through_relationship() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::Chinook,
+            query_request()
+                .collection("Album")
+                .query(
+                    query()
+                    .order_by([asc!("_id")])
+                    .limit(3)
+                    .fields([field!("AlbumId"), relation_field!("tracks" => "album_tracks", query()
+                      .limit(3)
+                      .fields([field!("AlbumId"), field!("Name"), field!("UnitPrice")])
+                      .groups(grouping()
+                        .dimensions([dimension_column(column("Name").from_relationship("track_genre"))])
+                          .aggregates([(
+                            "average_price", column_aggregate("UnitPrice", "avg")
+                          )])
+                          .order_by(ordered_dimensions()),
+                      )
+                    )])
+                )
+                .relationships([
+                    (
+                        "album_tracks",
+                        relationship("Track", [("AlbumId", &["AlbumId"])])
+                    ),
+                    (
+                        "track_genre",
+                        relationship("Genre", [("GenreId", &["GenreId"])]).object_type()
                     )
                 ])
         )

@@ -19,6 +19,7 @@ async fn runs_single_column_aggregate_on_groups() -> anyhow::Result<()> {
                         binop("_gt", target!("year"), value!(0)),
                         binop("_lte", target!("year"), value!(0)),
                     ]))
+                    .order_by([asc!("_id")])
                     .limit(10)
                     .groups(
                         grouping()
@@ -47,6 +48,7 @@ async fn groups_by_multiple_dimensions() -> anyhow::Result<()> {
             query_request().collection("movies").query(
                 query()
                     .predicate(binop("_lt", target!("year"), value!(1950)))
+                    .order_by([asc!("_id")])
                     .limit(10)
                     .groups(
                         grouping()
@@ -76,6 +78,7 @@ async fn combines_aggregates_and_groups_in_one_query() -> anyhow::Result<()> {
             query_request().collection("movies").query(
                 query()
                     .predicate(binop("_gte", target!("year"), value!(2000)))
+                    .order_by([asc!("_id")])
                     .limit(10)
                     .aggregates([(
                         "average_viewer_rating",
@@ -110,6 +113,7 @@ async fn combines_fields_and_groups_in_one_query() -> anyhow::Result<()> {
                         binop("_gt", target!("year"), value!(0)),
                         binop("_lte", target!("year"), value!(0)),
                     ]))
+                    .order_by([asc!("_id")])
                     .limit(3)
                     .fields([field!("title"), field!("year")])
                     .order_by([asc!("_id")])
