@@ -72,9 +72,7 @@ pub fn facet_pipelines_for_query(
             // Otherwise if the aggregate value is missing because the aggregation applied to an
             // empty document set then provide an explicit `null` value.
             } else {
-                doc! {
-                    "$ifNull": [value_expr, null]
-                }
+                convert_aggregate_result_type(value_expr, aggregate)
             };
 
             (key.to_string(), value_expr.into())
@@ -140,6 +138,36 @@ fn is_count(aggregate: &Aggregate) -> bool {
         Aggregate::ColumnCount { .. } => true,
         Aggregate::StarCount { .. } => true,
         Aggregate::SingleColumn { .. } => false,
+    }
+}
+
+/// The system expects specific return types for specific aggregates. That means we may need
+/// to do a numeric type conversion here. The conversion applies to the aggregated result,
+/// not to input values.
+pub fn convert_aggregate_result_type(
+    column_ref: impl Into<Bson>,
+    aggregate: &Aggregate,
+) -> bson::Document {
+    let convert_to = match aggregate {
+        Aggregate::ColumnCount { .. } => None,
+        Aggregate::SingleColumn {
+            column_type,
+            function,
+            ..
+        } => function.expected_result_type(column_type),
+        Aggregate::StarCount => None,
+    };
+    match convert_to {
+        // $convert implicitly fills `null` if input value is missing
+        Some(scalar_type) => doc! {
+                "$convert": {
+                "input": column_ref,
+                "to": scalar_type.bson_name(),
+            }
+        },
+        None => doc! {
+            "$ifNull": [column_ref, null]
+        },
     }
 }
 
@@ -287,15 +315,15 @@ mod tests {
                 "$replaceWith": {
                     "aggregates": {
                         "avg": {
-                            "$ifNull": [
-                                {
+                            "$convert": {
+                                "input": {
                                     "$getField": {
                                         "field": "result",
                                         "input": { "$first": { "$getField": { "$literal": "avg" } } },
                                     }
                                 },
-                                null
-                            ]
+                                "to": "double",
+                            }
                         },
                         "count": {
                             "$ifNull": [
@@ -364,15 +392,15 @@ mod tests {
                 "$replaceWith": {
                     "aggregates": {
                         "avg": {
-                            "$ifNull": [
-                                {
+                            "$convert": {
+                                "input": {
                                     "$getField": {
                                         "field": "result",
                                         "input": { "$first": { "$getField": { "$literal": "avg" } } },
                                     }
                                 },
-                                null
-                            ]
+                                "to": "double",
+                            }
                         },
                     },
                     "rows": "$__ROWS__",
