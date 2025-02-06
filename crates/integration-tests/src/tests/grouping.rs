@@ -107,6 +107,7 @@ async fn combines_fields_and_groups_in_one_query() -> anyhow::Result<()> {
                         binop("_gt", target!("year"), value!(0)),
                         binop("_lte", target!("year"), value!(0)),
                     ]))
+                    .limit(3)
                     .fields([field!("title"), field!("year")])
                     .order_by([asc!("_id")])
                     .groups(
@@ -118,7 +119,6 @@ async fn combines_fields_and_groups_in_one_query() -> anyhow::Result<()> {
                             )])
                             .order_by(ordered_dimensions()),
                     )
-                    .limit(3),
             ),
         )
         .await?

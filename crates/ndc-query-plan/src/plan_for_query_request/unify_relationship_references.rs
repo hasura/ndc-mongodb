@@ -95,7 +95,6 @@ where
 
     let mismatching_fields = [
         (a.limit != b.limit, "limit"),
-        (a.aggregates_limit != b.aggregates_limit, "aggregates_limit"),
         (a.offset != b.offset, "offset"),
         (a.order_by != b.order_by, "order_by"),
         (predicate_a != predicate_b, "predicate"),
@@ -120,7 +119,6 @@ where
         aggregates: unify_options(a.aggregates, b.aggregates, unify_aggregates)?,
         fields: unify_fields(a.fields, b.fields)?,
         limit: a.limit,
-        aggregates_limit: a.aggregates_limit,
         offset: a.offset,
         order_by: a.order_by,
         predicate: predicate_a,

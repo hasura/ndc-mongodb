@@ -38,6 +38,7 @@ pub fn pipeline_for_non_foreach(
 ) -> Result<Pipeline, MongoAgentError> {
     let query = &query_plan.query;
     let Query {
+        limit,
         offset,
         order_by,
         predicate,
@@ -61,17 +62,16 @@ pub fn pipeline_for_non_foreach(
         .map(make_sort_stages)
         .flatten_ok()
         .collect::<Result<Vec<_>, _>>()?;
+    let limit_stage = limit.map(Into::into).map(Stage::Limit);
     let skip_stage = offset.map(Into::into).map(Stage::Skip);
 
     match_stage
         .into_iter()
         .chain(sort_stages)
         .chain(skip_stage)
+        .chain(limit_stage)
         .for_each(|stage| pipeline.push(stage));
 
-    // `diverging_stages` includes either a $facet stage if the query includes aggregates, or the
-    // sort and limit stages if we are requesting rows only. In both cases the last stage is
-    // a $replaceWith.
     let diverging_stages = if is_response_faceted(query) {
         let (facet_pipelines, select_facet_results) =
             facet_pipelines_for_query(query_plan, query_level)?;
@@ -89,18 +89,14 @@ pub fn pipeline_for_non_foreach(
 }
 
 /// Generate a pipeline to select fields requested by the given query. This is intended to be used
-/// within a $facet stage. We assume that the query's `where`, `order_by`, `offset` criteria (which
-/// are shared with aggregates) have already been applied, and that we have already joined
-/// relations.
+/// within a $facet stage. We assume that the query's `where`, `order_by`, `offset`, `limit`
+/// criteria (which are shared with aggregates) have already been applied, and that we have already
+/// joined relations.
 pub fn pipeline_for_fields_facet(
     query_plan: &QueryPlan,
     query_level: QueryLevel,
 ) -> Result<Pipeline, MongoAgentError> {
-    let Query {
-        limit,
-        relationships,
-        ..
-    } = &query_plan.query;
+    let Query { relationships, .. } = &query_plan.query;
 
     let mut selection = selection_for_fields(query_plan.query.fields.as_ref())?;
     if query_level != QueryLevel::Top {
@@ -117,12 +113,6 @@ pub fn pipeline_for_fields_facet(
         }
     }
 
-    let limit_stage = limit.map(Into::into).map(Stage::Limit);
     let replace_with_stage: Stage = Stage::ReplaceWith(selection);
-
-    Ok(Pipeline::from_iter(
-        [limit_stage, replace_with_stage.into()]
-            .into_iter()
-            .flatten(),
-    ))
+    Ok(Pipeline::new(vec![replace_with_stage]))
 }

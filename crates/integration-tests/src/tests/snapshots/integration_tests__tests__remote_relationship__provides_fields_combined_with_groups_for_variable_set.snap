@@ -1,6 +1,6 @@
 ---
 source: crates/integration-tests/src/tests/remote_relationship.rs
-expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").variables([[(\"year\",\njson!(2014))]]).query(query().predicate(binop(\"_eq\", target!(\"year\"),\nvariable!(year))).fields([field!(\"title\"),\nfield!(\"rated\")]).groups(grouping().dimensions([dimension_column(\"rated\")]).aggregates([(\"average_viewer_rating\",\ncolumn_aggregate(\"tomatoes.viewer.rating\",\n\"avg\"),),]).order_by(ordered_dimensions()),).limit(3),),).await?"
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").variables([[(\"year\",\njson!(2014))]]).query(query().predicate(binop(\"_eq\", target!(\"year\"),\nvariable!(year))).fields([field!(\"title\"),\nfield!(\"rated\")]).order_by([asc!(\"_id\")]).groups(grouping().dimensions([dimension_column(\"rated\")]).aggregates([(\"average_viewer_rating\",\ncolumn_aggregate(\"tomatoes.viewer.rating\",\n\"avg\"),),]).order_by(ordered_dimensions()),).limit(3),),).await?"
 ---
 - rows:
     - rated: ~
@@ -13,44 +13,12 @@ expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collec
     - dimensions:
         - ~
       aggregates:
-        average_viewer_rating: 3.1320754716981134
-    - dimensions:
-        - G
-      aggregates:
-        average_viewer_rating: 3.8
-    - dimensions:
-        - NOT RATED
-      aggregates:
-        average_viewer_rating: 2.824242424242424
-    - dimensions:
-        - PG
-      aggregates:
-        average_viewer_rating: 3.7096774193548385
+        average_viewer_rating: 2.3
     - dimensions:
         - PG-13
       aggregates:
-        average_viewer_rating: 3.470707070707071
+        average_viewer_rating: 3.4
     - dimensions:
         - R
       aggregates:
-        average_viewer_rating: 3.3283783783783787
-    - dimensions:
-        - TV-14
-      aggregates:
-        average_viewer_rating: 3.233333333333333
-    - dimensions:
-        - TV-G
-      aggregates:
-        average_viewer_rating: ~
-    - dimensions:
-        - TV-MA
-      aggregates:
-        average_viewer_rating: 4.2
-    - dimensions:
-        - TV-PG
-      aggregates:
-        average_viewer_rating: ~
-    - dimensions:
-        - UNRATED
-      aggregates:
-        average_viewer_rating: 3.06875
+        average_viewer_rating: 3.9

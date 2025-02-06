@@ -26,7 +26,7 @@ pub fn pipeline_for_groups(grouping: &Grouping) -> Result<Pipeline> {
     // 'query.aggregates.group_by.order' capability! This only orders by dimensions. Before
     // enabling the capability we also need to be able to order by aggregates. We need partial
     // support for order by to get consistent integration test snapshots.
-    let sort_stage = grouping
+    let sort_groups_stage = grouping
         .order_by
         .as_ref()
         .map(sort_stage_for_grouping)
@@ -38,7 +38,7 @@ pub fn pipeline_for_groups(grouping: &Grouping) -> Result<Pipeline> {
     let replace_with_stage = Stage::ReplaceWith(selection_for_grouping(grouping));
 
     Ok(Pipeline::new(
-        [Some(group_stage), sort_stage, Some(replace_with_stage)]
+        [Some(group_stage), sort_groups_stage, Some(replace_with_stage)]
             .into_iter()
             .flatten()
             .collect(),

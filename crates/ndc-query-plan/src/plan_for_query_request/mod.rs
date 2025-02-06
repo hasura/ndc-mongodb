@@ -152,7 +152,6 @@ pub fn plan_for_query<T: QueryContext>(
 
     Ok(plan::Query {
         aggregates,
-        aggregates_limit: limit,
         fields,
         order_by,
         limit,

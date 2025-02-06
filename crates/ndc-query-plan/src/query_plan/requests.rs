@@ -53,7 +53,6 @@ pub struct Query<T: ConnectorTypes> {
     pub aggregates: Option<IndexMap<ndc::FieldName, Aggregate<T>>>,
     pub fields: Option<IndexMap<ndc::FieldName, Field<T>>>,
     pub limit: Option<u32>,
-    pub aggregates_limit: Option<u32>,
     pub offset: Option<u32>,
     pub order_by: Option<OrderBy<T>>,
     pub predicate: Option<Expression<T>>,

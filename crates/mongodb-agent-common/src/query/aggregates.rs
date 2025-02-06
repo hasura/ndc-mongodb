@@ -37,7 +37,6 @@ pub fn facet_pipelines_for_query(
     let query = &query_plan.query;
     let Query {
         aggregates,
-        aggregates_limit,
         fields,
         groups,
         ..
@@ -45,12 +44,7 @@ pub fn facet_pipelines_for_query(
     let mut facet_pipelines = aggregates
         .iter()
         .flatten()
-        .map(|(key, aggregate)| {
-            Ok((
-                key.to_string(),
-                pipeline_for_aggregate(aggregate.clone(), *aggregates_limit)?,
-            ))
-        })
+        .map(|(key, aggregate)| Ok((key.to_string(), pipeline_for_aggregate(aggregate.clone())?)))
         .collect::<Result<BTreeMap<_, _>>>()?;
 
     // This builds a map that feeds into a `$replaceWith` pipeline stage to build a map of
@@ -163,7 +157,7 @@ fn is_count(aggregate: &Aggregate) -> bool {
 //     count: if $exists: ["$column", true] then 1 else 0
 //
 // Distinct counts need a group by the target column AFAIK so they need a facet.
-fn pipeline_for_aggregate(aggregate: Aggregate, limit: Option<u32>) -> Result<Pipeline> {
+fn pipeline_for_aggregate(aggregate: Aggregate) -> Result<Pipeline> {
     let pipeline = match aggregate {
         Aggregate::ColumnCount {
             column,
@@ -172,21 +166,16 @@ fn pipeline_for_aggregate(aggregate: Aggregate, limit: Option<u32>) -> Result<Pi
             ..
         } if distinct => {
             let target_field = mk_target_field(column, field_path);
-            Pipeline::from_iter(
-                [
-                    Some(filter_to_documents_with_value(target_field.clone())?),
-                    limit.map(Into::into).map(Stage::Limit),
-                    Some(Stage::Group {
-                        key_expression: ColumnRef::from_comparison_target(&target_field)
-                            .into_aggregate_expression()
-                            .into_bson(),
-                        accumulators: [].into(),
-                    }),
-                    Some(Stage::Count(RESULT_FIELD.to_string())),
-                ]
-                .into_iter()
-                .flatten(),
-            )
+            Pipeline::new(vec![
+                filter_to_documents_with_value(target_field.clone())?,
+                Stage::Group {
+                    key_expression: ColumnRef::from_comparison_target(&target_field)
+                        .into_aggregate_expression()
+                        .into_bson(),
+                    accumulators: [].into(),
+                },
+                Stage::Count(RESULT_FIELD.to_string()),
+            ])
         }
 
         // TODO: ENG-1465 count by distinct
@@ -195,17 +184,10 @@ fn pipeline_for_aggregate(aggregate: Aggregate, limit: Option<u32>) -> Result<Pi
             field_path,
             distinct: _,
             ..
-        } => Pipeline::from_iter(
-            [
-                Some(filter_to_documents_with_value(mk_target_field(
-                    column, field_path,
-                ))?),
-                limit.map(Into::into).map(Stage::Limit),
-                Some(Stage::Count(RESULT_FIELD.to_string())),
-            ]
-            .into_iter()
-            .flatten(),
-        ),
+        } => Pipeline::new(vec![
+            filter_to_documents_with_value(mk_target_field(column, field_path))?,
+            Stage::Count(RESULT_FIELD.to_string()),
+        ]),
 
         Aggregate::SingleColumn {
             column,
@@ -231,28 +213,16 @@ fn pipeline_for_aggregate(aggregate: Aggregate, limit: Option<u32>) -> Result<Pi
                 A::Max => Accumulator::Max(field_ref),
                 A::Sum => Accumulator::Sum(field_ref),
             };
-            Pipeline::from_iter(
-                [
-                    Some(filter_to_documents_with_value(target_field)?),
-                    limit.map(Into::into).map(Stage::Limit),
-                    Some(Stage::Group {
-                        key_expression: Bson::Null,
-                        accumulators: [(RESULT_FIELD.to_string(), accumulator)].into(),
-                    }),
-                ]
-                .into_iter()
-                .flatten(),
-            )
+            Pipeline::new(vec![
+                filter_to_documents_with_value(target_field)?,
+                Stage::Group {
+                    key_expression: Bson::Null,
+                    accumulators: [(RESULT_FIELD.to_string(), accumulator)].into(),
+                },
+            ])
         }
 
-        Aggregate::StarCount {} => Pipeline::from_iter(
-            [
-                limit.map(Into::into).map(Stage::Limit),
-                Some(Stage::Count(RESULT_FIELD.to_string())),
-            ]
-            .into_iter()
-            .flatten(),
-        ),
+        Aggregate::StarCount {} => Pipeline::new(vec![Stage::Count(RESULT_FIELD.to_string())]),
     };
     Ok(pipeline)
 }
