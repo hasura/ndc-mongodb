@@ -84,13 +84,13 @@ fn selection_for_field(
             groups,
             ..
         } => {
-            // TODO: If we get a unification of two relationship references where one selects only
-            // fields, and the other selects only groups, we may end up in a broken state where the
-            // response should be faceted but is not. Data will be populated correctly - the issue
-            // is only here where we need to figure out whether to write a selection for faceted
-            // data or not. Instead of referencing the [Field::Relationship] value to determine
-            // faceting we need to reference the [Relationship] attached to the [Query] that
-            // populated it.
+            // TODO: ENG-1569 If we get a unification of two relationship references where one
+            // selects only fields, and the other selects only groups, we may end up in a broken
+            // state where the response should be faceted but is not. Data will be populated
+            // correctly - the issue is only here where we need to figure out whether to write
+            // a selection for faceted data or not. Instead of referencing the
+            // [Field::Relationship] value to determine faceting we need to reference the
+            // [Relationship] attached to the [Query] that populated it.
 
             // The pipeline for the relationship has already selected the requested fields with the
             // appropriate aliases. At this point all we need to do is to prune the selection down
@@ -110,12 +110,6 @@ fn selection_for_field(
                     })
                     .collect()
             };
-
-            // // As in field_selection, we don't need all of the logic for grouping selection. We
-            // // only need to prune down to the fields requested by this specific field reference.
-            // let group_selection = |grouping: &Grouping| -> Document {
-            //     grouping.aggregates
-            // };
 
             // Field of the incoming pipeline document that contains data fetched for the
             // relationship.
