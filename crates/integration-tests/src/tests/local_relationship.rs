@@ -255,12 +255,13 @@ async fn gets_groups_through_relationship() -> anyhow::Result<()> {
                     query()
                     .order_by([asc!("_id")])
                     .limit(5)
-                    .fields([relation_field!("tracks" => "album_tracks", query()
+                    .fields([field!("AlbumId"), relation_field!("tracks" => "album_tracks", query()
                       .groups(grouping()
                         .dimensions([dimension_column(column("Name").from_relationship("track_genre"))])
-                          .aggregates([(
-                            "average_price", column_aggregate("UnitPrice", "avg")
-                          )])
+                          .aggregates([
+                            ("AlbumId", column_aggregate("AlbumId", "avg")),
+                            ("average_price", column_aggregate("UnitPrice", "avg")),
+                          ])
                           .order_by(ordered_dimensions()),
                       )
                     )])
@@ -268,11 +269,11 @@ async fn gets_groups_through_relationship() -> anyhow::Result<()> {
                 .relationships([
                     (
                         "album_tracks",
-                        relationship("Track", [("albumId", &["albumId"])])
+                        relationship("Track", [("AlbumId", &["AlbumId"])])
                     ),
                     (
                         "track_genre",
-                        relationship("Genre", [("genreId", &["genreId"])]).object_type()
+                        relationship("Genre", [("GenreId", &["GenreId"])]).object_type()
                     )
                 ])
         )

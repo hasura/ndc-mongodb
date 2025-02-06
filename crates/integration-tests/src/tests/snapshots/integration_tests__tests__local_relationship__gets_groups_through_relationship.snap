@@ -1,20 +1,30 @@
 ---
 source: crates/integration-tests/src/tests/local_relationship.rs
-expression: "run_connector_query(Connector::Chinook,\nquery_request().collection(\"Album\").query(query().limit(5).fields([relation_field!(\"tracks\"\n=> \"album_tracks\",\nquery().groups(grouping().dimensions([dimension_column(column(\"Name\").from_relationship(\"track_genre\"))]).aggregates([(\"average_price\",\ncolumn_aggregate(\"UnitPrice\",\n\"avg\"))]).order_by(ordered_dimensions()),))])).relationships([(\"album_tracks\",\nrelationship(\"Track\", [(\"albumId\", &[\"albumId\"])])),\n(\"track_genre\",\nrelationship(\"Genre\", [(\"genreId\", &[\"genreId\"])]).object_type())])).await?"
+expression: "run_connector_query(Connector::Chinook,\nquery_request().collection(\"Album\").query(query().order_by([asc!(\"_id\")]).limit(5).fields([field!(\"AlbumId\"),\nrelation_field!(\"tracks\" => \"album_tracks\",\nquery().groups(grouping().dimensions([dimension_column(column(\"Name\").from_relationship(\"track_genre\"))]).aggregates([(\"AlbumId\",\ncolumn_aggregate(\"AlbumId\", \"avg\")),\n(\"average_price\",\ncolumn_aggregate(\"UnitPrice\",\n\"avg\")),]).order_by(ordered_dimensions()),))])).relationships([(\"album_tracks\",\nrelationship(\"Track\", [(\"AlbumId\", &[\"AlbumId\"])])),\n(\"track_genre\",\nrelationship(\"Genre\", [(\"GenreId\", &[\"GenreId\"])]).object_type())])).await?"
 ---
 - rows:
-    - tracks:
+    - AlbumId: 3
+      tracks:
         groups:
-          - average_price: 1.0508050242649158
-    - tracks:
+          - AlbumId: 3
+            average_price: 11.99
+    - AlbumId: 5
+      tracks:
         groups:
-          - average_price: 1.0602255209820155
-    - tracks:
+          - AlbumId: 5
+            average_price: 0.99
+    - AlbumId: 6
+      tracks:
         groups:
-          - average_price: 1.0602255209820155
-    - tracks:
+          - AlbumId: 6
+            average_price: 0.99
+    - AlbumId: 7
+      tracks:
         groups:
-          - average_price: 1.0602255209820155
-    - tracks:
+          - AlbumId: 7
+            average_price: 0.99
+    - AlbumId: 8
+      tracks:
         groups:
-          - average_price: 1.0602255209820155
+          - AlbumId: 8
+            average_price: 0.99
