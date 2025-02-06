@@ -289,7 +289,7 @@ fn type_for_row_set(
         object_fields.insert(
             ROW_SET_GROUPS_KEY.into(),
             ObjectField {
-                r#type: Type::Object(type_for_aggregates(&grouping.aggregates)),
+                r#type: Type::array_of(Type::Object(type_for_aggregates(&grouping.aggregates))),
                 parameters: Default::default(),
             },
         );
