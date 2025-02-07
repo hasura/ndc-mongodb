@@ -7,6 +7,7 @@ use ndc_models::{FieldName, OrderDirection};
 
 use crate::{
     aggregation_function::AggregationFunction,
+    constants::GROUP_DIMENSIONS_KEY,
     interface_types::MongoAgentError,
     mongo_query_plan::{Aggregate, Dimension, GroupOrderBy, GroupOrderByTarget, Grouping},
 };
@@ -35,7 +36,7 @@ pub fn pipeline_for_groups(grouping: &Grouping) -> Result<Pipeline> {
     // TODO: ENG-1563 to implement 'query.aggregates.group_by.paginate' apply grouping.limit and
     // grouping.offset **after** group stage because those options count groups, not documents
 
-    let replace_with_stage = Stage::ReplaceWith(selection_for_grouping(grouping));
+    let replace_with_stage = Stage::ReplaceWith(selection_for_grouping_internal(grouping, "_id"));
 
     Ok(Pipeline::new(
         [
@@ -116,7 +117,17 @@ fn aggregate_to_accumulator(aggregate: &Aggregate) -> Result<Accumulator> {
 }
 
 pub fn selection_for_grouping(grouping: &Grouping) -> Selection {
-    let dimensions = ("_id".to_string(), bson!("$_id"));
+    // This function is called externally to propagate groups from relationship lookups. In that
+    // case the group has already gone through [selection_for_grouping_internal] once so we want to
+    // reference the dimensions key as "dimensions".
+    selection_for_grouping_internal(grouping, GROUP_DIMENSIONS_KEY)
+}
+
+fn selection_for_grouping_internal(grouping: &Grouping, dimensions_field_name: &str) -> Selection {
+    let dimensions = (
+        GROUP_DIMENSIONS_KEY.to_string(),
+        bson!(format!("${dimensions_field_name}")),
+    );
     let selected_aggregates = grouping.aggregates.iter().map(|(key, aggregate)| {
         let column_ref = ColumnRef::from_field(key).into_aggregate_expression();
         let selection = convert_aggregate_result_type(column_ref, aggregate);

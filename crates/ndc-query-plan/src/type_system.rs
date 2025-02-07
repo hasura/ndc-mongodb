@@ -17,6 +17,8 @@ pub enum Type<ScalarType> {
     ArrayOf(Box<Type<ScalarType>>),
     /// A nullable form of any of the other types
     Nullable(Box<Type<ScalarType>>),
+    /// Used internally
+    Tuple(Vec<Type<ScalarType>>),
 }
 
 impl<S> Type<S> {
@@ -99,6 +101,16 @@ impl<ScalarType: Display> Display for Type<ScalarType> {
                 Type::Object(ot) => write!(f, "{ot}"),
                 Type::ArrayOf(t) => write!(f, "[{t}]"),
                 Type::Nullable(t) => write!(f, "{t}"),
+                Type::Tuple(ts) => {
+                    write!(f, "(")?;
+                    for (index, t) in ts.iter().enumerate() {
+                        write!(f, "{t}")?;
+                        if index < ts.len() - 1 {
+                            write!(f, ", ")?;
+                        }
+                    }
+                    write!(f, ")")
+                }
             }
         }
         match self {

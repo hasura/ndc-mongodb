@@ -54,6 +54,7 @@ fn is_fractional(t: &Type) -> bool {
         Type::Scalar(MongoScalarType::ExtendedJSON) => true,
         Type::Object(_) => false,
         Type::ArrayOf(_) => false,
+        Type::Tuple(ts) => ts.iter().all(is_fractional),
         Type::Nullable(t) => is_fractional(t),
     }
 }

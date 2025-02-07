@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use itertools::Itertools as _;
 use ndc_models::{self as ndc};
 
 use crate::{self as plan};
@@ -66,6 +67,21 @@ fn find_object_type<'a, S>(
         }),
         crate::Type::Nullable(t) => find_object_type(t, parent_type, field_name),
         crate::Type::Object(object_type) => Ok(object_type),
+        crate::Type::Tuple(ts) => {
+            let object_types = ts
+                .iter()
+                .flat_map(|t| find_object_type(t, parent_type, field_name))
+                .collect_vec();
+            if object_types.len() == 1 {
+                Ok(object_types[0])
+            } else {
+                Err(QueryPlanError::ExpectedObjectTypeAtField {
+                    parent_type: parent_type.to_owned(),
+                    field_name: field_name.to_owned(),
+                    got: "array".to_owned(),
+                })
+            }
+        }
     }
 }
 

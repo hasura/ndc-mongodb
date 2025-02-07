@@ -10,9 +10,9 @@ use thiserror::Error;
 use tracing::instrument;
 
 use crate::{
-    constants::{BsonRowSet, ROW_SET_AGGREGATES_KEY, ROW_SET_GROUPS_KEY, ROW_SET_ROWS_KEY},
+    constants::{BsonRowSet, GROUP_DIMENSIONS_KEY, ROW_SET_AGGREGATES_KEY, ROW_SET_GROUPS_KEY, ROW_SET_ROWS_KEY},
     mongo_query_plan::{
-        Aggregate, Field, Grouping, NestedArray, NestedField, NestedObject, ObjectField,
+        Aggregate, Dimension, Field, Grouping, NestedArray, NestedField, NestedObject, ObjectField,
         ObjectType, Query, QueryPlan, Type,
     },
     query::{
@@ -34,7 +34,7 @@ pub enum QueryResponseError {
     #[error("{0}")]
     BsonToJson(#[from] BsonToJsonError),
 
-    #[error("a group response is missing its '_id' field")]
+    #[error("a group response is missing its '{GROUP_DIMENSIONS_KEY}' field")]
     GroupMissingDimensions { path: Vec<String> },
 
     #[error("expected a single response document from MongoDB, but did not get one")]
@@ -215,11 +215,11 @@ fn serialize_groups(
 ) -> Result<Vec<Group>> {
     docs.into_iter()
         .map(|doc| {
-            let dimensions_field_value =
-                doc.get("_id")
-                    .ok_or_else(|| QueryResponseError::GroupMissingDimensions {
-                        path: path_to_owned(path),
-                    })?;
+            let dimensions_field_value = doc.get(GROUP_DIMENSIONS_KEY).ok_or_else(|| {
+                QueryResponseError::GroupMissingDimensions {
+                    path: path_to_owned(path),
+                }
+            })?;
 
             let dimensions_array = match dimensions_field_value {
                 Bson::Array(vec) => Cow::Borrowed(vec),
@@ -286,10 +286,21 @@ fn type_for_row_set(
     }
 
     if let Some(grouping) = groups {
+        let dimension_types = grouping
+            .dimensions
+            .iter()
+            .map(Dimension::value_type)
+            .cloned()
+            .collect();
+        let dimension_tuple_type = Type::Tuple(dimension_types);
+        let mut group_object_type = type_for_aggregates(&grouping.aggregates);
+        group_object_type
+            .fields
+            .insert(GROUP_DIMENSIONS_KEY.into(), dimension_tuple_type.into());
         object_fields.insert(
             ROW_SET_GROUPS_KEY.into(),
             ObjectField {
-                r#type: Type::array_of(Type::Object(type_for_aggregates(&grouping.aggregates))),
+                r#type: Type::array_of(Type::Object(group_object_type)),
                 parameters: Default::default(),
             },
         );

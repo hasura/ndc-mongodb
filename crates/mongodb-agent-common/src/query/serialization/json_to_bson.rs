@@ -66,6 +66,7 @@ pub fn json_to_bson(expected_type: &Type, value: Value) -> Result<Bson> {
         Type::Object(object_type) => convert_object(object_type, value),
         Type::ArrayOf(element_type) => convert_array(element_type, value),
         Type::Nullable(t) => convert_nullable(t, value),
+        Type::Tuple(element_types) => convert_tuple(element_types, value),
     }
 }
 
@@ -128,6 +129,16 @@ fn convert_array(element_type: &Type, value: Value) -> Result<Bson> {
     let bson_array = input_elements
         .into_iter()
         .map(|v| json_to_bson(element_type, v))
+        .try_collect()?;
+    Ok(Bson::Array(bson_array))
+}
+
+fn convert_tuple(element_types: &[Type], value: Value) -> Result<Bson> {
+    let input_elements: Vec<Value> = serde_json::from_value(value)?;
+    let bson_array = element_types
+        .iter()
+        .zip(input_elements)
+        .map(|(element_type, v)| json_to_bson(element_type, v))
         .try_collect()?;
     Ok(Bson::Array(bson_array))
 }

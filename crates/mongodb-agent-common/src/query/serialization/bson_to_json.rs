@@ -49,6 +49,7 @@ pub fn bson_to_json(mode: ExtendedJsonMode, expected_type: &Type, value: Bson) -
         }
         Type::Object(object_type) => convert_object(mode, object_type, value),
         Type::ArrayOf(element_type) => convert_array(mode, element_type, value),
+        Type::Tuple(element_types) => convert_tuple(mode, element_types, value),
         Type::Nullable(t) => convert_nullable(mode, t, value),
     }
 }
@@ -110,6 +111,22 @@ fn convert_array(mode: ExtendedJsonMode, element_type: &Type, value: Bson) -> Re
     let json_array = values
         .into_iter()
         .map(|value| bson_to_json(mode, element_type, value))
+        .try_collect()?;
+    Ok(Value::Array(json_array))
+}
+
+fn convert_tuple(mode: ExtendedJsonMode, element_types: &[Type], value: Bson) -> Result<Value> {
+    let values = match value {
+        Bson::Array(values) => Ok(values),
+        _ => Err(BsonToJsonError::TypeMismatch(
+            Type::Tuple(element_types.to_vec()),
+            value,
+        )),
+    }?;
+    let json_array = element_types
+        .iter()
+        .zip(values)
+        .map(|(element_type, value)| bson_to_json(mode, element_type, value))
         .try_collect()?;
     Ok(Value::Array(json_array))
 }

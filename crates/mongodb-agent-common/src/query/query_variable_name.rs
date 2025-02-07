@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
 use configuration::MongoScalarType;
+use itertools::Itertools;
 
 use crate::{
     mongo_query_plan::{ObjectType, Type},
@@ -28,6 +29,7 @@ fn type_name(input_type: &Type) -> Cow<'static, str> {
         Type::Object(obj) => object_type_name(obj).into(),
         Type::ArrayOf(t) => format!("[{}]", type_name(t)).into(),
         Type::Nullable(t) => format!("nullable({})", type_name(t)).into(),
+        Type::Tuple(ts) => format!("({})", ts.iter().map(type_name).join(", ")).into(),
     }
 }
 
