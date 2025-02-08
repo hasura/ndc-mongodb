@@ -91,12 +91,19 @@ fn plan_for_dimension<T: QueryContext>(
                 get_object_field_by_path(&collection_type, &column_name, field_path.as_deref())?
                     .clone();
 
+            let references_relationship = !relationship_path.is_empty();
+            let field_type = if references_relationship {
+                plan::Type::array_of(object_field.r#type)
+            } else {
+                object_field.r#type
+            };
+
             plan::Dimension::Column {
                 path: relationship_path,
                 column_name,
                 arguments: plan_arguments,
                 field_path,
-                field_type: object_field.r#type,
+                field_type,
             }
         }
     };

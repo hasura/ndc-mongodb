@@ -158,8 +158,12 @@ pub enum Dimension<T: ConnectorTypes> {
         arguments: BTreeMap<ArgumentName, Argument<T>>,
         /// Path to a nested field within an object column
         field_path: Option<Vec<FieldName>>,
-        /// Type of the field that you get *after* follwing `field_path` to a possibly-nested
+        /// Type of the field that you get **after** follwing `field_path` to a possibly-nested
         /// field.
+        ///
+        /// If this column references a field in a related collection then this type will be an
+        /// array type whose element type is the type of the related field. The array type wrapper
+        /// applies regardless of whether the relationship is an array or an object relationship.
         field_type: Type<T::ScalarType>,
     },
 }
