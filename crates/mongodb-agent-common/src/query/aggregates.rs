@@ -475,7 +475,7 @@ mod tests {
             },
             {
                 "$replaceWith": {
-                    "_id": "$_id",
+                    "dimensions": "$_id",
                     "average_viewer_rating": { "$convert": { "input": "$average_viewer_rating", "to": "double" } },
                     "max.runtime": { "$ifNull": [{ "$getField": { "$literal": "max.runtime" } }, null] },
                 }
@@ -487,12 +487,12 @@ mod tests {
             expected_pipeline,
             bson!([
                 {
-                    "_id": 2007,
+                    "dimensions": [2007],
                     "average_viewer_rating": 7.5,
                     "max.runtime": 207,
                 },
                 {
-                    "_id": 2015,
+                    "dimensions": [2015],
                     "average_viewer_rating": 6.9,
                     "max.runtime": 412,
                 },
