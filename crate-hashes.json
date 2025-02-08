@@ -1,5 +1,6 @@
 {
-  "git+http://github.com/hasura/ndc-spec.git?tag=v0.1.6#ndc-models@0.1.6": "0nc2x5pwsgwn2cb6589gdj1ws6sll0m9m2r6zwmgv027dfcx6k4x",
-  "git+http://github.com/hasura/ndc-spec.git?tag=v0.1.6#ndc-test@0.1.6": "0nc2x5pwsgwn2cb6589gdj1ws6sll0m9m2r6zwmgv027dfcx6k4x",
-  "git+https://github.com/hasura/ndc-sdk-rs.git?tag=v0.4.0#ndc-sdk@0.4.0": "1dq1m5x2dx0yyf93qyf7lc3n5bs4i94jxn8g453ghs5c56fcpq96"
+  "git+http://github.com/hasura/ndc-spec.git?tag=v0.2.0-rc.2#ndc-models@0.2.0": "0h7fxhxmccxm7pfdfdikyy8lvw5il0db79s81yvcqngg812wvl5d",
+  "git+http://github.com/hasura/ndc-spec.git?tag=v0.2.0-rc.2#ndc-test@0.2.0": "0h7fxhxmccxm7pfdfdikyy8lvw5il0db79s81yvcqngg812wvl5d",
+  "git+https://github.com/hasura/ndc-sdk-rs.git?rev=643b96b8ee4c8b372b44433167ce2ac4de193332#ndc-sdk-core@0.5.0": "12kw0jamimkh5d0nr9ysvc07d47z450j3pmldxvpzyxs0b0n3c23",
+  "git+https://github.com/hasura/ndc-sdk-rs.git?rev=643b96b8ee4c8b372b44433167ce2ac4de193332#ndc-sdk@0.5.0": "12kw0jamimkh5d0nr9ysvc07d47z450j3pmldxvpzyxs0b0n3c23"
 }

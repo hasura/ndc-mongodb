@@ -1531,7 +1531,7 @@ rec {
           }
           {
             name = "itertools";
-            packageId = "itertools";
+            packageId = "itertools 0.13.0";
           }
           {
             name = "mongodb";
@@ -4871,11 +4871,32 @@ rec {
         };
         resolvedDefaultFeatures = [ "default" ];
       };
-      "itertools" = rec {
+      "itertools 0.12.1" = rec {
         crateName = "itertools";
         version = "0.12.1";
         edition = "2018";
         sha256 = "0s95jbb3ndj1lvfxyq5wanc0fm0r6hg6q4ngb92qlfdxvci10ads";
+        authors = [
+          "bluss"
+        ];
+        dependencies = [
+          {
+            name = "either";
+            packageId = "either";
+            usesDefaultFeatures = false;
+          }
+        ];
+        features = {
+          "default" = [ "use_std" ];
+          "use_std" = [ "use_alloc" "either/use_std" ];
+        };
+        resolvedDefaultFeatures = [ "use_alloc" ];
+      };
+      "itertools 0.13.0" = rec {
+        crateName = "itertools";
+        version = "0.13.0";
+        edition = "2018";
+        sha256 = "11hiy3qzl643zcigknclh446qb9zlg4dpdzfkjaa9q9fqpgyfgj1";
         authors = [
           "bluss"
         ];
@@ -5662,7 +5683,7 @@ rec {
           }
           {
             name = "itertools";
-            packageId = "itertools";
+            packageId = "itertools 0.13.0";
           }
           {
             name = "lazy_static";
@@ -5689,6 +5710,10 @@ rec {
           {
             name = "ndc-query-plan";
             packageId = "ndc-query-plan";
+          }
+          {
+            name = "nonempty";
+            packageId = "nonempty";
           }
           {
             name = "once_cell";
@@ -5815,7 +5840,7 @@ rec {
           }
           {
             name = "itertools";
-            packageId = "itertools";
+            packageId = "itertools 0.13.0";
           }
           {
             name = "mongodb";
@@ -5959,7 +5984,7 @@ rec {
           }
           {
             name = "itertools";
-            packageId = "itertools";
+            packageId = "itertools 0.13.0";
           }
           {
             name = "mongodb";
@@ -6161,13 +6186,13 @@ rec {
       };
       "ndc-models" = rec {
         crateName = "ndc-models";
-        version = "0.1.6";
+        version = "0.2.0";
         edition = "2021";
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "http://github.com/hasura/ndc-spec.git";
-          rev = "d1be19e9cdd86ac7b6ad003ff82b7e5b4e96b84f";
-          sha256 = "0nc2x5pwsgwn2cb6589gdj1ws6sll0m9m2r6zwmgv027dfcx6k4x";
+          rev = "2fad1c699df79890dbb3877d1035ffd8bd0abfc2";
+          sha256 = "0h7fxhxmccxm7pfdfdikyy8lvw5il0db79s81yvcqngg812wvl5d";
         };
         libName = "ndc_models";
         dependencies = [
@@ -6228,7 +6253,7 @@ rec {
           }
           {
             name = "itertools";
-            packageId = "itertools";
+            packageId = "itertools 0.13.0";
           }
           {
             name = "ndc-models";
@@ -6278,14 +6303,14 @@ rec {
       };
       "ndc-sdk" = rec {
         crateName = "ndc-sdk";
-        version = "0.4.0";
+        version = "0.5.0";
         edition = "2021";
         crateBin = [];
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/hasura/ndc-sdk-rs.git";
-          rev = "665509f7d3b47ce4f014fc23f817a3599ba13933";
-          sha256 = "1dq1m5x2dx0yyf93qyf7lc3n5bs4i94jxn8g453ghs5c56fcpq96";
+          rev = "643b96b8ee4c8b372b44433167ce2ac4de193332";
+          sha256 = "12kw0jamimkh5d0nr9ysvc07d47z450j3pmldxvpzyxs0b0n3c23";
         };
         libName = "ndc_sdk";
         dependencies = [
@@ -6296,32 +6321,30 @@ rec {
           {
             name = "axum";
             packageId = "axum";
-            features = [ "http2" ];
+            features = [ "http2" "http2" ];
           }
           {
             name = "axum-extra";
             packageId = "axum-extra";
           }
           {
-            name = "bytes";
-            packageId = "bytes";
-          }
-          {
             name = "clap";
             packageId = "clap";
-            features = [ "derive" "env" ];
+            features = [ "derive" "env" "derive" "env" ];
           }
           {
             name = "http";
             packageId = "http 0.2.12";
           }
           {
-            name = "mime";
-            packageId = "mime";
-          }
-          {
             name = "ndc-models";
             packageId = "ndc-models";
+          }
+          {
+            name = "ndc-sdk-core";
+            packageId = "ndc-sdk-core";
+            usesDefaultFeatures = false;
+            features = [ "axum" ];
           }
           {
             name = "ndc-test";
@@ -6339,7 +6362,7 @@ rec {
           {
             name = "opentelemetry-otlp";
             packageId = "opentelemetry-otlp";
-            features = [ "reqwest-client" "gzip-tonic" "tls" "tls-roots" "http-proto" ];
+            features = [ "reqwest-client" "gzip-tonic" "tls" "tls-roots" "http-proto" "reqwest-client" "gzip-tonic" "tls" "tls-roots" "http-proto" ];
           }
           {
             name = "opentelemetry-semantic-conventions";
@@ -6352,7 +6375,7 @@ rec {
           {
             name = "opentelemetry_sdk";
             packageId = "opentelemetry_sdk";
-            features = [ "rt-tokio" ];
+            features = [ "rt-tokio" "rt-tokio" ];
           }
           {
             name = "prometheus";
@@ -6363,14 +6386,13 @@ rec {
             packageId = "reqwest 0.11.27";
           }
           {
-            name = "serde";
-            packageId = "serde";
-            features = [ "derive" ];
+            name = "semver";
+            packageId = "semver";
           }
           {
             name = "serde_json";
             packageId = "serde_json";
-            features = [ "raw_value" ];
+            features = [ "raw_value" "raw_value" ];
           }
           {
             name = "thiserror";
@@ -6379,12 +6401,12 @@ rec {
           {
             name = "tokio";
             packageId = "tokio";
-            features = [ "fs" "macros" "rt-multi-thread" "signal" ];
+            features = [ "fs" "macros" "rt-multi-thread" "signal" "fs" "macros" "rt-multi-thread" "signal" ];
           }
           {
             name = "tower-http";
             packageId = "tower-http";
-            features = [ "cors" "trace" "validate-request" ];
+            features = [ "cors" "limit" "trace" "validate-request" "cors" "limit" "trace" "validate-request" ];
           }
           {
             name = "tracing";
@@ -6398,7 +6420,7 @@ rec {
             name = "tracing-subscriber";
             packageId = "tracing-subscriber";
             usesDefaultFeatures = false;
-            features = [ "ansi" "env-filter" "fmt" "json" ];
+            features = [ "ansi" "env-filter" "fmt" "json" "ansi" "env-filter" "fmt" "json" ];
           }
           {
             name = "url";
@@ -6408,21 +6430,107 @@ rec {
         features = {
           "default" = [ "native-tls" "ndc-test" ];
           "native-tls" = [ "reqwest/native-tls" ];
-          "ndc-test" = [ "dep:ndc-test" ];
+          "ndc-test" = [ "dep:ndc-test" "ndc-sdk-core/ndc-test" ];
           "rustls" = [ "reqwest/rustls" ];
         };
         resolvedDefaultFeatures = [ "default" "native-tls" "ndc-test" ];
       };
+      "ndc-sdk-core" = rec {
+        crateName = "ndc-sdk-core";
+        version = "0.5.0";
+        edition = "2021";
+        workspace_member = null;
+        src = pkgs.fetchgit {
+          url = "https://github.com/hasura/ndc-sdk-rs.git";
+          rev = "643b96b8ee4c8b372b44433167ce2ac4de193332";
+          sha256 = "12kw0jamimkh5d0nr9ysvc07d47z450j3pmldxvpzyxs0b0n3c23";
+        };
+        libName = "ndc_sdk_core";
+        dependencies = [
+          {
+            name = "async-trait";
+            packageId = "async-trait";
+          }
+          {
+            name = "axum";
+            packageId = "axum";
+            optional = true;
+            features = [ "http2" "http2" ];
+          }
+          {
+            name = "bytes";
+            packageId = "bytes";
+          }
+          {
+            name = "http";
+            packageId = "http 0.2.12";
+          }
+          {
+            name = "mime";
+            packageId = "mime";
+            optional = true;
+          }
+          {
+            name = "ndc-models";
+            packageId = "ndc-models";
+          }
+          {
+            name = "ndc-test";
+            packageId = "ndc-test";
+            optional = true;
+          }
+          {
+            name = "prometheus";
+            packageId = "prometheus";
+          }
+          {
+            name = "serde";
+            packageId = "serde";
+            features = [ "derive" "derive" ];
+          }
+          {
+            name = "serde_json";
+            packageId = "serde_json";
+            features = [ "raw_value" "raw_value" ];
+          }
+          {
+            name = "thiserror";
+            packageId = "thiserror";
+          }
+          {
+            name = "tokio";
+            packageId = "tokio";
+            features = [ "fs" "macros" "rt-multi-thread" "signal" "fs" "macros" "rt-multi-thread" "signal" "sync" ];
+          }
+          {
+            name = "tracing";
+            packageId = "tracing";
+          }
+        ];
+        devDependencies = [
+          {
+            name = "axum";
+            packageId = "axum";
+            features = [ "http2" "http2" ];
+          }
+        ];
+        features = {
+          "axum" = [ "dep:axum" "dep:mime" ];
+          "default" = [ "axum" "ndc-test" ];
+          "ndc-test" = [ "dep:ndc-test" ];
+        };
+        resolvedDefaultFeatures = [ "axum" "ndc-test" ];
+      };
       "ndc-test" = rec {
         crateName = "ndc-test";
-        version = "0.1.6";
+        version = "0.2.0";
         edition = "2021";
         crateBin = [];
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "http://github.com/hasura/ndc-spec.git";
-          rev = "d1be19e9cdd86ac7b6ad003ff82b7e5b4e96b84f";
-          sha256 = "0nc2x5pwsgwn2cb6589gdj1ws6sll0m9m2r6zwmgv027dfcx6k4x";
+          rev = "2fad1c699df79890dbb3877d1035ffd8bd0abfc2";
+          sha256 = "0h7fxhxmccxm7pfdfdikyy8lvw5il0db79s81yvcqngg812wvl5d";
         };
         libName = "ndc_test";
         dependencies = [
@@ -6455,7 +6563,7 @@ rec {
           }
           {
             name = "reqwest";
-            packageId = "reqwest 0.11.27";
+            packageId = "reqwest 0.12.4";
             usesDefaultFeatures = false;
             features = [ "json" "multipart" ];
           }
@@ -6473,11 +6581,6 @@ rec {
             features = [ "preserve_order" ];
           }
           {
-            name = "smol_str";
-            packageId = "smol_str";
-            features = [ "serde" ];
-          }
-          {
             name = "thiserror";
             packageId = "thiserror";
           }
@@ -6486,15 +6589,11 @@ rec {
             packageId = "tokio";
             features = [ "macros" "rt-multi-thread" "parking_lot" ];
           }
-          {
-            name = "url";
-            packageId = "url";
-          }
         ];
         features = {
           "default" = [ "native-tls" ];
           "native-tls" = [ "reqwest/native-tls" ];
-          "rustls" = [ "reqwest/rustls" ];
+          "rustls" = [ "reqwest/rustls-tls" ];
         };
         resolvedDefaultFeatures = [ "default" "native-tls" ];
       };
@@ -6512,7 +6611,7 @@ rec {
           }
           {
             name = "itertools";
-            packageId = "itertools";
+            packageId = "itertools 0.13.0";
           }
           {
             name = "ndc-models";
@@ -6557,17 +6656,18 @@ rec {
       };
       "nonempty" = rec {
         crateName = "nonempty";
-        version = "0.10.0";
-        edition = "2018";
-        sha256 = "1f0bjs3x83qh3wlibg06fsy8djw61pzfg3a27g5ddk04r14qfgih";
+        version = "0.11.0";
+        edition = "2021";
+        sha256 = "07bljx1i4r4m5rkx1hx9jmd7sia4sbs6iv0v224jzbyck4dlg7jl";
         authors = [
           "Alexis Sellier <self@cloudhead.io>"
         ];
         features = {
           "arbitrary" = [ "dep:arbitrary" ];
-          "serde" = [ "dep:serde" ];
-          "serialize" = [ "serde" ];
+          "default" = [ "std" ];
+          "serialize" = [ "dep:serde" ];
         };
+        resolvedDefaultFeatures = [ "default" "std" ];
       };
       "nu-ansi-term" = rec {
         crateName = "nu-ansi-term";
@@ -7847,7 +7947,7 @@ rec {
           }
           {
             name = "itertools";
-            packageId = "itertools";
+            packageId = "itertools 0.12.1";
             usesDefaultFeatures = false;
             features = [ "use_alloc" ];
           }
@@ -8364,12 +8464,6 @@ rec {
             target = { target, features }: (!("wasm32" == target."arch" or null));
           }
           {
-            name = "mime_guess";
-            packageId = "mime_guess";
-            optional = true;
-            usesDefaultFeatures = false;
-          }
-          {
             name = "native-tls";
             packageId = "native-tls";
             rename = "native-tls-crate";
@@ -8548,7 +8642,7 @@ rec {
           "wasm-streams" = [ "dep:wasm-streams" ];
           "webpki-roots" = [ "dep:webpki-roots" ];
         };
-        resolvedDefaultFeatures = [ "__tls" "blocking" "default" "default-tls" "hyper-tls" "json" "mime_guess" "multipart" "native-tls" "native-tls-crate" "serde_json" "tokio-native-tls" ];
+        resolvedDefaultFeatures = [ "__tls" "blocking" "default" "default-tls" "hyper-tls" "native-tls" "native-tls-crate" "tokio-native-tls" ];
       };
       "reqwest 0.12.4" = rec {
         crateName = "reqwest";
@@ -8640,6 +8734,12 @@ rec {
             name = "mime";
             packageId = "mime";
             target = { target, features }: (!("wasm32" == target."arch" or null));
+          }
+          {
+            name = "mime_guess";
+            packageId = "mime_guess";
+            optional = true;
+            usesDefaultFeatures = false;
           }
           {
             name = "native-tls";
@@ -8814,7 +8914,7 @@ rec {
           "stream" = [ "tokio/fs" "dep:tokio-util" "dep:wasm-streams" ];
           "zstd" = [ "dep:async-compression" "async-compression?/zstd" "dep:tokio-util" ];
         };
-        resolvedDefaultFeatures = [ "__tls" "charset" "default" "default-tls" "h2" "http2" "json" "macos-system-configuration" ];
+        resolvedDefaultFeatures = [ "__tls" "charset" "default" "default-tls" "h2" "http2" "json" "macos-system-configuration" "multipart" "native-tls" ];
       };
       "resolv-conf" = rec {
         crateName = "resolv-conf";
@@ -11701,7 +11801,7 @@ rec {
           "uuid" = [ "dep:uuid" ];
           "validate-request" = [ "mime" ];
         };
-        resolvedDefaultFeatures = [ "cors" "default" "mime" "trace" "tracing" "validate-request" ];
+        resolvedDefaultFeatures = [ "cors" "default" "limit" "mime" "trace" "tracing" "validate-request" ];
       };
       "tower-layer" = rec {
         crateName = "tower-layer";
