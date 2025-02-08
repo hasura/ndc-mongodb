@@ -1,9 +1,10 @@
 use crate::{connector::Connector, graphql_query, run_connector_query};
 use insta::assert_yaml_snapshot;
 use ndc_test_helpers::{
-    asc, binop, column, column_aggregate, dimension_column, exists, field, grouping,
+    asc, binop, column, column_aggregate, dimension_column, exists, field, grouping, is_in,
     ordered_dimensions, query, query_request, related, relation_field, relationship, target, value,
 };
+use serde_json::json;
 
 #[tokio::test]
 async fn joins_local_relationships() -> anyhow::Result<()> {
@@ -245,6 +246,42 @@ async fn joins_relationships_on_nested_key() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn groups_by_related_field() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::Chinook,
+            query_request()
+                .collection("Track")
+                .query(
+                    query()
+                        // avoid albums that are modified in mutation tests
+                        .predicate(is_in(
+                            target!("AlbumId"),
+                            [json!(15), json!(91), json!(227)]
+                        ))
+                        .groups(
+                            grouping()
+                                .dimensions([dimension_column(
+                                    column("Name").from_relationship("track_genre")
+                                )])
+                                .aggregates([(
+                                    "average_price",
+                                    column_aggregate("UnitPrice", "avg")
+                                )])
+                                .order_by(ordered_dimensions())
+                        )
+                )
+                .relationships([(
+                    "track_genre",
+                    relationship("Genre", [("GenreId", &["GenreId"])]).object_type()
+                )])
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn gets_groups_through_relationship() -> anyhow::Result<()> {
     assert_yaml_snapshot!(
         run_connector_query(
@@ -253,8 +290,9 @@ async fn gets_groups_through_relationship() -> anyhow::Result<()> {
                 .collection("Album")
                 .query(
                     query()
+                    // avoid albums that are modified in mutation tests
+                    .predicate(is_in(target!("AlbumId"), [json!(15), json!(91), json!(227)]))
                     .order_by([asc!("_id")])
-                    .limit(5)
                     .fields([field!("AlbumId"), relation_field!("tracks" => "album_tracks", query()
                       .groups(grouping()
                         .dimensions([dimension_column(column("Name").from_relationship("track_genre"))])
@@ -291,11 +329,10 @@ async fn gets_fields_and_groups_through_relationship() -> anyhow::Result<()> {
                 .collection("Album")
                 .query(
                     query()
+                    .predicate(is_in(target!("AlbumId"), [json!(15), json!(91), json!(227)]))
                     .order_by([asc!("_id")])
-                    .limit(3)
                     .fields([field!("AlbumId"), relation_field!("tracks" => "album_tracks", query()
                       .order_by([asc!("_id")])
-                      .limit(3)
                       .fields([field!("AlbumId"), field!("Name"), field!("UnitPrice")])
                       .groups(grouping()
                         .dimensions([dimension_column(column("Name").from_relationship("track_genre"))])

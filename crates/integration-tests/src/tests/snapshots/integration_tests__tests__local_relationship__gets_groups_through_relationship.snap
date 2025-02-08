@@ -1,30 +1,34 @@
 ---
 source: crates/integration-tests/src/tests/local_relationship.rs
-expression: "run_connector_query(Connector::Chinook,\nquery_request().collection(\"Album\").query(query().order_by([asc!(\"_id\")]).limit(5).fields([field!(\"AlbumId\"),\nrelation_field!(\"tracks\" => \"album_tracks\",\nquery().groups(grouping().dimensions([dimension_column(column(\"Name\").from_relationship(\"track_genre\"))]).aggregates([(\"AlbumId\",\ncolumn_aggregate(\"AlbumId\", \"avg\")),\n(\"average_price\",\ncolumn_aggregate(\"UnitPrice\",\n\"avg\")),]).order_by(ordered_dimensions()),))])).relationships([(\"album_tracks\",\nrelationship(\"Track\", [(\"AlbumId\", &[\"AlbumId\"])])),\n(\"track_genre\",\nrelationship(\"Genre\", [(\"GenreId\", &[\"GenreId\"])]).object_type())])).await?"
+expression: "run_connector_query(Connector::Chinook,\nquery_request().collection(\"Album\").query(query().predicate(is_in(target!(\"AlbumId\"),\n[json!(15), json!(91),\njson!(227)])).order_by([asc!(\"_id\")]).fields([field!(\"AlbumId\"),\nrelation_field!(\"tracks\" => \"album_tracks\",\nquery().groups(grouping().dimensions([dimension_column(column(\"Name\").from_relationship(\"track_genre\"))]).aggregates([(\"AlbumId\",\ncolumn_aggregate(\"AlbumId\", \"avg\")),\n(\"average_price\",\ncolumn_aggregate(\"UnitPrice\",\n\"avg\")),]).order_by(ordered_dimensions()),))])).relationships([(\"album_tracks\",\nrelationship(\"Track\", [(\"AlbumId\", &[\"AlbumId\"])])),\n(\"track_genre\",\nrelationship(\"Genre\", [(\"GenreId\", &[\"GenreId\"])]).object_type())])).await?"
 ---
 - rows:
-    - AlbumId: 3
+    - AlbumId: 15
       tracks:
         groups:
-          - AlbumId: 3
-            average_price: 11.99
-    - AlbumId: 5
-      tracks:
-        groups:
-          - AlbumId: 5
+          - AlbumId: 15
             average_price: 0.99
-    - AlbumId: 6
+            dimensions:
+              - - Metal
+    - AlbumId: 91
       tracks:
         groups:
-          - AlbumId: 6
+          - AlbumId: 91
             average_price: 0.99
-    - AlbumId: 7
+            dimensions:
+              - - Rock
+    - AlbumId: 227
       tracks:
         groups:
-          - AlbumId: 7
-            average_price: 0.99
-    - AlbumId: 8
-      tracks:
-        groups:
-          - AlbumId: 8
-            average_price: 0.99
+          - AlbumId: 227
+            average_price: 1.99
+            dimensions:
+              - - Sci Fi & Fantasy
+          - AlbumId: 227
+            average_price: 1.99
+            dimensions:
+              - - Science Fiction
+          - AlbumId: 227
+            average_price: 1.99
+            dimensions:
+              - - TV Shows
