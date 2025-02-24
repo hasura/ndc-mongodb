@@ -145,16 +145,19 @@ fn selection_for_grouping_internal(grouping: &Grouping, dimensions_field_name: &
     let selected_aggregates = grouping.aggregates.iter().map(|(key, aggregate)| {
         let column_ref = ColumnRef::from_field(key).into_aggregate_expression();
         // Selecting distinct counts requires some post-processing since the $group stage produces
-        // an array of unique values. We need to filter to non-null values, and get the length of
-        // that array.
+        // an array of unique values. We need to count the non-null values in that array.
         let value_expression = match aggregate {
             Aggregate::ColumnCount { distinct, .. } if *distinct => bson!({
-                "$size": {
-                    "$filter": {
-                        "input": column_ref,
-                        "as": "value",
-                        "cond": { "$ne": ["$$value", null] },
-                    }
+                "$reduce": {
+                    "input": column_ref,
+                    "initialValue": 0,
+                    "in": {
+                        "$cond": {
+                            "if": { "$eq": ["$$this", null] },
+                            "then": "$$value",
+                            "else": { "$sum": ["$$value", 1] },
+                        }
+                    },
                 }
             }),
             _ => column_ref.into_bson(),
