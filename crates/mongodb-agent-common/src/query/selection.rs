@@ -9,7 +9,9 @@ use crate::{
     interface_types::MongoAgentError,
     mongo_query_plan::{Field, NestedArray, NestedField, NestedObject},
     mongodb::sanitize::get_field,
-    query::{column_ref::ColumnRef, groups::selection_for_grouping},
+    query::{
+        aggregates::selection_for_aggregates, column_ref::ColumnRef, groups::selection_for_grouping,
+    },
 };
 
 use super::is_response_faceted::ResponseFacets;
@@ -170,6 +172,17 @@ fn selection_for_field(
                         }
                     }
                 }
+                ResponseFacets::AggregatesOnly(aggregates) => doc! {
+                    ROW_SET_AGGREGATES_KEY: {
+                        "$first": {
+                            "$map": {
+                                "input": relationship_field,
+                                "as": "CURRENT", // implicitly changes the document root in `in` to be the array element
+                                "in": selection_for_aggregates(aggregates),
+                            }
+                        } 
+                    }
+                },
                 ResponseFacets::FieldsOnly(fields) => doc! {
                     ROW_SET_ROWS_KEY: {
                         "$map": {

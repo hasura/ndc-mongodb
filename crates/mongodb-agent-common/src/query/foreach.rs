@@ -72,6 +72,9 @@ pub fn pipeline_for_foreach(
                 })
                 .collect()
         }
+        ResponseFacets::AggregatesOnly(_) => {
+            doc! { ROW_SET_AGGREGATES_KEY: "$query" }
+        }
         ResponseFacets::FieldsOnly(_) => {
             doc! { ROW_SET_ROWS_KEY: "$query" }
         }

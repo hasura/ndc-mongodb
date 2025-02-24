@@ -1,153 +1,120 @@
 use std::collections::BTreeMap;
 
-use configuration::MongoScalarType;
-use mongodb::bson::{self, doc, Bson};
-use mongodb_support::{
-    aggregate::{Accumulator, Pipeline, Selection, Stage},
-    BsonScalarType,
-};
+use indexmap::IndexMap;
+use mongodb::bson::{bson, Bson};
+use mongodb_support::aggregate::{Accumulator, Pipeline, Selection, Stage};
 use ndc_models::FieldName;
 
-use crate::{
-    aggregation_function::AggregationFunction,
-    comparison_function::ComparisonFunction,
-    constants::RESULT_FIELD,
-    constants::{ROW_SET_AGGREGATES_KEY, ROW_SET_GROUPS_KEY, ROW_SET_ROWS_KEY},
-    interface_types::MongoAgentError,
-    mongo_query_plan::{
-        Aggregate, ComparisonTarget, ComparisonValue, Expression, Query, QueryPlan, Type,
-    },
-    mongodb::sanitize::get_field,
-};
+use crate::{aggregation_function::AggregationFunction, mongo_query_plan::Aggregate};
 
-use super::{
-    column_ref::ColumnRef, groups::pipeline_for_groups, make_selector,
-    pipeline::pipeline_for_fields_facet, query_level::QueryLevel,
-};
+use super::column_ref::ColumnRef;
 
-type Result<T> = std::result::Result<T, MongoAgentError>;
-
-/// Returns a map of pipelines for evaluating each aggregate independently, paired with
-/// a `Selection` that converts results of each pipeline to a format compatible with
-/// `QueryResponse`.
-pub fn facet_pipelines_for_query(
-    query_plan: &QueryPlan,
-    query_level: QueryLevel,
-) -> Result<(BTreeMap<String, Pipeline>, Selection)> {
-    let query = &query_plan.query;
-    let Query {
-        aggregates,
-        fields,
-        groups,
-        ..
-    } = query;
-    let mut facet_pipelines = aggregates
-        .iter()
-        .flatten()
-        .map(|(key, aggregate)| Ok((key.to_string(), pipeline_for_aggregate(aggregate.clone())?)))
-        .collect::<Result<BTreeMap<_, _>>>()?;
-
-    // This builds a map that feeds into a `$replaceWith` pipeline stage to build a map of
-    // aggregation results.
-    let aggregate_selections: bson::Document = aggregates
-        .iter()
-        .flatten()
-        .map(|(key, aggregate)| {
-            // The facet result for each aggregate is an array containing a single document which
-            // has a field called `result`. This code selects each facet result by name, and pulls
-            // out the `result` value.
-            let value_expr = doc! {
-                "$getField": {
-                    "field": RESULT_FIELD, // evaluates to the value of this field
-                    "input": { "$first": get_field(key.as_str()) }, // field is accessed from this document
-                },
-            };
-
-            // Matching SQL semantics, if a **count** aggregation does not match any rows we want
-            // to return zero. Other aggregations should return null.
-            let value_expr = if is_count(aggregate) {
-                doc! {
-                    "$ifNull": [value_expr, 0],
-                }
-            // Otherwise if the aggregate value is missing because the aggregation applied to an
-            // empty document set then provide an explicit `null` value.
-            } else {
-                convert_aggregate_result_type(value_expr, aggregate)
-            };
-
-            (key.to_string(), value_expr.into())
-        })
-        .collect();
-
-    let select_aggregates = if !aggregate_selections.is_empty() {
-        Some((
-            ROW_SET_AGGREGATES_KEY.to_string(),
-            aggregate_selections.into(),
-        ))
-    } else {
-        None
+pub fn pipeline_for_aggregates(aggregates: &IndexMap<FieldName, Aggregate>) -> Pipeline {
+    let group_stage = Stage::Group {
+        key_expression: Bson::Null,
+        accumulators: accumulators_for_aggregates(aggregates),
     };
-
-    let (groups_pipeline_facet, select_groups) = match groups {
-        Some(grouping) => {
-            let internal_key = "__GROUPS__";
-            let groups_pipeline = pipeline_for_groups(grouping)?;
-            let facet = (internal_key.to_string(), groups_pipeline);
-            let selection = (
-                ROW_SET_GROUPS_KEY.to_string(),
-                Bson::String(format!("${internal_key}")),
-            );
-            (Some(facet), Some(selection))
-        }
-        None => (None, None),
-    };
-
-    let (rows_pipeline_facet, select_rows) = match fields {
-        Some(_) => {
-            let internal_key = "__ROWS__";
-            let rows_pipeline = pipeline_for_fields_facet(query_plan, query_level)?;
-            let facet = (internal_key.to_string(), rows_pipeline);
-            let selection = (
-                ROW_SET_ROWS_KEY.to_string().to_string(),
-                Bson::String(format!("${internal_key}")),
-            );
-            (Some(facet), Some(selection))
-        }
-        None => (None, None),
-    };
-
-    for (key, pipeline) in [groups_pipeline_facet, rows_pipeline_facet]
-        .into_iter()
-        .flatten()
-    {
-        facet_pipelines.insert(key, pipeline);
-    }
-
-    let selection = Selection::new(
-        [select_aggregates, select_groups, select_rows]
-            .into_iter()
-            .flatten()
-            .collect(),
-    );
-
-    Ok((facet_pipelines, selection))
+    let replace_with_stage = Stage::ReplaceWith(selection_for_aggregates(aggregates));
+    Pipeline::new(vec![group_stage, replace_with_stage])
 }
 
-fn is_count(aggregate: &Aggregate) -> bool {
+pub fn accumulators_for_aggregates(
+    aggregates: &IndexMap<FieldName, Aggregate>,
+) -> BTreeMap<String, Accumulator> {
+    aggregates
+        .into_iter()
+        .map(|(name, aggregate)| (name.to_string(), aggregate_to_accumulator(aggregate)))
+        .collect()
+}
+
+fn aggregate_to_accumulator(aggregate: &Aggregate) -> Accumulator {
+    use Aggregate as A;
     match aggregate {
-        Aggregate::ColumnCount { .. } => true,
-        Aggregate::StarCount { .. } => true,
-        Aggregate::SingleColumn { .. } => false,
+        A::ColumnCount {
+            column,
+            field_path,
+            distinct,
+            ..
+        } => {
+            let field_ref = ColumnRef::from_column_and_field_path(column, field_path.as_ref())
+                .into_aggregate_expression()
+                .into_bson();
+            if *distinct {
+                Accumulator::AddToSet(field_ref)
+            } else {
+                Accumulator::Sum(bson!({
+                    "$cond": {
+                        "if": { "$eq": [field_ref, null] }, // count non-null, non-missing values
+                        "then": 0,
+                        "else": 1,
+                    }
+                }))
+            }
+        }
+        A::SingleColumn {
+            column,
+            field_path,
+            function,
+            ..
+        } => {
+            use AggregationFunction as A;
+
+            let field_ref = ColumnRef::from_column_and_field_path(column, field_path.as_ref())
+                .into_aggregate_expression()
+                .into_bson();
+
+            match function {
+                A::Avg => Accumulator::Avg(field_ref),
+                A::Min => Accumulator::Min(field_ref),
+                A::Max => Accumulator::Max(field_ref),
+                A::Sum => Accumulator::Sum(field_ref),
+            }
+        }
+        A::StarCount => Accumulator::Sum(bson!(1)),
     }
+}
+
+pub fn selection_for_aggregates(aggregates: &IndexMap<FieldName, Aggregate>) -> Selection {
+    let selected_aggregates = aggregates
+        .iter()
+        .map(|(key, aggregate)| selection_for_aggregate(key, aggregate))
+        .collect();
+    Selection::new(selected_aggregates)
+}
+
+pub fn selection_for_aggregate(key: &FieldName, aggregate: &Aggregate) -> (String, Bson) {
+    let column_ref = ColumnRef::from_field(key).into_aggregate_expression();
+    // Selecting distinct counts requires some post-processing since the $group stage produces
+    // an array of unique values. We need to count the non-null values in that array.
+    let value_expression = match aggregate {
+        Aggregate::ColumnCount { distinct, .. } if *distinct => bson!({
+            "$reduce": {
+                "input": column_ref,
+                "initialValue": 0,
+                "in": {
+                    "$cond": {
+                        "if": { "$eq": ["$$this", null] },
+                        "then": "$$value",
+                        "else": { "$sum": ["$$value", 1] },
+                    }
+                },
+            }
+        }),
+        aggregate if aggregate.is_count() => bson!({
+            "$ifNull": [column_ref, 0]
+        }),
+        _ => bson!({
+            "$ifNull": [column_ref, null]
+        }),
+    };
+    let selection = convert_aggregate_result_type(value_expression, aggregate);
+    (key.to_string(), selection)
 }
 
 /// The system expects specific return types for specific aggregates. That means we may need
 /// to do a numeric type conversion here. The conversion applies to the aggregated result,
 /// not to input values.
-pub fn convert_aggregate_result_type(
-    column_ref: impl Into<Bson>,
-    aggregate: &Aggregate,
-) -> bson::Document {
+fn convert_aggregate_result_type(column_ref: impl Into<Bson>, aggregate: &Aggregate) -> Bson {
     let convert_to = match aggregate {
         Aggregate::ColumnCount { .. } => None,
         Aggregate::SingleColumn {
@@ -159,113 +126,14 @@ pub fn convert_aggregate_result_type(
     };
     match convert_to {
         // $convert implicitly fills `null` if input value is missing
-        Some(scalar_type) => doc! {
+        Some(scalar_type) => bson!({
                 "$convert": {
                 "input": column_ref,
                 "to": scalar_type.bson_name(),
             }
-        },
-        None => doc! {
-            "$ifNull": [column_ref, null]
-        },
+        }),
+        None => column_ref.into(),
     }
-}
-
-// TODO: We can probably combine some aggregates in the same group stage:
-// - single column
-// - star count
-// - column count, non-distinct
-//
-// We might still need separate facets for
-// - column count, distinct
-//
-// The issue with non-distinct column count is we want to exclude null and non-existent values.
-// That could probably be done with an accumulator like,
-//
-//     count: if $exists: ["$column", true] then 1 else 0
-//
-// Distinct counts need a group by the target column AFAIK so they need a facet.
-fn pipeline_for_aggregate(aggregate: Aggregate) -> Result<Pipeline> {
-    let pipeline = match aggregate {
-        Aggregate::ColumnCount {
-            column,
-            field_path,
-            distinct,
-            ..
-        } if distinct => {
-            let target_field = mk_target_field(column, field_path);
-            Pipeline::new(vec![
-                filter_to_documents_with_value(target_field.clone())?,
-                Stage::Group {
-                    key_expression: ColumnRef::from_comparison_target(&target_field)
-                        .into_aggregate_expression()
-                        .into_bson(),
-                    accumulators: [].into(),
-                },
-                Stage::Count(RESULT_FIELD.to_string()),
-            ])
-        }
-
-        // TODO: ENG-1465 count by distinct
-        Aggregate::ColumnCount {
-            column,
-            field_path,
-            distinct: _,
-            ..
-        } => Pipeline::new(vec![
-            filter_to_documents_with_value(mk_target_field(column, field_path))?,
-            Stage::Count(RESULT_FIELD.to_string()),
-        ]),
-
-        Aggregate::SingleColumn {
-            column,
-            field_path,
-            function,
-            ..
-        } => {
-            use AggregationFunction as A;
-
-            let field_ref = ColumnRef::from_column_and_field_path(&column, field_path.as_ref())
-                .into_aggregate_expression()
-                .into_bson();
-
-            let accumulator = match function {
-                A::Avg => Accumulator::Avg(field_ref),
-                A::Min => Accumulator::Min(field_ref),
-                A::Max => Accumulator::Max(field_ref),
-                A::Sum => Accumulator::Sum(field_ref),
-            };
-            Pipeline::new(vec![Stage::Group {
-                key_expression: Bson::Null,
-                accumulators: [(RESULT_FIELD.to_string(), accumulator)].into(),
-            }])
-        }
-
-        Aggregate::StarCount {} => Pipeline::new(vec![Stage::Count(RESULT_FIELD.to_string())]),
-    };
-    Ok(pipeline)
-}
-
-fn mk_target_field(name: FieldName, field_path: Option<Vec<FieldName>>) -> ComparisonTarget {
-    ComparisonTarget::Column {
-        name,
-        arguments: Default::default(),
-        field_path,
-        field_type: Type::Scalar(MongoScalarType::ExtendedJSON), // type does not matter here
-    }
-}
-
-fn filter_to_documents_with_value(target_field: ComparisonTarget) -> Result<Stage> {
-    Ok(Stage::Match(make_selector(
-        &Expression::BinaryComparisonOperator {
-            column: target_field,
-            operator: ComparisonFunction::NotEqual,
-            value: ComparisonValue::Scalar {
-                value: serde_json::Value::Null,
-                value_type: Type::Scalar(MongoScalarType::Bson(BsonScalarType::Null)),
-            },
-        },
-    )?))
 }
 
 #[cfg(test)]

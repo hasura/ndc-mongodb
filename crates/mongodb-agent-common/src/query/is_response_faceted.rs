@@ -28,6 +28,7 @@ pub enum ResponseFacets<'a> {
         fields: Option<&'a IndexMap<FieldName, Field>>,
         groups: Option<&'a Grouping>,
     },
+    AggregatesOnly(&'a IndexMap<FieldName, Aggregate>),
     FieldsOnly(&'a IndexMap<FieldName, Field>),
     GroupsOnly(&'a Grouping),
 }
@@ -38,20 +39,23 @@ impl ResponseFacets<'_> {
         fields: Option<&'a IndexMap<FieldName, Field>>,
         groups: Option<&'a Grouping>,
     ) -> ResponseFacets<'a> {
-        let aggregates_score = if has_aggregates(aggregates) { 2 } else { 0 };
-        let fields_score = if has_fields(fields) { 1 } else { 0 };
-        let groups_score = if has_groups(groups) { 1 } else { 0 };
+        let facet_score = [
+            get_aggregates(aggregates).map(|_| ()),
+            get_fields(fields).map(|_| ()),
+            get_groups(groups).map(|_| ()),
+        ]
+        .into_iter()
+        .flatten()
+        .count();
 
-        if aggregates_score + fields_score + groups_score > 1 {
+        if facet_score > 1 {
             ResponseFacets::Combination {
-                aggregates: if has_aggregates(aggregates) {
-                    aggregates
-                } else {
-                    None
-                },
-                fields: if has_fields(fields) { fields } else { None },
-                groups: if has_groups(groups) { groups } else { None },
+                aggregates: get_aggregates(aggregates),
+                fields: get_fields(fields),
+                groups: get_groups(groups),
             }
+        } else if let Some(aggregates) = aggregates {
+            ResponseFacets::AggregatesOnly(aggregates)
         } else if let Some(grouping) = groups {
             ResponseFacets::GroupsOnly(grouping)
         } else {
@@ -68,36 +72,26 @@ impl ResponseFacets<'_> {
     }
 }
 
-/// A query that includes aggregates will be run using a $facet pipeline stage. A query that
-/// combines two ore more of rows, groups, and aggregates will also use facets. The choice affects
-/// how result rows are mapped to a QueryResponse.
-///
-/// If we have aggregate pipelines they should be combined with the fields pipeline (if there is
-/// one) in a single facet stage. If we have fields, and no aggregates then the fields pipeline
-/// can instead be appended to `pipeline`.
-pub fn is_response_faceted(query: &Query) -> bool {
-    matches!(
-        ResponseFacets::from_query(query),
-        ResponseFacets::Combination { .. }
-    )
-}
-
-fn has_aggregates(aggregates: Option<&IndexMap<FieldName, Aggregate>>) -> bool {
+fn get_aggregates(
+    aggregates: Option<&IndexMap<FieldName, Aggregate>>,
+) -> Option<&IndexMap<FieldName, Aggregate>> {
     if let Some(aggregates) = aggregates {
-        !aggregates.is_empty()
-    } else {
-        false
+        if !aggregates.is_empty() {
+            return Some(aggregates);
+        }
     }
+    None
 }
 
-fn has_fields(fields: Option<&IndexMap<FieldName, Field>>) -> bool {
+fn get_fields(fields: Option<&IndexMap<FieldName, Field>>) -> Option<&IndexMap<FieldName, Field>> {
     if let Some(fields) = fields {
-        !fields.is_empty()
-    } else {
-        false
+        if !fields.is_empty() {
+            return Some(fields);
+        }
     }
+    None
 }
 
-fn has_groups(groups: Option<&Grouping>) -> bool {
-    groups.is_some()
+fn get_groups(groups: Option<&Grouping>) -> Option<&Grouping> {
+    groups
 }

@@ -6,30 +6,30 @@ expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collec
     - dimensions:
         - ~
       aggregates:
-        count: 6
-        year_count: 6
         year_distinct_count: 3
+        year_count: 6
+        count: 6
     - dimensions:
         - NOT RATED
       aggregates:
-        count: 4
-        year_count: 4
         year_distinct_count: 3
+        year_count: 4
+        count: 4
     - dimensions:
         - PASSED
       aggregates:
-        count: 3
-        year_count: 3
         year_distinct_count: 1
+        year_count: 3
+        count: 3
     - dimensions:
         - TV-PG
       aggregates:
-        count: 1
-        year_count: 1
         year_distinct_count: 1
+        year_count: 1
+        count: 1
     - dimensions:
         - UNRATED
       aggregates:
-        count: 5
-        year_count: 5
         year_distinct_count: 2
+        year_count: 5
+        count: 5
