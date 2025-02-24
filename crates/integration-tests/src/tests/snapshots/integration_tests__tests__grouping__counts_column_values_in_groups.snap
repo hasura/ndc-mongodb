@@ -1,0 +1,35 @@
+---
+source: crates/integration-tests/src/tests/grouping.rs
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").query(query().predicate(and([binop(\"_gt\",\ntarget!(\"year\"), value!(1920)),\nbinop(\"_lte\", target!(\"year\"),\nvalue!(1923)),])).groups(grouping().dimensions([dimension_column(\"rated\")]).aggregates([column_count_aggregate!(\"year_distinct_count\"\n=> \"year\", distinct: true),\ncolumn_count_aggregate!(\"year_count\" => \"year\", distinct: false),\nstar_count_aggregate!(\"count\"),]).order_by(ordered_dimensions()),),),).await?"
+---
+- groups:
+    - dimensions:
+        - ~
+      aggregates:
+        count: 6
+        year_count: 6
+        year_distinct_count: 3
+    - dimensions:
+        - NOT RATED
+      aggregates:
+        count: 4
+        year_count: 4
+        year_distinct_count: 3
+    - dimensions:
+        - PASSED
+      aggregates:
+        count: 3
+        year_count: 3
+        year_distinct_count: 1
+    - dimensions:
+        - TV-PG
+      aggregates:
+        count: 1
+        year_count: 1
+        year_distinct_count: 1
+    - dimensions:
+        - UNRATED
+      aggregates:
+        count: 5
+        year_count: 5
+        year_distinct_count: 2

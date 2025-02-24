@@ -20,7 +20,7 @@ type Result<T> = std::result::Result<T, MongoAgentError>;
 pub fn pipeline_for_groups(grouping: &Grouping) -> Result<Pipeline> {
     let group_stage = Stage::Group {
         key_expression: dimensions_to_expression(&grouping.dimensions).into(),
-        accumulators: accumulators_for_aggregates(&grouping.aggregates)?,
+        accumulators: accumulators_for_aggregates(&grouping.aggregates),
     };
 
     // TODO: ENG-1562 This implementation does not fully implement the
@@ -74,23 +74,39 @@ fn dimensions_to_expression(dimensions: &[Dimension]) -> bson::Array {
         .collect()
 }
 
-// TODO: This function can be infallible once counts are implemented
 fn accumulators_for_aggregates(
     aggregates: &IndexMap<FieldName, Aggregate>,
-) -> Result<BTreeMap<String, Accumulator>> {
+) -> BTreeMap<String, Accumulator> {
     aggregates
         .into_iter()
-        .map(|(name, aggregate)| Ok((name.to_string(), aggregate_to_accumulator(aggregate)?)))
+        .map(|(name, aggregate)| (name.to_string(), aggregate_to_accumulator(aggregate)))
         .collect()
 }
 
-// TODO: This function can be infallible once counts are implemented
-fn aggregate_to_accumulator(aggregate: &Aggregate) -> Result<Accumulator> {
+fn aggregate_to_accumulator(aggregate: &Aggregate) -> Accumulator {
     use Aggregate as A;
     match aggregate {
-        A::ColumnCount { .. } => Err(MongoAgentError::NotImplemented(Cow::Borrowed(
-            "count aggregates in groups",
-        ))),
+        A::ColumnCount {
+            column,
+            field_path,
+            distinct,
+            ..
+        } => {
+            let field_ref = ColumnRef::from_column_and_field_path(column, field_path.as_ref())
+                .into_aggregate_expression()
+                .into_bson();
+            if *distinct {
+                Accumulator::AddToSet(field_ref)
+            } else {
+                Accumulator::Sum(bson!({
+                    "$cond": {
+                        "if": { "$eq": [field_ref, null] }, // count non-null, non-missing values
+                        "then": 0,
+                        "else": 1,
+                    }
+                }))
+            }
+        }
         A::SingleColumn {
             column,
             field_path,
@@ -103,16 +119,14 @@ fn aggregate_to_accumulator(aggregate: &Aggregate) -> Result<Accumulator> {
                 .into_aggregate_expression()
                 .into_bson();
 
-            Ok(match function {
+            match function {
                 A::Avg => Accumulator::Avg(field_ref),
                 A::Min => Accumulator::Min(field_ref),
                 A::Max => Accumulator::Max(field_ref),
                 A::Sum => Accumulator::Sum(field_ref),
-            })
+            }
         }
-        A::StarCount => Err(MongoAgentError::NotImplemented(Cow::Borrowed(
-            "count aggregates in groups",
-        ))),
+        A::StarCount => Accumulator::Sum(bson!(1)),
     }
 }
 
@@ -130,7 +144,22 @@ fn selection_for_grouping_internal(grouping: &Grouping, dimensions_field_name: &
     );
     let selected_aggregates = grouping.aggregates.iter().map(|(key, aggregate)| {
         let column_ref = ColumnRef::from_field(key).into_aggregate_expression();
-        let selection = convert_aggregate_result_type(column_ref, aggregate);
+        // Selecting distinct counts requires some post-processing since the $group stage produces
+        // an array of unique values. We need to filter to non-null values, and get the length of
+        // that array.
+        let value_expression = match aggregate {
+            Aggregate::ColumnCount { distinct, .. } if *distinct => bson!({
+                "$size": {
+                    "$filter": {
+                        "input": column_ref,
+                        "as": "value",
+                        "cond": { "$ne": ["$$value", null] },
+                    }
+                }
+            }),
+            _ => column_ref.into_bson(),
+        };
+        let selection = convert_aggregate_result_type(value_expression, aggregate);
         (key.to_string(), selection.into())
     });
     let selection_doc = std::iter::once(dimensions)
