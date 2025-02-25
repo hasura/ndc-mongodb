@@ -84,6 +84,7 @@ pub fn selection_for_aggregates(aggregates: &IndexMap<FieldName, Aggregate>) -> 
 
 pub fn selection_for_aggregate(key: &FieldName, aggregate: &Aggregate) -> (String, Bson) {
     let column_ref = ColumnRef::from_field(key).into_aggregate_expression();
+
     // Selecting distinct counts requires some post-processing since the $group stage produces
     // an array of unique values. We need to count the non-null values in that array.
     let value_expression = match aggregate {
@@ -100,15 +101,22 @@ pub fn selection_for_aggregate(key: &FieldName, aggregate: &Aggregate) -> (Strin
                 },
             }
         }),
-        aggregate if aggregate.is_count() => bson!({
-            "$ifNull": [column_ref, 0]
-        }),
-        _ => bson!({
-            "$ifNull": [column_ref, null]
-        }),
+        _ => column_ref.into(),
     };
-    let selection = convert_aggregate_result_type(value_expression, aggregate);
-    (key.to_string(), selection)
+
+    // Fill in null or zero values for missing fields. If we skip this we get errors on missing
+    // data down the line.
+    let value_expression = bson!({
+        "$ifNull": [
+            value_expression,
+            if aggregate.is_count() { bson!(0) } else { bson!(null) }
+        ]
+    });
+
+    // Convert types to match what the engine expects for each aggregation result
+    let value_expression = convert_aggregate_result_type(value_expression, aggregate);
+
+    (key.to_string(), value_expression)
 }
 
 /// The system expects specific return types for specific aggregates. That means we may need

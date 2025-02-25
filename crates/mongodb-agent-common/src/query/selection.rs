@@ -127,25 +127,19 @@ fn selection_for_field(
                     fields,
                     groups,
                 } => {
-                    let aggregate_selection: Document = aggregates
-                        .into_iter()
-                        .flatten()
-                        .map(|(aggregate_name, _)| {
-                            (
-                                aggregate_name.to_string(),
-                                format!("$$row_set.{ROW_SET_AGGREGATES_KEY}.{aggregate_name}")
-                                    .into(),
-                            )
-                        })
-                        .collect();
-                    let mut new_row_set = doc! { ROW_SET_AGGREGATES_KEY: aggregate_selection };
+                    let mut new_row_set = Document::new();
+
+                    if let Some(aggregates) = aggregates {
+                        new_row_set
+                            .insert(ROW_SET_AGGREGATES_KEY, selection_for_aggregates(aggregates));
+                    }
 
                     if let Some(fields) = fields {
                         new_row_set.insert(
                             ROW_SET_ROWS_KEY,
                             doc! {
                                 "$map": {
-                                    "input": format!("$$row_set.{ROW_SET_ROWS_KEY}"),
+                                    "input": format!("${ROW_SET_ROWS_KEY}"),
                                     "in": field_selection(fields),
                                 }
                             },
@@ -157,7 +151,7 @@ fn selection_for_field(
                             ROW_SET_GROUPS_KEY,
                             doc! {
                                 "$map": {
-                                    "input": format!("$$row_set.{ROW_SET_GROUPS_KEY}"),
+                                    "input": format!("${ROW_SET_GROUPS_KEY}"),
                                     "as": "CURRENT", // implicitly changes the document root in `in` to be the array element
                                     "in": selection_for_grouping(grouping),
                                 }
@@ -167,20 +161,17 @@ fn selection_for_field(
 
                     doc! {
                         "$let": {
-                            "vars": { "row_set": { "$first": relationship_field } },
+                            "vars": { "CURRENT": { "$first": relationship_field } },
                             "in": new_row_set,
                         }
                     }
                 }
                 ResponseFacets::AggregatesOnly(aggregates) => doc! {
                     ROW_SET_AGGREGATES_KEY: {
-                        "$first": {
-                            "$map": {
-                                "input": relationship_field,
-                                "as": "CURRENT", // implicitly changes the document root in `in` to be the array element
-                                "in": selection_for_aggregates(aggregates),
-                            }
-                        } 
+                        "$let": {
+                            "vars": { "CURRENT": { "$first": relationship_field } },
+                            "in": selection_for_aggregates(aggregates),
+                        }
                     }
                 },
                 ResponseFacets::FieldsOnly(fields) => doc! {
