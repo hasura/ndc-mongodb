@@ -371,7 +371,7 @@ mod tests {
             },
             {
                 "$replaceWith": {
-                    "aggregates": "$query",
+                    "aggregates": { "$first": "$query" },
                 }
             },
         ]);
