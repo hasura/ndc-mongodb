@@ -74,7 +74,7 @@ fn aggregate_to_accumulator(aggregate: &Aggregate) -> Accumulator {
     }
 }
 
-pub fn selection_for_aggregates(aggregates: &IndexMap<FieldName, Aggregate>) -> Selection {
+fn selection_for_aggregates(aggregates: &IndexMap<FieldName, Aggregate>) -> Selection {
     let selected_aggregates = aggregates
         .iter()
         .map(|(key, aggregate)| selection_for_aggregate(key, aggregate))
@@ -83,7 +83,7 @@ pub fn selection_for_aggregates(aggregates: &IndexMap<FieldName, Aggregate>) -> 
 }
 
 pub fn selection_for_aggregate(key: &FieldName, aggregate: &Aggregate) -> (String, Bson) {
-    let column_ref = ColumnRef::from_field(key).into_aggregate_expression();
+    let column_ref = ColumnRef::from_field(key.as_ref()).into_aggregate_expression();
 
     // Selecting distinct counts requires some post-processing since the $group stage produces
     // an array of unique values. We need to count the non-null values in that array.
@@ -106,17 +106,21 @@ pub fn selection_for_aggregate(key: &FieldName, aggregate: &Aggregate) -> (Strin
 
     // Fill in null or zero values for missing fields. If we skip this we get errors on missing
     // data down the line.
-    let value_expression = bson!({
-        "$ifNull": [
-            value_expression,
-            if aggregate.is_count() { bson!(0) } else { bson!(null) }
-        ]
-    });
+    let value_expression = replace_missing_aggregate_value(value_expression, aggregate.is_count());
 
     // Convert types to match what the engine expects for each aggregation result
     let value_expression = convert_aggregate_result_type(value_expression, aggregate);
 
     (key.to_string(), value_expression)
+}
+
+pub fn replace_missing_aggregate_value(expression: Bson, is_count: bool) -> Bson {
+    bson!({
+        "$ifNull": [
+            expression,
+            if is_count { bson!(0) } else { bson!(null) }
+        ]
+    })
 }
 
 /// The system expects specific return types for specific aggregates. That means we may need

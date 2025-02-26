@@ -9,11 +9,10 @@ use crate::{
     constants::{ROW_SET_AGGREGATES_KEY, ROW_SET_GROUPS_KEY, ROW_SET_ROWS_KEY},
     interface_types::MongoAgentError,
     mongo_query_plan::{MongoConfiguration, Query, QueryPlan},
-    mongodb::sanitize::get_field,
 };
 
 use super::{
-    aggregates::pipeline_for_aggregates, foreach::pipeline_for_foreach,
+    aggregates::pipeline_for_aggregates, column_ref::ColumnRef, foreach::pipeline_for_foreach,
     groups::pipeline_for_groups, is_response_faceted::ResponseFacets, make_selector,
     make_sort::make_sort_stages, native_query::pipeline_for_native_query, query_level::QueryLevel,
     relations::pipeline_for_relations, selection::selection_for_fields,
@@ -192,7 +191,7 @@ pub fn pipeline_for_fields_facet(
             selection = selection.try_map_document(|mut doc| {
                 doc.insert(
                     relationship_key.to_owned(),
-                    get_field(relationship_key.as_str()),
+                    ColumnRef::from_field(relationship_key.as_str()).into_aggregate_expression(),
                 );
                 doc
             })?;

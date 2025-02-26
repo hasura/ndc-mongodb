@@ -76,7 +76,8 @@ fn make_lookup_stage(
     let source_selector = single_mapping.map(|(field_name, _)| field_name);
     let target_selector = single_mapping.map(|(_, target_path)| target_path);
 
-    let source_key = source_selector.and_then(|f| ColumnRef::from_field(f).into_match_key());
+    let source_key =
+        source_selector.and_then(|f| ColumnRef::from_field(f.as_ref()).into_match_key());
     let target_key =
         target_selector.and_then(|path| ColumnRef::from_field_path(path.as_ref()).into_match_key());
 
@@ -137,7 +138,7 @@ fn lookup_with_uncorrelated_subquery(
         .map(|local_field| {
             (
                 variable(local_field.as_str()),
-                ColumnRef::from_field(local_field)
+                ColumnRef::from_field(local_field.as_ref())
                     .into_aggregate_expression()
                     .into_bson(),
             )

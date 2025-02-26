@@ -37,7 +37,7 @@ pub fn pipeline_for_groups(grouping: &Grouping) -> Result<Pipeline> {
     // TODO: ENG-1563 to implement 'query.aggregates.group_by.paginate' apply grouping.limit and
     // grouping.offset **after** group stage because those options count groups, not documents
 
-    let replace_with_stage = Stage::ReplaceWith(selection_for_grouping_internal(grouping, "_id"));
+    let replace_with_stage = Stage::ReplaceWith(selection_for_grouping(grouping, "_id"));
 
     Ok(Pipeline::new(
         [
@@ -75,14 +75,7 @@ fn dimensions_to_expression(dimensions: &[Dimension]) -> bson::Array {
         .collect()
 }
 
-pub fn selection_for_grouping(grouping: &Grouping) -> Selection {
-    // This function is called externally to propagate groups from relationship lookups. In that
-    // case the group has already gone through [selection_for_grouping_internal] once so we want to
-    // reference the dimensions key as "dimensions".
-    selection_for_grouping_internal(grouping, GROUP_DIMENSIONS_KEY)
-}
-
-fn selection_for_grouping_internal(grouping: &Grouping, dimensions_field_name: &str) -> Selection {
+fn selection_for_grouping(grouping: &Grouping, dimensions_field_name: &str) -> Selection {
     let dimensions = (
         GROUP_DIMENSIONS_KEY.to_string(),
         bson!(format!("${dimensions_field_name}")),

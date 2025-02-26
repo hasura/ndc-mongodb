@@ -86,8 +86,8 @@ impl<'a> ColumnRef<'a> {
         .expect("field_path is not empty") // safety: NonEmpty cannot be empty
     }
 
-    pub fn from_field(field_name: &ndc_models::FieldName) -> ColumnRef<'_> {
-        fold_path_element(None, field_name.as_ref())
+    pub fn from_field(field_name: &str) -> ColumnRef<'_> {
+        fold_path_element(None, field_name)
     }
 
     pub fn from_relationship(relationship_name: &ndc_models::RelationshipName) -> ColumnRef<'_> {
@@ -103,8 +103,8 @@ impl<'a> ColumnRef<'a> {
         Self::ExpressionStringShorthand(format!("$${variable_name}").into())
     }
 
-    pub fn into_nested_field<'b: 'a>(self, field_name: &'b ndc_models::FieldName) -> ColumnRef<'b> {
-        fold_path_element(Some(self), field_name.as_ref())
+    pub fn into_nested_field<'b: 'a>(self, field_name: &'b str) -> ColumnRef<'b> {
+        fold_path_element(Some(self), field_name)
     }
 
     pub fn into_aggregate_expression(self) -> AggregationExpression {
