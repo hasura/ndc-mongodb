@@ -4,10 +4,8 @@ on:
     branches:
       - main
       - 'v*'
-      - 'jessehallett/eng-1621-mongodb-native-query-cannot-be-used-as-target-of-remote-join'
     tags:
       - 'v*'
-  pull_request:
 
 jobs:
   binary:

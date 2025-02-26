@@ -73,7 +73,7 @@ writeShellApplication {
         export docker_tags=("$tag")
       elif [[ $input =~ ^refs/heads/(.*)$ ]]; then
         local branch="''${BASH_REMATCH[1]}"
-        set_dev_tags "eng-1621"
+        set_dev_tags "$branch"
       else
         export docker_tags=()
       fi
