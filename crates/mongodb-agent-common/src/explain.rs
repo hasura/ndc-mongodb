@@ -1,13 +1,12 @@
 use std::collections::BTreeMap;
 
 use mongodb::bson::{doc, to_bson, Bson};
+use mongodb_support::aggregate::AggregateCommand;
 use ndc_models::{ExplainResponse, QueryRequest};
 use ndc_query_plan::plan_for_query_request;
 
 use crate::{
-    interface_types::MongoAgentError,
-    mongo_query_plan::MongoConfiguration,
-    query::{self, QueryTarget},
+    interface_types::MongoAgentError, mongo_query_plan::MongoConfiguration, query,
     state::ConnectorState,
 };
 
@@ -19,19 +18,28 @@ pub async fn explain_query(
     let db = state.database();
     let query_plan = plan_for_query_request(config, query_request)?;
 
-    let pipeline = query::pipeline_for_query_request(config, &query_plan)?;
+    let AggregateCommand {
+        collection,
+        pipeline,
+        let_vars,
+    } = query::command_for_query_request(config, &query_plan)?;
     let pipeline_bson = to_bson(&pipeline)?;
 
-    let target = QueryTarget::for_request(config, &query_plan);
-    let aggregate_target = match (target.input_collection(), query_plan.has_variables()) {
-        (Some(collection_name), false) => Bson::String(collection_name.to_string()),
-        _ => Bson::Int32(1),
+    let aggregate_target = match collection {
+        Some(collection_name) => Bson::String(collection_name.to_string()),
+        None => Bson::Int32(1),
     };
 
-    let query_command = doc! {
-        "aggregate": aggregate_target,
-        "pipeline": pipeline_bson,
-        "cursor": {},
+    let query_command = {
+        let mut cmd = doc! {
+            "aggregate": aggregate_target,
+            "pipeline": pipeline_bson,
+            "cursor": {},
+        };
+        if let Some(let_vars) = let_vars {
+            cmd.insert("let", let_vars);
+        }
+        cmd
     };
 
     let explain_command = doc! {

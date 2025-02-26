@@ -33,7 +33,7 @@ pub fn make_selector(expr: &Expression) -> Result<Document> {
 mod tests {
     use configuration::MongoScalarType;
     use mongodb::bson::{self, bson, doc};
-    use mongodb_support::BsonScalarType;
+    use mongodb_support::{aggregate::AggregateCommand, BsonScalarType};
     use ndc_models::UnaryComparisonOperator;
     use ndc_query_plan::{plan_for_query_request, Scope};
     use ndc_test_helpers::{
@@ -47,7 +47,7 @@ mod tests {
         mongo_query_plan::{
             ComparisonTarget, ComparisonValue, ExistsInCollection, Expression, Type,
         },
-        query::pipeline_for_query_request,
+        query::command_for_query_request,
         test_helpers::{chinook_config, chinook_relationships},
     };
 
@@ -193,7 +193,7 @@ mod tests {
 
         let config = chinook_config();
         let plan = plan_for_query_request(&config, request)?;
-        let pipeline = pipeline_for_query_request(&config, &plan)?;
+        let AggregateCommand { pipeline, let_vars } = command_for_query_request(&config, &plan)?;
 
         let expected_pipeline = bson!([
             {
@@ -256,6 +256,7 @@ mod tests {
         ]);
 
         assert_eq!(bson::to_bson(&pipeline).unwrap(), expected_pipeline);
+        assert_eq!(let_vars, None);
         Ok(())
     }
 

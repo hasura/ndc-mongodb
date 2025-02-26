@@ -56,7 +56,11 @@ pub fn serialize_query_response(
 ) -> Result<QueryResponse> {
     let collection_name = &query_plan.collection;
 
-    let row_sets = if query_plan.has_variables() {
+    let row_sets = if query_plan
+        .variables
+        .as_ref()
+        .is_some_and(|variables| variables.len() != 1)
+    {
         response_documents
             .into_iter()
             .map(|document| {
