@@ -4,9 +4,9 @@ on:
     branches:
       - main
       - 'v*'
-      - 'jessehallett/eng-1621-mongodb-vector-search-native-query-does-not-work-in-remote'
     tags:
       - 'v*'
+  pull_request:
 
 jobs:
   binary:
