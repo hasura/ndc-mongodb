@@ -172,7 +172,7 @@ mod tests {
     }
 
     #[test]
-    fn root_column_reference_refereces_column_of_nearest_query() -> anyhow::Result<()> {
+    fn root_column_reference_references_column_of_nearest_query() -> anyhow::Result<()> {
         let request = query_request()
             .collection("Artist")
             .query(
@@ -193,7 +193,11 @@ mod tests {
 
         let config = chinook_config();
         let plan = plan_for_query_request(&config, request)?;
-        let AggregateCommand { pipeline, let_vars } = command_for_query_request(&config, &plan)?;
+        let AggregateCommand {
+            collection: _,
+            pipeline,
+            let_vars,
+        } = command_for_query_request(&config, &plan)?;
 
         let expected_pipeline = bson!([
             {
