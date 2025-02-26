@@ -257,7 +257,7 @@ mod tests {
                     "students": {
                         "rows": {
                             "$map": {
-                                "input": { "$getField": { "$literal": "class_students" } },
+                                "input": "$class_students",
                                 "in": {
                                     "student_name": "$$this.student_name"
                                 }
@@ -346,7 +346,7 @@ mod tests {
                     "class": {
                         "rows": {
                             "$map": {
-                                "input": { "$getField": { "$literal": "student_class" } },
+                                "input": "$student_class",
                                 "in": {
                                     "class_title": "$$this.class_title"
                                 }
@@ -443,7 +443,7 @@ mod tests {
                     "students": {
                         "rows": {
                             "$map": {
-                                "input": { "$getField": { "$literal": "students" } },
+                                "input": "$students",
                                 "in": {
                                     "student_name": "$$this.student_name"
                                 }
@@ -520,7 +520,7 @@ mod tests {
                     "join": {
                         "rows": {
                             "$map": {
-                                "input": { "$getField": { "$literal": "join" } },
+                                "input": "$join",
                                 "in": {
                                     "invalid_name": "$$this.invalid_name",
                                 }
@@ -622,7 +622,7 @@ mod tests {
                         },
                         {
                             "$replaceWith": {
-                                "assignments": { "$getField": { "$literal": "assignments" } },
+                                "assignments": "$assignments",
                                 "student_name": { "$ifNull": ["$name", null] },
                             },
                         },
@@ -636,7 +636,7 @@ mod tests {
                     "students": {
                         "rows": {
                             "$map": {
-                                "input": { "$getField": { "$literal": "students" } },
+                                "input": "$students",
                                 "in": {
                                     "assignments": "$$this.assignments",
                                     "student_name": "$$this.student_name",
@@ -720,27 +720,14 @@ mod tests {
                     },
                     "pipeline": [
                         {
-                            "$facet": {
-                                "aggregate_count": [
-                                    { "$count": "result" },
-                                ],
+                            "$group": {
+                                "_id": null,
+                                "aggregate_count": { "$sum": 1 },
                             }
                         },
                         {
                             "$replaceWith": {
-                                "aggregates": {
-                                    "aggregate_count": {
-                                        "$ifNull": [
-                                            {
-                                                "$getField": {
-                                                    "field": "result",
-                                                    "input": { "$first": { "$getField": { "$literal": "aggregate_count" } } },
-                                                },
-                                            },
-                                            0,
-                                        ]
-                                    },
-                                },
+                                "aggregate_count": { "$ifNull": ["$aggregate_count", 0] },
                             },
                         }
                     ],
@@ -750,16 +737,16 @@ mod tests {
             {
                 "$replaceWith": {
                     "students_aggregate": {
-                        "$let": {
-                            "vars": {
-                                "row_set": { "$first": { "$getField": { "$literal": "students" } } }
-                            },
-                            "in": {
-                                "aggregates": {
-                                    "aggregate_count": "$$row_set.aggregates.aggregate_count"
+                        "aggregates": {
+                            "$let": {
+                                "vars": {
+                                    "aggregates": { "$first": "$students" }
+                                },
+                                "in": {
+                                    "aggregate_count": { "$ifNull": ["$$aggregates.aggregate_count", 0] }
                                 }
                             }
-                        }
+                        },
                     }
                 },
             },
@@ -864,7 +851,7 @@ mod tests {
               "movie": {
                 "rows": {
                   "$map": {
-                    "input": { "$getField": { "$literal": "movie" } },
+                    "input": "$movie",
                     "in": {
                         "year": "$$this.year",
                         "title": "$$this.title",
@@ -986,7 +973,7 @@ mod tests {
                     "movie": {
                         "rows": {
                             "$map": {
-                                "input": { "$getField": { "$literal": "movie" } },
+                                "input": "$movie",
                                 "in": {
                                     "credits": "$$this.credits",
                                 }

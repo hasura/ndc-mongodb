@@ -247,28 +247,30 @@ mod tests {
                     "pipeline": [
                         { "$match": { "$expr": { "$eq": ["$artistId", "$$artistId_int"] } }},
                         { "$facet": {
+                            "__AGGREGATES__": [
+                                {
+                                    "$group": {
+                                        "_id": null,
+                                        "count": { "$sum": 1 },
+                                    }
+                                },
+                                {
+                                    "$replaceWith": {
+                                        "count": { "$ifNull": ["$count", 0] },
+                                    }
+                                },
+                            ],
                             "__ROWS__": [{ "$replaceWith": {
                                 "albumId": { "$ifNull": ["$albumId", null] },
                                 "title": { "$ifNull": ["$title", null] }
                             }}],
-                            "count": [{ "$count": "result" }],
                         } },
-                        { "$replaceWith": {
-                            "aggregates": {
-                                "count": {
-                                    "$ifNull": [
-                                        {
-                                            "$getField": {
-                                                "field": "result",
-                                                "input": { "$first": { "$getField": { "$literal": "count" } } }
-                                            }
-                                        },
-                                        0,
-                                    ]
-                                },
-                            },
-                            "rows": "$__ROWS__",
-                        } },
+                        { 
+                            "$replaceWith": {
+                                "aggregates": { "$first": "$__AGGREGATES__" },
+                                "rows": "$__ROWS__",
+                            }
+                        },
                     ]
                 }
             },
@@ -353,30 +355,23 @@ mod tests {
                     "as": "query",
                     "pipeline": [
                         { "$match": { "$expr": { "$eq": ["$artistId", "$$artistId_int"] } }},
-                        { "$facet": {
-                            "count": [{ "$count": "result" }],
-                        } },
-                        { "$replaceWith": {
-                            "aggregates": {
-                                "count": {
-                                    "$ifNull": [
-                                        {
-                                            "$getField": {
-                                                "field": "result",
-                                                "input": { "$first": { "$getField": { "$literal": "count" } } }
-                                            }
-                                        },
-                                        0,
-                                    ]
-                                },
-                            },
-                        } },
+                        {
+                            "$group": {
+                                "_id": null,
+                                "count": { "$sum": 1 }
+                            }
+                        },
+                        {
+                            "$replaceWith": {
+                                "count": { "$ifNull": ["$count", 0] },
+                            }
+                        },
                     ]
                 }
             },
             {
                 "$replaceWith": {
-                    "aggregates": { "$getField": { "input": { "$first": "$query" }, "field": "aggregates" } },
+                    "aggregates": "$query",
                 }
             },
         ]);

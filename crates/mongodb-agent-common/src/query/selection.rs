@@ -406,7 +406,7 @@ mod tests {
                 "class_students": {
                     "rows": {
                         "$map": {
-                            "input": { "$getField": { "$literal": "class_students" } },
+                            "input": "$class_students",
                             "in": {
                                 "name": "$$this.name"
                             },
@@ -416,7 +416,7 @@ mod tests {
                 "students": {
                     "rows": {
                         "$map": {
-                            "input": { "$getField": { "$literal": "class_students_0" } },
+                            "input": "$class_students_0",
                             "in": {
                                 "student_name": "$$this.student_name"
                             },

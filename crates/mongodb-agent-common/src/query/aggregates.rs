@@ -156,6 +156,7 @@ mod tests {
         binop, collection, column_aggregate, column_count_aggregate, dimension_column, field,
         group, grouping, named_type, object_type, query, query_request, row_set, target, value,
     };
+    use pretty_assertions::assert_eq;
     use serde_json::json;
 
     use crate::{
@@ -180,42 +181,37 @@ mod tests {
 
         let expected_pipeline = bson!([
             {
-                "$facet": {
-                    "avg": [
-                        { "$group": { "_id": null, "result": { "$avg": "$gpa" } } },
-                    ],
-                    "count": [
-                        { "$match": { "gpa": { "$ne": null } } },
-                        { "$group": { "_id": "$gpa" } },
-                        { "$count": "result" },
-                    ],
+                "$group": {
+                    "_id": null,
+                    "avg": { "$avg": "$gpa" },
+                    "count": { "$addToSet": "$gpa" },
                 },
             },
             {
                 "$replaceWith": {
-                    "aggregates": {
-                        "avg": {
-                            "$convert": {
-                                "input": {
-                                    "$getField": {
-                                        "field": "result",
-                                        "input": { "$first": { "$getField": { "$literal": "avg" } } },
+                    "avg": {
+                        "$convert": {
+                            "to": "double",
+                            "input": { "$ifNull": ["$avg", null] },
+                        }
+                    },
+                    "count": {
+                        "$ifNull": [
+                            {
+                                "$reduce": {
+                                    "input": "$count",
+                                    "initialValue": 0,
+                                    "in": {
+                                        "$cond": {
+                                            "if": { "$eq": ["$$this", null] },
+                                            "then": "$$value",
+                                            "else": { "$sum": ["$$value", 1] }
+                                        }
                                     }
-                                },
-                                "to": "double",
-                            }
-                        },
-                        "count": {
-                            "$ifNull": [
-                                {
-                                    "$getField": {
-                                        "field": "result",
-                                        "input": { "$first": { "$getField": { "$literal": "count" } } },
-                                    }
-                                },
-                                0,
-                            ]
-                        },
+                                }
+                            },
+                            0
+                        ]
                     },
                 },
             },
@@ -225,10 +221,8 @@ mod tests {
             "students",
             expected_pipeline,
             bson!([{
-                "aggregates": {
-                    "count": 11,
-                    "avg": 3,
-                },
+                "count": 11,
+                "avg": 3,
             }]),
         );
 
@@ -258,31 +252,29 @@ mod tests {
             { "$match": { "gpa": { "$lt": 4.0 } } },
             {
                 "$facet": {
+                    "__AGGREGATES__": [
+                        { "$group": { "_id": null, "avg": { "$avg": "$gpa" } } },
+                        {
+                            "$replaceWith": {
+                                "avg": {
+                                    "$convert": {
+                                        "to": "double",
+                                        "input": { "$ifNull": ["$avg", null] },
+                                    }
+                                },
+                            },
+                        },
+                    ],
                     "__ROWS__": [{
                         "$replaceWith": {
                             "student_gpa": { "$ifNull": ["$gpa", null] },
                         },
                     }],
-                    "avg": [
-                        { "$group": { "_id": null, "result": { "$avg": "$gpa" } } },
-                    ],
                 },
             },
             {
                 "$replaceWith": {
-                    "aggregates": {
-                        "avg": {
-                            "$convert": {
-                                "input": {
-                                    "$getField": {
-                                        "field": "result",
-                                        "input": { "$first": { "$getField": { "$literal": "avg" } } },
-                                    }
-                                },
-                                "to": "double",
-                            }
-                        },
-                    },
+                    "aggregates": { "$first": "$__AGGREGATES__" },
                     "rows": "$__ROWS__",
                 },
             },
@@ -356,7 +348,12 @@ mod tests {
             {
                 "$replaceWith": {
                     "dimensions": "$_id",
-                    "average_viewer_rating": { "$convert": { "input": "$average_viewer_rating", "to": "double" } },
+                    "average_viewer_rating": {
+                        "$convert": {
+                            "to": "double",
+                            "input": { "$ifNull": ["$average_viewer_rating", null] },
+                        }
+                    },
                     "max.runtime": { "$ifNull": [{ "$getField": { "$literal": "max.runtime" } }, null] },
                 }
             },
