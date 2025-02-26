@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 use itertools::Itertools as _;
 use mongodb::bson::{self, doc, Bson};
-use mongodb_support::aggregate::{Pipeline, Selection, Stage};
+use mongodb_support::aggregate::{AggregateCommand, Pipeline, Selection, Stage};
 use ndc_query_plan::VariableSet;
 
 use super::pipeline::pipeline_for_non_foreach;
@@ -15,16 +15,39 @@ use crate::mongo_query_plan::{MongoConfiguration, QueryPlan, Type, VariableTypes
 type Result<T> = std::result::Result<T, MongoAgentError>;
 
 /// Produces a complete MongoDB pipeline for a query request that includes variable sets.
-pub fn pipeline_for_foreach(
+pub fn command_for_foreach(
     request_variable_sets: &[VariableSet],
     config: &MongoConfiguration,
     query_request: &QueryPlan,
-) -> Result<Pipeline> {
+) -> Result<AggregateCommand> {
     let target = QueryTarget::for_request(config, query_request);
 
     let variable_sets =
         variable_sets_to_bson(request_variable_sets, &query_request.variable_types)?;
 
+    let query_pipeline = pipeline_for_non_foreach(config, query_request, QueryLevel::Top)?;
+
+    // If there are multiple variable sets we need to use sub-pipelines to fork the query for each
+    // set. So we start the pipeline with a `$documents` stage to inject variable sets, and join
+    // the target collection with a `$lookup` stage with the query pipeline as a sub-pipeline. But
+    // if there is exactly one variable set then we can optimize away the `$lookup`. This is useful
+    // because some aggregation operations, like `$vectorSearch`, are not allowed in sub-pipelines.
+    Ok(if variable_sets.len() == 1 {
+        // safety: we just checked the length of variable_sets
+        let single_set = variable_sets.into_iter().next().unwrap();
+        command_for_single_variable_set(single_set, target, query_pipeline)
+    } else {
+        command_for_multiple_variable_sets(query_request, variable_sets, target, query_pipeline)
+    })
+}
+
+// Where "multiple" means either zero or more than 1
+fn command_for_multiple_variable_sets(
+    query_request: &QueryPlan,
+    variable_sets: Vec<bson::Document>,
+    target: QueryTarget<'_>,
+    query_pipeline: Pipeline,
+) -> AggregateCommand {
     let variable_names = variable_sets
         .iter()
         .flat_map(|variable_set| variable_set.keys());
@@ -33,8 +56,6 @@ pub fn pipeline_for_foreach(
         .collect();
 
     let variable_sets_stage = Stage::Documents(variable_sets);
-
-    let query_pipeline = pipeline_for_non_foreach(config, query_request, QueryLevel::Top)?;
 
     let lookup_stage = Stage::Lookup {
         from: target.input_collection().map(ToString::to_string),
@@ -61,9 +82,25 @@ pub fn pipeline_for_foreach(
     };
     let selection_stage = Stage::ReplaceWith(Selection::new(selection));
 
-    Ok(Pipeline {
-        stages: vec![variable_sets_stage, lookup_stage, selection_stage],
-    })
+    AggregateCommand {
+        collection: None,
+        pipeline: Pipeline {
+            stages: vec![variable_sets_stage, lookup_stage, selection_stage],
+        },
+        let_vars: None,
+    }
+}
+
+fn command_for_single_variable_set(
+    variable_set: bson::Document,
+    target: QueryTarget<'_>,
+    query_pipeline: Pipeline,
+) -> AggregateCommand {
+    AggregateCommand {
+        collection: target.input_collection().map(ToString::to_string),
+        pipeline: query_pipeline,
+        let_vars: Some(variable_set),
+    }
 }
 
 fn variable_sets_to_bson(

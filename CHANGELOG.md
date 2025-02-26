@@ -4,6 +4,10 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+### Changed
+
+- Query plans for remote joins no longer use `$lookup` stage if there is exactly one incoming variable set - this allows use of `$vectorSearch` in native queries in remote joins in certain circumstances ([#147](https://github.com/hasura/ndc-mongodb/pull/147))
+
 ## [1.6.0] - 2025-01-17
 
 ### Added

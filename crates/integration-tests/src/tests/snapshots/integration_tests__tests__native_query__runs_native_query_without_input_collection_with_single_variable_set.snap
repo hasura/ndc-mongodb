@@ -1,0 +1,11 @@
+---
+source: crates/integration-tests/src/tests/native_query.rs
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().variables([[(\"type\",\n\"decimal\")]]).collection(\"extended_json_test_data\").query(query().predicate(binop(\"_eq\",\ntarget!(\"type\"),\nvariable!(type))).order_by([asc!(\"type\"),\nasc!(\"value\")]).fields([field!(\"type\"), field!(\"value\")]),)).await?"
+---
+- rows:
+    - type: decimal
+      value:
+        $numberDecimal: "1"
+    - type: decimal
+      value:
+        $numberDecimal: "2"

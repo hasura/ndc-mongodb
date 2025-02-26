@@ -62,3 +62,65 @@ async fn runs_native_query_with_variable_sets() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+#[tokio::test]
+async fn runs_native_query_with_a_single_variable_set() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::SampleMflix,
+            query_request()
+                .variables([[("count", 3)]])
+                .collection("title_word_frequency")
+                .query(
+                    query()
+                        .predicate(binop("_eq", target!("count"), variable!(count)))
+                        .order_by([asc!("_id")])
+                        .limit(20)
+                        .fields([field!("_id"), field!("count")]),
+                )
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn runs_native_query_without_input_collection_with_variable_sets() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::SampleMflix,
+            query_request()
+                .variables([[("type", "decimal")], [("type", "date")]])
+                .collection("extended_json_test_data")
+                .query(
+                    query()
+                        .predicate(binop("_eq", target!("type"), variable!(type)))
+                        .order_by([asc!("type"), asc!("value")])
+                        .fields([field!("type"), field!("value")]),
+                )
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn runs_native_query_without_input_collection_with_single_variable_set() -> anyhow::Result<()>
+{
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::SampleMflix,
+            query_request()
+                .variables([[("type", "decimal")]])
+                .collection("extended_json_test_data")
+                .query(
+                    query()
+                        .predicate(binop("_eq", target!("type"), variable!(type)))
+                        .order_by([asc!("type"), asc!("value")])
+                        .fields([field!("type"), field!("value")]),
+                )
+        )
+        .await?
+    );
+    Ok(())
+}

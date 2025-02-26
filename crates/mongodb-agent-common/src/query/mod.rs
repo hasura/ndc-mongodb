@@ -19,7 +19,7 @@ use self::execute_query_request::execute_query_request;
 pub use self::{
     make_selector::make_selector,
     make_sort::make_sort_stages,
-    pipeline::{is_response_faceted, pipeline_for_non_foreach, pipeline_for_query_request},
+    pipeline::{command_for_query_request, is_response_faceted, pipeline_for_non_foreach},
     query_target::QueryTarget,
     response::QueryResponseError,
 };

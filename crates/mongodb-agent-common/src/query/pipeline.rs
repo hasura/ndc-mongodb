@@ -4,7 +4,7 @@ use configuration::MongoScalarType;
 use itertools::Itertools;
 use mongodb::bson::{self, doc, Bson};
 use mongodb_support::{
-    aggregate::{Accumulator, Pipeline, Selection, Stage},
+    aggregate::{Accumulator, AggregateCommand, Pipeline, Selection, Stage},
     BsonScalarType,
 };
 use ndc_models::FieldName;
@@ -24,12 +24,13 @@ use crate::{
 use super::{
     column_ref::ColumnRef,
     constants::{RESULT_FIELD, ROWS_FIELD},
-    foreach::pipeline_for_foreach,
+    foreach::command_for_foreach,
     make_selector,
     make_sort::make_sort_stages,
     native_query::pipeline_for_native_query,
     query_level::QueryLevel,
     relations::pipeline_for_relations,
+    QueryTarget,
 };
 
 /// A query that includes aggregates will be run using a $facet pipeline stage, while a query
@@ -44,14 +45,20 @@ pub fn is_response_faceted(query: &Query) -> bool {
 
 /// Shared logic to produce a MongoDB aggregation pipeline for a query request.
 #[instrument(name = "Build Query Pipeline" skip_all, fields(internal.visibility = "user"))]
-pub fn pipeline_for_query_request(
+pub fn command_for_query_request(
     config: &MongoConfiguration,
     query_plan: &QueryPlan,
-) -> Result<Pipeline, MongoAgentError> {
+) -> Result<AggregateCommand, MongoAgentError> {
     if let Some(variable_sets) = &query_plan.variables {
-        pipeline_for_foreach(variable_sets, config, query_plan)
+        command_for_foreach(variable_sets, config, query_plan)
     } else {
-        pipeline_for_non_foreach(config, query_plan, QueryLevel::Top)
+        let target = QueryTarget::for_request(config, query_plan);
+        let pipeline = pipeline_for_non_foreach(config, query_plan, QueryLevel::Top)?;
+        Ok(AggregateCommand {
+            collection: target.input_collection().map(ToString::to_string),
+            pipeline,
+            let_vars: None,
+        })
     }
 }
 

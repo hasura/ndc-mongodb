@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - 'v*'
     tags:
       - 'v*'
 
@@ -34,7 +35,7 @@ jobs:
       run: nix build --print-build-logs
 
     - name: Create release 🚀
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: mongodb-connector
         path: result/bin/mongodb-connector
