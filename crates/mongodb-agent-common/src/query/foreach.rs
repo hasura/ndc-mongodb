@@ -73,7 +73,7 @@ pub fn pipeline_for_foreach(
                 .collect()
         }
         ResponseFacets::AggregatesOnly(_) => {
-            doc! { ROW_SET_AGGREGATES_KEY: "$query" }
+            doc! { ROW_SET_AGGREGATES_KEY: { "$first": "$query" } }
         }
         ResponseFacets::FieldsOnly(_) => {
             doc! { ROW_SET_ROWS_KEY: "$query" }
@@ -265,7 +265,7 @@ mod tests {
                                 "title": { "$ifNull": ["$title", null] }
                             }}],
                         } },
-                        { 
+                        {
                             "$replaceWith": {
                                 "aggregates": { "$first": "$__AGGREGATES__" },
                                 "rows": "$__ROWS__",

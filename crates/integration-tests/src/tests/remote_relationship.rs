@@ -1,8 +1,8 @@
 use crate::{connector::Connector, graphql_query, run_connector_query};
 use insta::assert_yaml_snapshot;
 use ndc_test_helpers::{
-    and, asc, binop, column_aggregate, dimension_column, field, grouping, ordered_dimensions,
-    query, query_request, target, variable,
+    and, asc, binop, column_aggregate, column_count_aggregate, dimension_column, field, grouping,
+    ordered_dimensions, query, query_request, star_count_aggregate, target, value, variable,
 };
 use serde_json::json;
 
@@ -72,6 +72,62 @@ async fn variable_used_in_multiple_type_contexts() -> anyhow::Result<()> {
                             field!("lastupdated")
                         ]),
                 )
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn aggregates_request_with_variable_sets() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::SampleMflix,
+            query_request()
+                .collection("movies")
+                .variables([[("year", json!(2014))]])
+                .query(
+                    query()
+                        .predicate(binop("_eq", target!("year"), variable!(year)))
+                        .aggregates([
+                            (
+                                "average_viewer_rating",
+                                column_aggregate("tomatoes.viewer.rating", "avg").into(),
+                            ),
+                            column_count_aggregate!("rated_count" => "rated", distinct: true),
+                            star_count_aggregate!("count"),
+                        ])
+                ),
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn aggregates_request_with_variable_sets_over_empty_collection_subset() -> anyhow::Result<()>
+{
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::SampleMflix,
+            query_request()
+                .collection("movies")
+                .variables([[("year", json!(2014))]])
+                .query(
+                    query()
+                        .predicate(and([
+                            binop("_eq", target!("year"), variable!(year)),
+                            binop("_eq", target!("title"), value!("non-existent title")),
+                        ]))
+                        .aggregates([
+                            (
+                                "average_viewer_rating",
+                                column_aggregate("tomatoes.viewer.rating", "avg").into(),
+                            ),
+                            column_count_aggregate!("rated_count" => "rated", distinct: true),
+                            star_count_aggregate!("count"),
+                        ])
+                ),
         )
         .await?
     );
