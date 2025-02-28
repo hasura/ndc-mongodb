@@ -166,8 +166,6 @@ fn plan_for_group_comparison_target<T: QueryContext>(
     target: ndc::GroupComparisonTarget,
 ) -> Result<plan::GroupComparisonTarget<T>> {
     let plan_target = match target {
-        // TODO: Do we expect the target aggregate to correspond to one of the grouping aggregates?
-        // Or can it be independent?
         ndc::GroupComparisonTarget::Aggregate { aggregate } => {
             let target_aggregate = plan_for_aggregate(plan_state, object_type, aggregate)?;
             plan::GroupComparisonTarget::Aggregate {
@@ -233,8 +231,6 @@ fn plan_for_group_order_by_target<T: QueryContext>(
             Ok(plan::GroupOrderByTarget::Dimension { index })
         }
         ndc::GroupOrderByTarget::Aggregate { aggregate } => {
-            // TODO: Do we expect the target aggregate to correspond to one of the grouping aggregates?
-            // Or can it be independent?
             let target_aggregate =
                 plan_for_aggregate(plan_state, collection_object_type, aggregate)?;
             Ok(plan::GroupOrderByTarget::Aggregate {
