@@ -80,21 +80,7 @@ impl<'de> Deserialize<'de> for BsonType {
     }
 }
 
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    PartialEq,
-    Eq,
-    Hash,
-    PartialOrd,
-    Ord,
-    Sequence,
-    Serialize,
-    Deserialize,
-    JsonSchema,
-)]
-#[serde(try_from = "BsonType", rename_all = "camelCase")]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Sequence, JsonSchema)]
 pub enum BsonScalarType {
     // numeric
     Double,
@@ -111,7 +97,7 @@ pub enum BsonScalarType {
 
     // binary subtypes - these are stored in BSON using the BinData type, but there are multiple
     // binary subtype codes, and it's useful to have first-class representations for those
-    UUID,   // subtype 4
+    UUID, // subtype 4
 
     // other
     BinData,
@@ -327,6 +313,25 @@ impl BsonScalarType {
             }
         }
         helper(a, b).or_else(|| helper(b, a))
+    }
+}
+
+impl Serialize for BsonScalarType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.bson_name())
+    }
+}
+
+impl<'de> Deserialize<'de> for BsonScalarType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        BsonScalarType::from_bson_name(&s).map_err(serde::de::Error::custom)
     }
 }
 
