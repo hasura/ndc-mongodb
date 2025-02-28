@@ -109,6 +109,10 @@ pub enum BsonScalarType {
     Date,
     Timestamp,
 
+    // binary subtypes - these are stored in BSON using the BinData type, but there are multiple
+    // binary subtype codes, and it's useful to have first-class representations for those
+    UUID,   // subtype 4
+
     // other
     BinData,
     ObjectId,
@@ -150,6 +154,7 @@ impl BsonScalarType {
             S::Undefined => "undefined",
             S::DbPointer => "dbPointer",
             S::Symbol => "symbol",
+            S::UUID => "uuid",
         }
     }
 
@@ -174,6 +179,7 @@ impl BsonScalarType {
             S::Undefined => "Undefined",
             S::DbPointer => "DbPointer",
             S::Symbol => "Symbol",
+            S::UUID => "UUID",
         }
     }
 
@@ -188,6 +194,31 @@ impl BsonScalarType {
         let scalar_type =
             all::<BsonScalarType>().find(|s| s.bson_name().eq_ignore_ascii_case(name));
         scalar_type.ok_or_else(|| Error::UnknownScalarType(name.to_owned()))
+    }
+
+    pub fn is_binary(self) -> bool {
+        match self {
+            S::BinData => true,
+            S::UUID => true,
+            S::Double => false,
+            S::Decimal => false,
+            S::Int => false,
+            S::Long => false,
+            S::String => false,
+            S::Date => false,
+            S::Timestamp => false,
+            S::ObjectId => false,
+            S::Bool => false,
+            S::Null => false,
+            S::Regex => false,
+            S::Javascript => false,
+            S::JavascriptWithScope => false,
+            S::MinKey => false,
+            S::MaxKey => false,
+            S::Undefined => false,
+            S::DbPointer => false,
+            S::Symbol => false,
+        }
     }
 
     pub fn is_orderable(self) -> bool {
@@ -211,6 +242,7 @@ impl BsonScalarType {
             S::Undefined => false,
             S::DbPointer => false,
             S::Symbol => false,
+            S::UUID => false,
         }
     }
 
@@ -235,6 +267,7 @@ impl BsonScalarType {
             S::Undefined => false,
             S::DbPointer => false,
             S::Symbol => false,
+            S::UUID => false,
         }
     }
 
@@ -259,7 +292,41 @@ impl BsonScalarType {
             S::Undefined => true,
             S::DbPointer => true,
             S::Symbol => true,
+            S::UUID => true,
         }
+    }
+
+    /// True iff we consider a to be a supertype of b.
+    ///
+    /// Note that if you add more supertypes here then it is important to also update the custom
+    /// equality check in our tests in mongodb_agent_common::query::serialization::tests. Equality
+    /// needs to be transitive over supertypes, so for example if we have,
+    ///
+    /// (Double, Int), (Decimal, Double)
+    ///
+    /// then in addition to comparing ints to doubles, and doubles to decimals, we also need to compare
+    /// decimals to ints.
+    pub fn is_supertype(a: Self, b: Self) -> bool {
+        Self::common_supertype(a, b).is_some_and(|c| c == a)
+    }
+
+    /// If there is a BSON scalar type that encompasses both a and b, return it. This does not
+    /// require a and to overlap. The returned type may be equal to a or b if one is a supertype of
+    /// the other.
+    pub fn common_supertype(a: BsonScalarType, b: BsonScalarType) -> Option<BsonScalarType> {
+        fn helper(a: BsonScalarType, b: BsonScalarType) -> Option<BsonScalarType> {
+            if a == b {
+                Some(a)
+            } else if a.is_binary() && b.is_binary() {
+                Some(S::BinData)
+            } else {
+                match (a, b) {
+                    (S::Double, S::Int) => Some(S::Double),
+                    _ => None,
+                }
+            }
+        }
+        helper(a, b).or_else(|| helper(b, a))
     }
 }
 
