@@ -401,4 +401,22 @@ mod tests {
         assert_eq!(t, BsonType::Scalar(BsonScalarType::Double));
         Ok(())
     }
+
+    #[test]
+    fn unifies_double_and_int() {
+        use BsonScalarType as S;
+        let t1 = S::common_supertype(S::Double, S::Int);
+        let t2 = S::common_supertype(S::Int, S::Double);
+        assert_eq!(t1, Some(S::Double));
+        assert_eq!(t2, Some(S::Double));
+    }
+
+    #[test]
+    fn unifies_bin_data_and_uuid() {
+        use BsonScalarType as S;
+        let t1 = S::common_supertype(S::BinData, S::UUID);
+        let t2 = S::common_supertype(S::UUID, S::BinData);
+        assert_eq!(t1, Some(S::BinData));
+        assert_eq!(t2, Some(S::BinData));
+    }
 }
