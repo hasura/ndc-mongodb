@@ -4,6 +4,17 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+### Fixed
+
+- Update dependencies to get fixes for reported security vulnerabilities ([#149](https://github.com/hasura/ndc-mongodb/pull/149))
+
+#### Security Fixes
+
+Rust dependencies have been updated to get fixes for these advisories:
+
+- https://rustsec.org/advisories/RUSTSEC-2025-0004
+- https://rustsec.org/advisories/RUSTSEC-2025-0006
+
 ## [1.6.0] - 2025-01-17
 
 ### Added
