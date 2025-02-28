@@ -1,7 +1,7 @@
 use std::time::SystemTime;
 
 use mongodb::bson::{self, oid::ObjectId, Bson};
-use proptest::{collection, prelude::*, sample::SizeRange};
+use proptest::{array, collection, prelude::*, sample::SizeRange};
 
 pub fn arb_bson() -> impl Strategy<Value = Bson> {
     arb_bson_with_options(Default::default())
@@ -56,6 +56,7 @@ pub fn arb_bson_with_options(options: ArbBsonOptions) -> impl Strategy<Value = B
         (any::<u32>(), any::<u32>())
             .prop_map(|(time, increment)| Bson::Timestamp(bson::Timestamp { time, increment })),
         arb_binary().prop_map(Bson::Binary),
+        arb_uuid().prop_map(Bson::Binary),
         (".*", "i?l?m?s?u?x?").prop_map(|(pattern, options)| Bson::RegularExpression(
             bson::Regex { pattern, options }
         )),
@@ -122,6 +123,14 @@ fn arb_binary() -> impl Strategy<Value = bson::Binary> {
     let binary_subtype = any::<u8>().prop_map(Into::into);
     let bytes = collection::vec(any::<u8>(), 1..256);
     (binary_subtype, bytes).prop_map(|(subtype, bytes)| bson::Binary { subtype, bytes })
+}
+
+fn arb_uuid() -> impl Strategy<Value = bson::Binary> {
+    let bytes = array::uniform16(any::<u8>());
+    bytes.prop_map(|bytes| {
+        let uuid = bson::Uuid::from_bytes(bytes);
+        bson::Binary::from_uuid(uuid)
+    })
 }
 
 pub fn arb_datetime() -> impl Strategy<Value = bson::DateTime> {
