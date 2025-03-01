@@ -6,7 +6,8 @@ pub mod vec_set;
 
 pub use mutation_plan::*;
 pub use plan_for_query_request::{
-    plan_for_mutation_request, plan_for_query_request,
+    plan_for_mutation_request::plan_for_mutation_request,
+    plan_for_query_request,
     query_context::QueryContext,
     query_plan_error::QueryPlanError,
     type_annotated_field::{type_annotated_field, type_annotated_nested_field},

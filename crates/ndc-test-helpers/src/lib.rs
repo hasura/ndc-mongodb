@@ -2,12 +2,16 @@
 #![allow(unused_imports)]
 
 mod aggregates;
+pub use aggregates::*;
 mod collection_info;
+mod column;
+pub use column::*;
 mod comparison_target;
 mod comparison_value;
 mod exists_in_collection;
 mod expressions;
 mod field;
+mod groups;
 mod object_type;
 mod order_by;
 mod path_element;
@@ -19,7 +23,7 @@ use std::collections::BTreeMap;
 
 use indexmap::IndexMap;
 use ndc_models::{
-    Aggregate, Argument, Expression, Field, OrderBy, OrderByElement, PathElement, Query,
+    Aggregate, Argument, Expression, Field, FieldName, OrderBy, OrderByElement, PathElement, Query,
     QueryRequest, Relationship, RelationshipArgument, RelationshipType,
 };
 
@@ -33,6 +37,7 @@ pub use comparison_value::*;
 pub use exists_in_collection::*;
 pub use expressions::*;
 pub use field::*;
+pub use groups::*;
 pub use object_type::*;
 pub use order_by::*;
 pub use path_element::*;
@@ -47,7 +52,6 @@ pub struct QueryRequestBuilder {
     arguments: Option<BTreeMap<ndc_models::ArgumentName, Argument>>,
     collection_relationships: Option<BTreeMap<ndc_models::RelationshipName, Relationship>>,
     variables: Option<Vec<BTreeMap<ndc_models::VariableName, serde_json::Value>>>,
-    groups: Option<ndc_models::Grouping>,
 }
 
 pub fn query_request() -> QueryRequestBuilder {
@@ -62,7 +66,6 @@ impl QueryRequestBuilder {
             arguments: None,
             collection_relationships: None,
             variables: None,
-            groups: None,
         }
     }
 
@@ -116,11 +119,6 @@ impl QueryRequestBuilder {
                 })
                 .collect(),
         );
-        self
-    }
-
-    pub fn groups(mut self, groups: impl Into<ndc_models::Grouping>) -> Self {
-        self.groups = Some(groups.into());
         self
     }
 }
@@ -179,11 +177,14 @@ impl QueryBuilder {
         self
     }
 
-    pub fn aggregates<const S: usize>(mut self, aggregates: [(&str, Aggregate); S]) -> Self {
+    pub fn aggregates(
+        mut self,
+        aggregates: impl IntoIterator<Item = (impl Into<FieldName>, impl Into<Aggregate>)>,
+    ) -> Self {
         self.aggregates = Some(
             aggregates
                 .into_iter()
-                .map(|(name, aggregate)| (name.to_owned().into(), aggregate))
+                .map(|(name, aggregate)| (name.into(), aggregate.into()))
                 .collect(),
         );
         self
@@ -206,6 +207,11 @@ impl QueryBuilder {
 
     pub fn predicate(mut self, expression: Expression) -> Self {
         self.predicate = Some(expression);
+        self
+    }
+
+    pub fn groups(mut self, groups: impl Into<ndc_models::Grouping>) -> Self {
+        self.groups = Some(groups.into());
         self
     }
 }

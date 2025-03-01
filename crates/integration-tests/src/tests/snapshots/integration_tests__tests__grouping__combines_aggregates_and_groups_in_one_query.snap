@@ -1,0 +1,27 @@
+---
+source: crates/integration-tests/src/tests/grouping.rs
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").query(query().predicate(binop(\"_gte\",\ntarget!(\"year\"),\nvalue!(2000))).limit(10).aggregates([(\"average_viewer_rating\",\ncolumn_aggregate(\"tomatoes.viewer.rating\",\n\"avg\"))]).groups(grouping().dimensions([dimension_column(\"year\"),]).aggregates([(\"average_viewer_rating_by_year\",\ncolumn_aggregate(\"tomatoes.viewer.rating\",\n\"avg\"),)]).order_by(ordered_dimensions()),),),).await?"
+---
+- aggregates:
+    average_viewer_rating: 3.05
+  groups:
+    - dimensions:
+        - 2000
+      aggregates:
+        average_viewer_rating_by_year: 3.825
+    - dimensions:
+        - 2001
+      aggregates:
+        average_viewer_rating_by_year: 2.55
+    - dimensions:
+        - 2002
+      aggregates:
+        average_viewer_rating_by_year: 1.8
+    - dimensions:
+        - 2003
+      aggregates:
+        average_viewer_rating_by_year: 3
+    - dimensions:
+        - 2005
+      aggregates:
+        average_viewer_rating_by_year: 3.5

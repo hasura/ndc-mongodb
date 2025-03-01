@@ -1,5 +1,5 @@
 use ref_cast::RefCast;
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, fmt::Display};
 
 use itertools::Itertools as _;
 use ndc_models::{self as ndc, ArgumentName, ObjectTypeName};
@@ -9,7 +9,7 @@ use crate::{self as plan, QueryPlanError};
 type Result<T> = std::result::Result<T, QueryPlanError>;
 
 /// The type of values that a column, field, or argument may take.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum Type<ScalarType> {
     Scalar(ScalarType),
     /// The name of an object type declared in `objectTypes`
@@ -17,6 +17,8 @@ pub enum Type<ScalarType> {
     ArrayOf(Box<Type<ScalarType>>),
     /// A nullable form of any of the other types
     Nullable(Box<Type<ScalarType>>),
+    /// Used internally
+    Tuple(Vec<Type<ScalarType>>),
 }
 
 impl<S> Type<S> {
@@ -87,7 +89,41 @@ impl<S> Type<S> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+impl<ScalarType: Display> Display for Type<ScalarType> {
+    /// Display types using GraphQL-style syntax
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fn helper<S>(t: &Type<S>, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+        where
+            S: Display,
+        {
+            match t {
+                Type::Scalar(s) => write!(f, "{}", s),
+                Type::Object(ot) => write!(f, "{ot}"),
+                Type::ArrayOf(t) => write!(f, "[{t}]"),
+                Type::Nullable(t) => write!(f, "{t}"),
+                Type::Tuple(ts) => {
+                    write!(f, "(")?;
+                    for (index, t) in ts.iter().enumerate() {
+                        write!(f, "{t}")?;
+                        if index < ts.len() - 1 {
+                            write!(f, ", ")?;
+                        }
+                    }
+                    write!(f, ")")
+                }
+            }
+        }
+        match self {
+            Type::Nullable(t) => helper(t, f),
+            t => {
+                helper(t, f)?;
+                write!(f, "!")
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ObjectType<ScalarType> {
     /// A type name may be tracked for error reporting. The name does not affect how query plans
     /// are generated.
@@ -130,7 +166,21 @@ impl<S> ObjectType<S> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+impl<S: Display> Display for ObjectType<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{ ")?;
+        for (index, (name, field)) in self.fields.iter().enumerate() {
+            write!(f, "{name}: {}", field.r#type)?;
+            if index < self.fields.len() - 1 {
+                write!(f, ", ")?;
+            }
+        }
+        write!(f, " }}")?;
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct ObjectField<ScalarType> {
     pub r#type: Type<ScalarType>,
     /// The arguments available to the field - Matches implementation from CollectionInfo

@@ -1,0 +1,152 @@
+---
+source: crates/integration-tests/src/tests/local_relationship.rs
+expression: "run_connector_query(Connector::Chinook,\nquery_request().collection(\"Album\").query(query().predicate(is_in(target!(\"AlbumId\"),\n[json!(15), json!(91),\njson!(227)])).order_by([asc!(\"_id\")]).fields([field!(\"AlbumId\"),\nrelation_field!(\"tracks\" => \"album_tracks\",\nquery().order_by([asc!(\"_id\")]).fields([field!(\"AlbumId\"), field!(\"Name\"),\nfield!(\"UnitPrice\")]).groups(grouping().dimensions([dimension_column(column(\"Name\").from_relationship(\"track_genre\"))]).aggregates([(\"average_price\",\ncolumn_aggregate(\"UnitPrice\",\n\"avg\"))]).order_by(ordered_dimensions()),))])).relationships([(\"album_tracks\",\nrelationship(\"Track\", [(\"AlbumId\", &[\"AlbumId\"])])),\n(\"track_genre\",\nrelationship(\"Genre\", [(\"GenreId\", &[\"GenreId\"])]).object_type())])).await?"
+---
+- rows:
+    - AlbumId: 15
+      tracks:
+        groups:
+          - average_price: 0.99
+            dimensions:
+              - - Metal
+        rows:
+          - AlbumId: 15
+            Name: Heart Of Gold
+            UnitPrice: "0.99"
+          - AlbumId: 15
+            Name: Snowblind
+            UnitPrice: "0.99"
+          - AlbumId: 15
+            Name: Like A Bird
+            UnitPrice: "0.99"
+          - AlbumId: 15
+            Name: Blood In The Wall
+            UnitPrice: "0.99"
+          - AlbumId: 15
+            Name: The Beginning...At Last
+            UnitPrice: "0.99"
+    - AlbumId: 91
+      tracks:
+        groups:
+          - average_price: 0.99
+            dimensions:
+              - - Rock
+        rows:
+          - AlbumId: 91
+            Name: Right Next Door to Hell
+            UnitPrice: "0.99"
+          - AlbumId: 91
+            Name: "Dust N' Bones"
+            UnitPrice: "0.99"
+          - AlbumId: 91
+            Name: Live and Let Die
+            UnitPrice: "0.99"
+          - AlbumId: 91
+            Name: "Don't Cry (Original)"
+            UnitPrice: "0.99"
+          - AlbumId: 91
+            Name: Perfect Crime
+            UnitPrice: "0.99"
+          - AlbumId: 91
+            Name: "You Ain't the First"
+            UnitPrice: "0.99"
+          - AlbumId: 91
+            Name: Bad Obsession
+            UnitPrice: "0.99"
+          - AlbumId: 91
+            Name: Back off Bitch
+            UnitPrice: "0.99"
+          - AlbumId: 91
+            Name: "Double Talkin' Jive"
+            UnitPrice: "0.99"
+          - AlbumId: 91
+            Name: November Rain
+            UnitPrice: "0.99"
+          - AlbumId: 91
+            Name: The Garden
+            UnitPrice: "0.99"
+          - AlbumId: 91
+            Name: Garden of Eden
+            UnitPrice: "0.99"
+          - AlbumId: 91
+            Name: "Don't Damn Me"
+            UnitPrice: "0.99"
+          - AlbumId: 91
+            Name: Bad Apples
+            UnitPrice: "0.99"
+          - AlbumId: 91
+            Name: Dead Horse
+            UnitPrice: "0.99"
+          - AlbumId: 91
+            Name: Coma
+            UnitPrice: "0.99"
+    - AlbumId: 227
+      tracks:
+        groups:
+          - average_price: 1.99
+            dimensions:
+              - - Sci Fi & Fantasy
+          - average_price: 1.99
+            dimensions:
+              - - Science Fiction
+          - average_price: 1.99
+            dimensions:
+              - - TV Shows
+        rows:
+          - AlbumId: 227
+            Name: Occupation / Precipice
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: "Exodus, Pt. 1"
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: "Exodus, Pt. 2"
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: Collaborators
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: Torn
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: A Measure of Salvation
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: Hero
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: Unfinished Business
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: The Passage
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: The Eye of Jupiter
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: Rapture
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: Taking a Break from All Your Worries
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: The Woman King
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: A Day In the Life
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: Dirty Hands
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: Maelstrom
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: The Son Also Rises
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: "Crossroads, Pt. 1"
+            UnitPrice: "1.99"
+          - AlbumId: 227
+            Name: "Crossroads, Pt. 2"
+            UnitPrice: "1.99"

@@ -1,8 +1,7 @@
 use indexmap::IndexMap;
 
 use crate::{
-    Aggregate, ConnectorTypes, Expression, Field, OrderBy, OrderByElement, Query, Relationships,
-    Scope,
+    Aggregate, ConnectorTypes, Expression, Field, Grouping, OrderBy, OrderByElement, Query, Relationships, Scope
 };
 
 #[derive(Clone, Debug, Default)]
@@ -10,10 +9,10 @@ pub struct QueryBuilder<T: ConnectorTypes> {
     aggregates: Option<IndexMap<ndc_models::FieldName, Aggregate<T>>>,
     fields: Option<IndexMap<ndc_models::FieldName, Field<T>>>,
     limit: Option<u32>,
-    aggregates_limit: Option<u32>,
     offset: Option<u32>,
     order_by: Option<OrderBy<T>>,
     predicate: Option<Expression<T>>,
+    groups: Option<Grouping<T>>,
     relationships: Relationships<T>,
     scope: Option<Scope>,
 }
@@ -29,10 +28,10 @@ impl<T: ConnectorTypes> QueryBuilder<T> {
             fields: None,
             aggregates: Default::default(),
             limit: None,
-            aggregates_limit: None,
             offset: None,
             order_by: None,
             predicate: None,
+            groups: None,
             relationships: Default::default(),
             scope: None,
         }
@@ -88,10 +87,10 @@ impl<T: ConnectorTypes> From<QueryBuilder<T>> for Query<T> {
             aggregates: value.aggregates,
             fields: value.fields,
             limit: value.limit,
-            aggregates_limit: value.aggregates_limit,
             offset: value.offset,
             order_by: value.order_by,
             predicate: value.predicate,
+            groups: value.groups,
             relationships: value.relationships,
             scope: value.scope,
         }

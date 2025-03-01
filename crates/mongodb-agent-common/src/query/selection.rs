@@ -5,27 +5,31 @@ use ndc_models::FieldName;
 use nonempty::NonEmpty;
 
 use crate::{
+    constants::{ROW_SET_AGGREGATES_KEY, ROW_SET_GROUPS_KEY, ROW_SET_ROWS_KEY},
     interface_types::MongoAgentError,
-    mongo_query_plan::{Field, NestedArray, NestedField, NestedObject, QueryPlan},
+    mongo_query_plan::{Field, NestedArray, NestedField, NestedObject},
     mongodb::sanitize::get_field,
-    query::column_ref::ColumnRef,
+    query::{column_ref::ColumnRef, groups::selection_for_grouping},
 };
 
-pub fn selection_from_query_request(
-    query_request: &QueryPlan,
+use super::is_response_faceted::ResponseFacets;
+
+/// Creates a document to use in a $replaceWith stage to limit query results to the specific fields
+/// requested. Assumes that only fields are requested.
+pub fn selection_for_fields(
+    fields: Option<&IndexMap<FieldName, Field>>,
 ) -> Result<Selection, MongoAgentError> {
-    // let fields = (&query_request.query.fields).flatten().unwrap_or_default();
     let empty_map = IndexMap::new();
-    let fields = if let Some(fs) = &query_request.query.fields {
+    let fields = if let Some(fs) = fields {
         fs
     } else {
         &empty_map
     };
-    let doc = from_query_request_helper(None, fields)?;
+    let doc = for_fields_helper(None, fields)?;
     Ok(Selection::new(doc))
 }
 
-fn from_query_request_helper(
+fn for_fields_helper(
     parent: Option<ColumnRef<'_>>,
     field_selection: &IndexMap<ndc_models::FieldName, Field>,
 ) -> Result<Document, MongoAgentError> {
@@ -62,7 +66,7 @@ fn selection_for_field(
             ..
         } => {
             let col_ref = nested_column_reference(parent, column);
-            let nested_selection = from_query_request_helper(Some(col_ref.clone()), fields)?;
+            let nested_selection = for_fields_helper(Some(col_ref.clone()), fields)?;
             Ok(doc! {"$cond": {"if": col_ref.into_aggregate_expression(), "then": nested_selection, "else": Bson::Null}}.into())
         }
         Field::Column {
@@ -77,13 +81,22 @@ fn selection_for_field(
             relationship,
             aggregates,
             fields,
+            groups,
             ..
         } => {
+            // TODO: ENG-1569 If we get a unification of two relationship references where one
+            // selects only fields, and the other selects only groups, we may end up in a broken
+            // state where the response should be faceted but is not. Data will be populated
+            // correctly - the issue is only here where we need to figure out whether to write
+            // a selection for faceted data or not. Instead of referencing the
+            // [Field::Relationship] value to determine faceting we need to reference the
+            // [Relationship] attached to the [Query] that populated it.
+
             // The pipeline for the relationship has already selected the requested fields with the
             // appropriate aliases. At this point all we need to do is to prune the selection down
             // to requested fields, omitting fields of the relationship that were selected for
             // filtering and sorting.
-            let field_selection: Option<Document> = fields.as_ref().map(|fields| {
+            let field_selection = |fields: &IndexMap<FieldName, Field>| -> Document {
                 fields
                     .iter()
                     .map(|(field_name, _)| {
@@ -96,52 +109,90 @@ fn selection_for_field(
                         )
                     })
                     .collect()
-            });
+            };
 
-            if let Some(aggregates) = aggregates {
-                let aggregate_selecion: Document = aggregates
-                    .iter()
-                    .map(|(aggregate_name, _)| {
-                        (
-                            aggregate_name.to_string(),
-                            format!("$$row_set.aggregates.{aggregate_name}").into(),
-                        )
-                    })
-                    .collect();
-                let mut new_row_set = doc! { "aggregates": aggregate_selecion };
+            // Field of the incoming pipeline document that contains data fetched for the
+            // relationship.
+            let relationship_field = get_field(relationship.as_str());
 
-                if let Some(field_selection) = field_selection {
-                    new_row_set.insert(
-                        "rows",
-                        doc! {
-                            "$map": {
-                                "input": "$$row_set.rows",
-                                "in": field_selection,
-                            }
-                        },
-                    );
-                }
+            let doc = match ResponseFacets::from_parameters(
+                aggregates.as_ref(),
+                fields.as_ref(),
+                groups.as_ref(),
+            ) {
+                ResponseFacets::Combination {
+                    aggregates,
+                    fields,
+                    groups,
+                } => {
+                    let aggregate_selection: Document = aggregates
+                        .into_iter()
+                        .flatten()
+                        .map(|(aggregate_name, _)| {
+                            (
+                                aggregate_name.to_string(),
+                                format!("$$row_set.{ROW_SET_AGGREGATES_KEY}.{aggregate_name}")
+                                    .into(),
+                            )
+                        })
+                        .collect();
+                    let mut new_row_set = doc! { ROW_SET_AGGREGATES_KEY: aggregate_selection };
 
-                Ok(doc! {
-                    "$let": {
-                        "vars": { "row_set": { "$first": get_field(relationship.as_str()) } },
-                        "in": new_row_set,
+                    if let Some(fields) = fields {
+                        new_row_set.insert(
+                            ROW_SET_ROWS_KEY,
+                            doc! {
+                                "$map": {
+                                    "input": format!("$$row_set.{ROW_SET_ROWS_KEY}"),
+                                    "in": field_selection(fields),
+                                }
+                            },
+                        );
                     }
-                }
-                .into())
-            } else if let Some(field_selection) = field_selection {
-                Ok(doc! {
-                    "rows": {
-                        "$map": {
-                            "input": get_field(relationship.as_str()),
-                            "in": field_selection,
+
+                    if let Some(grouping) = groups {
+                        new_row_set.insert(
+                            ROW_SET_GROUPS_KEY,
+                            doc! {
+                                "$map": {
+                                    "input": format!("$$row_set.{ROW_SET_GROUPS_KEY}"),
+                                    "as": "CURRENT", // implicitly changes the document root in `in` to be the array element
+                                    "in": selection_for_grouping(grouping),
+                                }
+                            },
+                        );
+                    }
+
+                    doc! {
+                        "$let": {
+                            "vars": { "row_set": { "$first": relationship_field } },
+                            "in": new_row_set,
                         }
                     }
                 }
-                .into())
-            } else {
-                Ok(doc! { "rows": [] }.into())
-            }
+                ResponseFacets::FieldsOnly(fields) => doc! {
+                    ROW_SET_ROWS_KEY: {
+                        "$map": {
+                            "input": relationship_field,
+                            "in": field_selection(fields),
+                        }
+                    }
+                },
+                ResponseFacets::GroupsOnly(grouping) => doc! {
+                    // We can reuse the grouping selection logic instead of writing a custom one
+                    // like with `field_selection` because `selection_for_grouping` only selects
+                    // top-level keys - it doesn't have logic that we don't want to duplicate like
+                    // `selection_for_field` does.
+                    ROW_SET_GROUPS_KEY: {
+                        "$map": {
+                            "input": relationship_field,
+                            "as": "CURRENT", // implicitly changes the document root in `in` to be the array element
+                            "in": selection_for_grouping(grouping),
+                        }
+                    }
+                },
+            };
+            Ok(doc.into())
         }
     }
 }
@@ -154,7 +205,7 @@ fn selection_for_array(
     match field {
         NestedField::Object(NestedObject { fields }) => {
             let mut nested_selection =
-                from_query_request_helper(Some(ColumnRef::variable("this")), fields)?;
+                for_fields_helper(Some(ColumnRef::variable("this")), fields)?;
             for _ in 0..array_nesting_level {
                 nested_selection = doc! {"$map": {"input": "$$this", "in": nested_selection}}
             }
@@ -188,7 +239,9 @@ mod tests {
     };
     use pretty_assertions::assert_eq;
 
-    use crate::{mongo_query_plan::MongoConfiguration, mongodb::selection_from_query_request};
+    use crate::mongo_query_plan::MongoConfiguration;
+
+    use super::*;
 
     #[test]
     fn calculates_selection_for_query_request() -> Result<(), anyhow::Error> {
@@ -216,7 +269,7 @@ mod tests {
 
         let query_plan = plan_for_query_request(&foo_config(), query_request)?;
 
-        let selection = selection_from_query_request(&query_plan)?;
+        let selection = selection_for_fields(query_plan.query.fields.as_ref())?;
         assert_eq!(
             Into::<Document>::into(selection),
             doc! {
@@ -308,7 +361,7 @@ mod tests {
         // twice (once with the key `class_students`, and then with the key `class_students_0`).
         // This is because the queries on the two relationships have different scope names. The
         // query would work with just one lookup. Can we do that optimization?
-        let selection = selection_from_query_request(&query_plan)?;
+        let selection = selection_for_fields(query_plan.query.fields.as_ref())?;
         assert_eq!(
             Into::<Document>::into(selection),
             doc! {

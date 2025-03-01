@@ -5,7 +5,7 @@ use ndc_models as ndc;
 /// Supported binary comparison operators. This type provides GraphQL names, MongoDB operator
 /// names, and aggregation pipeline code for each operator. Argument types are defined in
 /// mongodb-agent-common/src/scalar_types_capabilities.rs.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Sequence)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Sequence)]
 pub enum ComparisonFunction {
     LessThan,
     LessThanOrEqual,

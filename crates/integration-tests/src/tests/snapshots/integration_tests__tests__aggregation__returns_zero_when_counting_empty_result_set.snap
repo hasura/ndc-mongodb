@@ -1,10 +1,10 @@
 ---
 source: crates/integration-tests/src/tests/aggregation.rs
-expression: "graphql_query(r#\"\n            query {\n              moviesAggregate(filter_input: {where: {title: {_eq: \"no such movie\"}}}) {\n                _count\n                title {\n                  count\n                }\n              }\n            }\n            \"#).run().await?"
+expression: "graphql_query(r#\"\n            query {\n              moviesAggregate(filter_input: {where: {title: {_eq: \"no such movie\"}}}) {\n                _count\n                title {\n                  _count\n                }\n              }\n            }\n            \"#).run().await?"
 ---
 data:
   moviesAggregate:
     _count: 0
     title:
-      count: 0
+      _count: 0
 errors: ~

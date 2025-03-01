@@ -10,6 +10,7 @@ use ndc_models::{
 
 use crate::aggregation_function::{AggregationFunction, AggregationFunction as A};
 use crate::comparison_function::{ComparisonFunction, ComparisonFunction as C};
+use crate::mongo_query_plan as plan;
 
 use BsonScalarType as S;
 
@@ -52,9 +53,6 @@ fn extended_json_scalar_type() -> (ndc_models::ScalarTypeName, ScalarType) {
                             result_type: Type::Named {
                                 name: mongodb_support::EXTENDED_JSON_TYPE_NAME.into(),
                             },
-                        },
-                        Plan::Count => NDC::Custom {
-                            result_type: bson_to_named_type(S::Int),
                         },
                         Plan::Min => NDC::Min,
                         Plan::Max => NDC::Max,
@@ -164,34 +162,31 @@ fn aggregate_functions(
     scalar_type: BsonScalarType,
 ) -> impl Iterator<Item = (AggregationFunction, AggregateFunctionDefinition)> {
     use AggregateFunctionDefinition as NDC;
-    [(
-        A::Count,
-        NDC::Custom {
-            result_type: bson_to_named_type(S::Int),
-        },
-    )]
-    .into_iter()
-    .chain(iter_if(
+    iter_if(
         scalar_type.is_orderable(),
         [(A::Min, NDC::Min), (A::Max, NDC::Max)].into_iter(),
-    ))
+    )
     .chain(iter_if(
         scalar_type.is_numeric(),
         [
             (
                 A::Avg,
                 NDC::Average {
-                    result_type: bson_to_scalar_type_name(S::Double),
+                    result_type: bson_to_scalar_type_name(
+                        A::expected_result_type(A::Avg, &plan::Type::scalar(scalar_type))
+                            .expect("average result type is defined"),
+                        // safety: this expect is checked in integration tests
+                    ),
                 },
             ),
             (
                 A::Sum,
                 NDC::Sum {
-                    result_type: bson_to_scalar_type_name(if scalar_type.is_fractional() {
-                        S::Double
-                    } else {
-                        S::Long
-                    }),
+                    result_type: bson_to_scalar_type_name(
+                        A::expected_result_type(A::Sum, &plan::Type::scalar(scalar_type))
+                            .expect("sum result type is defined"),
+                        // safety: this expect is checked in integration tests
+                    ),
                 },
             ),
         ]

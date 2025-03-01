@@ -1,0 +1,25 @@
+---
+source: crates/integration-tests/src/tests/local_relationship.rs
+expression: "run_connector_query(Connector::Chinook,\nquery_request().collection(\"Track\").query(query().predicate(is_in(target!(\"AlbumId\"),\n[json!(15), json!(91),\njson!(227)])).groups(grouping().dimensions([dimension_column(column(\"Name\").from_relationship(\"track_genre\"))]).aggregates([(\"average_price\",\ncolumn_aggregate(\"UnitPrice\",\n\"avg\"))]).order_by(ordered_dimensions()))).relationships([(\"track_genre\",\nrelationship(\"Genre\", [(\"GenreId\", &[\"GenreId\"])]).object_type())])).await?"
+---
+- groups:
+    - dimensions:
+        - - Metal
+      aggregates:
+        average_price: 0.99
+    - dimensions:
+        - - Rock
+      aggregates:
+        average_price: 0.99
+    - dimensions:
+        - - Sci Fi & Fantasy
+      aggregates:
+        average_price: 1.99
+    - dimensions:
+        - - Science Fiction
+      aggregates:
+        average_price: 1.99
+    - dimensions:
+        - - TV Shows
+      aggregates:
+        average_price: 1.99

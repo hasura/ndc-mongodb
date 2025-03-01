@@ -6,7 +6,7 @@ use pretty_assertions::assert_eq;
 use crate::{
     self as plan,
     plan_for_query_request::plan_test_helpers::{self, make_flat_schema, make_nested_schema},
-    QueryContext, QueryPlan,
+    QueryContext, QueryPlan, Type,
 };
 
 use super::plan_for_query_request;
@@ -521,7 +521,7 @@ fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
         .query(query().aggregates([
             star_count_aggregate!("count_star"),
             column_count_aggregate!("count_id" => "last_name", distinct: true),
-            column_aggregate!("avg_id" => "id", "Average"),
+            ("avg_id", column_aggregate("id", "Average").into()),
         ]))
         .into();
     let query_plan = plan_for_query_request(&query_context, query)?;
@@ -545,6 +545,7 @@ fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
                         "avg_id".into(),
                         plan::Aggregate::SingleColumn {
                             column: "id".into(),
+                            column_type: Type::scalar(plan_test_helpers::ScalarType::Int),
                             arguments: Default::default(),
                             field_path: None,
                             function: plan_test_helpers::AggregateFunction::Average,
@@ -644,6 +645,7 @@ fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), a
                             path: vec!["author_articles".into()],
                             aggregate: plan::Aggregate::SingleColumn {
                                 column: "year".into(),
+                                column_type: Type::scalar(plan_test_helpers::ScalarType::Int).into_nullable(),
                                 arguments: Default::default(),
                                 field_path: Default::default(),
                                 function: plan_test_helpers::AggregateFunction::Average,
@@ -680,6 +682,7 @@ fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), a
                         plan::Field::Relationship {
                             relationship: "author_articles".into(),
                             aggregates: None,
+                            groups: None,
                             fields: Some(
                                 [
                                     (
@@ -915,6 +918,7 @@ fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Res
                     plan::Field::Relationship {
                         relationship: "author".into(),
                         aggregates: None,
+                        groups: None,
                         fields: Some(
                             [(
                                 "name".into(),

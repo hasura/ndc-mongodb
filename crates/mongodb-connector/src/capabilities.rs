@@ -1,5 +1,5 @@
 use ndc_sdk::models::{
-    AggregateCapabilities, Capabilities, ExistsCapabilities, LeafCapability,
+    AggregateCapabilities, Capabilities, ExistsCapabilities, GroupByCapabilities, LeafCapability,
     NestedArrayFilterByCapabilities, NestedFieldCapabilities, NestedFieldFilterByCapabilities,
     QueryCapabilities, RelationshipCapabilities,
 };
@@ -9,7 +9,11 @@ pub fn mongo_capabilities() -> Capabilities {
         query: QueryCapabilities {
             aggregates: Some(AggregateCapabilities {
                 filter_by: None,
-                group_by: None,
+                group_by: Some(GroupByCapabilities {
+                    filter: None,
+                    order: None,
+                    paginate: None,
+                }),
             }),
             variables: Some(LeafCapability {}),
             explain: Some(LeafCapability {}),
