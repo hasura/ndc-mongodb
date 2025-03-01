@@ -11,3 +11,4 @@ cc 21360610045c5a616b371fb8d5492eb0c22065d62e54d9c8a8761872e2e192f3 # shrinks to
 cc 8842e7f78af24e19847be5d8ee3d47c547ef6c1bb54801d360a131f41a87f4fa
 cc 2a192b415e5669716701331fe4141383a12ceda9acc9f32e4284cbc2ed6f2d8a # shrinks to bson = Document({"A": Document({"¡": JavaScriptCodeWithScope { code: "", scope: Document({"\0": Int32(-1)}) }})}), mode = Relaxed
 cc 4c37daee6ab1e1bcc75b4089786253f29271d116a1785180560ca431d2b4a651 # shrinks to bson = Document({"0": Document({"A": Array([Int32(0), Decimal128(...)])})})
+cc ad219d6630a8e9a386e734b6ba440577162cca8435c7685e32b574e9b1aa390e

@@ -1,6 +1,6 @@
 use std::time::SystemTime;
 
-use mongodb::bson::{self, oid::ObjectId, Bson};
+use mongodb::bson::{self, oid::ObjectId, spec::BinarySubtype, Binary, Bson};
 use proptest::{array, collection, prelude::*, sample::SizeRange};
 
 pub fn arb_bson() -> impl Strategy<Value = Bson> {
@@ -121,8 +121,13 @@ fn arb_bson_document_recursive(
 
 fn arb_binary() -> impl Strategy<Value = bson::Binary> {
     let binary_subtype = any::<u8>().prop_map(Into::into);
-    let bytes = collection::vec(any::<u8>(), 1..256);
-    (binary_subtype, bytes).prop_map(|(subtype, bytes)| bson::Binary { subtype, bytes })
+    binary_subtype.prop_flat_map(|subtype| {
+        let bytes = match subtype {
+            BinarySubtype::Uuid => array::uniform16(any::<u8>()).prop_map_into().boxed(),
+            _ => collection::vec(any::<u8>(), 1..256).boxed(),
+        };
+        bytes.prop_map(move |bytes| Binary { subtype, bytes })
+    })
 }
 
 fn arb_uuid() -> impl Strategy<Value = bson::Binary> {
