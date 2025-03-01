@@ -94,6 +94,7 @@ fn bson_scalar_type_representation(bson_scalar_type: BsonScalarType) -> Option<T
         BsonScalarType::Date => Some(TypeRepresentation::Timestamp), // Mongo Date is milliseconds since unix epoch
         BsonScalarType::Timestamp => None, // Internal Mongo timestamp type
         BsonScalarType::BinData => None,
+        BsonScalarType::UUID => Some(TypeRepresentation::String),
         BsonScalarType::ObjectId => Some(TypeRepresentation::String), // Mongo ObjectId is usually expressed as a 24 char hex string (12 byte number)
         BsonScalarType::Bool => Some(TypeRepresentation::Boolean),
         BsonScalarType::Null => None,

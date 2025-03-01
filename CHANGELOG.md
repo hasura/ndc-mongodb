@@ -4,9 +4,45 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+### Added
+
+- Add uuid scalar type ([#148](https://github.com/hasura/ndc-mongodb/pull/148))
+
 ### Fixed
 
 - Update dependencies to get fixes for reported security vulnerabilities ([#149](https://github.com/hasura/ndc-mongodb/pull/149))
+
+#### UUID scalar type
+
+Previously UUID values would show up in GraphQL as `BinData`. BinData is a generalized BSON type for binary data. It
+doesn't provide a great interface for working with UUIDs because binary data must be given as a JSON object with binary
+data in base64-encoding (while UUIDs are usually given in a specific hex-encoded string format), and there is also
+a mandatory "subtype" field. For example a BinData value representing a UUID fetched via GraphQL looks like this:
+
+```json
+{ "base64": "QKaT0MAKQl2vXFNeN/3+nA==", "subType":"04" }
+```
+
+With this change UUID fields can use the new `uuid` type instead of `binData`. Values of type `uuid` are represented in
+JSON as strings. The same value in a field with type `uuid` looks like this:
+
+```json
+"40a693d0-c00a-425d-af5c-535e37fdfe9c"
+```
+
+This means that you can now, for example, filter using string representations for UUIDs:
+
+```gql
+query {
+  posts(where: {id: {_eq: "40a693d0-c00a-425d-af5c-535e37fdfe9c"}}) {
+    title
+  }
+}
+```
+
+Introspection has been updated so that database fields containing UUIDs will use the `uuid` type when setting up new
+collections, or when re-introspecting after deleting the existing schema configuration. For migrating you may delete and
+re-introspect, or edit schema files to change occurrences of `binData` to `uuid`.
 
 #### Security Fixes
 

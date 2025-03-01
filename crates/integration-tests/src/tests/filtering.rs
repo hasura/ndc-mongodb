@@ -1,5 +1,5 @@
 use insta::assert_yaml_snapshot;
-use ndc_test_helpers::{binop, field, query, query_request, target, variable};
+use ndc_test_helpers::{binop, field, query, query_request, target, value, variable};
 
 use crate::{connector::Connector, graphql_query, run_connector_query};
 
@@ -80,6 +80,26 @@ async fn filters_by_comparisons_on_elements_of_array_of_scalars_against_variable
                         .predicate(binop("_eq", target!("cast"), variable!(cast_member)))
                         .fields([field!("title"), field!("cast")]),
                 )
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn filters_by_uuid() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::TestCases,
+            query_request().collection("uuids").query(
+                query()
+                    .predicate(binop(
+                        "_eq",
+                        target!("uuid"),
+                        value!("40a693d0-c00a-425d-af5c-535e37fdfe9c")
+                    ))
+                    .fields([field!("name"), field!("uuid"), field!("uuid_as_string")]),
+            )
         )
         .await?
     );

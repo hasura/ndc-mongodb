@@ -48,13 +48,9 @@ pub fn unify_type(type_a: Type, type_b: Type) -> Type {
         // Scalar types unify if they are the same type, or if one is a superset of the other.
         // If they are diffferent then the union is ExtendedJSON.
         (Type::Scalar(scalar_a), Type::Scalar(scalar_b)) => {
-            if scalar_a == scalar_b || is_supertype(&scalar_a, &scalar_b) {
-                Type::Scalar(scalar_a)
-            } else if is_supertype(&scalar_b, &scalar_a) {
-                Type::Scalar(scalar_b)
-            } else {
-                Type::ExtendedJSON
-            }
+            BsonScalarType::common_supertype(scalar_a, scalar_b)
+                .map(Type::Scalar)
+                .unwrap_or(Type::ExtendedJSON)
         }
 
         // Object types unify if they have the same name.
@@ -190,20 +186,6 @@ pub fn unify_object_types(
     );
 
     merged_type_map.into_values().collect()
-}
-
-/// True iff we consider a to be a supertype of b.
-///
-/// Note that if you add more supertypes here then it is important to also update the custom
-/// equality check in our tests in mongodb_agent_common::query::serialization::tests. Equality
-/// needs to be transitive over supertypes, so for example if we have,
-///
-/// (Double, Int), (Decimal, Double)
-///
-/// then in addition to comparing ints to doubles, and doubles to decimals, we also need to compare
-/// decimals to ints.
-pub fn is_supertype(a: &BsonScalarType, b: &BsonScalarType) -> bool {
-    matches!((a, b), (Double, Int))
 }
 
 #[cfg(test)]
