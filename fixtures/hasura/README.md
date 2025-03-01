@@ -32,11 +32,11 @@ this repo. The plugin binary is provided by the Nix dev shell. Use these
 commands:
 
 ```sh
-$ nix run .#mongodb-cli-plugin -- --connection-uri mongodb://localhost/sample_mflix --context-path sample_mflix/connector/ update
+$ nix run .#mongodb-cli-plugin -- --connection-uri mongodb://localhost/sample_mflix --context-path app/connector/sample_mflix/ update
 
-$ nix run .#mongodb-cli-plugin -- --connection-uri mongodb://localhost/chinook --context-path chinook/connector/ update
+$ nix run .#mongodb-cli-plugin -- --connection-uri mongodb://localhost/chinook --context-path app/connector/chinook/ update
 
-$ nix run .#mongodb-cli-plugin -- --connection-uri mongodb://localhost/test_cases --context-path test_cases/connector/ update
+$ nix run .#mongodb-cli-plugin -- --connection-uri mongodb://localhost/test_cases --context-path app/connector/test_cases/ update
 ```
 
 Update Hasura metadata based on connector configuration

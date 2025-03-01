@@ -8,7 +8,7 @@ use configuration::{
     Schema, WithName,
 };
 use futures_util::TryStreamExt;
-use mongodb::bson::{doc, Bson, Document};
+use mongodb::bson::{doc, spec::BinarySubtype, Binary, Bson, Document};
 use mongodb_agent_common::mongodb::{CollectionTrait as _, DatabaseTrait};
 use mongodb_support::{
     aggregate::{Pipeline, Stage},
@@ -220,7 +220,13 @@ fn make_field_type(
         Bson::Int32(_) => scalar(Int),
         Bson::Int64(_) => scalar(Long),
         Bson::Timestamp(_) => scalar(Timestamp),
-        Bson::Binary(_) => scalar(BinData),
+        Bson::Binary(Binary { subtype, .. }) => {
+            if *subtype == BinarySubtype::Uuid {
+                scalar(UUID)
+            } else {
+                scalar(BinData)
+            }
+        }
         Bson::ObjectId(_) => scalar(ObjectId),
         Bson::DateTime(_) => scalar(Date),
         Bson::Symbol(_) => scalar(Symbol),

@@ -35,7 +35,11 @@ pub enum Property {
     },
     #[serde(untagged)]
     Scalar {
-        #[serde(rename = "bsonType", default = "default_bson_scalar_type")]
+        #[serde(
+            rename = "bsonType",
+            deserialize_with = "deserialize_scalar_bson_type",
+            default = "default_bson_scalar_type"
+        )]
         bson_type: BsonScalarType,
         #[serde(skip_serializing_if = "Option::is_none")]
         description: Option<String>,
@@ -58,6 +62,15 @@ pub fn get_property_description(p: &Property) -> Option<String> {
             description,
         } => description.clone(),
     }
+}
+
+fn deserialize_scalar_bson_type<'de, D>(deserializer: D) -> Result<BsonScalarType, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Error;
+    let value = BsonType::deserialize(deserializer)?;
+    value.try_into().map_err(D::Error::custom)
 }
 
 fn default_bson_scalar_type() -> BsonScalarType {

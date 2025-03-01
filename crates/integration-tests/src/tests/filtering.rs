@@ -119,3 +119,23 @@ async fn filters_by_array_comparison_is_empty() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+#[tokio::test]
+async fn filters_by_uuid() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::TestCases,
+            query_request().collection("uuids").query(
+                query()
+                    .predicate(binop(
+                        "_eq",
+                        target!("uuid"),
+                        value!("40a693d0-c00a-425d-af5c-535e37fdfe9c")
+                    ))
+                    .fields([field!("name"), field!("uuid"), field!("uuid_as_string")]),
+            )
+        )
+        .await?
+    );
+    Ok(())
+}

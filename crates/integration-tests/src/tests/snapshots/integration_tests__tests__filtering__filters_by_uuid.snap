@@ -1,0 +1,8 @@
+---
+source: crates/integration-tests/src/tests/filtering.rs
+expression: "run_connector_query(Connector::TestCases,\nquery_request().collection(\"uuids\").query(query().predicate(binop(\"_eq\",\ntarget!(\"uuid\"),\nvalue!(\"40a693d0-c00a-425d-af5c-535e37fdfe9c\"))).fields([field!(\"name\"),\nfield!(\"uuid\"), field!(\"uuid_as_string\")]),)).await?"
+---
+- rows:
+    - name: peristeria elata
+      uuid: 40a693d0-c00a-425d-af5c-535e37fdfe9c
+      uuid_as_string: 40a693d0-c00a-425d-af5c-535e37fdfe9c

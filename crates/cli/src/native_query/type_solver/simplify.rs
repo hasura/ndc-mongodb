@@ -7,8 +7,6 @@ use mongodb_support::BsonScalarType;
 use ndc_models::{FieldName, ObjectTypeName};
 use nonempty::NonEmpty;
 
-use crate::introspection::type_unification::is_supertype;
-
 use crate::native_query::helpers::get_object_field_type;
 use crate::native_query::type_constraint::Variance;
 use crate::native_query::{
@@ -290,19 +288,13 @@ fn solve_scalar(
     b: BsonScalarType,
 ) -> Result<TypeConstraint, Error> {
     let solution = match variance {
-        Variance::Covariant => {
-            if a == b || is_supertype(&a, &b) {
-                Some(C::Scalar(a))
-            } else if is_supertype(&b, &a) {
-                Some(C::Scalar(b))
-            } else {
-                Some(C::Union([C::Scalar(a), C::Scalar(b)].into()))
-            }
-        }
+        Variance::Covariant => BsonScalarType::common_supertype(a, b)
+            .map(C::Scalar)
+            .or_else(|| Some(C::Union([C::Scalar(a), C::Scalar(b)].into()))),
         Variance::Contravariant => {
-            if a == b || is_supertype(&a, &b) {
+            if a == b || BsonScalarType::is_supertype(a, b) {
                 Some(C::Scalar(b))
-            } else if is_supertype(&b, &a) {
+            } else if BsonScalarType::is_supertype(b, a) {
                 Some(C::Scalar(a))
             } else {
                 None
