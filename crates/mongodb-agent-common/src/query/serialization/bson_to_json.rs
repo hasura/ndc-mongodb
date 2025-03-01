@@ -18,6 +18,9 @@ pub enum BsonToJsonError {
     #[error("error converting 64-bit floating point number from BSON to JSON: {0}")]
     DoubleConversion(f64),
 
+    #[error("error converting UUID from BSON to JSON: {0}")]
+    UuidConversion(#[from] bson::uuid::Error),
+
     #[error("input object of type {0} is missing a field, \"{1}\"")]
     MissingObjectField(Type, String),
 
@@ -88,6 +91,7 @@ fn bson_scalar_to_json(
         (BsonScalarType::Timestamp, Bson::Timestamp(v)) => {
             Ok(to_value::<json_formats::Timestamp>(v.into())?)
         }
+        (BsonScalarType::UUID, Bson::Binary(b)) => Ok(serde_json::to_value(b.to_uuid()?)?),
         (BsonScalarType::BinData, Bson::Binary(b)) => {
             Ok(to_value::<json_formats::BinData>(b.into())?)
         }

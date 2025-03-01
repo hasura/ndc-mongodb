@@ -72,11 +72,12 @@ pub fn json_to_bson(expected_type: &Type, value: Value) -> Result<Bson> {
 
 /// Works like json_to_bson, but only converts BSON scalar types.
 pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Result<Bson> {
+    use BsonScalarType as S;
     let result = match expected_type {
-        BsonScalarType::Double => Bson::Double(deserialize(expected_type, value)?),
-        BsonScalarType::Int => Bson::Int32(deserialize(expected_type, value)?),
-        BsonScalarType::Long => convert_long(&from_string(expected_type, value)?)?,
-        BsonScalarType::Decimal => Bson::Decimal128(
+        S::Double => Bson::Double(deserialize(expected_type, value)?),
+        S::Int => Bson::Int32(deserialize(expected_type, value)?),
+        S::Long => convert_long(&from_string(expected_type, value)?)?,
+        S::Decimal => Bson::Decimal128(
             Decimal128::from_str(&from_string(expected_type, value.clone())?).map_err(|err| {
                 JsonToBsonError::ConversionErrorWithContext(
                     Type::Scalar(MongoScalarType::Bson(expected_type)),
@@ -85,41 +86,38 @@ pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Resul
                 )
             })?,
         ),
-        BsonScalarType::String => Bson::String(deserialize(expected_type, value)?),
-        BsonScalarType::Date => convert_date(&from_string(expected_type, value)?)?,
-        BsonScalarType::Timestamp => {
-            deserialize::<json_formats::Timestamp>(expected_type, value)?.into()
-        }
-        BsonScalarType::BinData => {
-            deserialize::<json_formats::BinData>(expected_type, value)?.into()
-        }
-        BsonScalarType::ObjectId => Bson::ObjectId(deserialize(expected_type, value)?),
-        BsonScalarType::Bool => match value {
+        S::String => Bson::String(deserialize(expected_type, value)?),
+        S::Date => convert_date(&from_string(expected_type, value)?)?,
+        S::Timestamp => deserialize::<json_formats::Timestamp>(expected_type, value)?.into(),
+        S::BinData => deserialize::<json_formats::BinData>(expected_type, value)?.into(),
+        S::UUID => convert_uuid(&from_string(expected_type, value)?)?,
+        S::ObjectId => Bson::ObjectId(deserialize(expected_type, value)?),
+        S::Bool => match value {
             Value::Bool(b) => Bson::Boolean(b),
-            _ => incompatible_scalar_type(BsonScalarType::Bool, value)?,
+            _ => incompatible_scalar_type(S::Bool, value)?,
         },
-        BsonScalarType::Null => match value {
+        S::Null => match value {
             Value::Null => Bson::Null,
-            _ => incompatible_scalar_type(BsonScalarType::Null, value)?,
+            _ => incompatible_scalar_type(S::Null, value)?,
         },
-        BsonScalarType::Undefined => match value {
+        S::Undefined => match value {
             Value::Null => Bson::Undefined,
-            _ => incompatible_scalar_type(BsonScalarType::Undefined, value)?,
+            _ => incompatible_scalar_type(S::Undefined, value)?,
         },
-        BsonScalarType::Regex => {
+        S::Regex => {
             deserialize::<json_formats::Either<json_formats::Regex, String>>(expected_type, value)?
                 .into_left()
                 .into()
         }
-        BsonScalarType::Javascript => Bson::JavaScriptCode(deserialize(expected_type, value)?),
-        BsonScalarType::JavascriptWithScope => {
+        S::Javascript => Bson::JavaScriptCode(deserialize(expected_type, value)?),
+        S::JavascriptWithScope => {
             deserialize::<json_formats::JavaScriptCodeWithScope>(expected_type, value)?.into()
         }
-        BsonScalarType::MinKey => Bson::MinKey,
-        BsonScalarType::MaxKey => Bson::MaxKey,
-        BsonScalarType::Symbol => Bson::Symbol(deserialize(expected_type, value)?),
+        S::MinKey => Bson::MinKey,
+        S::MaxKey => Bson::MaxKey,
+        S::Symbol => Bson::Symbol(deserialize(expected_type, value)?),
         // dbPointer is deprecated
-        BsonScalarType::DbPointer => Err(JsonToBsonError::NotImplemented(expected_type))?,
+        S::DbPointer => Err(JsonToBsonError::NotImplemented(expected_type))?,
     };
     Ok(result)
 }
@@ -204,6 +202,17 @@ fn convert_long(value: &str) -> Result<Bson> {
         .parse()
         .map_err(|err| JsonToBsonError::ParseInt(value.to_owned(), err))?;
     Ok(Bson::Int64(n))
+}
+
+fn convert_uuid(value: &str) -> Result<Bson> {
+    let uuid = bson::Uuid::parse_str(value).map_err(|err| {
+        JsonToBsonError::ConversionErrorWithContext(
+            Type::Scalar(MongoScalarType::Bson(BsonScalarType::UUID)),
+            value.into(),
+            err.into(),
+        )
+    })?;
+    Ok(bson::binary::Binary::from_uuid(uuid).into())
 }
 
 fn deserialize<T>(expected_type: BsonScalarType, value: Value) -> Result<T>

@@ -1,0 +1,34 @@
+{
+  "name": "uuids",
+  "collections": {
+    "uuids": {
+      "type": "uuids"
+    }
+  },
+  "objectTypes": {
+    "uuids": {
+      "fields": {
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        },
+        "name": {
+          "type": {
+            "scalar": "string"
+          }
+        },
+        "uuid": {
+          "type": {
+            "scalar": "uuid"
+          }
+        },
+        "uuid_as_string": {
+          "type": {
+            "scalar": "string"
+          }
+        }
+      }
+    }
+  }
+}

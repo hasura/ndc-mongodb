@@ -112,6 +112,7 @@ fn bson_scalar_type_representation(bson_scalar_type: BsonScalarType) -> TypeRepr
         S::Date => R::TimestampTZ, // Mongo Date is milliseconds since unix epoch, but we serialize to JSON as an ISO string
         S::Timestamp => R::JSON,   // Internal Mongo timestamp type
         S::BinData => R::JSON,
+        S::UUID => R::String,
         S::ObjectId => R::String, // Mongo ObjectId is usually expressed as a 24 char hex string (12 byte number) - not using R::Bytes because that expects base64
         S::Bool => R::Boolean,
         S::Null => R::JSON,
