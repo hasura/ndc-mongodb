@@ -8,6 +8,10 @@ This changelog documents the changes between release versions.
 
 - Add uuid scalar type ([#148](https://github.com/hasura/ndc-mongodb/pull/148))
 
+### Fixed
+
+- Update dependencies to get fixes for reported security vulnerabilities ([#149](https://github.com/hasura/ndc-mongodb/pull/149))
+
 #### UUID scalar type
 
 Previously UUID values would show up in GraphQL as `BinData`. BinData is a generalized BSON type for binary data. It
@@ -39,6 +43,13 @@ query {
 Introspection has been updated so that database fields containing UUIDs will use the `uuid` type when setting up new
 collections, or when re-introspecting after deleting the existing schema configuration. For migrating you may delete and
 re-introspect, or edit schema files to change occurrences of `binData` to `uuid`.
+
+#### Security Fixes
+
+Rust dependencies have been updated to get fixes for these advisories:
+
+- https://rustsec.org/advisories/RUSTSEC-2025-0004
+- https://rustsec.org/advisories/RUSTSEC-2025-0006
 
 ## [1.6.0] - 2025-01-17
 
