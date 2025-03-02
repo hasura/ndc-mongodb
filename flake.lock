@@ -144,16 +144,15 @@
         "pre-commit-hooks": "pre-commit-hooks_3"
       },
       "locked": {
-        "lastModified": 1737445492,
-        "narHash": "sha256-qBSS92FAE2k+5PEkOzbgcYPavlqpl+uHoLJAbO9UUfM=",
+        "lastModified": 1740896733,
+        "narHash": "sha256-CDqloGUMG2eTW/dKtOazTM2IYCkCZs5GJYwarW6TbYE=",
         "owner": "hallettj",
         "repo": "crate2nix",
-        "rev": "8af1c29d8cd74b198ce9c1626573f511c9423801",
+        "rev": "c69d84bfaf887dd812a1022ab6dc93672f2d5e6a",
         "type": "github"
       },
       "original": {
         "owner": "hallettj",
-        "ref": "git-workspaces",
         "repo": "crate2nix",
         "type": "github"
       }
@@ -837,15 +836,15 @@
     },
     "nixpkgs_6": {
       "locked": {
-        "lastModified": 1737062831,
-        "narHash": "sha256-Tbk1MZbtV2s5aG+iM99U8FqwxU/YNArMcWAv6clcsBc=",
-        "owner": "nixos",
+        "lastModified": 1737469691,
+        "narHash": "sha256-nmKOgAU48S41dTPIXAq0AHZSehWUn6ZPrUKijHAMmIk=",
+        "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "5df43628fdf08d642be8ba5b3625a6c70731c19c",
+        "rev": "9e4d5190a9482a1fb9d18adf0bdb83c6e506eaab",
         "type": "github"
       },
       "original": {
-        "owner": "nixos",
+        "owner": "NixOS",
         "ref": "nixos-unstable",
         "repo": "nixpkgs",
         "type": "github"

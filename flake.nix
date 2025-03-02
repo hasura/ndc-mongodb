@@ -8,8 +8,7 @@
     # Nix build system for Rust projects. Builds each crate (including
     # dependencies) as a separate nix derivation for best possible cache
     # utilization.
-    # crate2nix.url = "github:nix-community/crate2nix";
-    crate2nix.url = "github:hallettj/crate2nix/git-workspaces";
+    crate2nix.url = "github:hallettj/crate2nix";
 
     hasura-ddn-cli.url = "github:hasura/ddn-cli-nix";
 
@@ -134,6 +133,14 @@
               buildRustCrateForPkgs = pkgs: pkgs.buildRustCrate.override {
                 cargo = rust;
                 rustc = rust;
+              };
+              defaultCrateOverrides = final.defaultCrateOverrides // {
+                engine = attrs: {
+                  # Set env var for the engine's build.rs script. If this isn't
+                  # set the script tries to get a git revision which doesn't
+                  # work in the nix builder.
+                  RELEASE_VERSION = "dev";
+                };
               };
             };
 
