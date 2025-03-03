@@ -74,34 +74,38 @@
         (final: prev: {
           rustToolchain = final.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 
-          # Cargo.nix is a generated set of nix derivations that builds workspace
-          # crates. We import it here to bring project crates into the overlayed
-          # package set.
-          #
           # To apply the Rust toolchain described in `rust-toolchain.toml` we need
           # to override `cargo` and `rustc` inputs. Note that `rustToolchain`
           # is set up above.
-          ndc-mongodb-workspace = import ./Cargo.nix {
-            pkgs = final;
-            buildRustCrateForPkgs = pkgs: pkgs.buildRustCrate.override {
-              # What's the deal with `pkgsBuildHost`? It has to do with
-              # cross-compiling.
-              #
-              # - "build" is the system we are building on
-              # - "host" is the system we are building for
-              #
-              # If a package set is configured for cross-compiling then packages
-              # in the set by default are compiled to run on the "host" system.
-              # OTOH `pkgsBuildHost` contains copies of all packages compiled to
-              # run on the build system, and to produce compiled output for the
-              # host system.
-              #
-              # So it's important to use packages in `pkgsBuildHost` to
-              # reference programs that run during the build process.
-              cargo = pkgs.pkgsBuildHost.rustToolchain;
-              rustc = pkgs.pkgsBuildHost.rustToolchain;
+          ndc-mongodb-workspace =
+            let
+              src = ./.;
+              cargo-nix = crate2nix.tools.${final.system}.generatedCargoNix {
+                name = "ndc-mongodb-workspace";
+                inherit src;
+              };
+            in
+            import cargo-nix {
+              pkgs = final;
+              buildRustCrateForPkgs = pkgs: pkgs.buildRustCrate.override {
+                # What's the deal with `pkgsBuildHost`? It has to do with
+                # cross-compiling.
+                #
+                # - "build" is the system we are building on
+                # - "host" is the system we are building for
+                #
+                # If a package set is configured for cross-compiling then packages
+                # in the set by default are compiled to run on the "host" system.
+                # OTOH `pkgsBuildHost` contains copies of all packages compiled to
+                # run on the build system, and to produce compiled output for the
+                # host system.
+                #
+                # So it's important to use packages in `pkgsBuildHost` to
+                # reference programs that run during the build process.
+                cargo = pkgs.pkgsBuildHost.rustToolchain;
+                rustc = pkgs.pkgsBuildHost.rustToolchain;
+              };
             };
-          };
 
           # Extend our package set with mongodb-connector, graphql-engine, and
           # other packages built by this flake to make these packages accessible
