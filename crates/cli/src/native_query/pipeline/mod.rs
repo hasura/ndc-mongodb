@@ -211,7 +211,7 @@ fn infer_type_from_group_stage(
                 None,
                 expr.clone(),
             )?,
-            Accumulator::Push(expr) => {
+            Accumulator::AddToSet(expr) | Accumulator::Push(expr) => {
                 let t = infer_type_from_aggregation_expression(
                     context,
                     &format!("{desired_object_type_name}_push"),

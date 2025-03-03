@@ -6,6 +6,12 @@ use serde::{Deserialize, Serialize};
 /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/#std-label-accumulators-group
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum Accumulator {
+    /// Returns an array of unique expression values for each group. Order of the array elements is undefined.
+    ///
+    /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/addToSet/#mongodb-group-grp.-addToSet
+    #[serde(rename = "$addToSet")]
+    AddToSet(bson::Bson),
+
     /// Returns an average of numerical values. Ignores non-numeric values.
     ///
     /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/avg/#mongodb-group-grp.-avg
