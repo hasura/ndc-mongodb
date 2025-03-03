@@ -1,7 +1,5 @@
-use mongodb::bson::{self, Bson};
+use mongodb::bson;
 use serde::Deserialize;
-
-pub const RESULT_FIELD: &str = "result";
 
 /// Value must match the field name in [BsonRowSet]
 pub const ROW_SET_AGGREGATES_KEY: &str = "aggregates";
@@ -15,7 +13,7 @@ pub const ROW_SET_ROWS_KEY: &str = "rows";
 #[derive(Debug, Deserialize)]
 pub struct BsonRowSet {
     #[serde(default)]
-    pub aggregates: Bson, // name matches ROW_SET_AGGREGATES_KEY
+    pub aggregates: Option<bson::Document>, // name matches ROW_SET_AGGREGATES_KEY
     #[serde(default)]
     pub groups: Vec<bson::Document>, // name matches ROW_SET_GROUPS_KEY
     #[serde(default)]

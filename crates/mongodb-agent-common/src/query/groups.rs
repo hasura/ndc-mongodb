@@ -1,18 +1,19 @@
-use std::{borrow::Cow, collections::BTreeMap};
+use std::borrow::Cow;
 
-use indexmap::IndexMap;
 use mongodb::bson::{self, bson};
-use mongodb_support::aggregate::{Accumulator, Pipeline, Selection, SortDocument, Stage};
-use ndc_models::{FieldName, OrderDirection};
+use mongodb_support::aggregate::{Pipeline, Selection, SortDocument, Stage};
+use ndc_models::OrderDirection;
 
 use crate::{
-    aggregation_function::AggregationFunction,
     constants::GROUP_DIMENSIONS_KEY,
     interface_types::MongoAgentError,
-    mongo_query_plan::{Aggregate, Dimension, GroupOrderBy, GroupOrderByTarget, Grouping},
+    mongo_query_plan::{Dimension, GroupOrderBy, GroupOrderByTarget, Grouping},
 };
 
-use super::{aggregates::convert_aggregate_result_type, column_ref::ColumnRef};
+use super::{
+    aggregates::{accumulators_for_aggregates, selection_for_aggregate},
+    column_ref::ColumnRef,
+};
 
 type Result<T> = std::result::Result<T, MongoAgentError>;
 
@@ -36,7 +37,7 @@ pub fn pipeline_for_groups(grouping: &Grouping) -> Result<Pipeline> {
     // TODO: ENG-1563 to implement 'query.aggregates.group_by.paginate' apply grouping.limit and
     // grouping.offset **after** group stage because those options count groups, not documents
 
-    let replace_with_stage = Stage::ReplaceWith(selection_for_grouping_internal(grouping, "_id"));
+    let replace_with_stage = Stage::ReplaceWith(selection_for_grouping(grouping, "_id"));
 
     Ok(Pipeline::new(
         [
@@ -74,97 +75,15 @@ fn dimensions_to_expression(dimensions: &[Dimension]) -> bson::Array {
         .collect()
 }
 
-fn accumulators_for_aggregates(
-    aggregates: &IndexMap<FieldName, Aggregate>,
-) -> BTreeMap<String, Accumulator> {
-    aggregates
-        .into_iter()
-        .map(|(name, aggregate)| (name.to_string(), aggregate_to_accumulator(aggregate)))
-        .collect()
-}
-
-fn aggregate_to_accumulator(aggregate: &Aggregate) -> Accumulator {
-    use Aggregate as A;
-    match aggregate {
-        A::ColumnCount {
-            column,
-            field_path,
-            distinct,
-            ..
-        } => {
-            let field_ref = ColumnRef::from_column_and_field_path(column, field_path.as_ref())
-                .into_aggregate_expression()
-                .into_bson();
-            if *distinct {
-                Accumulator::AddToSet(field_ref)
-            } else {
-                Accumulator::Sum(bson!({
-                    "$cond": {
-                        "if": { "$eq": [field_ref, null] }, // count non-null, non-missing values
-                        "then": 0,
-                        "else": 1,
-                    }
-                }))
-            }
-        }
-        A::SingleColumn {
-            column,
-            field_path,
-            function,
-            ..
-        } => {
-            use AggregationFunction as A;
-
-            let field_ref = ColumnRef::from_column_and_field_path(column, field_path.as_ref())
-                .into_aggregate_expression()
-                .into_bson();
-
-            match function {
-                A::Avg => Accumulator::Avg(field_ref),
-                A::Min => Accumulator::Min(field_ref),
-                A::Max => Accumulator::Max(field_ref),
-                A::Sum => Accumulator::Sum(field_ref),
-            }
-        }
-        A::StarCount => Accumulator::Sum(bson!(1)),
-    }
-}
-
-pub fn selection_for_grouping(grouping: &Grouping) -> Selection {
-    // This function is called externally to propagate groups from relationship lookups. In that
-    // case the group has already gone through [selection_for_grouping_internal] once so we want to
-    // reference the dimensions key as "dimensions".
-    selection_for_grouping_internal(grouping, GROUP_DIMENSIONS_KEY)
-}
-
-fn selection_for_grouping_internal(grouping: &Grouping, dimensions_field_name: &str) -> Selection {
+fn selection_for_grouping(grouping: &Grouping, dimensions_field_name: &str) -> Selection {
     let dimensions = (
         GROUP_DIMENSIONS_KEY.to_string(),
         bson!(format!("${dimensions_field_name}")),
     );
-    let selected_aggregates = grouping.aggregates.iter().map(|(key, aggregate)| {
-        let column_ref = ColumnRef::from_field(key).into_aggregate_expression();
-        // Selecting distinct counts requires some post-processing since the $group stage produces
-        // an array of unique values. We need to count the non-null values in that array.
-        let value_expression = match aggregate {
-            Aggregate::ColumnCount { distinct, .. } if *distinct => bson!({
-                "$reduce": {
-                    "input": column_ref,
-                    "initialValue": 0,
-                    "in": {
-                        "$cond": {
-                            "if": { "$eq": ["$$this", null] },
-                            "then": "$$value",
-                            "else": { "$sum": ["$$value", 1] },
-                        }
-                    },
-                }
-            }),
-            _ => column_ref.into_bson(),
-        };
-        let selection = convert_aggregate_result_type(value_expression, aggregate);
-        (key.to_string(), selection.into())
-    });
+    let selected_aggregates = grouping
+        .aggregates
+        .iter()
+        .map(|(key, aggregate)| selection_for_aggregate(key, aggregate));
     let selection_doc = std::iter::once(dimensions)
         .chain(selected_aggregates)
         .collect();

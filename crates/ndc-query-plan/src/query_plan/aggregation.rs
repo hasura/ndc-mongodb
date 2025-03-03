@@ -46,6 +46,14 @@ impl<T: ConnectorTypes> Aggregate<T> {
             Aggregate::StarCount => Cow::Owned(T::count_aggregate_type()),
         }
     }
+
+    pub fn is_count(&self) -> bool {
+        match self {
+            Aggregate::ColumnCount { .. } => true,
+            Aggregate::SingleColumn { .. } => false,
+            Aggregate::StarCount => true,
+        }
+    }
 }
 
 #[derive(Derivative)]

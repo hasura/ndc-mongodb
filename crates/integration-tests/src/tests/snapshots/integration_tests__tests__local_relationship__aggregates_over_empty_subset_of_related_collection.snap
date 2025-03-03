@@ -1,0 +1,20 @@
+---
+source: crates/integration-tests/src/tests/local_relationship.rs
+expression: "run_connector_query(Connector::Chinook,\nquery_request().collection(\"Album\").query(query().predicate(is_in(target!(\"AlbumId\"),\n[json!(15), json!(91),\njson!(227)])).fields([relation_field!(\"tracks\" => \"tracks\",\nquery().predicate(binop(\"_eq\", target!(\"Name\"),\nvalue!(\"non-existent name\"))).aggregates([star_count_aggregate!(\"count\"),\ncolumn_count_aggregate!(\"composer_count\" => \"Composer\", distinct: true),\n(\"average_price\",\ncolumn_aggregate(\"UnitPrice\",\n\"avg\").into()),]))]).order_by([asc!(\"_id\")])).relationships([(\"tracks\",\nrelationship(\"Track\", [(\"AlbumId\", &[\"AlbumId\"])]))])).await?"
+---
+- rows:
+    - tracks:
+        aggregates:
+          average_price: ~
+          composer_count: 0
+          count: 0
+    - tracks:
+        aggregates:
+          average_price: ~
+          composer_count: 0
+          count: 0
+    - tracks:
+        aggregates:
+          average_price: ~
+          composer_count: 0
+          count: 0

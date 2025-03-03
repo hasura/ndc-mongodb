@@ -3,20 +3,24 @@ use std::{borrow::Cow, collections::BTreeMap};
 use configuration::MongoScalarType;
 use indexmap::IndexMap;
 use itertools::Itertools;
-use mongodb::bson::{self, Bson};
+use mongodb::bson::{self, doc, Bson};
 use mongodb_support::ExtendedJsonMode;
-use ndc_models::{Group, QueryResponse, RowFieldValue, RowSet};
+use ndc_models::{FieldName, Group, QueryResponse, RowFieldValue, RowSet};
+use serde_json::json;
 use thiserror::Error;
 use tracing::instrument;
 
 use crate::{
-    constants::{BsonRowSet, GROUP_DIMENSIONS_KEY, ROW_SET_AGGREGATES_KEY, ROW_SET_GROUPS_KEY, ROW_SET_ROWS_KEY},
+    constants::{
+        BsonRowSet, GROUP_DIMENSIONS_KEY, ROW_SET_AGGREGATES_KEY, ROW_SET_GROUPS_KEY,
+        ROW_SET_ROWS_KEY,
+    },
     mongo_query_plan::{
         Aggregate, Dimension, Field, Grouping, NestedArray, NestedField, NestedObject, ObjectField,
         ObjectType, Query, QueryPlan, Type,
     },
     query::{
-        is_response_faceted::is_response_faceted,
+        is_response_faceted::ResponseFacets,
         serialization::{bson_to_json, BsonToJsonError},
     },
 };
@@ -67,28 +71,38 @@ pub fn serialize_query_response(
                 )
             })
             .try_collect()
-    } else if is_response_faceted(&query_plan.query) {
-        let row_set = parse_single_document(response_documents)?;
-        Ok(vec![serialize_row_set(
-            mode,
-            &[],
-            &query_plan.query,
-            row_set,
-        )?])
-    } else if let Some(grouping) = &query_plan.query.groups {
-        Ok(vec![serialize_row_set_groups_only(
-            mode,
-            &[],
-            grouping,
-            response_documents,
-        )?])
     } else {
-        Ok(vec![serialize_row_set_rows_only(
-            mode,
-            &[],
-            &query_plan.query,
-            response_documents,
-        )?])
+        match ResponseFacets::from_query(&query_plan.query) {
+            ResponseFacets::Combination { .. } => {
+                let row_set = parse_single_document(response_documents)?;
+                Ok(vec![serialize_row_set(
+                    mode,
+                    &[],
+                    &query_plan.query,
+                    row_set,
+                )?])
+            }
+            ResponseFacets::AggregatesOnly(aggregates) => {
+                Ok(vec![serialize_row_set_aggregates_only(
+                    mode,
+                    &[],
+                    aggregates,
+                    response_documents,
+                )?])
+            }
+            ResponseFacets::FieldsOnly(_) => Ok(vec![serialize_row_set_rows_only(
+                mode,
+                &[],
+                &query_plan.query,
+                response_documents,
+            )?]),
+            ResponseFacets::GroupsOnly(grouping) => Ok(vec![serialize_row_set_groups_only(
+                mode,
+                &[],
+                grouping,
+                response_documents,
+            )?]),
+        }
     }?;
     let response = QueryResponse(row_sets);
     tracing::debug!(query_response = %serde_json::to_string(&response).unwrap());
@@ -115,6 +129,20 @@ fn serialize_row_set_rows_only(
     })
 }
 
+fn serialize_row_set_aggregates_only(
+    mode: ExtendedJsonMode,
+    path: &[&str],
+    aggregates: &IndexMap<FieldName, Aggregate>,
+    docs: Vec<bson::Document>,
+) -> Result<RowSet> {
+    let doc = docs.first().cloned().unwrap_or(doc! {});
+    Ok(RowSet {
+        aggregates: Some(serialize_aggregates(mode, path, aggregates, doc)?),
+        rows: None,
+        groups: None,
+    })
+}
+
 fn serialize_row_set_groups_only(
     mode: ExtendedJsonMode,
     path: &[&str],
@@ -128,9 +156,8 @@ fn serialize_row_set_groups_only(
     })
 }
 
-// When a query includes aggregates, or some combination of aggregates, rows, or groups then the
-// response is "faceted" to give us a single document with `rows`, `aggregates`, and `groups`
-// fields.
+// When a query includes some combination of aggregates, rows, or groups then the response is
+// "faceted" to give us a single document with `rows`, `aggregates`, and `groups` fields.
 fn serialize_row_set(
     mode: ExtendedJsonMode,
     path: &[&str],
@@ -140,7 +167,10 @@ fn serialize_row_set(
     let aggregates = query
         .aggregates
         .as_ref()
-        .map(|aggregates| serialize_aggregates(mode, path, aggregates, row_set.aggregates))
+        .map(|aggregates| {
+            let aggregate_values = row_set.aggregates.unwrap_or_else(|| doc! {});
+            serialize_aggregates(mode, path, aggregates, aggregate_values)
+        })
         .transpose()?;
 
     let groups = query
@@ -164,21 +194,32 @@ fn serialize_row_set(
 
 fn serialize_aggregates(
     mode: ExtendedJsonMode,
-    path: &[&str],
+    _path: &[&str],
     query_aggregates: &IndexMap<ndc_models::FieldName, Aggregate>,
-    value: Bson,
+    value: bson::Document,
 ) -> Result<IndexMap<ndc_models::FieldName, serde_json::Value>> {
-    let aggregates_type = type_for_aggregates(query_aggregates);
-    let json = bson_to_json(mode, &Type::Object(aggregates_type), value)?;
-
-    // The NDC type uses an IndexMap for aggregate values; we need to convert the map
-    // underlying the Value::Object value to an IndexMap
-    let aggregate_values = match json {
-        serde_json::Value::Object(obj) => obj.into_iter().map(|(k, v)| (k.into(), v)).collect(),
-        _ => Err(QueryResponseError::AggregatesNotObject {
-            path: path_to_owned(path),
-        })?,
-    };
+    // The NDC type uses an IndexMap for aggregate values; we need to convert the map underlying
+    // the Value::Object value to an IndexMap.
+    //
+    // We also need to fill in missing aggregate values. This can be an issue in a query that does
+    // not match any documents. In that case instead of an object with null aggregate values
+    // MongoDB does not return any documents, so this function gets an empty document.
+    let aggregate_values = query_aggregates
+        .iter()
+        .map(|(key, aggregate)| {
+            let json_value = match value.get(key.as_str()).cloned() {
+                Some(bson_value) => bson_to_json(mode, &type_for_aggregate(aggregate), bson_value)?,
+                None => {
+                    if aggregate.is_count() {
+                        json!(0)
+                    } else {
+                        json!(null)
+                    }
+                }
+            };
+            Ok((key.clone(), json_value))
+        })
+        .collect::<Result<_>>()?;
     Ok(aggregate_values)
 }
 
@@ -239,7 +280,7 @@ fn serialize_groups(
                 })
                 .collect::<Result<_>>()?;
 
-            let aggregates = serialize_aggregates(mode, path, &grouping.aggregates, doc.into())?;
+            let aggregates = serialize_aggregates(mode, path, &grouping.aggregates, doc)?;
 
             // TODO: This conversion step can be removed when the aggregates map key type is
             // changed from String to FieldName
@@ -318,15 +359,7 @@ fn type_for_aggregates(
     let fields = query_aggregates
         .iter()
         .map(|(field_name, aggregate)| {
-            let result_type = match aggregate {
-                Aggregate::ColumnCount { .. } => {
-                    Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Int))
-                }
-                Aggregate::StarCount => {
-                    Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Int))
-                }
-                Aggregate::SingleColumn { result_type, .. } => result_type.clone(),
-            };
+            let result_type = type_for_aggregate(aggregate);
             (
                 field_name.to_string().into(),
                 ObjectField {
@@ -337,6 +370,18 @@ fn type_for_aggregates(
         })
         .collect();
     ObjectType { fields, name: None }
+}
+
+fn type_for_aggregate(aggregate: &Aggregate) -> Type {
+    match aggregate {
+        Aggregate::ColumnCount { .. } => {
+            Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Int))
+        }
+        Aggregate::StarCount => {
+            Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Int))
+        }
+        Aggregate::SingleColumn { result_type, .. } => result_type.clone(),
+    }
 }
 
 fn type_for_row(

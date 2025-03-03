@@ -1,15 +1,5 @@
 use std::borrow::Cow;
 
-use mongodb::bson::{doc, Document};
-
-/// Produces a MongoDB expression that references a field by name in a way that is safe from code
-/// injection.
-///
-/// TODO: equivalent to ColumnRef::Expression
-pub fn get_field(name: &str) -> Document {
-    doc! { "$getField": { "$literal": name } }
-}
-
 /// Given a name returns a valid variable name for use in MongoDB aggregation expressions. Outputs
 /// are guaranteed to be distinct for distinct inputs. Consistently returns the same output for the
 /// same input string.

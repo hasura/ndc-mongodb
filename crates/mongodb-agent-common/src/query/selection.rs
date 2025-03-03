@@ -5,14 +5,15 @@ use ndc_models::FieldName;
 use nonempty::NonEmpty;
 
 use crate::{
-    constants::{ROW_SET_AGGREGATES_KEY, ROW_SET_GROUPS_KEY, ROW_SET_ROWS_KEY},
+    constants::{
+        GROUP_DIMENSIONS_KEY, ROW_SET_AGGREGATES_KEY, ROW_SET_GROUPS_KEY, ROW_SET_ROWS_KEY,
+    },
     interface_types::MongoAgentError,
-    mongo_query_plan::{Field, NestedArray, NestedField, NestedObject},
-    mongodb::sanitize::get_field,
-    query::{column_ref::ColumnRef, groups::selection_for_grouping},
+    mongo_query_plan::{Aggregate, Field, Grouping, NestedArray, NestedField, NestedObject},
+    query::column_ref::ColumnRef,
 };
 
-use super::is_response_faceted::ResponseFacets;
+use super::{aggregates::replace_missing_aggregate_value, is_response_faceted::ResponseFacets};
 
 /// Creates a document to use in a $replaceWith stage to limit query results to the specific fields
 /// requested. Assumes that only fields are requested.
@@ -96,24 +97,58 @@ fn selection_for_field(
             // appropriate aliases. At this point all we need to do is to prune the selection down
             // to requested fields, omitting fields of the relationship that were selected for
             // filtering and sorting.
-            let field_selection = |fields: &IndexMap<FieldName, Field>| -> Document {
+            fn field_selection(fields: &IndexMap<FieldName, Field>) -> Document {
                 fields
                     .iter()
                     .map(|(field_name, _)| {
                         (
                             field_name.to_string(),
                             ColumnRef::variable("this")
-                                .into_nested_field(field_name)
+                                .into_nested_field(field_name.as_ref())
                                 .into_aggregate_expression()
                                 .into_bson(),
                         )
                     })
                     .collect()
-            };
+            }
+
+            fn aggregates_selection(
+                from: ColumnRef<'_>,
+                aggregates: &IndexMap<FieldName, Aggregate>,
+                check_for_null: bool,
+            ) -> Document {
+                aggregates
+                    .into_iter()
+                    .map(|(aggregate_name, aggregate)| {
+                        let value_ref = from
+                            .clone()
+                            .into_nested_field(aggregate_name.as_ref())
+                            .into_aggregate_expression()
+                            .into_bson();
+                        let value_ref = if check_for_null {
+                            replace_missing_aggregate_value(value_ref, aggregate.is_count())
+                        } else {
+                            value_ref
+                        };
+                        (aggregate_name.to_string(), value_ref)
+                    })
+                    .collect()
+            }
+
+            fn group_selection(from: ColumnRef<'_>, grouping: &Grouping) -> Document {
+                let mut selection = aggregates_selection(from, &grouping.aggregates, false);
+                selection.insert(
+                    GROUP_DIMENSIONS_KEY,
+                    ColumnRef::variable("this")
+                        .into_nested_field(GROUP_DIMENSIONS_KEY)
+                        .into_aggregate_expression(),
+                );
+                selection
+            }
 
             // Field of the incoming pipeline document that contains data fetched for the
             // relationship.
-            let relationship_field = get_field(relationship.as_str());
+            let relationship_field = ColumnRef::from_field(relationship.as_ref());
 
             let doc = match ResponseFacets::from_parameters(
                 aggregates.as_ref(),
@@ -125,25 +160,26 @@ fn selection_for_field(
                     fields,
                     groups,
                 } => {
-                    let aggregate_selection: Document = aggregates
-                        .into_iter()
-                        .flatten()
-                        .map(|(aggregate_name, _)| {
-                            (
-                                aggregate_name.to_string(),
-                                format!("$$row_set.{ROW_SET_AGGREGATES_KEY}.{aggregate_name}")
-                                    .into(),
-                            )
-                        })
-                        .collect();
-                    let mut new_row_set = doc! { ROW_SET_AGGREGATES_KEY: aggregate_selection };
+                    let mut new_row_set = Document::new();
+
+                    if let Some(aggregates) = aggregates {
+                        new_row_set.insert(
+                            ROW_SET_AGGREGATES_KEY,
+                            aggregates_selection(
+                                ColumnRef::variable("row_set")
+                                    .into_nested_field(ROW_SET_AGGREGATES_KEY),
+                                aggregates,
+                                false,
+                            ),
+                        );
+                    }
 
                     if let Some(fields) = fields {
                         new_row_set.insert(
                             ROW_SET_ROWS_KEY,
                             doc! {
                                 "$map": {
-                                    "input": format!("$$row_set.{ROW_SET_ROWS_KEY}"),
+                                    "input": ColumnRef::variable("row_set").into_nested_field(ROW_SET_ROWS_KEY).into_aggregate_expression(),
                                     "in": field_selection(fields),
                                 }
                             },
@@ -155,9 +191,8 @@ fn selection_for_field(
                             ROW_SET_GROUPS_KEY,
                             doc! {
                                 "$map": {
-                                    "input": format!("$$row_set.{ROW_SET_GROUPS_KEY}"),
-                                    "as": "CURRENT", // implicitly changes the document root in `in` to be the array element
-                                    "in": selection_for_grouping(grouping),
+                                    "input": ColumnRef::variable("row_set").into_nested_field(ROW_SET_GROUPS_KEY).into_aggregate_expression(),
+                                    "in": group_selection(ColumnRef::variable("this"), grouping),
                                 }
                             },
                         );
@@ -165,29 +200,32 @@ fn selection_for_field(
 
                     doc! {
                         "$let": {
-                            "vars": { "row_set": { "$first": relationship_field } },
+                            "vars": { "row_set": { "$first": relationship_field.into_aggregate_expression() } },
                             "in": new_row_set,
                         }
                     }
                 }
+                ResponseFacets::AggregatesOnly(aggregates) => doc! {
+                    ROW_SET_AGGREGATES_KEY: {
+                        "$let": {
+                            "vars": { "aggregates": { "$first": relationship_field.into_aggregate_expression() } },
+                            "in": aggregates_selection(ColumnRef::variable("aggregates"), aggregates, true),
+                        }
+                    }
+                },
                 ResponseFacets::FieldsOnly(fields) => doc! {
                     ROW_SET_ROWS_KEY: {
                         "$map": {
-                            "input": relationship_field,
+                            "input": relationship_field.into_aggregate_expression(),
                             "in": field_selection(fields),
                         }
                     }
                 },
                 ResponseFacets::GroupsOnly(grouping) => doc! {
-                    // We can reuse the grouping selection logic instead of writing a custom one
-                    // like with `field_selection` because `selection_for_grouping` only selects
-                    // top-level keys - it doesn't have logic that we don't want to duplicate like
-                    // `selection_for_field` does.
                     ROW_SET_GROUPS_KEY: {
                         "$map": {
-                            "input": relationship_field,
-                            "as": "CURRENT", // implicitly changes the document root in `in` to be the array element
-                            "in": selection_for_grouping(grouping),
+                            "input": relationship_field.into_aggregate_expression(),
+                            "in": group_selection(ColumnRef::variable("this"), grouping),
                         }
                     }
                 },
@@ -223,7 +261,7 @@ fn nested_column_reference<'a>(
     column: &'a FieldName,
 ) -> ColumnRef<'a> {
     match parent {
-        Some(parent) => parent.into_nested_field(column),
+        Some(parent) => parent.into_nested_field(column.as_ref()),
         None => ColumnRef::from_field_path(NonEmpty::singleton(column)),
     }
 }
@@ -368,7 +406,7 @@ mod tests {
                 "class_students": {
                     "rows": {
                         "$map": {
-                            "input": { "$getField": { "$literal": "class_students" } },
+                            "input": "$class_students",
                             "in": {
                                 "name": "$$this.name"
                             },
@@ -378,7 +416,7 @@ mod tests {
                 "students": {
                     "rows": {
                         "$map": {
-                            "input": { "$getField": { "$literal": "class_students_0" } },
+                            "input": "$class_students_0",
                             "in": {
                                 "student_name": "$$this.student_name"
                             },
