@@ -91,7 +91,6 @@ async fn update(
                 .all_schema_nullable
         }
     };
-    let config_file_changed = configuration::get_config_file_changed(&context.path).await?;
 
     if !no_validator_schema {
         let schemas_from_json_validation =
@@ -103,7 +102,6 @@ async fn update(
     let schemas_from_sampling = introspection::sample_schema_from_db(
         sample_size,
         all_schema_nullable,
-        config_file_changed,
         database,
         &existing_schemas,
     )

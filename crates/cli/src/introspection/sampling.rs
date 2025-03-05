@@ -25,7 +25,6 @@ type ObjectType = WithName<ndc_models::ObjectTypeName, schema::ObjectType>;
 pub async fn sample_schema_from_db(
     sample_size: u32,
     all_schema_nullable: bool,
-    config_file_changed: bool,
     db: &impl DatabaseTrait,
     existing_schemas: &HashSet<std::string::String>,
 ) -> anyhow::Result<BTreeMap<std::string::String, Schema>> {
@@ -34,7 +33,7 @@ pub async fn sample_schema_from_db(
 
     while let Some(collection_spec) = collections_cursor.try_next().await? {
         let collection_name = collection_spec.name;
-        if !existing_schemas.contains(&collection_name) || config_file_changed {
+        if !existing_schemas.contains(&collection_name) {
             let collection_schema = sample_schema_from_collection(
                 &collection_name,
                 sample_size,
