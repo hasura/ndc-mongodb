@@ -74,15 +74,16 @@
         (final: prev: {
           rustToolchain = final.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 
-          # To apply the Rust toolchain described in `rust-toolchain.toml` we need
-          # to override `cargo` and `rustc` inputs. Note that `rustToolchain`
-          # is set up above.
+          # In case this package set is configured for cross-compiling,
+          # getting the crate2nix tools for `buildPlatform` gets an executable
+          # that can run at build time.
+          crate2nix-tools = crate2nix.tools.${final.buildPlatform.system};
+
           ndc-mongodb-workspace =
             let
-              src = ./.;
-              cargo-nix = crate2nix.tools.${final.system}.generatedCargoNix {
+              cargo-nix = final.crate2nix-tools.generatedCargoNix {
                 name = "ndc-mongodb-workspace";
-                inherit src;
+                src = ./.;
               };
             in
             import cargo-nix {
@@ -127,7 +128,7 @@
             let
               src = "${graphql-engine-source}/v3";
               rust = final.pkgsBuildHost.rust-bin.fromRustupToolchainFile "${src}/rust-toolchain.toml";
-              cargo-nix = crate2nix.tools.${final.system}.generatedCargoNix {
+              cargo-nix = final.crate2nix-tools.generatedCargoNix {
                 name = "graphql-engine-workspace";
                 inherit src;
               };
@@ -279,8 +280,7 @@
 
       devShells = eachSystem (pkgs: {
         default = pkgs.mkShell {
-          # inputsFrom = builtins.attrValues self.checks.${pkgs.buildPlatform.system};
-          nativeBuildInputs = with pkgs; [
+          packages = with pkgs; [
             arion.packages.${pkgs.system}.default
             cargo-insta
             crate2nix.packages.${pkgs.system}.default

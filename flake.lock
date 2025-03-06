@@ -144,11 +144,11 @@
         "pre-commit-hooks": "pre-commit-hooks_3"
       },
       "locked": {
-        "lastModified": 1740896733,
-        "narHash": "sha256-CDqloGUMG2eTW/dKtOazTM2IYCkCZs5GJYwarW6TbYE=",
+        "lastModified": 1741468138,
+        "narHash": "sha256-BMTvymEeJEWwv7DiwaKd3hhLlKqpV5QF5xaQLnYCbUQ=",
         "owner": "hallettj",
         "repo": "crate2nix",
-        "rev": "c69d84bfaf887dd812a1022ab6dc93672f2d5e6a",
+        "rev": "ed86716c9153f7b2ca968a7840b598dcc39d049d",
         "type": "github"
       },
       "original": {
