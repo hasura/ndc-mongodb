@@ -98,12 +98,12 @@ async fn update(
         configuration::write_schema_directory(&context.path, schemas_from_json_validation).await?;
     }
 
-    let existing_schemas = configuration::list_existing_schemas(&context.path).await?;
+    let existing_schemas = configuration::read_existing_schemas(&context.path).await?;
     let schemas_from_sampling = introspection::sample_schema_from_db(
         sample_size,
         all_schema_nullable,
         database,
-        &existing_schemas,
+        existing_schemas,
     )
     .await?;
     configuration::write_schema_directory(&context.path, schemas_from_sampling).await

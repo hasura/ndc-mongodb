@@ -18,6 +18,13 @@ pub struct Collection {
     pub description: Option<String>,
 }
 
+/// Schema for a single collection, as opposed to [Schema] which can describe multiple collections.
+#[derive(Clone, Debug)]
+pub struct CollectionSchema {
+    pub collection: Collection,
+    pub object_types: BTreeMap<ndc_models::ObjectTypeName, ObjectType>,
+}
+
 /// The type of values that a column, field, or argument may take.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]

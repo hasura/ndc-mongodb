@@ -8,8 +8,8 @@ pub mod serialized;
 mod with_name;
 
 pub use crate::configuration::Configuration;
-pub use crate::directory::list_existing_schemas;
 pub use crate::directory::parse_configuration_options_file;
+pub use crate::directory::read_existing_schemas;
 pub use crate::directory::write_schema_directory;
 pub use crate::directory::{
     read_directory, read_directory_with_ignored_configs, read_native_query_directory,

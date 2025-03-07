@@ -1,10 +1,10 @@
 use anyhow::{anyhow, Context as _};
 use futures::stream::TryStreamExt as _;
 use itertools::Itertools as _;
-use ndc_models::FunctionName;
+use ndc_models::{CollectionName, FunctionName};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::BTreeMap,
     path::{Path, PathBuf},
 };
 use tokio::fs;
@@ -12,6 +12,7 @@ use tokio_stream::wrappers::ReadDirStream;
 
 use crate::{
     configuration::ConfigurationOptions,
+    schema::CollectionSchema,
     serialized::{NativeQuery, Schema},
     with_name::WithName,
     Configuration,
@@ -291,17 +292,33 @@ where
         .with_context(|| format!("error writing {:?}", path))
 }
 
-pub async fn list_existing_schemas(
+// Read schemas with a separate map entry for each configuration file.
+pub async fn read_existing_schemas(
     configuration_dir: impl AsRef<Path>,
-) -> anyhow::Result<HashSet<String>> {
+) -> anyhow::Result<BTreeMap<CollectionName, CollectionSchema>> {
     let dir = configuration_dir.as_ref();
 
-    // TODO: we don't really need to read and parse all the schema files here, just get their names.
-    let schemas = read_subdir_configs::<_, Schema>(&dir.join(SCHEMA_DIRNAME), &[])
+    let schemas = read_subdir_configs::<String, Schema>(&dir.join(SCHEMA_DIRNAME), &[])
         .await?
         .unwrap_or_default();
 
-    Ok(schemas.into_keys().collect())
+    // Get a single collection schema out of each file
+    let schemas = schemas
+        .into_iter()
+        .flat_map(|(name, schema)| {
+            let mut collections = schema.collections.into_iter().collect_vec();
+            let (collection_name, collection) = collections.pop()?;
+            if !collections.is_empty() {
+                return Some(Err(anyhow!("found schemas for multiple collections in {SCHEMA_DIRNAME}/{name}.json - please limit schema configurations to one collection per file")));
+            }
+            Some(Ok((collection_name, CollectionSchema {
+                collection,
+                object_types: schema.object_types,
+            })))
+        })
+        .collect::<anyhow::Result<BTreeMap<CollectionName, CollectionSchema>>>()?;
+
+    Ok(schemas)
 }
 
 #[cfg(test)]
