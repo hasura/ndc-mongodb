@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, path::Path};
+use std::path::Path;
 
 use async_tempfile::TempDir;
 use configuration::{read_directory, Configuration};

@@ -209,6 +209,8 @@ impl From<ndc_models::ObjectType> for ObjectType {
     }
 }
 
+pub type ObjectTypes = BTreeMap<ndc_models::ObjectTypeName, ObjectType>;
+
 /// Information about an object type field.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]

@@ -6,10 +6,11 @@ use crate::log_warning;
 
 use super::type_unification::{make_nullable_field, unify_object_types, unify_type};
 use configuration::{
-    schema::{self, Collection, CollectionSchema, Type},
+    schema::{self, Collection, CollectionSchema, ObjectTypes, Type},
     Schema, WithName,
 };
 use futures_util::TryStreamExt;
+use json_structural_diff::JsonDiff;
 use mongodb::bson::{doc, spec::BinarySubtype, Binary, Bson, Document};
 use mongodb_agent_common::mongodb::{CollectionTrait as _, DatabaseTrait};
 use mongodb_support::{
@@ -22,7 +23,53 @@ use self::keep_backward_compatible_changes::keep_backward_compatible_changes;
 
 type ObjectField = WithName<ndc_models::FieldName, schema::ObjectField>;
 type ObjectType = WithName<ndc_models::ObjectTypeName, schema::ObjectType>;
-type ObjectTypes = BTreeMap<ndc_models::ObjectTypeName, schema::ObjectType>;
+
+#[derive(Default)]
+pub struct SampledSchema {
+    pub schemas: BTreeMap<String, Schema>,
+
+    /// Updates to existing schema changes are made conservatively. These diffs show the difference
+    /// between each new configuration to be written to disk on the left, and the schema that would
+    /// have been written if starting from scratch on the right.
+    pub ignored_changes: BTreeMap<String, String>,
+}
+
+impl SampledSchema {
+    pub fn insert_collection(
+        &mut self,
+        name: impl std::fmt::Display,
+        collection: CollectionSchema,
+    ) {
+        self.schemas.insert(
+            name.to_string(),
+            Self::schema_from_collection(name, collection),
+        );
+    }
+
+    pub fn record_ignored_collection_changes(
+        &mut self,
+        name: impl std::fmt::Display,
+        before: &CollectionSchema,
+        after: &CollectionSchema,
+    ) -> Result<(), serde_json::error::Error> {
+        let a = serde_json::to_value(Self::schema_from_collection(&name, before.clone()))?;
+        let b = serde_json::to_value(Self::schema_from_collection(&name, after.clone()))?;
+        if let Some(diff) = JsonDiff::diff_string(&a, &b, false) {
+            self.ignored_changes.insert(name.to_string(), diff);
+        }
+        Ok(())
+    }
+
+    fn schema_from_collection(
+        name: impl std::fmt::Display,
+        collection: CollectionSchema,
+    ) -> Schema {
+        Schema {
+            collections: [(name.to_string().into(), collection.collection)].into(),
+            object_types: collection.object_types,
+        }
+    }
+}
 
 /// Sample from all collections in the database and return a Schema.
 /// Return an error if there are any errors accessing the database
@@ -33,8 +80,8 @@ pub async fn sample_schema_from_db(
     all_schema_nullable: bool,
     db: &impl DatabaseTrait,
     mut previously_defined_collections: BTreeMap<CollectionName, CollectionSchema>,
-) -> anyhow::Result<BTreeMap<String, Schema>> {
-    let mut schemas = BTreeMap::new();
+) -> anyhow::Result<SampledSchema> {
+    let mut sampled_schema: SampledSchema = Default::default();
     let mut collections_cursor = db.list_collections().await?;
 
     while let Some(collection_spec) = collections_cursor.try_next().await? {
@@ -66,7 +113,12 @@ pub async fn sample_schema_from_db(
             Some(previously_defined_collection) => {
                 let backward_compatible_schema = keep_backward_compatible_changes(
                     previously_defined_collection,
-                    collection_schema.object_types,
+                    collection_schema.object_types.clone(),
+                );
+                let _ = sampled_schema.record_ignored_collection_changes(
+                    &collection_name,
+                    &backward_compatible_schema,
+                    &collection_schema,
                 );
                 let updated_collection = Collection {
                     r#type: collection_type_name,
@@ -83,27 +135,10 @@ pub async fn sample_schema_from_db(
             None => collection_schema,
         };
 
-        schemas.insert(collection_name, collection_schema);
+        sampled_schema.insert_collection(collection_name, collection_schema);
     }
 
-    let schemas = schemas
-        .into_iter()
-        .map(|(collection_name, collection_schema)| {
-            let CollectionSchema {
-                collection,
-                object_types,
-            } = collection_schema;
-            (
-                collection_name.clone(),
-                Schema {
-                    collections: [(collection_name.into(), collection)].into(),
-                    object_types,
-                },
-            )
-        })
-        .collect();
-
-    Ok(schemas)
+    Ok(sampled_schema)
 }
 
 async fn sample_schema_from_collection(
