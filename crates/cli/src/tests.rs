@@ -1,7 +1,12 @@
 use async_tempfile::TempDir;
 use configuration::read_directory;
-use mongodb::bson::{self, doc, from_document};
-use mongodb_agent_common::mongodb::{test_helpers::mock_stream, MockDatabaseTrait};
+use mongodb::{
+    bson::{self, doc, from_document},
+    options::AggregateOptions,
+};
+use mongodb_agent_common::mongodb::{
+    test_helpers::mock_stream, MockCollectionTrait, MockDatabaseTrait,
+};
 use ndc_models::{CollectionName, FieldName, ObjectField, ObjectType, Type};
 use pretty_assertions::assert_eq;
 
@@ -110,6 +115,14 @@ async fn collection_schema_from_validator(validator: bson::Document) -> anyhow::
         Ok(mock_stream(vec![Ok(
             from_document(collection_spec).unwrap()
         )]))
+    });
+
+    db.expect_collection().returning(|_collection_name| {
+        let mut collection = MockCollectionTrait::new();
+        collection
+            .expect_aggregate()
+            .returning(|_pipeline, _options: Option<AggregateOptions>| Ok(mock_stream(vec![])));
+        collection
     });
 
     update(&context, &args, &db).await?;
