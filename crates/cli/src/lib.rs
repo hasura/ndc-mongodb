@@ -13,6 +13,8 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
+use configuration::SCHEMA_DIRNAME;
+use introspection::sampling::SampledSchema;
 // Exported for use in tests
 pub use introspection::type_from_bson;
 use mongodb_agent_common::{mongodb::DatabaseTrait, state::try_init_state_from_uri};
@@ -91,7 +93,6 @@ async fn update(
                 .all_schema_nullable
         }
     };
-    let config_file_changed = configuration::get_config_file_changed(&context.path).await?;
 
     if !no_validator_schema {
         let schemas_from_json_validation =
@@ -99,14 +100,35 @@ async fn update(
         configuration::write_schema_directory(&context.path, schemas_from_json_validation).await?;
     }
 
-    let existing_schemas = configuration::list_existing_schemas(&context.path).await?;
-    let schemas_from_sampling = introspection::sample_schema_from_db(
+    let existing_schemas = configuration::read_existing_schemas(&context.path).await?;
+    let SampledSchema {
+        schemas: schemas_from_sampling,
+        ignored_changes,
+    } = introspection::sample_schema_from_db(
         sample_size,
         all_schema_nullable,
-        config_file_changed,
         database,
-        &existing_schemas,
+        existing_schemas,
     )
     .await?;
-    configuration::write_schema_directory(&context.path, schemas_from_sampling).await
+    configuration::write_schema_directory(&context.path, schemas_from_sampling).await?;
+
+    if !ignored_changes.is_empty() {
+        eprintln!("Warning: introspection detected some changes to to database that were **not** applied to existing
+schema configurations. To avoid accidental breaking changes the introspection system is
+conservative about what changes are applied automatically.");
+        eprintln!();
+        eprintln!("To apply changes delete the schema configuration files you want updated, and run introspection
+again; or edit the files directly.");
+        eprintln!();
+        eprintln!("These database changes were **not** applied:");
+    }
+    for (collection_name, changes) in ignored_changes {
+        let mut config_path = context.path.join(SCHEMA_DIRNAME).join(collection_name);
+        config_path.set_extension("json");
+        eprintln!();
+        eprintln!("{}:", config_path.to_string_lossy());
+        eprintln!("{}", changes)
+    }
+    Ok(())
 }

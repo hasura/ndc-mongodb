@@ -1,18 +1,18 @@
 use anyhow::{anyhow, Context as _};
 use futures::stream::TryStreamExt as _;
 use itertools::Itertools as _;
-use ndc_models::FunctionName;
+use ndc_models::{CollectionName, FunctionName};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, HashSet},
-    fs::Metadata,
+    collections::BTreeMap,
     path::{Path, PathBuf},
 };
-use tokio::{fs, io::AsyncWriteExt};
+use tokio::fs;
 use tokio_stream::wrappers::ReadDirStream;
 
 use crate::{
     configuration::ConfigurationOptions,
+    schema::CollectionSchema,
     serialized::{NativeQuery, Schema},
     with_name::WithName,
     Configuration,
@@ -22,7 +22,6 @@ pub const SCHEMA_DIRNAME: &str = "schema";
 pub const NATIVE_MUTATIONS_DIRNAME: &str = "native_mutations";
 pub const NATIVE_QUERIES_DIRNAME: &str = "native_queries";
 pub const CONFIGURATION_OPTIONS_BASENAME: &str = "configuration";
-pub const CONFIGURATION_OPTIONS_METADATA: &str = ".configuration_metadata";
 
 // Deprecated: Discussion came out that we standardize names and the decision
 // was to use `native_mutations`. We should leave this in for a few releases
@@ -207,7 +206,6 @@ pub async fn parse_configuration_options_file(dir: &Path) -> anyhow::Result<Conf
     // If a configuration file does not exist use defaults and write the file
     let defaults: ConfigurationOptions = Default::default();
     let _ = write_file(dir, CONFIGURATION_OPTIONS_BASENAME, &defaults).await;
-    let _ = write_config_metadata_file(dir).await;
     Ok(defaults)
 }
 
@@ -294,58 +292,33 @@ where
         .with_context(|| format!("error writing {:?}", path))
 }
 
-pub async fn list_existing_schemas(
+// Read schemas with a separate map entry for each configuration file.
+pub async fn read_existing_schemas(
     configuration_dir: impl AsRef<Path>,
-) -> anyhow::Result<HashSet<String>> {
+) -> anyhow::Result<BTreeMap<CollectionName, CollectionSchema>> {
     let dir = configuration_dir.as_ref();
 
-    // TODO: we don't really need to read and parse all the schema files here, just get their names.
-    let schemas = read_subdir_configs::<_, Schema>(&dir.join(SCHEMA_DIRNAME), &[])
+    let schemas = read_subdir_configs::<String, Schema>(&dir.join(SCHEMA_DIRNAME), &[])
         .await?
         .unwrap_or_default();
 
-    Ok(schemas.into_keys().collect())
-}
+    // Get a single collection schema out of each file
+    let schemas = schemas
+        .into_iter()
+        .flat_map(|(name, schema)| {
+            let mut collections = schema.collections.into_iter().collect_vec();
+            let (collection_name, collection) = collections.pop()?;
+            if !collections.is_empty() {
+                return Some(Err(anyhow!("found schemas for multiple collections in {SCHEMA_DIRNAME}/{name}.json - please limit schema configurations to one collection per file")));
+            }
+            Some(Ok((collection_name, CollectionSchema {
+                collection,
+                object_types: schema.object_types,
+            })))
+        })
+        .collect::<anyhow::Result<BTreeMap<CollectionName, CollectionSchema>>>()?;
 
-// Metadata file is just a dot filed used for the purposes of know if the user has updated their config to force refresh
-// of the schema introspection.
-async fn write_config_metadata_file(configuration_dir: impl AsRef<Path>) {
-    let dir = configuration_dir.as_ref();
-    let file_result = fs::OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .create(true)
-        .open(dir.join(CONFIGURATION_OPTIONS_METADATA))
-        .await;
-
-    if let Ok(mut file) = file_result {
-        let _ = file.write_all(b"").await;
-    };
-}
-
-pub async fn get_config_file_changed(dir: impl AsRef<Path>) -> anyhow::Result<bool> {
-    let path = dir.as_ref();
-    let dot_metadata: Result<Metadata, std::io::Error> =
-        fs::metadata(&path.join(CONFIGURATION_OPTIONS_METADATA)).await;
-    let json_metadata =
-        fs::metadata(&path.join(CONFIGURATION_OPTIONS_BASENAME.to_owned() + ".json")).await;
-    let yaml_metadata =
-        fs::metadata(&path.join(CONFIGURATION_OPTIONS_BASENAME.to_owned() + ".yaml")).await;
-
-    let compare = |dot_date, config_date| async move {
-        if dot_date < config_date {
-            let _ = write_config_metadata_file(path).await;
-            Ok(true)
-        } else {
-            Ok(false)
-        }
-    };
-
-    match (dot_metadata, json_metadata, yaml_metadata) {
-        (Ok(dot), Ok(json), _) => compare(dot.modified()?, json.modified()?).await,
-        (Ok(dot), _, Ok(yaml)) => compare(dot.modified()?, yaml.modified()?).await,
-        _ => Ok(true),
-    }
+    Ok(schemas)
 }
 
 #[cfg(test)]
