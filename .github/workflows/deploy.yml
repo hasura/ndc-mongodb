@@ -10,7 +10,6 @@ on:
 jobs:
   docker:
     name: deploy::docker
-    needs: binary
 
     # This job doesn't work as written on ubuntu-24.04. The problem is described
     # in this issue: https://github.com/actions/runner-images/issues/10443
