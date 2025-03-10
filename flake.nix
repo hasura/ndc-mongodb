@@ -8,6 +8,7 @@
     # Nix build system for Rust projects. Builds each crate (including
     # dependencies) as a separate nix derivation for best possible cache
     # utilization.
+    cargo2nix.url = "github:hallettj/cargo2nix/workspace-fix";
     crate2nix.url = "github:hallettj/crate2nix";
 
     hasura-ddn-cli.url = "github:hasura/ddn-cli-nix";
@@ -57,6 +58,7 @@
   outputs =
     { self
     , nixpkgs
+    , cargo2nix
     , crate2nix
     , hasura-ddn-cli
     , rust-overlay
@@ -70,7 +72,8 @@
       # Nixpkgs provides a wide set of software packages. These overlays add
       # packages or replace packages in that set.
       overlays = [
-        (import rust-overlay)
+        (cargo2nix.overlays.default) # provides rustBuilder
+        (import rust-overlay) # provides rust-bin
         (final: prev: {
           rustToolchain = final.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 
@@ -81,44 +84,53 @@
 
           ndc-mongodb-workspace =
             let
-              cargo-nix = final.crate2nix-tools.generatedCargoNix {
-                name = "ndc-mongodb-workspace";
-                src = ./.;
+              src = ./.;
+              tools = final.callPackage crate2nix.lib.tools { pkgs = final; };
+              vendor = tools.internal.vendorSupport {
+                lockFiles = [ "${src}/Cargo.lock" ];
+                # lockFiles = tools.internal.gatherLockFiles src;
+                # hashes = { };
+              };
+              cargonix = final.stdenv.mkDerivation {
+                name = "ndc-mongodb-cargonix";
+
+                buildInputs = [ final.rustToolchain cargo2nix.packages.${final.buildPlatform.system}.cargo2nix ];
+
+                inherit src;
+
+                buildPhase = ''
+                  export HOME=/tmp/home
+                  export CARGO_HOME="$HOME/cargo"
+                  mkdir -p $CARGO_HOME
+
+                  cp ${vendor.cargoConfig} $CARGO_HOME/config.toml
+                  # link `config` for backward-compatibility
+
+                  CARGO_OFFLINE=true cargo2nix -o -f default.nix -l
+                '';
+
+                installPhase = ''
+                  mkdir -p $out
+                  cp default.nix $out/
+                '';
+
               };
             in
-            import cargo-nix {
-              pkgs = final;
-              buildRustCrateForPkgs = pkgs: pkgs.buildRustCrate.override {
-                # What's the deal with `pkgsBuildHost`? It has to do with
-                # cross-compiling.
-                #
-                # - "build" is the system we are building on
-                # - "host" is the system we are building for
-                #
-                # If a package set is configured for cross-compiling then packages
-                # in the set by default are compiled to run on the "host" system.
-                # OTOH `pkgsBuildHost` contains copies of all packages compiled to
-                # run on the build system, and to produce compiled output for the
-                # host system.
-                #
-                # So it's important to use packages in `pkgsBuildHost` to
-                # reference programs that run during the build process.
-                cargo = pkgs.pkgsBuildHost.rustToolchain;
-                rustc = pkgs.pkgsBuildHost.rustToolchain;
-              };
+            final.rustBuilder.makePackageSet {
+              packageFun = import cargonix;
+              rustToolchain = final.rustToolchain;
+              workspaceSrc = src; # do we need this?
             };
 
-          # Extend our package set with mongodb-connector, graphql-engine, and
-          # other packages built by this flake to make these packages accessible
-          # in arion-compose.nix.
-          mongodb-connector = final.ndc-mongodb-workspace.workspaceMembers.mongodb-connector.build;
-          mongodb-cli-plugin = final.ndc-mongodb-workspace.workspaceMembers.mongodb-cli-plugin.build;
+          mongodb-connector = final.ndc-mongodb-workspace.workspace.mongodb-connector { };
+          mongodb-cli-plugin = final.ndc-mongodb-workspace.workspace.mongodb-cli-plugin { };
+          # mongodb-cli-plugin = (final.ndc-mongodb-workspace.workspace.mongodb-cli-plugin { }).override { features = [ ]; release = false; };
 
-          # Packages created by crate2nix like these can be customized in
-          # a number of ways. For example to create a debug build with
-          # extra features enabled use an expression like this:
+          # Packages created by cargo2nix like these can be customized in
+          # a number of ways. For example to create a debug build with extra
+          # features enabled use an expression like this:
           #
-          #     final.ndc-mongodb-workspace.workspaceMembers.mongodb-connector.build.override {
+          #     mongodb-connector.override {
           #       features = [ "default" "optional-feature" "etc" ];
           #       release = false;
           #     }
@@ -192,26 +204,43 @@
 
     in
     {
-      # checks = eachSystem (pkgs: {
-      #   # Build all crates as part of `nix flake check`
-      #   inherit (pkgs) mongodb-connector-workspace;
-      #
-      #   lint = pkgs.craneLib.cargoClippy (pkgs.mongodb-connector-workspace.buildArgs // {
-      #     cargoClippyExtraArgs = "--all-targets -- --deny warnings";
-      #     doInstallCargoArtifacts = false; # avoids "wrong ELF type" messages
-      #   });
-      #
-      #   test = pkgs.craneLib.cargoNextest (pkgs.mongodb-connector-workspace.buildArgs // {
-      #     partitions = 1;
-      #     partitionType = "count";
-      #     doInstallCargoArtifacts = false; # avoids "wrong ELF type" messages
-      #   });
-      #
-      #   audit = pkgs.craneLib.cargoAudit {
-      #     inherit advisory-db;
-      #     inherit (pkgs.mongodb-connector-workspace) src;
-      #   };
-      # });
+      checks = eachSystem (pkgs: {
+        # Build all crates as part of `nix flake check`
+        # inherit (pkgs) mongodb-connector-workspace;
+
+        test =
+          let
+            crates = builtins.attrNames pkgs.ndc-mongodb-workspace.workspace;
+            test-build = crate-name: pkgs.ndc-mongodb-workspace.workspace.${crate-name} { compileMode = "test"; };
+            test-runner = crate-name: ''
+              echo "# ${crate-name}" | tee -a "$out"
+              for bin in ${test-build crate-name}/bin/*; do
+                "$bin" | tee -a "$out"
+              done;
+            '';
+          in
+          pkgs.runCommand "ndc-mongodb-tests" { } (builtins.map test-runner crates);
+
+        # Here is how the cargo2nix flake does it:
+        # test = pkgs.rustBuilder.runTests pkgs.ndc-mongodb-workspace.workspace.mongodb-agent-common { };
+
+        #
+        #   lint = pkgs.craneLib.cargoClippy (pkgs.mongodb-connector-workspace.buildArgs // {
+        #     cargoClippyExtraArgs = "--all-targets -- --deny warnings";
+        #     doInstallCargoArtifacts = false; # avoids "wrong ELF type" messages
+        #   });
+        #
+        #   test = pkgs.craneLib.cargoNextest (pkgs.mongodb-connector-workspace.buildArgs // {
+        #     partitions = 1;
+        #     partitionType = "count";
+        #     doInstallCargoArtifacts = false; # avoids "wrong ELF type" messages
+        #   });
+        #
+        #   audit = pkgs.craneLib.cargoAudit {
+        #     inherit advisory-db;
+        #     inherit (pkgs.mongodb-connector-workspace) src;
+        #   };
+      });
 
       packages = eachSystem (pkgs: rec {
         default = pkgs.mongodb-connector;
@@ -264,8 +293,8 @@
 
         # CLI plugin packages with cross-compilation options
         mongodb-cli-plugin = pkgs.mongodb-cli-plugin;
-        mongodb-cli-plugin-x86_64-linux = pkgs.pkgsCross.x86_64-linux.mongodb-cli-plugin.override { staticallyLinked = true; };
-        mongodb-cli-plugin-aarch64-linux = pkgs.pkgsCross.aarch64-linux.mongodb-cli-plugin.override { staticallyLinked = true; };
+        mongodb-cli-plugin-x86_64-linux = pkgs.pkgsCross.x86_64-linux.pkgsStatic.mongodb-cli-plugin;
+        mongodb-cli-plugin-aarch64-linux = pkgs.pkgsCross.aarch64-linux.pkgsStatic.mongodb-cli-plugin;
 
         # CLI plugin docker images
         mongodb-cli-plugin-docker = pkgs.callPackage ./nix/docker-cli-plugin.nix { };
@@ -279,18 +308,15 @@
       legacyPackages = eachSystem (pkgs: pkgs);
 
       devShells = eachSystem (pkgs: {
-        default = pkgs.mkShell {
+        default = pkgs.ndc-mongodb-workspace.workspaceShell {
           packages = with pkgs; [
             arion.packages.${pkgs.system}.default
             cargo-insta
-            crate2nix.packages.${pkgs.system}.default
             ddn
             just
             mongosh
             pkg-config
-          ] ++ nixpkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs; [
-            libiconv
-          ]);
+          ];
         };
       });
     };
