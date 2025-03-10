@@ -114,7 +114,7 @@ async fn update(
     configuration::write_schema_directory(&context.path, schemas_from_sampling).await?;
 
     if !ignored_changes.is_empty() {
-        eprintln!("Warning: introspection detected some changes to to database thate were **not** applied to existing
+        eprintln!("Warning: introspection detected some changes to to database that were **not** applied to existing
 schema configurations. To avoid accidental breaking changes the introspection system is
 conservative about what changes are applied automatically.");
         eprintln!();
