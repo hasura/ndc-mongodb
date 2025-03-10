@@ -88,13 +88,17 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build statically-linked binary 🔨
-      run: nix build --print-build-logs .#mongodb-connector-${{ matrix.target }}
+      run: |
+        nix build --print-build-logs .#mongodb-connector-${{ matrix.target }}
+        mkdir -p release
+        cp result/bin/mongodb-connector release/mongodb-connector-${{ matrix.target }}
 
     - name: Upload binaries to workflow artifacts 🚀
       uses: actions/upload-artifact@v4
       with:
         name: mongodb-connector-${{ matrix.target }}
-        path: result/bin/mongodb-connector
+        path: release
+        if-no-files-found: error
 
   # Builds without nix to get Windows binaries
   build-cli-binaries:
