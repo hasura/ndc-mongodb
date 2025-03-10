@@ -2,7 +2,7 @@
 
 This changelog documents the changes between release versions.
 
-## [Unreleased]
+## [1.7.0] - 2025-03-10
 
 ### Added
 
