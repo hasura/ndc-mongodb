@@ -2,7 +2,7 @@
 
 This changelog documents the changes between release versions.
 
-## [Unreleased v2]
+## [Unreleased]
 
 ### Added
 
@@ -47,15 +47,36 @@ Results for `avg` are always coerced to `double`.
 Results for `sum` are coerced to `double` if the summed inputs use a fractional
 numeric type, or to `long` if inputs use an integral numeric type.
 
-## [Unreleased v1]
+## [1.7.0] - 2025-03-10
 
 ### Added
 
 - Add uuid scalar type ([#148](https://github.com/hasura/ndc-mongodb/pull/148))
 
+### Changed
+
+- On database introspection newly-added collection fields will be added to existing schema configurations ([#152](https://github.com/hasura/ndc-mongodb/pull/152))
+
 ### Fixed
 
 - Update dependencies to get fixes for reported security vulnerabilities ([#149](https://github.com/hasura/ndc-mongodb/pull/149))
+
+#### Changes to database introspection
+
+Previously running introspection would not update existing schema definitions, it would only add definitions for
+newly-added collections. This release changes that behavior to make conservative changes to existing definitions: 
+
+- added fields, either top-level or nested, will be added to existing schema definitions
+- types for fields that are already configured will **not** be changed automatically
+- fields that appear to have been added to collections will **not** be removed from configurations
+
+We take such a conservative approach to schema configuration changes because we want to avoid accidental breaking API
+changes, and because schema configuration can be edited by hand, and we don't want to accidentally reverse such
+modifications.
+
+If you want to make type changes to fields that are already configured, or if you want to remove fields from schema
+configuration you can either make those edits to schema configurations by hand, or you can delete schema files before
+running introspection.
 
 #### UUID scalar type
 

@@ -1,22 +1,75 @@
-use std::collections::{BTreeMap, HashSet};
+mod keep_backward_compatible_changes;
+
+use std::collections::BTreeMap;
 
 use crate::log_warning;
 
 use super::type_unification::{make_nullable_field, unify_object_types, unify_type};
 use configuration::{
-    schema::{self, Type},
+    schema::{self, Collection, CollectionSchema, ObjectTypes, Type},
     Schema, WithName,
 };
 use futures_util::TryStreamExt;
+use json_structural_diff::JsonDiff;
 use mongodb::bson::{doc, spec::BinarySubtype, Binary, Bson, Document};
 use mongodb_agent_common::mongodb::{CollectionTrait as _, DatabaseTrait};
 use mongodb_support::{
     aggregate::{Pipeline, Stage},
-    BsonScalarType::{self, *},
+    BsonScalarType::{self, self as S},
 };
+use ndc_models::{CollectionName, ObjectTypeName};
+
+use self::keep_backward_compatible_changes::keep_backward_compatible_changes;
 
 type ObjectField = WithName<ndc_models::FieldName, schema::ObjectField>;
 type ObjectType = WithName<ndc_models::ObjectTypeName, schema::ObjectType>;
+
+#[derive(Default)]
+pub struct SampledSchema {
+    pub schemas: BTreeMap<String, Schema>,
+
+    /// Updates to existing schema changes are made conservatively. These diffs show the difference
+    /// between each new configuration to be written to disk on the left, and the schema that would
+    /// have been written if starting from scratch on the right.
+    pub ignored_changes: BTreeMap<String, String>,
+}
+
+impl SampledSchema {
+    pub fn insert_collection(
+        &mut self,
+        name: impl std::fmt::Display,
+        collection: CollectionSchema,
+    ) {
+        self.schemas.insert(
+            name.to_string(),
+            Self::schema_from_collection(name, collection),
+        );
+    }
+
+    pub fn record_ignored_collection_changes(
+        &mut self,
+        name: impl std::fmt::Display,
+        before: &CollectionSchema,
+        after: &CollectionSchema,
+    ) -> Result<(), serde_json::error::Error> {
+        let a = serde_json::to_value(Self::schema_from_collection(&name, before.clone()))?;
+        let b = serde_json::to_value(Self::schema_from_collection(&name, after.clone()))?;
+        if let Some(diff) = JsonDiff::diff_string(&a, &b, false) {
+            self.ignored_changes.insert(name.to_string(), diff);
+        }
+        Ok(())
+    }
+
+    fn schema_from_collection(
+        name: impl std::fmt::Display,
+        collection: CollectionSchema,
+    ) -> Schema {
+        Schema {
+            collections: [(name.to_string().into(), collection.collection)].into(),
+            object_types: collection.object_types,
+        }
+    }
+}
 
 /// Sample from all collections in the database and return a Schema.
 /// Return an error if there are any errors accessing the database
@@ -25,39 +78,76 @@ type ObjectType = WithName<ndc_models::ObjectTypeName, schema::ObjectType>;
 pub async fn sample_schema_from_db(
     sample_size: u32,
     all_schema_nullable: bool,
-    config_file_changed: bool,
     db: &impl DatabaseTrait,
-    existing_schemas: &HashSet<std::string::String>,
-) -> anyhow::Result<BTreeMap<std::string::String, Schema>> {
-    let mut schemas = BTreeMap::new();
+    mut previously_defined_collections: BTreeMap<CollectionName, CollectionSchema>,
+) -> anyhow::Result<SampledSchema> {
+    let mut sampled_schema: SampledSchema = Default::default();
     let mut collections_cursor = db.list_collections().await?;
 
     while let Some(collection_spec) = collections_cursor.try_next().await? {
         let collection_name = collection_spec.name;
-        if !existing_schemas.contains(&collection_name) || config_file_changed {
-            let collection_schema = sample_schema_from_collection(
-                &collection_name,
-                sample_size,
-                all_schema_nullable,
-                db,
-            )
-            .await?;
-            if let Some(collection_schema) = collection_schema {
-                schemas.insert(collection_name, collection_schema);
-            } else {
-                log_warning!("could not find any documents to sample from collection, {collection_name} - skipping");
+
+        let previously_defined_collection =
+            previously_defined_collections.remove(collection_name.as_str());
+
+        // Use previously-defined type name in case user has customized it
+        let collection_type_name = previously_defined_collection
+            .as_ref()
+            .map(|c| c.collection.r#type.clone())
+            .unwrap_or_else(|| collection_name.clone().into());
+
+        let Some(collection_schema) = sample_schema_from_collection(
+            &collection_name,
+            collection_type_name.clone(),
+            sample_size,
+            all_schema_nullable,
+            db,
+        )
+        .await?
+        else {
+            log_warning!("could not find any documents to sample from collection, {collection_name} - skipping");
+            continue;
+        };
+
+        let collection_schema = match previously_defined_collection {
+            Some(previously_defined_collection) => {
+                let backward_compatible_schema = keep_backward_compatible_changes(
+                    previously_defined_collection,
+                    collection_schema.object_types.clone(),
+                );
+                let _ = sampled_schema.record_ignored_collection_changes(
+                    &collection_name,
+                    &backward_compatible_schema,
+                    &collection_schema,
+                );
+                let updated_collection = Collection {
+                    r#type: collection_type_name,
+                    description: collection_schema
+                        .collection
+                        .description
+                        .or(backward_compatible_schema.collection.description),
+                };
+                CollectionSchema {
+                    collection: updated_collection,
+                    object_types: backward_compatible_schema.object_types,
+                }
             }
-        }
+            None => collection_schema,
+        };
+
+        sampled_schema.insert_collection(collection_name, collection_schema);
     }
-    Ok(schemas)
+
+    Ok(sampled_schema)
 }
 
 async fn sample_schema_from_collection(
     collection_name: &str,
+    collection_type_name: ObjectTypeName,
     sample_size: u32,
     all_schema_nullable: bool,
     db: &impl DatabaseTrait,
-) -> anyhow::Result<Option<Schema>> {
+) -> anyhow::Result<Option<CollectionSchema>> {
     let options = None;
     let mut cursor = db
         .collection(collection_name)
@@ -72,7 +162,7 @@ async fn sample_schema_from_collection(
     let is_collection_type = true;
     while let Some(document) = cursor.try_next().await? {
         let object_types = make_object_type(
-            &collection_name.into(),
+            &collection_type_name,
             &document,
             is_collection_type,
             all_schema_nullable,
@@ -86,15 +176,12 @@ async fn sample_schema_from_collection(
     if collected_object_types.is_empty() {
         Ok(None)
     } else {
-        let collection_info = WithName::named(
-            collection_name.into(),
-            schema::Collection {
-                description: None,
-                r#type: collection_name.into(),
-            },
-        );
-        Ok(Some(Schema {
-            collections: WithName::into_map([collection_info]),
+        let collection_info = schema::Collection {
+            description: None,
+            r#type: collection_type_name,
+        };
+        Ok(Some(CollectionSchema {
+            collection: collection_info,
             object_types: WithName::into_map(collected_object_types),
         }))
     }
@@ -184,12 +271,12 @@ fn make_field_type(
         (vec![], Type::Scalar(t))
     }
     match field_value {
-        Bson::Double(_) => scalar(Double),
-        Bson::String(_) => scalar(String),
+        Bson::Double(_) => scalar(S::Double),
+        Bson::String(_) => scalar(S::String),
         Bson::Array(arr) => {
             // Examine all elements of the array and take the union of the resulting types.
             let mut collected_otds = vec![];
-            let mut result_type = Type::Scalar(Undefined);
+            let mut result_type = Type::Scalar(S::Undefined);
             for elem in arr {
                 let (elem_collected_otds, elem_type) =
                     make_field_type(object_type_name, elem, all_schema_nullable);
@@ -212,29 +299,29 @@ fn make_field_type(
             );
             (collected_otds, Type::Object(object_type_name.to_owned()))
         }
-        Bson::Boolean(_) => scalar(Bool),
-        Bson::Null => scalar(Null),
-        Bson::RegularExpression(_) => scalar(Regex),
-        Bson::JavaScriptCode(_) => scalar(Javascript),
-        Bson::JavaScriptCodeWithScope(_) => scalar(JavascriptWithScope),
-        Bson::Int32(_) => scalar(Int),
-        Bson::Int64(_) => scalar(Long),
-        Bson::Timestamp(_) => scalar(Timestamp),
+        Bson::Boolean(_) => scalar(S::Bool),
+        Bson::Null => scalar(S::Null),
+        Bson::RegularExpression(_) => scalar(S::Regex),
+        Bson::JavaScriptCode(_) => scalar(S::Javascript),
+        Bson::JavaScriptCodeWithScope(_) => scalar(S::JavascriptWithScope),
+        Bson::Int32(_) => scalar(S::Int),
+        Bson::Int64(_) => scalar(S::Long),
+        Bson::Timestamp(_) => scalar(S::Timestamp),
         Bson::Binary(Binary { subtype, .. }) => {
             if *subtype == BinarySubtype::Uuid {
-                scalar(UUID)
+                scalar(S::UUID)
             } else {
-                scalar(BinData)
+                scalar(S::BinData)
             }
         }
-        Bson::ObjectId(_) => scalar(ObjectId),
-        Bson::DateTime(_) => scalar(Date),
-        Bson::Symbol(_) => scalar(Symbol),
-        Bson::Decimal128(_) => scalar(Decimal),
-        Bson::Undefined => scalar(Undefined),
-        Bson::MaxKey => scalar(MaxKey),
-        Bson::MinKey => scalar(MinKey),
-        Bson::DbPointer(_) => scalar(DbPointer),
+        Bson::ObjectId(_) => scalar(S::ObjectId),
+        Bson::DateTime(_) => scalar(S::Date),
+        Bson::Symbol(_) => scalar(S::Symbol),
+        Bson::Decimal128(_) => scalar(S::Decimal),
+        Bson::Undefined => scalar(S::Undefined),
+        Bson::MaxKey => scalar(S::MaxKey),
+        Bson::MinKey => scalar(S::MinKey),
+        Bson::DbPointer(_) => scalar(S::DbPointer),
     }
 }
 

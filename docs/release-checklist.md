@@ -6,7 +6,7 @@ Create a PR in the MongoDB connector repository with these changes:
 
 - update the `version` property in `Cargo.toml` (in the workspace root only). For example, `version = "1.5.0"`
 - update `CHANGELOG.md`, add a heading under `## [Unreleased]` with the new version number and date. For example, `## [1.5.0] - 2024-12-05`
-- update `Cargo.lock` by running `cargo build`
+- update `Cargo.lock` by running `cargo check`
 
 ## 2. Tag
 
@@ -137,6 +137,9 @@ The content should have this format,
   },
   "source": {
     "hash": "<hash of tagged commit>"
+  },
+  "test": {
+    "test_config_path": "../../tests/test-config.json"
   }
 }
 ```
@@ -158,6 +161,9 @@ For example,
   },
   "source": {
     "hash": "b95da1815a9b686e517aa78f677752e36e0bfda0"
+  },
+  "test": {
+    "test_config_path": "../../tests/test-config.json"
   }
 }
 ```

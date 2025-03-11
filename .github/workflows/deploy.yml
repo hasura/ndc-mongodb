@@ -7,41 +7,8 @@ on:
       - 'v*'
 
 jobs:
-  binary:
-    name: deploy::binary
-    runs-on: ubuntu-24.04
-    steps:
-    - name: Checkout 🛎️
-      uses: actions/checkout@v3
-
-    - name: Install Nix ❄
-      uses: DeterminateSystems/nix-installer-action@v4
-
-    - name: Link Cachix 🔌
-      uses: cachix/cachix-action@v12
-      with:
-        name: '${{ vars.CACHIX_CACHE_NAME }}'
-        authToken: '${{ secrets.CACHIX_CACHE_AUTH_TOKEN }}'
-
-    - name: Login to GitHub Container Registry 📦
-      uses: docker/login-action@v1
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: build the crate using nix 🔨
-      run: nix build --print-build-logs
-
-    - name: Create release 🚀
-      uses: actions/upload-artifact@v3
-      with:
-        name: mongodb-connector
-        path: result/bin/mongodb-connector
-
   docker:
     name: deploy::docker
-    needs: binary
 
     # This job doesn't work as written on ubuntu-24.04. The problem is described
     # in this issue: https://github.com/actions/runner-images/issues/10443
@@ -91,6 +58,49 @@ jobs:
           path: ./connector-definition/dist/connector-definition.tgz
           compression-level: 0 # Already compressed
 
+  # Builds with nix for simplicity
+  build-connector-binaries:
+    name: build the connector binaries
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-linux
+          - target: aarch64-linux
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout 🛎️
+      uses: actions/checkout@v3
+
+    - name: Install Nix ❄
+      uses: DeterminateSystems/nix-installer-action@v4
+
+    - name: Link Cachix 🔌
+      uses: cachix/cachix-action@v12
+      with:
+        name: '${{ vars.CACHIX_CACHE_NAME }}'
+        authToken: '${{ secrets.CACHIX_CACHE_AUTH_TOKEN }}'
+
+    - name: Login to GitHub Container Registry 📦
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build statically-linked binary 🔨
+      run: |
+        nix build --print-build-logs .#mongodb-connector-${{ matrix.target }}
+        mkdir -p release
+        cp result/bin/mongodb-connector release/mongodb-connector-${{ matrix.target }}
+
+    - name: Upload binaries to workflow artifacts 🚀
+      uses: actions/upload-artifact@v4
+      with:
+        name: mongodb-connector-${{ matrix.target }}
+        path: release
+        if-no-files-found: error
+
+  # Builds without nix to get Windows binaries
   build-cli-binaries:
     name: build the CLI binaries
     strategy:
@@ -187,6 +197,7 @@ jobs:
     needs:
       - docker
       - connector-definition
+      - build-connector-binaries
       - build-cli-binaries
     runs-on: ubuntu-24.04
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}

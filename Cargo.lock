@@ -454,12 +454,12 @@ checksum = "97af0562545a7d7f3d9222fcf909963bec36dcb502afaacab98c6ffac8da47ce"
 
 [[package]]
 name = "configuration"
-version = "1.6.0"
+version = "1.7.0"
 dependencies = [
  "anyhow",
  "async-tempfile",
  "futures",
- "googletest",
+ "googletest 0.12.0",
  "itertools 0.13.0",
  "mongodb",
  "mongodb-support",
@@ -632,6 +632,12 @@ name = "diff"
 version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
+
+[[package]]
+name = "difflib"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6184e33543162437515c2e2b48714794e37845ec9851711914eec9d308f6ebe8"
 
 [[package]]
 name = "digest"
@@ -922,7 +928,19 @@ version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22e38fa267f4db1a2fa51795ea4234eaadc3617a97486a9f158de9256672260e"
 dependencies = [
- "googletest_macro",
+ "googletest_macro 0.12.0",
+ "num-traits",
+ "regex",
+ "rustversion",
+]
+
+[[package]]
+name = "googletest"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dce026f84cdd339bf71be01b24fe67470ee634282f68c1c4b563d00a9f002b05"
+dependencies = [
+ "googletest_macro 0.13.0",
  "num-traits",
  "regex",
  "rustversion",
@@ -934,6 +952,17 @@ version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "171deab504ad43a9ea80324a3686a0cbe9436220d9d0b48ae4d7f7bd303b48a9"
 dependencies = [
+ "quote",
+ "syn 2.0.66",
+]
+
+[[package]]
+name = "googletest_macro"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f5070fa86976044fe2b004d874c10af5d1aed6d8f6a72ff93a6eb29cc87048bc"
+dependencies = [
+ "proc-macro2",
  "quote",
  "syn 2.0.66",
 ]
@@ -1476,7 +1505,7 @@ dependencies = [
 
 [[package]]
 name = "integration-tests"
-version = "1.6.0"
+version = "1.7.0"
 dependencies = [
  "anyhow",
  "assert_json",
@@ -1545,6 +1574,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29c15563dc2726973df627357ce0c9ddddbea194836909d655df6a75d2cf296d"
 dependencies = [
  "wasm-bindgen",
+]
+
+[[package]]
+name = "json-structural-diff"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e878e36a8a44c158505c2c818abdc1350413ad83dcb774a0459f6a7ef2b65cbf"
+dependencies = [
+ "difflib",
+ "regex",
+ "serde_json",
 ]
 
 [[package]]
@@ -1765,7 +1805,7 @@ dependencies = [
 
 [[package]]
 name = "mongodb-agent-common"
-version = "1.6.0"
+version = "1.7.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1805,7 +1845,7 @@ dependencies = [
 
 [[package]]
 name = "mongodb-cli-plugin"
-version = "1.6.0"
+version = "1.7.0"
 dependencies = [
  "anyhow",
  "async-tempfile",
@@ -1813,13 +1853,15 @@ dependencies = [
  "configuration",
  "enum-iterator",
  "futures-util",
- "googletest",
+ "googletest 0.13.0",
  "indexmap 2.2.6",
  "itertools 0.13.0",
+ "json-structural-diff",
  "mongodb",
  "mongodb-agent-common",
  "mongodb-support",
  "ndc-models",
+ "ndc-test-helpers",
  "nom",
  "nonempty",
  "pretty",
@@ -1837,7 +1879,7 @@ dependencies = [
 
 [[package]]
 name = "mongodb-connector"
-version = "1.6.0"
+version = "1.7.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1875,7 +1917,7 @@ dependencies = [
 
 [[package]]
 name = "mongodb-support"
-version = "1.6.0"
+version = "1.7.0"
 dependencies = [
  "anyhow",
  "enum-iterator",
@@ -1920,7 +1962,7 @@ dependencies = [
 
 [[package]]
 name = "ndc-query-plan"
-version = "1.6.0"
+version = "1.7.0"
 dependencies = [
  "anyhow",
  "derivative",
@@ -2011,7 +2053,7 @@ dependencies = [
 
 [[package]]
 name = "ndc-test-helpers"
-version = "1.6.0"
+version = "1.7.0"
 dependencies = [
  "indexmap 2.2.6",
  "itertools 0.13.0",
@@ -3285,7 +3327,7 @@ checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 
 [[package]]
 name = "test-helpers"
-version = "1.6.0"
+version = "1.7.0"
 dependencies = [
  "configuration",
  "enum-iterator",
