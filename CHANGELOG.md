@@ -2,6 +2,51 @@
 
 This changelog documents the changes between release versions.
 
+## [Unreleased]
+
+### Added
+
+- You can now group documents for aggregation according to multiple grouping criteria ([#144](https://github.com/hasura/ndc-mongodb/pull/144), [#145](https://github.com/hasura/ndc-mongodb/pull/145))
+
+### Changed
+
+- **BREAKING:** Update to ndc-spec v0.2 ([#139](https://github.com/hasura/ndc-mongodb/pull/139))
+- **BREAKING:** Remove custom count aggregation - use standard count instead ([#144](https://github.com/hasura/ndc-mongodb/pull/144))
+- Results for `avg` and `sum` aggregations are coerced to consistent result types ([#144](https://github.com/hasura/ndc-mongodb/pull/144))
+
+#### ndc-spec v0.2
+
+This database connector communicates with the GraphQL Engine using an IR
+described by [ndc-spec](https://hasura.github.io/ndc-spec/). Version 0.2 makes
+a number of improvements to the spec, and enables features that were previously
+not possible. Highlights of those new features include:
+
+- relationships can use a nested object field on the target side as a join key
+- grouping result documents, and aggregating on groups of documents
+- queries on fields of nested collections (document fields that are arrays of objects)
+- filtering on scalar values inside array document fields - previously it was possible to filter on fields of objects inside arrays, but not on scalars
+
+For more details on what has changed in the spec see [the
+changelog](https://hasura.github.io/ndc-spec/specification/changelog.html#020).
+
+Use of the new spec requires a version of GraphQL Engine that supports ndc-spec
+v0.2, and there are required metadata changes.
+
+#### Removed custom count aggregation
+
+Previously there were two options for getting document counts named `count` and
+`_count`. These did the same thing. `count` has been removed - use `_count`
+instead.
+
+#### Results for `avg` and `sum` aggregations are coerced to consistent result types
+
+This change is required for compliance with ndc-spec.
+
+Results for `avg` are always coerced to `double`.
+
+Results for `sum` are coerced to `double` if the summed inputs use a fractional
+numeric type, or to `long` if inputs use an integral numeric type.
+
 ## [1.7.0] - 2025-03-10
 
 ### Added

@@ -21,14 +21,14 @@ pub enum BsonToJsonError {
     #[error("error converting UUID from BSON to JSON: {0}")]
     UuidConversion(#[from] bson::uuid::Error),
 
-    #[error("input object of type {0:?} is missing a field, \"{1}\"")]
+    #[error("input object of type {0} is missing a field, \"{1}\"")]
     MissingObjectField(Type, String),
 
     #[error("error converting value to JSON: {0}")]
     Serde(#[from] serde_json::Error),
 
     // TODO: It would be great if we could capture a path into the larger BSON value here
-    #[error("expected a value of type {0:?}, but got {1}")]
+    #[error("expected a value of type {0}, but got {1}")]
     TypeMismatch(Type, Bson),
 
     #[error("unknown object type, \"{0}\"")]
@@ -52,6 +52,7 @@ pub fn bson_to_json(mode: ExtendedJsonMode, expected_type: &Type, value: Bson) -
         }
         Type::Object(object_type) => convert_object(mode, object_type, value),
         Type::ArrayOf(element_type) => convert_array(mode, element_type, value),
+        Type::Tuple(element_types) => convert_tuple(mode, element_types, value),
         Type::Nullable(t) => convert_nullable(mode, t, value),
     }
 }
@@ -74,7 +75,9 @@ fn bson_scalar_to_json(
         (BsonScalarType::Double, v) => convert_small_number(expected_type, v),
         (BsonScalarType::Int, v) => convert_small_number(expected_type, v),
         (BsonScalarType::Long, Bson::Int64(n)) => Ok(Value::String(n.to_string())),
+        (BsonScalarType::Long, Bson::Int32(n)) => Ok(Value::String(n.to_string())),
         (BsonScalarType::Decimal, Bson::Decimal128(n)) => Ok(Value::String(n.to_string())),
+        (BsonScalarType::Decimal, Bson::Double(n)) => Ok(Value::String(n.to_string())),
         (BsonScalarType::String, Bson::String(s)) => Ok(Value::String(s)),
         (BsonScalarType::Symbol, Bson::Symbol(s)) => Ok(Value::String(s)),
         (BsonScalarType::Date, Bson::DateTime(date)) => convert_date(date),
@@ -112,6 +115,22 @@ fn convert_array(mode: ExtendedJsonMode, element_type: &Type, value: Bson) -> Re
     let json_array = values
         .into_iter()
         .map(|value| bson_to_json(mode, element_type, value))
+        .try_collect()?;
+    Ok(Value::Array(json_array))
+}
+
+fn convert_tuple(mode: ExtendedJsonMode, element_types: &[Type], value: Bson) -> Result<Value> {
+    let values = match value {
+        Bson::Array(values) => Ok(values),
+        _ => Err(BsonToJsonError::TypeMismatch(
+            Type::Tuple(element_types.to_vec()),
+            value,
+        )),
+    }?;
+    let json_array = element_types
+        .iter()
+        .zip(values)
+        .map(|(element_type, value)| bson_to_json(mode, element_type, value))
         .try_collect()?;
     Ok(Value::Array(json_array))
 }
@@ -234,16 +253,13 @@ mod tests {
 
     #[test]
     fn serializes_document_with_missing_nullable_field() -> anyhow::Result<()> {
-        let expected_type = Type::Object(ObjectType {
-            name: Some("test_object".into()),
-            fields: [(
-                "field".into(),
-                Type::Nullable(Box::new(Type::Scalar(MongoScalarType::Bson(
-                    BsonScalarType::String,
-                )))),
-            )]
-            .into(),
-        });
+        let expected_type = Type::named_object(
+            "test_object",
+            [(
+                "field",
+                Type::nullable(Type::Scalar(MongoScalarType::Bson(BsonScalarType::String))),
+            )],
+        );
         let value = bson::doc! {};
         let actual = bson_to_json(ExtendedJsonMode::Canonical, &expected_type, value.into())?;
         assert_eq!(actual, json!({}));

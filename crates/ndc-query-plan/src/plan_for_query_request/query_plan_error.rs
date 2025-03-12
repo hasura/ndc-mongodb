@@ -29,6 +29,11 @@ pub enum QueryPlanError {
     #[error("not implemented: {}", .0)]
     NotImplemented(String),
 
+    #[error("relationship, {relationship_name}, has an empty target path")]
+    RelationshipEmptyTarget {
+        relationship_name: ndc::RelationshipName,
+    },
+
     #[error("{0}")]
     RelationshipUnification(#[from] RelationshipUnificationError),
 

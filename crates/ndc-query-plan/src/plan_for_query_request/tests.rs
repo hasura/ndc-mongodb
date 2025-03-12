@@ -1,507 +1,517 @@
 use ndc_models::{self as ndc, OrderByTarget, OrderDirection, RelationshipType};
 use ndc_test_helpers::*;
+use nonempty::NonEmpty;
 use pretty_assertions::assert_eq;
-use serde_json::json;
 
 use crate::{
     self as plan,
-    plan_for_query_request::plan_test_helpers::{
-        self, make_flat_schema, make_nested_schema, TestContext,
-    },
-    query_plan::UnrelatedJoin,
-    ExistsInCollection, Expression, Field, OrderBy, Query, QueryContext, QueryPlan, Relationship,
+    plan_for_query_request::plan_test_helpers::{self, make_flat_schema, make_nested_schema},
+    QueryContext, QueryPlan, Type,
 };
 
 use super::plan_for_query_request;
 
-#[test]
-fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
-    let request = query_request()
-        .collection("schools")
-        .relationships([
-            (
-                "school_classes",
-                relationship("classes", [("_id", "school_id")]),
-            ),
-            (
-                "class_students",
-                relationship("students", [("_id", "class_id")]),
-            ),
-            (
-                "class_department",
-                relationship("departments", [("department_id", "_id")]).object_type(),
-            ),
-            (
-                "school_directory",
-                relationship("directory", [("_id", "school_id")]).object_type(),
-            ),
-            (
-                "student_advisor",
-                relationship("advisors", [("advisor_id", "_id")]).object_type(),
-            ),
-            (
-                "existence_check",
-                relationship("some_collection", [("some_id", "_id")]),
-            ),
-        ])
-        .query(
-            query()
-                .fields([relation_field!("class_name" => "school_classes", query()
-                    .fields([
-                        relation_field!("student_name" => "class_students")
-                    ])
-                )])
-                .order_by(vec![ndc::OrderByElement {
-                    order_direction: OrderDirection::Asc,
-                    target: OrderByTarget::Column {
-                        name: "advisor_name".into(),
-                        field_path: None,
-                        path: vec![
-                            path_element("school_classes".into())
-                                .predicate(binop(
-                                    "Equal",
-                                    target!(
-                                        "_id",
-                                        relations: [
-                                        // path_element("school_classes"),
-                                        path_element("class_department".into()),
-                                    ],
-                                    ),
-                                    column_value!(
-                                        "math_department_id",
-                                        relations: [path_element("school_directory".into())],
-                                    ),
-                                ))
-                                .into(),
-                            path_element("class_students".into()).into(),
-                            path_element("student_advisor".into()).into(),
-                        ],
-                    },
-                }])
-                // The `And` layer checks that we properly recursive into Expressions
-                .predicate(and([ndc::Expression::Exists {
-                    in_collection: related!("existence_check"),
-                    predicate: None,
-                }])),
-        )
-        .into();
+// TODO: ENG-1487 we need named scopes to define this query in ndc-spec 0.2
+// #[test]
+// fn translates_query_request_relationships() -> Result<(), anyhow::Error> {
+//     let request = query_request()
+//         .collection("schools")
+//         .relationships([
+//             (
+//                 "school_classes",
+//                 relationship("classes", [("_id", &["school_id"])]),
+//             ),
+//             (
+//                 "class_students",
+//                 relationship("students", [("_id", &["class_id"])]),
+//             ),
+//             (
+//                 "class_department",
+//                 relationship("departments", [("department_id", &["_id"])]).object_type(),
+//             ),
+//             (
+//                 "school_directory",
+//                 relationship("directory", [("_id", &["school_id"])]).object_type(),
+//             ),
+//             (
+//                 "student_advisor",
+//                 relationship("advisors", [("advisor_id", &["_id"])]).object_type(),
+//             ),
+//             (
+//                 "existence_check",
+//                 relationship("some_collection", [("some_id", &["_id"])]),
+//             ),
+//         ])
+//         .query(
+//             query()
+//                 .fields([relation_field!("class_name" => "school_classes", query()
+//                     .fields([
+//                         relation_field!("student_name" => "class_students")
+//                     ])
+//                 )])
+//                 .order_by(vec![ndc::OrderByElement {
+//                     order_direction: OrderDirection::Asc,
+//                     target: OrderByTarget::Column {
+//                         name: "advisor_name".into(),
+//                         arguments: Default::default(),
+//                         field_path: None,
+//                         path: vec![
+//                             path_element("school_classes")
+//                                 .predicate(
+//                                     exists(
+//                                         in_related("class_department"),
+//                                         binop(
+//                                             "Equal",
+//                                             target!("_id"),
+//                                             column_value("math_department_id")
+//                                                 .path([path_element("school_directory")])
+//                                                 .scope(2)
+//                                                 .into()
+//                                             ),
+//                                         )
+//                                 )
+//                                 .into(),
+//                             path_element("class_students").into(),
+//                             path_element("student_advisor").into(),
+//                         ],
+//                     },
+//                 }])
+//                 // The `And` layer checks that we properly recurse into Expressions
+//                 .predicate(and([ndc::Expression::Exists {
+//                     in_collection: related!("existence_check"),
+//                     predicate: None,
+//                 }])),
+//         )
+//         .into();
+//
+//     let expected = QueryPlan {
+//         collection: "schools".into(),
+//         arguments: Default::default(),
+//         variables: None,
+//         variable_types: Default::default(),
+//         unrelated_collections: Default::default(),
+//         query: Query {
+//             predicate: Some(Expression::And {
+//                 expressions: vec![Expression::Exists {
+//                     in_collection: ExistsInCollection::Related {
+//                         relationship: "existence_check".into(),
+//                     },
+//                     predicate: None,
+//                 }],
+//             }),
+//             order_by: Some(OrderBy {
+//                 elements: [plan::OrderByElement {
+//                     order_direction: OrderDirection::Asc,
+//                     target: plan::OrderByTarget::Column {
+//                         name: "advisor_name".into(),
+//                         arguments: Default::default(),
+//                         field_path: Default::default(),
+//                         path: [
+//                             "school_classes_0".into(),
+//                             "class_students".into(),
+//                             "student_advisor".into(),
+//                         ]
+//                             .into(),
+//                     },
+//                 }]
+//                     .into(),
+//             }),
+//             relationships: [
+//                 // We join on the school_classes relationship twice. This one is for the `order_by`
+//                 // comparison in the top-level request query
+//                 (
+//                     "school_classes_0".into(),
+//                     Relationship {
+//                         column_mapping: [("_id".into(), vec!["school_id".into()])].into(),
+//                         relationship_type: RelationshipType::Array,
+//                         target_collection: "classes".into(),
+//                         arguments: Default::default(),
+//                         query: Query {
+//                             predicate: Some(Expression::Exists {
+//                                 in_collection: ExistsInCollection::Related {
+//                                     relationship: "school_directory".into(),
+//                                 },
+//                                 predicate: Some(Box::new(plan::Expression::BinaryComparisonOperator {
+//                                     column: plan::ComparisonTarget::Column {
+//                                         name: "_id".into(),
+//                                         arguments: Default::default(),
+//                                         field_path: None,
+//                                         field_type: plan::Type::Scalar(
+//                                             plan_test_helpers::ScalarType::Int,
+//                                         ),
+//                                     },
+//                                     operator: plan_test_helpers::ComparisonOperator::Equal,
+//                                     value: plan::ComparisonValue::Column {
+//                                         name: "math_department_id".into(),
+//                                         arguments: Default::default(),
+//                                         field_path: None,
+//                                         field_type: plan::Type::Scalar(
+//                                             plan_test_helpers::ScalarType::Int,
+//                                         ),
+//                                         path: vec!["school_directory".into()],
+//                                         scope: Default::default(),
+//                                     },
+//                                 }))
+//                             }),
+//                             relationships: [(
+//                                 "class_department".into(),
+//                                 plan::Relationship {
+//                                     target_collection: "departments".into(),
+//                                     column_mapping: [("department_id".into(), vec!["_id".into()])].into(),
+//                                     relationship_type: RelationshipType::Object,
+//                                     arguments: Default::default(),
+//                                     query: plan::Query {
+//                                         fields: Some([
+//                                             ("_id".into(), plan::Field::Column { column: "_id".into(), fields: None, column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::Int) })
+//                                         ].into()),
+//                                         ..Default::default()
+//                                     },
+//                                 },
+//                             ), (
+//                                     "class_students".into(),
+//                                     plan::Relationship {
+//                                         target_collection: "students".into(),
+//                                         column_mapping: [("_id".into(), vec!["class_id".into()])].into(),
+//                                         relationship_type: RelationshipType::Array,
+//                                         arguments: Default::default(),
+//                                         query: plan::Query {
+//                                             relationships: [(
+//                                                 "student_advisor".into(),
+//                                                 plan::Relationship {
+//                                                     column_mapping: [(
+//                                                         "advisor_id".into(),
+//                                                         vec!["_id".into()],
+//                                                     )]
+//                                                         .into(),
+//                                                     relationship_type: RelationshipType::Object,
+//                                                     target_collection: "advisors".into(),
+//                                                     arguments: Default::default(),
+//                                                     query: plan::Query {
+//                                                         fields: Some(
+//                                                             [(
+//                                                                 "advisor_name".into(),
+//                                                                 plan::Field::Column {
+//                                                                     column: "advisor_name".into(),
+//                                                                     fields: None,
+//                                                                     column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
+//                                                                 },
+//                                                             )]
+//                                                                 .into(),
+//                                                         ),
+//                                                         ..Default::default()
+//                                                     },
+//                                                 },
+//                                             )]
+//                                                 .into(),
+//                                             ..Default::default()
+//                                         },
+//                                     },
+//                                 ),
+//                                 (
+//                                     "school_directory".into(),
+//                                     Relationship {
+//                                         target_collection: "directory".into(),
+//                                         column_mapping: [("_id".into(), vec!["school_id".into()])].into(),
+//                                         relationship_type: RelationshipType::Object,
+//                                         arguments: Default::default(),
+//                                         query: Query {
+//                                             fields: Some([
+//                                                 ("math_department_id".into(), plan::Field::Column { column: "math_department_id".into(), fields: None, column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::Int) })
+//                                             ].into()),
+//                                             ..Default::default()
+//                                         },
+//                                     },
+//                                 ),
+//                             ]
+//                                 .into(),
+//                             ..Default::default()
+//                         },
+//                     },
+//                 ),
+//                 // This is the second join on school_classes - this one provides the relationship
+//                 // field for the top-level request query
+//                 (
+//                     "school_classes".into(),
+//                     Relationship {
+//                         column_mapping: [("_id".into(), vec!["school_id".into()])].into(),
+//                         relationship_type: RelationshipType::Array,
+//                         target_collection: "classes".into(),
+//                         arguments: Default::default(),
+//                         query: Query {
+//                             fields: Some(
+//                                 [(
+//                                     "student_name".into(),
+//                                     plan::Field::Relationship {
+//                                         relationship: "class_students".into(),
+//                                         aggregates: None,
+//                                         fields: None,
+//                                     },
+//                                 )]
+//                                     .into(),
+//                             ),
+//                             relationships: [(
+//                                 "class_students".into(),
+//                                 plan::Relationship {
+//                                     target_collection: "students".into(),
+//                                     column_mapping: [("_id".into(), vec!["class_id".into()])].into(),
+//                                     relationship_type: RelationshipType::Array,
+//                                     arguments: Default::default(),
+//                                     query: Query {
+//                                         scope: Some(plan::Scope::Named("scope_1".into())),
+//                                         ..Default::default()
+//                                     },
+//                                 },
+//                             )].into(),
+//                             scope: Some(plan::Scope::Named("scope_0".into())),
+//                             ..Default::default()
+//                         },
+//                     },
+//                 ),
+//                 (
+//                     "existence_check".into(),
+//                     Relationship {
+//                         column_mapping: [("some_id".into(), vec!["_id".into()])].into(),
+//                         relationship_type: RelationshipType::Array,
+//                         target_collection: "some_collection".into(),
+//                         arguments: Default::default(),
+//                         query: Query {
+//                             predicate: None,
+//                             ..Default::default()
+//                         },
+//                     },
+//                 ),
+//             ]
+//                 .into(),
+//             fields: Some(
+//                 [(
+//                     "class_name".into(),
+//                     Field::Relationship {
+//                         relationship: "school_classes".into(),
+//                         aggregates: None,
+//                         fields: Some(
+//                             [(
+//                                 "student_name".into(),
+//                                 Field::Relationship {
+//                                     relationship: "class_students".into(),
+//                                     aggregates: None,
+//                                     fields: None,
+//                                 },
+//                             )]
+//                                 .into(),
+//                         ),
+//                     },
+//                 )]
+//                     .into(),
+//             ),
+//             scope: Some(plan::Scope::Root),
+//             ..Default::default()
+//         },
+//     };
+//
+//     let context = TestContext {
+//         collections: [
+//             collection("schools"),
+//             collection("classes"),
+//             collection("students"),
+//             collection("departments"),
+//             collection("directory"),
+//             collection("advisors"),
+//             collection("some_collection"),
+//         ]
+//         .into(),
+//         object_types: [
+//             ("schools".into(), object_type([("_id", named_type("Int"))])),
+//             (
+//                 "classes".into(),
+//                 object_type([
+//                     ("_id", named_type("Int")),
+//                     ("school_id", named_type("Int")),
+//                     ("department_id", named_type("Int")),
+//                 ]),
+//             ),
+//             (
+//                 "students".into(),
+//                 object_type([
+//                     ("_id", named_type("Int")),
+//                     ("class_id", named_type("Int")),
+//                     ("advisor_id", named_type("Int")),
+//                     ("student_name", named_type("String")),
+//                 ]),
+//             ),
+//             (
+//                 "departments".into(),
+//                 object_type([("_id", named_type("Int"))]),
+//             ),
+//             (
+//                 "directory".into(),
+//                 object_type([
+//                     ("_id", named_type("Int")),
+//                     ("school_id", named_type("Int")),
+//                     ("math_department_id", named_type("Int")),
+//                 ]),
+//             ),
+//             (
+//                 "advisors".into(),
+//                 object_type([
+//                     ("_id", named_type("Int")),
+//                     ("advisor_name", named_type("String")),
+//                 ]),
+//             ),
+//             (
+//                 "some_collection".into(),
+//                 object_type([("_id", named_type("Int")), ("some_id", named_type("Int"))]),
+//             ),
+//         ]
+//         .into(),
+//         ..Default::default()
+//     };
+//
+//     let query_plan = plan_for_query_request(&context, request)?;
+//
+//     assert_eq!(query_plan, expected);
+//     Ok(())
+// }
 
-    let expected = QueryPlan {
-        collection: "schools".into(),
-        arguments: Default::default(),
-        variables: None,
-        variable_types: Default::default(),
-        unrelated_collections: Default::default(),
-        query: Query {
-            predicate: Some(Expression::And {
-                expressions: vec![Expression::Exists {
-                    in_collection: ExistsInCollection::Related {
-                        relationship: "existence_check".into(),
-                    },
-                    predicate: None,
-                }],
-            }),
-            order_by: Some(OrderBy {
-                elements: [plan::OrderByElement {
-                    order_direction: OrderDirection::Asc,
-                    target: plan::OrderByTarget::Column {
-                        name: "advisor_name".into(),
-                        field_path: Default::default(),
-                        path: [
-                            "school_classes_0".into(),
-                            "class_students".into(),
-                            "student_advisor".into(),
-                        ]
-                            .into(),
-                    },
-                }]
-                    .into(),
-            }),
-            relationships: [
-                (
-                    "school_classes_0".into(),
-                    Relationship {
-                        column_mapping: [("_id".into(), "school_id".into())].into(),
-                        relationship_type: RelationshipType::Array,
-                        target_collection: "classes".into(),
-                        arguments: Default::default(),
-                        query: Query {
-                            predicate: Some(plan::Expression::BinaryComparisonOperator {
-                                column: plan::ComparisonTarget::Column {
-                                    name: "_id".into(),
-                                    field_path: None,
-                                    field_type: plan::Type::Scalar(
-                                        plan_test_helpers::ScalarType::Int,
-                                    ),
-                                    path: vec!["class_department".into()],
-                                },
-                                operator: plan_test_helpers::ComparisonOperator::Equal,
-                                value: plan::ComparisonValue::Column {
-                                    column: plan::ComparisonTarget::Column {
-                                        name: "math_department_id".into(),
-                                        field_path: None,
-                                        field_type: plan::Type::Scalar(
-                                            plan_test_helpers::ScalarType::Int,
-                                        ),
-                                        path: vec!["school_directory".into()],
-                                    },
-                                },
-                            }),
-                            relationships: [(
-                                "class_department".into(),
-                                plan::Relationship {
-                                    target_collection: "departments".into(),
-                                    column_mapping: [("department_id".into(), "_id".into())].into(),
-                                    relationship_type: RelationshipType::Object,
-                                    arguments: Default::default(),
-                                    query: plan::Query {
-                                        fields: Some([
-                                            ("_id".into(), plan::Field::Column { column: "_id".into(), fields: None, column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::Int) })
-                                        ].into()),
-                                        ..Default::default()
-                                    },
-                                },
-                            ), (
-                                    "class_students".into(),
-                                    plan::Relationship {
-                                        target_collection: "students".into(),
-                                        column_mapping: [("_id".into(), "class_id".into())].into(),
-                                        relationship_type: RelationshipType::Array,
-                                        arguments: Default::default(),
-                                        query: plan::Query {
-                                            relationships: [(
-                                                "student_advisor".into(),
-                                                plan::Relationship {
-                                                    column_mapping: [(
-                                                        "advisor_id".into(),
-                                                        "_id".into(),
-                                                    )]
-                                                        .into(),
-                                                    relationship_type: RelationshipType::Object,
-                                                    target_collection: "advisors".into(),
-                                                    arguments: Default::default(),
-                                                    query: plan::Query {
-                                                        fields: Some(
-                                                            [(
-                                                                "advisor_name".into(),
-                                                                plan::Field::Column {
-                                                                    column: "advisor_name".into(),
-                                                                    fields: None,
-                                                                    column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
-                                                                },
-                                                            )]
-                                                                .into(),
-                                                        ),
-                                                        ..Default::default()
-                                                    },
-                                                },
-                                            )]
-                                                .into(),
-                                            ..Default::default()
-                                        },
-                                    },
-                                ),
-                                (
-                                    "school_directory".into(),
-                                    Relationship {
-                                        target_collection: "directory".into(),
-                                        column_mapping: [("_id".into(), "school_id".into())].into(),
-                                        relationship_type: RelationshipType::Object,
-                                        arguments: Default::default(),
-                                        query: Query {
-                                            fields: Some([
-                                                ("math_department_id".into(), plan::Field::Column { column: "math_department_id".into(), fields: None, column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::Int) })
-                                            ].into()),
-                                            ..Default::default()
-                                        },
-                                    },
-                                ),
-                            ]
-                                .into(),
-                            ..Default::default()
-                        },
-                    },
-                ),
-                (
-                    "school_classes".into(),
-                    Relationship {
-                        column_mapping: [("_id".into(), "school_id".into())].into(),
-                        relationship_type: RelationshipType::Array,
-                        target_collection: "classes".into(),
-                        arguments: Default::default(),
-                        query: Query {
-                            fields: Some(
-                                [(
-                                    "student_name".into(),
-                                    plan::Field::Relationship {
-                                        relationship: "class_students".into(),
-                                        aggregates: None,
-                                        fields: None,
-                                    },
-                                )]
-                                    .into(),
-                            ),
-                            relationships: [(
-                                "class_students".into(),
-                                plan::Relationship {
-                                    target_collection: "students".into(),
-                                    column_mapping: [("_id".into(), "class_id".into())].into(),
-                                    relationship_type: RelationshipType::Array,
-                                    arguments: Default::default(),
-                                    query: Query {
-                                        scope: Some(plan::Scope::Named("scope_1".into())),
-                                        ..Default::default() 
-                                    },
-                                },
-                            )].into(),
-                            scope: Some(plan::Scope::Named("scope_0".into())),
-                            ..Default::default()
-                        },
-                    },
-                ),
-                (
-                    "existence_check".into(),
-                    Relationship {
-                        column_mapping: [("some_id".into(), "_id".into())].into(),
-                        relationship_type: RelationshipType::Array,
-                        target_collection: "some_collection".into(),
-                        arguments: Default::default(),
-                        query: Query {
-                            predicate: None,
-                            ..Default::default()
-                        },
-                    },
-                ),
-            ]
-                .into(),
-            fields: Some(
-                [(
-                    "class_name".into(),
-                    Field::Relationship {
-                        relationship: "school_classes".into(),
-                        aggregates: None,
-                        fields: Some(
-                            [(
-                                "student_name".into(),
-                                Field::Relationship {
-                                    relationship: "class_students".into(),
-                                    aggregates: None,
-                                    fields: None,
-                                },
-                            )]
-                                .into(),
-                        ),
-                    },
-                )]
-                    .into(),
-            ),
-            scope: Some(plan::Scope::Root),
-            ..Default::default()
-        },
-    };
+// TODO: ENG-1487 update this test to use named scopes instead of root column reference
 
-    let context = TestContext {
-        collections: [
-            collection("schools"),
-            collection("classes"),
-            collection("students"),
-            collection("departments"),
-            collection("directory"),
-            collection("advisors"),
-            collection("some_collection"),
-        ]
-        .into(),
-        object_types: [
-            ("schools".into(), object_type([("_id", named_type("Int"))])),
-            (
-                "classes".into(),
-                object_type([
-                    ("_id", named_type("Int")),
-                    ("school_id", named_type("Int")),
-                    ("department_id", named_type("Int")),
-                ]),
-            ),
-            (
-                "students".into(),
-                object_type([
-                    ("_id", named_type("Int")),
-                    ("class_id", named_type("Int")),
-                    ("advisor_id", named_type("Int")),
-                    ("student_name", named_type("String")),
-                ]),
-            ),
-            (
-                "departments".into(),
-                object_type([("_id", named_type("Int"))]),
-            ),
-            (
-                "directory".into(),
-                object_type([
-                    ("_id", named_type("Int")),
-                    ("school_id", named_type("Int")),
-                    ("math_department_id", named_type("Int")),
-                ]),
-            ),
-            (
-                "advisors".into(),
-                object_type([
-                    ("_id", named_type("Int")),
-                    ("advisor_name", named_type("String")),
-                ]),
-            ),
-            (
-                "some_collection".into(),
-                object_type([("_id", named_type("Int")), ("some_id", named_type("Int"))]),
-            ),
-        ]
-        .into(),
-        ..Default::default()
-    };
-
-    let query_plan = plan_for_query_request(&context, request)?;
-
-    assert_eq!(query_plan, expected);
-    Ok(())
-}
-
-#[test]
-fn translates_root_column_references() -> Result<(), anyhow::Error> {
-    let query_context = make_flat_schema();
-    let query = query_request()
-        .collection("authors")
-        .query(query().fields([field!("last_name")]).predicate(exists(
-            unrelated!("articles"),
-            and([
-                binop("Equal", target!("author_id"), column_value!(root("id"))),
-                binop("Regex", target!("title"), value!("Functional.*")),
-            ]),
-        )))
-        .into();
-    let query_plan = plan_for_query_request(&query_context, query)?;
-
-    let expected = QueryPlan {
-        collection: "authors".into(),
-        query: plan::Query {
-            predicate: Some(plan::Expression::Exists {
-                in_collection: plan::ExistsInCollection::Unrelated {
-                    unrelated_collection: "__join_articles_0".into(),
-                },
-                predicate: Some(Box::new(plan::Expression::And {
-                    expressions: vec![
-                        plan::Expression::BinaryComparisonOperator {
-                            column: plan::ComparisonTarget::Column {
-                                name: "author_id".into(),
-                                field_path: Default::default(),
-                                field_type: plan::Type::Scalar(plan_test_helpers::ScalarType::Int),
-                                path: Default::default(),
-                            },
-                            operator: plan_test_helpers::ComparisonOperator::Equal,
-                            value: plan::ComparisonValue::Column {
-                                column: plan::ComparisonTarget::ColumnInScope {
-                                    name: "id".into(),
-                                    field_path: Default::default(),
-                                    field_type: plan::Type::Scalar(
-                                        plan_test_helpers::ScalarType::Int,
-                                    ),
-                                    scope: plan::Scope::Root,
-                                },
-                            },
-                        },
-                        plan::Expression::BinaryComparisonOperator {
-                            column: plan::ComparisonTarget::Column {
-                                name: "title".into(),
-                                field_path: Default::default(),
-                                field_type: plan::Type::Scalar(
-                                    plan_test_helpers::ScalarType::String,
-                                ),
-                                path: Default::default(),
-                            },
-                            operator: plan_test_helpers::ComparisonOperator::Regex,
-                            value: plan::ComparisonValue::Scalar {
-                                value: json!("Functional.*"),
-                                value_type: plan::Type::Scalar(
-                                    plan_test_helpers::ScalarType::String,
-                                ),
-                            },
-                        },
-                    ],
-                })),
-            }),
-            fields: Some(
-                [(
-                    "last_name".into(),
-                    plan::Field::Column {
-                        column: "last_name".into(),
-                        fields: None,
-                        column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
-                    },
-                )]
-                .into(),
-            ),
-            scope: Some(plan::Scope::Root),
-            ..Default::default()
-        },
-        unrelated_collections: [(
-            "__join_articles_0".into(),
-            UnrelatedJoin {
-                target_collection: "articles".into(),
-                arguments: Default::default(),
-                query: plan::Query {
-                    predicate: Some(plan::Expression::And {
-                        expressions: vec![
-                            plan::Expression::BinaryComparisonOperator {
-                                column: plan::ComparisonTarget::Column {
-                                    name: "author_id".into(),
-                                    field_type: plan::Type::Scalar(
-                                        plan_test_helpers::ScalarType::Int,
-                                    ),
-                                    field_path: None,
-                                    path: vec![],
-                                },
-                                operator: plan_test_helpers::ComparisonOperator::Equal,
-                                value: plan::ComparisonValue::Column {
-                                    column: plan::ComparisonTarget::ColumnInScope {
-                                        name: "id".into(),
-                                        scope: plan::Scope::Root,
-                                        field_type: plan::Type::Scalar(
-                                            plan_test_helpers::ScalarType::Int,
-                                        ),
-                                        field_path: None,
-                                    },
-                                },
-                            },
-                            plan::Expression::BinaryComparisonOperator {
-                                column: plan::ComparisonTarget::Column {
-                                    name: "title".into(),
-                                    field_type: plan::Type::Scalar(
-                                        plan_test_helpers::ScalarType::String,
-                                    ),
-                                    field_path: None,
-                                    path: vec![],
-                                },
-                                operator: plan_test_helpers::ComparisonOperator::Regex,
-                                value: plan::ComparisonValue::Scalar {
-                                    value: "Functional.*".into(),
-                                    value_type: plan::Type::Scalar(
-                                        plan_test_helpers::ScalarType::String,
-                                    ),
-                                },
-                            },
-                        ],
-                    }),
-                    ..Default::default()
-                },
-            },
-        )]
-        .into(),
-        arguments: Default::default(),
-        variables: Default::default(),
-        variable_types: Default::default(),
-    };
-
-    assert_eq!(query_plan, expected);
-    Ok(())
-}
+// #[test]
+// fn translates_root_column_references() -> Result<(), anyhow::Error> {
+//     let query_context = make_flat_schema();
+//     let query = query_request()
+//         .collection("authors")
+//         .query(query().fields([field!("last_name")]).predicate(exists(
+//             unrelated!("articles"),
+//             and([
+//                 binop("Equal", target!("author_id"), column_value!(root("id"))),
+//                 binop("Regex", target!("title"), value!("Functional.*")),
+//             ]),
+//         )))
+//         .into();
+//     let query_plan = plan_for_query_request(&query_context, query)?;
+//
+//     let expected = QueryPlan {
+//         collection: "authors".into(),
+//         query: plan::Query {
+//             predicate: Some(plan::Expression::Exists {
+//                 in_collection: plan::ExistsInCollection::Unrelated {
+//                     unrelated_collection: "__join_articles_0".into(),
+//                 },
+//                 predicate: Some(Box::new(plan::Expression::And {
+//                     expressions: vec![
+//                         plan::Expression::BinaryComparisonOperator {
+//                             column: plan::ComparisonTarget::Column {
+//                                 name: "author_id".into(),
+//                                 field_path: Default::default(),
+//                                 field_type: plan::Type::Scalar(plan_test_helpers::ScalarType::Int),
+//                                 path: Default::default(),
+//                             },
+//                             operator: plan_test_helpers::ComparisonOperator::Equal,
+//                             value: plan::ComparisonValue::Column {
+//                                 column: plan::ComparisonTarget::ColumnInScope {
+//                                     name: "id".into(),
+//                                     field_path: Default::default(),
+//                                     field_type: plan::Type::Scalar(
+//                                         plan_test_helpers::ScalarType::Int,
+//                                     ),
+//                                     scope: plan::Scope::Root,
+//                                 },
+//                             },
+//                         },
+//                         plan::Expression::BinaryComparisonOperator {
+//                             column: plan::ComparisonTarget::Column {
+//                                 name: "title".into(),
+//                                 field_path: Default::default(),
+//                                 field_type: plan::Type::Scalar(
+//                                     plan_test_helpers::ScalarType::String,
+//                                 ),
+//                                 path: Default::default(),
+//                             },
+//                             operator: plan_test_helpers::ComparisonOperator::Regex,
+//                             value: plan::ComparisonValue::Scalar {
+//                                 value: json!("Functional.*"),
+//                                 value_type: plan::Type::Scalar(
+//                                     plan_test_helpers::ScalarType::String,
+//                                 ),
+//                             },
+//                         },
+//                     ],
+//                 })),
+//             }),
+//             fields: Some(
+//                 [(
+//                     "last_name".into(),
+//                     plan::Field::Column {
+//                         column: "last_name".into(),
+//                         fields: None,
+//                         column_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
+//                     },
+//                 )]
+//                 .into(),
+//             ),
+//             scope: Some(plan::Scope::Root),
+//             ..Default::default()
+//         },
+//         unrelated_collections: [(
+//             "__join_articles_0".into(),
+//             UnrelatedJoin {
+//                 target_collection: "articles".into(),
+//                 arguments: Default::default(),
+//                 query: plan::Query {
+//                     predicate: Some(plan::Expression::And {
+//                         expressions: vec![
+//                             plan::Expression::BinaryComparisonOperator {
+//                                 column: plan::ComparisonTarget::Column {
+//                                     name: "author_id".into(),
+//                                     field_type: plan::Type::Scalar(
+//                                         plan_test_helpers::ScalarType::Int,
+//                                     ),
+//                                     field_path: None,
+//                                     path: vec![],
+//                                 },
+//                                 operator: plan_test_helpers::ComparisonOperator::Equal,
+//                                 value: plan::ComparisonValue::Column {
+//                                     column: plan::ComparisonTarget::ColumnInScope {
+//                                         name: "id".into(),
+//                                         scope: plan::Scope::Root,
+//                                         field_type: plan::Type::Scalar(
+//                                             plan_test_helpers::ScalarType::Int,
+//                                         ),
+//                                         field_path: None,
+//                                     },
+//                                 },
+//                             },
+//                             plan::Expression::BinaryComparisonOperator {
+//                                 column: plan::ComparisonTarget::Column {
+//                                     name: "title".into(),
+//                                     field_type: plan::Type::Scalar(
+//                                         plan_test_helpers::ScalarType::String,
+//                                     ),
+//                                     field_path: None,
+//                                     path: vec![],
+//                                 },
+//                                 operator: plan_test_helpers::ComparisonOperator::Regex,
+//                                 value: plan::ComparisonValue::Scalar {
+//                                     value: "Functional.*".into(),
+//                                     value_type: plan::Type::Scalar(
+//                                         plan_test_helpers::ScalarType::String,
+//                                     ),
+//                                 },
+//                             },
+//                         ],
+//                     }),
+//                     ..Default::default()
+//                 },
+//             },
+//         )]
+//         .into(),
+//         arguments: Default::default(),
+//         variables: Default::default(),
+//         variable_types: Default::default(),
+//     };
+//
+//     assert_eq!(query_plan, expected);
+//     Ok(())
+// }
 
 #[test]
 fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
@@ -511,7 +521,7 @@ fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
         .query(query().aggregates([
             star_count_aggregate!("count_star"),
             column_count_aggregate!("count_id" => "last_name", distinct: true),
-            column_aggregate!("avg_id" => "id", "Average"),
+            ("avg_id", column_aggregate("id", "Average").into()),
         ]))
         .into();
     let query_plan = plan_for_query_request(&query_context, query)?;
@@ -526,6 +536,7 @@ fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
                         "count_id".into(),
                         plan::Aggregate::ColumnCount {
                             column: "last_name".into(),
+                            arguments: Default::default(),
                             field_path: None,
                             distinct: true,
                         },
@@ -534,9 +545,12 @@ fn translates_aggregate_selections() -> Result<(), anyhow::Error> {
                         "avg_id".into(),
                         plan::Aggregate::SingleColumn {
                             column: "id".into(),
+                            column_type: Type::scalar(plan_test_helpers::ScalarType::Int),
+                            arguments: Default::default(),
                             field_path: None,
                             function: plan_test_helpers::AggregateFunction::Average,
-                            result_type: plan::Type::Scalar(plan_test_helpers::ScalarType::Double),
+                            result_type: plan::Type::Scalar(plan_test_helpers::ScalarType::Double)
+                                .into_nullable(),
                         },
                     ),
                 ]
@@ -576,17 +590,21 @@ fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), a
                 .order_by(vec![
                     ndc::OrderByElement {
                         order_direction: OrderDirection::Asc,
-                        target: OrderByTarget::SingleColumnAggregate {
-                            column: "year".into(),
-                            function: "Average".into(),
-                            path: vec![path_element("author_articles".into()).into()],
-                            field_path: None,
+                        target: OrderByTarget::Aggregate {
+                            path: vec![path_element("author_articles").into()],
+                            aggregate: ndc::Aggregate::SingleColumn {
+                                column: "year".into(),
+                                arguments: Default::default(),
+                                field_path: None,
+                                function: "Average".into(),
+                            },
                         },
                     },
                     ndc::OrderByElement {
                         order_direction: OrderDirection::Desc,
                         target: OrderByTarget::Column {
                             name: "id".into(),
+                            arguments: Default::default(),
                             field_path: None,
                             path: vec![],
                         },
@@ -595,7 +613,7 @@ fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), a
         )
         .relationships([(
             "author_articles",
-            relationship("articles", [("id", "author_id")]),
+            relationship("articles", [("id", &["author_id"])]),
         )])
         .into();
     let query_plan = plan_for_query_request(&query_context, query)?;
@@ -608,12 +626,10 @@ fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), a
                     relationship: "author_articles".into(),
                 },
                 predicate: Some(Box::new(plan::Expression::BinaryComparisonOperator {
-                    column: plan::ComparisonTarget::Column {
-                        name: "title".into(),
-                        field_path: Default::default(),
-                        field_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
-                        path: Default::default(),
-                    },
+                    column: plan::ComparisonTarget::column(
+                        "title",
+                        plan::Type::scalar(plan_test_helpers::ScalarType::String),
+                    ),
                     operator: plan_test_helpers::ComparisonOperator::Regex,
                     value: plan::ComparisonValue::Scalar {
                         value: "Functional.*".into(),
@@ -625,17 +641,26 @@ fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), a
                 elements: vec![
                     plan::OrderByElement {
                         order_direction: OrderDirection::Asc,
-                        target: plan::OrderByTarget::SingleColumnAggregate {
-                            column: "year".into(),
-                            function: plan_test_helpers::AggregateFunction::Average,
-                            result_type: plan::Type::Scalar(plan_test_helpers::ScalarType::Double),
+                        target: plan::OrderByTarget::Aggregate {
                             path: vec!["author_articles".into()],
+                            aggregate: plan::Aggregate::SingleColumn {
+                                column: "year".into(),
+                                column_type: Type::scalar(plan_test_helpers::ScalarType::Int).into_nullable(),
+                                arguments: Default::default(),
+                                field_path: Default::default(),
+                                function: plan_test_helpers::AggregateFunction::Average,
+                                result_type: plan::Type::Scalar(
+                                    plan_test_helpers::ScalarType::Double,
+                                )
+                                .into_nullable(),
+                            },
                         },
                     },
                     plan::OrderByElement {
                         order_direction: OrderDirection::Desc,
                         target: plan::OrderByTarget::Column {
                             name: "id".into(),
+                            arguments: Default::default(),
                             field_path: None,
                             path: vec![],
                         },
@@ -657,6 +682,7 @@ fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), a
                         plan::Field::Relationship {
                             relationship: "author_articles".into(),
                             aggregates: None,
+                            groups: None,
                             fields: Some(
                                 [
                                     (
@@ -693,7 +719,7 @@ fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), a
                 "author_articles".into(),
                 plan::Relationship {
                     target_collection: "articles".into(),
-                    column_mapping: [("id".into(), "author_id".into())].into(),
+                    column_mapping: [("id".into(), NonEmpty::singleton("author_id".into()))].into(),
                     relationship_type: RelationshipType::Array,
                     arguments: Default::default(),
                     query: plan::Query {
@@ -856,15 +882,13 @@ fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Res
     let query_context = make_nested_schema();
     let request = query_request()
         .collection("appearances")
-        .relationships([("author", relationship("authors", [("authorId", "id")]))])
+        .relationships([("author", relationship("authors", [("authorId", &["id"])]))])
         .query(
             query()
                 .fields([relation_field!("presenter" => "author", query().fields([
                     field!("name"),
                 ]))])
-                .predicate(not(is_null(
-                    target!("name", relations: [path_element("author".into())]),
-                ))),
+                .predicate(exists(in_related("author"), not(is_null(target!("name"))))),
         )
         .into();
     let query_plan = plan_for_query_request(&query_context, request)?;
@@ -872,16 +896,21 @@ fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Res
     let expected = QueryPlan {
         collection: "appearances".into(),
         query: plan::Query {
-            predicate: Some(plan::Expression::Not {
-                expression: Box::new(plan::Expression::UnaryComparisonOperator {
-                    column: plan::ComparisonTarget::Column {
-                        name: "name".into(),
-                        field_path: None,
-                        field_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
-                        path: vec!["author".into()],
-                    },
-                    operator: ndc_models::UnaryComparisonOperator::IsNull,
-                }),
+            predicate: Some(plan::Expression::Exists {
+                in_collection: plan::ExistsInCollection::Related {
+                    relationship: "author".into(),
+                },
+                predicate: Some(Box::new(plan::Expression::Not {
+                    expression: Box::new(plan::Expression::UnaryComparisonOperator {
+                        column: plan::ComparisonTarget::Column {
+                            name: "name".into(),
+                            arguments: Default::default(),
+                            field_path: None,
+                            field_type: plan::Type::Scalar(plan_test_helpers::ScalarType::String),
+                        },
+                        operator: ndc_models::UnaryComparisonOperator::IsNull,
+                    }),
+                })),
             }),
             fields: Some(
                 [(
@@ -889,6 +918,7 @@ fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Res
                     plan::Field::Relationship {
                         relationship: "author".into(),
                         aggregates: None,
+                        groups: None,
                         fields: Some(
                             [(
                                 "name".into(),
@@ -909,7 +939,7 @@ fn translates_predicate_referencing_field_of_related_collection() -> anyhow::Res
             relationships: [(
                 "author".into(),
                 plan::Relationship {
-                    column_mapping: [("authorId".into(), "id".into())].into(),
+                    column_mapping: [("authorId".into(), NonEmpty::singleton("id".into()))].into(),
                     relationship_type: RelationshipType::Array,
                     target_collection: "authors".into(),
                     arguments: Default::default(),

@@ -31,7 +31,7 @@ definition:
   name: NestedCollection
   fields:
     - name: id
-      type: ObjectId_2!
+      type: ObjectId!
     - name: institution
       type: String!
     - name: staff
@@ -95,7 +95,7 @@ definition:
       type: NestedCollection
       comparableFields:
         - fieldName: id
-          booleanExpressionType: ObjectIdBoolExp_2
+          booleanExpressionType: ObjectIdBoolExp
         - fieldName: institution
           booleanExpressionType: StringBoolExp
         - fieldName: staff
@@ -118,7 +118,7 @@ definition:
       aggregatedType: NestedCollection
       aggregatableFields:
         - fieldName: id
-          aggregateExpression: ObjectIdAggExp_2
+          aggregateExpression: ObjectIdAggExp
         - fieldName: institution
           aggregateExpression: StringAggExp
   count:

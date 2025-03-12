@@ -35,7 +35,7 @@ definition:
   name: NestedFieldWithDollar
   fields:
     - name: id
-      type: ObjectId_2!
+      type: ObjectId!
     - name: configuration
       type: NestedFieldWithDollarConfiguration!
   graphql:
@@ -93,7 +93,7 @@ definition:
       type: NestedFieldWithDollar
       comparableFields:
         - fieldName: id
-          booleanExpressionType: ObjectIdBoolExp_2
+          booleanExpressionType: ObjectIdBoolExp
         - fieldName: configuration
           booleanExpressionType: NestedFieldWithDollarConfigurationBoolExp
       comparableRelationships: []
@@ -114,7 +114,7 @@ definition:
       aggregatedType: NestedFieldWithDollar
       aggregatableFields:
         - fieldName: id
-          aggregateExpression: ObjectIdAggExp_2
+          aggregateExpression: ObjectIdAggExp
   count:
     enable: true
   graphql:

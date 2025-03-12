@@ -1,21 +1,28 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
 use configuration::MongoScalarType;
 use indexmap::IndexMap;
 use itertools::Itertools;
-use mongodb::bson::{self, Bson};
+use mongodb::bson::{self, doc, Bson};
 use mongodb_support::ExtendedJsonMode;
-use ndc_models::{QueryResponse, RowFieldValue, RowSet};
-use serde::Deserialize;
+use ndc_models::{FieldName, Group, QueryResponse, RowFieldValue, RowSet};
+use serde_json::json;
 use thiserror::Error;
 use tracing::instrument;
 
 use crate::{
-    mongo_query_plan::{
-        Aggregate, Field, NestedArray, NestedField, NestedObject, ObjectType, Query, QueryPlan,
-        Type,
+    constants::{
+        BsonRowSet, GROUP_DIMENSIONS_KEY, ROW_SET_AGGREGATES_KEY, ROW_SET_GROUPS_KEY,
+        ROW_SET_ROWS_KEY,
     },
-    query::serialization::{bson_to_json, BsonToJsonError},
+    mongo_query_plan::{
+        Aggregate, Dimension, Field, Grouping, NestedArray, NestedField, NestedObject, ObjectField,
+        ObjectType, Query, QueryPlan, Type,
+    },
+    query::{
+        is_response_faceted::ResponseFacets,
+        serialization::{bson_to_json, BsonToJsonError},
+    },
 };
 
 use super::serialization::is_nullable;
@@ -31,6 +38,9 @@ pub enum QueryResponseError {
     #[error("{0}")]
     BsonToJson(#[from] BsonToJsonError),
 
+    #[error("a group response is missing its '{GROUP_DIMENSIONS_KEY}' field")]
+    GroupMissingDimensions { path: Vec<String> },
+
     #[error("expected a single response document from MongoDB, but did not get one")]
     ExpectedSingleDocument,
 
@@ -39,14 +49,6 @@ pub enum QueryResponseError {
 }
 
 type Result<T> = std::result::Result<T, QueryResponseError>;
-
-#[derive(Debug, Deserialize)]
-struct BsonRowSet {
-    #[serde(default)]
-    aggregates: Bson,
-    #[serde(default)]
-    rows: Vec<bson::Document>,
-}
 
 #[instrument(name = "Serialize Query Response", skip_all, fields(internal.visibility = "user"))]
 pub fn serialize_query_response(
@@ -61,7 +63,7 @@ pub fn serialize_query_response(
             .into_iter()
             .map(|document| {
                 let row_set = bson::from_document(document)?;
-                serialize_row_set_with_aggregates(
+                serialize_row_set(
                     mode,
                     &[collection_name.as_str()],
                     &query_plan.query,
@@ -69,28 +71,45 @@ pub fn serialize_query_response(
                 )
             })
             .try_collect()
-    } else if query_plan.query.has_aggregates() {
-        let row_set = parse_single_document(response_documents)?;
-        Ok(vec![serialize_row_set_with_aggregates(
-            mode,
-            &[],
-            &query_plan.query,
-            row_set,
-        )?])
     } else {
-        Ok(vec![serialize_row_set_rows_only(
-            mode,
-            &[],
-            &query_plan.query,
-            response_documents,
-        )?])
+        match ResponseFacets::from_query(&query_plan.query) {
+            ResponseFacets::Combination { .. } => {
+                let row_set = parse_single_document(response_documents)?;
+                Ok(vec![serialize_row_set(
+                    mode,
+                    &[],
+                    &query_plan.query,
+                    row_set,
+                )?])
+            }
+            ResponseFacets::AggregatesOnly(aggregates) => {
+                Ok(vec![serialize_row_set_aggregates_only(
+                    mode,
+                    &[],
+                    aggregates,
+                    response_documents,
+                )?])
+            }
+            ResponseFacets::FieldsOnly(_) => Ok(vec![serialize_row_set_rows_only(
+                mode,
+                &[],
+                &query_plan.query,
+                response_documents,
+            )?]),
+            ResponseFacets::GroupsOnly(grouping) => Ok(vec![serialize_row_set_groups_only(
+                mode,
+                &[],
+                grouping,
+                response_documents,
+            )?]),
+        }
     }?;
     let response = QueryResponse(row_sets);
     tracing::debug!(query_response = %serde_json::to_string(&response).unwrap());
     Ok(response)
 }
 
-// When there are no aggregates we expect a list of rows
+// When there are no aggregates or groups we expect a list of rows
 fn serialize_row_set_rows_only(
     mode: ExtendedJsonMode,
     path: &[&str],
@@ -106,12 +125,40 @@ fn serialize_row_set_rows_only(
     Ok(RowSet {
         aggregates: None,
         rows,
+        groups: None,
     })
 }
 
-// When there are aggregates we expect a single document with `rows` and `aggregates`
-// fields
-fn serialize_row_set_with_aggregates(
+fn serialize_row_set_aggregates_only(
+    mode: ExtendedJsonMode,
+    path: &[&str],
+    aggregates: &IndexMap<FieldName, Aggregate>,
+    docs: Vec<bson::Document>,
+) -> Result<RowSet> {
+    let doc = docs.first().cloned().unwrap_or(doc! {});
+    Ok(RowSet {
+        aggregates: Some(serialize_aggregates(mode, path, aggregates, doc)?),
+        rows: None,
+        groups: None,
+    })
+}
+
+fn serialize_row_set_groups_only(
+    mode: ExtendedJsonMode,
+    path: &[&str],
+    grouping: &Grouping,
+    docs: Vec<bson::Document>,
+) -> Result<RowSet> {
+    Ok(RowSet {
+        aggregates: None,
+        rows: None,
+        groups: Some(serialize_groups(mode, path, grouping, docs)?),
+    })
+}
+
+// When a query includes some combination of aggregates, rows, or groups then the response is
+// "faceted" to give us a single document with `rows`, `aggregates`, and `groups` fields.
+fn serialize_row_set(
     mode: ExtendedJsonMode,
     path: &[&str],
     query: &Query,
@@ -120,7 +167,16 @@ fn serialize_row_set_with_aggregates(
     let aggregates = query
         .aggregates
         .as_ref()
-        .map(|aggregates| serialize_aggregates(mode, path, aggregates, row_set.aggregates))
+        .map(|aggregates| {
+            let aggregate_values = row_set.aggregates.unwrap_or_else(|| doc! {});
+            serialize_aggregates(mode, path, aggregates, aggregate_values)
+        })
+        .transpose()?;
+
+    let groups = query
+        .groups
+        .as_ref()
+        .map(|grouping| serialize_groups(mode, path, grouping, row_set.groups))
         .transpose()?;
 
     let rows = query
@@ -129,26 +185,41 @@ fn serialize_row_set_with_aggregates(
         .map(|fields| serialize_rows(mode, path, fields, row_set.rows))
         .transpose()?;
 
-    Ok(RowSet { aggregates, rows })
+    Ok(RowSet {
+        aggregates,
+        rows,
+        groups,
+    })
 }
 
 fn serialize_aggregates(
     mode: ExtendedJsonMode,
-    path: &[&str],
+    _path: &[&str],
     query_aggregates: &IndexMap<ndc_models::FieldName, Aggregate>,
-    value: Bson,
+    value: bson::Document,
 ) -> Result<IndexMap<ndc_models::FieldName, serde_json::Value>> {
-    let aggregates_type = type_for_aggregates(query_aggregates);
-    let json = bson_to_json(mode, &aggregates_type, value)?;
-
-    // The NDC type uses an IndexMap for aggregate values; we need to convert the map
-    // underlying the Value::Object value to an IndexMap
-    let aggregate_values = match json {
-        serde_json::Value::Object(obj) => obj.into_iter().map(|(k, v)| (k.into(), v)).collect(),
-        _ => Err(QueryResponseError::AggregatesNotObject {
-            path: path_to_owned(path),
-        })?,
-    };
+    // The NDC type uses an IndexMap for aggregate values; we need to convert the map underlying
+    // the Value::Object value to an IndexMap.
+    //
+    // We also need to fill in missing aggregate values. This can be an issue in a query that does
+    // not match any documents. In that case instead of an object with null aggregate values
+    // MongoDB does not return any documents, so this function gets an empty document.
+    let aggregate_values = query_aggregates
+        .iter()
+        .map(|(key, aggregate)| {
+            let json_value = match value.get(key.as_str()).cloned() {
+                Some(bson_value) => bson_to_json(mode, &type_for_aggregate(aggregate), bson_value)?,
+                None => {
+                    if aggregate.is_count() {
+                        json!(0)
+                    } else {
+                        json!(null)
+                    }
+                }
+            };
+            Ok((key.clone(), json_value))
+        })
+        .collect::<Result<_>>()?;
     Ok(aggregate_values)
 }
 
@@ -177,47 +248,140 @@ fn serialize_rows(
         .try_collect()
 }
 
+fn serialize_groups(
+    mode: ExtendedJsonMode,
+    path: &[&str],
+    grouping: &Grouping,
+    docs: Vec<bson::Document>,
+) -> Result<Vec<Group>> {
+    docs.into_iter()
+        .map(|doc| {
+            let dimensions_field_value = doc.get(GROUP_DIMENSIONS_KEY).ok_or_else(|| {
+                QueryResponseError::GroupMissingDimensions {
+                    path: path_to_owned(path),
+                }
+            })?;
+
+            let dimensions_array = match dimensions_field_value {
+                Bson::Array(vec) => Cow::Borrowed(vec),
+                other_bson_value => Cow::Owned(vec![other_bson_value.clone()]),
+            };
+
+            let dimensions = grouping
+                .dimensions
+                .iter()
+                .zip(dimensions_array.iter())
+                .map(|(dimension_definition, dimension_value)| {
+                    Ok(bson_to_json(
+                        mode,
+                        dimension_definition.value_type(),
+                        dimension_value.clone(),
+                    )?)
+                })
+                .collect::<Result<_>>()?;
+
+            let aggregates = serialize_aggregates(mode, path, &grouping.aggregates, doc)?;
+
+            // TODO: This conversion step can be removed when the aggregates map key type is
+            // changed from String to FieldName
+            let aggregates = aggregates
+                .into_iter()
+                .map(|(key, value)| (key.to_string(), value))
+                .collect();
+
+            Ok(Group {
+                dimensions,
+                aggregates,
+            })
+        })
+        .try_collect()
+}
+
 fn type_for_row_set(
     path: &[&str],
     aggregates: &Option<IndexMap<ndc_models::FieldName, Aggregate>>,
     fields: &Option<IndexMap<ndc_models::FieldName, Field>>,
+    groups: &Option<Grouping>,
 ) -> Result<Type> {
-    let mut type_fields = BTreeMap::new();
+    let mut object_fields = BTreeMap::new();
 
     if let Some(aggregates) = aggregates {
-        type_fields.insert("aggregates".into(), type_for_aggregates(aggregates));
+        object_fields.insert(
+            ROW_SET_AGGREGATES_KEY.into(),
+            ObjectField {
+                r#type: Type::Object(type_for_aggregates(aggregates)),
+                parameters: Default::default(),
+            },
+        );
     }
 
     if let Some(query_fields) = fields {
         let row_type = type_for_row(path, query_fields)?;
-        type_fields.insert("rows".into(), Type::ArrayOf(Box::new(row_type)));
+        object_fields.insert(
+            ROW_SET_ROWS_KEY.into(),
+            ObjectField {
+                r#type: Type::ArrayOf(Box::new(row_type)),
+                parameters: Default::default(),
+            },
+        );
+    }
+
+    if let Some(grouping) = groups {
+        let dimension_types = grouping
+            .dimensions
+            .iter()
+            .map(Dimension::value_type)
+            .cloned()
+            .collect();
+        let dimension_tuple_type = Type::Tuple(dimension_types);
+        let mut group_object_type = type_for_aggregates(&grouping.aggregates);
+        group_object_type
+            .fields
+            .insert(GROUP_DIMENSIONS_KEY.into(), dimension_tuple_type.into());
+        object_fields.insert(
+            ROW_SET_GROUPS_KEY.into(),
+            ObjectField {
+                r#type: Type::array_of(Type::Object(group_object_type)),
+                parameters: Default::default(),
+            },
+        );
     }
 
     Ok(Type::Object(ObjectType {
-        fields: type_fields,
+        fields: object_fields,
         name: None,
     }))
 }
 
-fn type_for_aggregates(query_aggregates: &IndexMap<ndc_models::FieldName, Aggregate>) -> Type {
+fn type_for_aggregates(
+    query_aggregates: &IndexMap<ndc_models::FieldName, Aggregate>,
+) -> ObjectType {
     let fields = query_aggregates
         .iter()
         .map(|(field_name, aggregate)| {
+            let result_type = type_for_aggregate(aggregate);
             (
                 field_name.to_string().into(),
-                match aggregate {
-                    Aggregate::ColumnCount { .. } => {
-                        Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Int))
-                    }
-                    Aggregate::StarCount => {
-                        Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Int))
-                    }
-                    Aggregate::SingleColumn { result_type, .. } => result_type.clone(),
+                ObjectField {
+                    r#type: result_type,
+                    parameters: Default::default(),
                 },
             )
         })
         .collect();
-    Type::Object(ObjectType { fields, name: None })
+    ObjectType { fields, name: None }
+}
+
+fn type_for_aggregate(aggregate: &Aggregate) -> Type {
+    match aggregate {
+        Aggregate::ColumnCount { .. } => {
+            Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Int))
+        }
+        Aggregate::StarCount => {
+            Type::Scalar(MongoScalarType::Bson(mongodb_support::BsonScalarType::Int))
+        }
+        Aggregate::SingleColumn { result_type, .. } => result_type.clone(),
+    }
 }
 
 fn type_for_row(
@@ -231,7 +395,11 @@ fn type_for_row(
                 &append_to_path(path, [field_name.as_str()]),
                 field_definition,
             )?;
-            Ok((field_name.clone(), field_type))
+            let object_field = ObjectField {
+                r#type: field_type,
+                parameters: Default::default(),
+            };
+            Ok((field_name.clone(), object_field))
         })
         .try_collect::<_, _, QueryResponseError>()?;
     Ok(Type::Object(ObjectType { fields, name: None }))
@@ -250,8 +418,11 @@ fn type_for_field(path: &[&str], field_definition: &Field) -> Result<Type> {
             ..
         } => type_for_nested_field(path, column_type, nested_field)?,
         Field::Relationship {
-            aggregates, fields, ..
-        } => type_for_row_set(path, aggregates, fields)?,
+            aggregates,
+            fields,
+            groups,
+            ..
+        } => type_for_row_set(path, aggregates, fields, groups)?,
     };
     Ok(field_type)
 }
@@ -379,6 +550,7 @@ mod tests {
                     }))
                 )]
                 .into()]),
+                groups: Default::default(),
             }])
         );
         Ok(())
@@ -417,6 +589,7 @@ mod tests {
                     ]))
                 )]
                 .into()]),
+                groups: Default::default(),
             }])
         );
         Ok(())
@@ -473,6 +646,7 @@ mod tests {
                     )
                 ]
                 .into()]),
+                groups: Default::default(),
             }])
         );
         Ok(())
@@ -525,6 +699,7 @@ mod tests {
                     ),
                 ]
                 .into()]),
+                groups: Default::default(),
             }])
         );
         Ok(())
@@ -588,6 +763,7 @@ mod tests {
                     }))
                 )]
                 .into()]),
+                groups: Default::default(),
             }])
         );
         Ok(())
@@ -651,6 +827,7 @@ mod tests {
                     }))
                 )]
                 .into()]),
+                groups: Default::default(),
             }])
         );
         Ok(())
@@ -661,7 +838,7 @@ mod tests {
         let collection_name = "appearances";
         let request: QueryRequest = query_request()
             .collection(collection_name)
-            .relationships([("author", relationship("authors", [("authorId", "id")]))])
+            .relationships([("author", relationship("authors", [("authorId", &["id"])]))])
             .query(
                 query().fields([relation_field!("presenter" => "author", query().fields([
                     field!("addr" => "address", object!([
@@ -684,47 +861,53 @@ mod tests {
             &path,
             &query_plan.query.aggregates,
             &query_plan.query.fields,
+            &query_plan.query.groups,
         )?;
 
-        let expected = Type::Object(ObjectType {
-            name: None,
-            fields: [
-                ("rows".into(), Type::ArrayOf(Box::new(Type::Object(ObjectType {
-                    name: None,
-                    fields: [
-                        ("presenter".into(), Type::Object(ObjectType {
-                            name: None,
-                            fields: [
-                                ("rows".into(), Type::ArrayOf(Box::new(Type::Object(ObjectType {
-                                    name: None,
-                                    fields: [
-                                        ("addr".into(), Type::Object(ObjectType {
-                                            name: None,
-                                            fields: [
-                                                ("geocode".into(), Type::Nullable(Box::new(Type::Object(ObjectType {
-                                                    name: None,
-                                                    fields: [
-                                                        ("latitude".into(), Type::Scalar(MongoScalarType::Bson(BsonScalarType::Double))),
-                                                        ("long".into(), Type::Scalar(MongoScalarType::Bson(BsonScalarType::Double))),
-                                                    ].into(),
-                                                })))),
-                                                ("street".into(), Type::Scalar(MongoScalarType::Bson(BsonScalarType::String))),
-                                            ].into(),
-                                        })),
-                                        ("articles".into(), Type::ArrayOf(Box::new(Type::Object(ObjectType {
-                                            name: None,
-                                            fields: [
-                                                ("article_title".into(), Type::Scalar(MongoScalarType::Bson(BsonScalarType::String))),
-                                            ].into(),
-                                        })))),
-                                    ].into(),
-                                }))))
-                            ].into(),
-                        }))
-                    ].into()
-                }))))
-            ].into(),
-        });
+        let expected = Type::object([(
+            "rows",
+            Type::array_of(Type::Object(ObjectType::new([(
+                "presenter",
+                Type::object([(
+                    "rows",
+                    Type::array_of(Type::object([
+                        (
+                            "addr",
+                            Type::object([
+                                (
+                                    "geocode",
+                                    Type::nullable(Type::object([
+                                        (
+                                            "latitude",
+                                            Type::Scalar(MongoScalarType::Bson(
+                                                BsonScalarType::Double,
+                                            )),
+                                        ),
+                                        (
+                                            "long",
+                                            Type::Scalar(MongoScalarType::Bson(
+                                                BsonScalarType::Double,
+                                            )),
+                                        ),
+                                    ])),
+                                ),
+                                (
+                                    "street",
+                                    Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                                ),
+                            ]),
+                        ),
+                        (
+                            "articles",
+                            Type::array_of(Type::object([(
+                                "article_title",
+                                Type::Scalar(MongoScalarType::Bson(BsonScalarType::String)),
+                            )])),
+                        ),
+                    ])),
+                )]),
+            )]))),
+        )]);
 
         assert_eq!(row_set_type, expected);
         Ok(())

@@ -1,0 +1,24 @@
+---
+source: crates/integration-tests/src/tests/grouping.rs
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").query(query().predicate(or([binop(\"_gt\",\ntarget!(\"year\"), value!(0)),\nbinop(\"_lte\", target!(\"year\"),\nvalue!(0)),])).fields([field!(\"title\"),\nfield!(\"year\")]).order_by([asc!(\"_id\")]).groups(grouping().dimensions([dimension_column(\"year\")]).aggregates([(\"average_viewer_rating_by_year\",\ncolumn_aggregate(\"tomatoes.viewer.rating\",\n\"avg\"),)]).order_by(ordered_dimensions()),).limit(3),),).await?"
+---
+- rows:
+    - title: Blacksmith Scene
+      year: 1893
+    - title: The Great Train Robbery
+      year: 1903
+    - title: The Land Beyond the Sunset
+      year: 1912
+  groups:
+    - dimensions:
+        - 1893
+      aggregates:
+        average_viewer_rating_by_year: 3
+    - dimensions:
+        - 1903
+      aggregates:
+        average_viewer_rating_by_year: 3.7
+    - dimensions:
+        - 1912
+      aggregates:
+        average_viewer_rating_by_year: 3.7

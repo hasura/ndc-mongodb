@@ -5,7 +5,7 @@ definition:
   name: Invoice
   fields:
     - name: id
-      type: ObjectId_1!
+      type: ObjectId!
     - name: billingAddress
       type: String!
     - name: billingCity
@@ -92,7 +92,7 @@ definition:
       type: Invoice
       comparableFields:
         - fieldName: id
-          booleanExpressionType: ObjectIdBoolExp_1
+          booleanExpressionType: ObjectIdBoolExp
         - fieldName: billingAddress
           booleanExpressionType: StringBoolExp
         - fieldName: billingCity
@@ -131,7 +131,7 @@ definition:
       aggregatedType: Invoice
       aggregatableFields:
         - fieldName: id
-          aggregateExpression: ObjectIdAggExp_1
+          aggregateExpression: ObjectIdAggExp
         - fieldName: billingAddress
           aggregateExpression: StringAggExp
         - fieldName: billingCity

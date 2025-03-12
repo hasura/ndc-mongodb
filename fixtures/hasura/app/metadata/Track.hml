@@ -5,7 +5,7 @@ definition:
   name: Track
   fields:
     - name: id
-      type: ObjectId_1!
+      type: ObjectId!
     - name: albumId
       type: Int!
     - name: bytes
@@ -92,7 +92,7 @@ definition:
       type: Track
       comparableFields:
         - fieldName: id
-          booleanExpressionType: ObjectIdBoolExp_1
+          booleanExpressionType: ObjectIdBoolExp
         - fieldName: albumId
           booleanExpressionType: IntBoolExp
         - fieldName: bytes
@@ -134,7 +134,7 @@ definition:
       aggregatedType: Track
       aggregatableFields:
         - fieldName: id
-          aggregateExpression: ObjectIdAggExp_1
+          aggregateExpression: ObjectIdAggExp
         - fieldName: albumId
           aggregateExpression: IntAggExp
         - fieldName: bytes

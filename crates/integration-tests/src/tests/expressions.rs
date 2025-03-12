@@ -61,6 +61,7 @@ async fn evaluates_exists_with_predicate() -> anyhow::Result<()> {
                     query()
                         .predicate(exists(
                             ExistsInCollection::Related {
+                                field_path: Default::default(),
                                 relationship: "albums".into(),
                                 arguments: Default::default(),
                             },
@@ -74,7 +75,10 @@ async fn evaluates_exists_with_predicate() -> anyhow::Result<()> {
                             ]).order_by([asc!("Title")]))
                         ]),
                 )
-                .relationships([("albums", relationship("Album", [("ArtistId", "ArtistId")]))])
+                .relationships([(
+                    "albums",
+                    relationship("Album", [("ArtistId", &["ArtistId"])])
+                )])
         )
         .await?
     );

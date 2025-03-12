@@ -54,9 +54,30 @@ pub trait QueryContext: ConnectorTypes {
         Ok((
             func,
             plan::AggregateFunctionDefinition {
-                result_type: self.ndc_to_plan_type(&definition.result_type)?,
+                result_type: self.aggregate_function_result_type(definition, input_type)?,
             },
         ))
+    }
+
+    fn aggregate_function_result_type(
+        &self,
+        definition: &ndc::AggregateFunctionDefinition,
+        input_type: &plan::Type<Self::ScalarType>,
+    ) -> Result<plan::Type<Self::ScalarType>> {
+        let t = match definition {
+            ndc::AggregateFunctionDefinition::Min => input_type.clone().into_nullable(),
+            ndc::AggregateFunctionDefinition::Max => input_type.clone().into_nullable(),
+            ndc::AggregateFunctionDefinition::Sum { result_type }
+            | ndc::AggregateFunctionDefinition::Average { result_type } => {
+                let scalar_type = Self::lookup_scalar_type(result_type)
+                    .ok_or_else(|| QueryPlanError::UnknownScalarType(result_type.clone()))?;
+                plan::Type::Scalar(scalar_type).into_nullable()
+            }
+            ndc::AggregateFunctionDefinition::Custom { result_type } => {
+                self.ndc_to_plan_type(result_type)?
+            }
+        };
+        Ok(t)
     }
 
     fn find_comparison_operator(
@@ -72,15 +93,10 @@ pub trait QueryContext: ConnectorTypes {
     {
         let (operator, definition) =
             Self::lookup_comparison_operator(self, left_operand_type, op_name)?;
-        let plan_def = match definition {
-            ndc::ComparisonOperatorDefinition::Equal => plan::ComparisonOperatorDefinition::Equal,
-            ndc::ComparisonOperatorDefinition::In => plan::ComparisonOperatorDefinition::In,
-            ndc::ComparisonOperatorDefinition::Custom { argument_type } => {
-                plan::ComparisonOperatorDefinition::Custom {
-                    argument_type: self.ndc_to_plan_type(argument_type)?,
-                }
-            }
-        };
+        let plan_def =
+            plan::ComparisonOperatorDefinition::from_ndc_definition(definition, |ndc_type| {
+                self.ndc_to_plan_type(ndc_type)
+            })?;
         Ok((operator, plan_def))
     }
 

@@ -1,14 +1,16 @@
 use anyhow::anyhow;
 use itertools::Itertools as _;
-use mongodb::bson::{self, doc, Bson};
+use mongodb::bson::{self, bson, doc, Bson};
 use mongodb_support::aggregate::{Pipeline, Selection, Stage};
 use ndc_query_plan::VariableSet;
 
+use super::is_response_faceted::ResponseFacets;
 use super::pipeline::pipeline_for_non_foreach;
 use super::query_level::QueryLevel;
 use super::query_variable_name::query_variable_name;
 use super::serialization::json_to_bson;
 use super::QueryTarget;
+use crate::constants::{ROW_SET_AGGREGATES_KEY, ROW_SET_GROUPS_KEY, ROW_SET_ROWS_KEY};
 use crate::interface_types::MongoAgentError;
 use crate::mongo_query_plan::{MongoConfiguration, QueryPlan, Type, VariableTypes};
 
@@ -45,18 +47,39 @@ pub fn pipeline_for_foreach(
         r#as: "query".to_string(),
     };
 
-    let selection = if query_request.query.has_aggregates() && query_request.query.has_fields() {
-        doc! {
-            "aggregates": { "$getField": { "input": { "$first": "$query" }, "field": "aggregates" } },
-            "rows": { "$getField": { "input": { "$first": "$query" }, "field": "rows" } },
+    let selection = match ResponseFacets::from_query(&query_request.query) {
+        ResponseFacets::Combination {
+            aggregates,
+            fields,
+            groups,
+        } => {
+            let mut keys = vec![];
+            if aggregates.is_some() {
+                keys.push(ROW_SET_AGGREGATES_KEY);
+            }
+            if fields.is_some() {
+                keys.push(ROW_SET_ROWS_KEY);
+            }
+            if groups.is_some() {
+                keys.push(ROW_SET_GROUPS_KEY)
+            }
+            keys.into_iter()
+                .map(|key| {
+                    (
+                        key.to_string(),
+                        bson!({ "$getField": { "input": { "$first": "$query" }, "field": key } }),
+                    )
+                })
+                .collect()
         }
-    } else if query_request.query.has_aggregates() {
-        doc! {
-            "aggregates": { "$getField": { "input": { "$first": "$query" }, "field": "aggregates" } },
+        ResponseFacets::AggregatesOnly(_) => {
+            doc! { ROW_SET_AGGREGATES_KEY: { "$first": "$query" } }
         }
-    } else {
-        doc! {
-            "rows": "$query"
+        ResponseFacets::FieldsOnly(_) => {
+            doc! { ROW_SET_ROWS_KEY: "$query" }
+        }
+        ResponseFacets::GroupsOnly(_) => {
+            doc! { ROW_SET_GROUPS_KEY: "$query" }
         }
     };
     let selection_stage = Stage::ReplaceWith(Selection::new(selection));
@@ -224,28 +247,30 @@ mod tests {
                     "pipeline": [
                         { "$match": { "$expr": { "$eq": ["$artistId", "$$artistId_int"] } }},
                         { "$facet": {
+                            "__AGGREGATES__": [
+                                {
+                                    "$group": {
+                                        "_id": null,
+                                        "count": { "$sum": 1 },
+                                    }
+                                },
+                                {
+                                    "$replaceWith": {
+                                        "count": { "$ifNull": ["$count", 0] },
+                                    }
+                                },
+                            ],
                             "__ROWS__": [{ "$replaceWith": {
                                 "albumId": { "$ifNull": ["$albumId", null] },
                                 "title": { "$ifNull": ["$title", null] }
                             }}],
-                            "count": [{ "$count": "result" }],
                         } },
-                        { "$replaceWith": {
-                            "aggregates": {
-                                "count": {
-                                    "$ifNull": [
-                                        {
-                                            "$getField": {
-                                                "field": "result",
-                                                "input": { "$first": { "$getField": { "$literal": "count" } } }
-                                            }
-                                        },
-                                        0,
-                                    ]
-                                },
-                            },
-                            "rows": "$__ROWS__",
-                        } },
+                        {
+                            "$replaceWith": {
+                                "aggregates": { "$first": "$__AGGREGATES__" },
+                                "rows": "$__ROWS__",
+                            }
+                        },
                     ]
                 }
             },
@@ -330,30 +355,23 @@ mod tests {
                     "as": "query",
                     "pipeline": [
                         { "$match": { "$expr": { "$eq": ["$artistId", "$$artistId_int"] } }},
-                        { "$facet": {
-                            "count": [{ "$count": "result" }],
-                        } },
-                        { "$replaceWith": {
-                            "aggregates": {
-                                "count": {
-                                    "$ifNull": [
-                                        {
-                                            "$getField": {
-                                                "field": "result",
-                                                "input": { "$first": { "$getField": { "$literal": "count" } } }
-                                            }
-                                        },
-                                        0,
-                                    ]
-                                },
-                            },
-                        } },
+                        {
+                            "$group": {
+                                "_id": null,
+                                "count": { "$sum": 1 }
+                            }
+                        },
+                        {
+                            "$replaceWith": {
+                                "count": { "$ifNull": ["$count", 0] },
+                            }
+                        },
                     ]
                 }
             },
             {
                 "$replaceWith": {
-                    "aggregates": { "$getField": { "input": { "$first": "$query" }, "field": "aggregates" } },
+                    "aggregates": { "$first": "$query" },
                 }
             },
         ]);

@@ -1,0 +1,6 @@
+---
+source: crates/integration-tests/src/tests/filtering.rs
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().variables([[(\"title\",\n\"The Blue Bird\")]]).collection(\"movies\").query(query().predicate(binop(\"_eq\",\ntarget!(\"title\"), variable!(title))).fields([field!(\"title\")]),)).await?"
+---
+- rows:
+    - title: The Blue Bird

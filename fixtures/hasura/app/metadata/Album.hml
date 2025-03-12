@@ -5,7 +5,7 @@ definition:
   name: Album
   fields:
     - name: id
-      type: ObjectId_1!
+      type: ObjectId!
     - name: albumId
       type: Int!
     - name: artistId
@@ -56,7 +56,7 @@ definition:
       type: Album
       comparableFields:
         - fieldName: id
-          booleanExpressionType: ObjectIdBoolExp_1
+          booleanExpressionType: ObjectIdBoolExp
         - fieldName: albumId
           booleanExpressionType: IntBoolExp
         - fieldName: artistId
@@ -83,7 +83,7 @@ definition:
       aggregatedType: Album
       aggregatableFields:
         - fieldName: id
-          aggregateExpression: ObjectIdAggExp_1
+          aggregateExpression: ObjectIdAggExp
         - fieldName: albumId
           aggregateExpression: IntAggExp
         - fieldName: artistId

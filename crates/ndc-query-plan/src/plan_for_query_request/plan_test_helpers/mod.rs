@@ -15,11 +15,10 @@ use ndc_test_helpers::{
 
 use crate::{ConnectorTypes, QueryContext, QueryPlanError, Type};
 
-#[allow(unused_imports)]
 pub use self::{
-    query::{query, QueryBuilder},
-    relationships::{relationship, RelationshipBuilder},
-    type_helpers::{date, double, int, object_type, string},
+    query::QueryBuilder,
+    relationships::relationship,
+    type_helpers::{date, double, int, string},
 };
 
 #[derive(Clone, Debug, Default)]
@@ -34,6 +33,14 @@ impl ConnectorTypes for TestContext {
     type AggregateFunction = AggregateFunction;
     type ComparisonOperator = ComparisonOperator;
     type ScalarType = ScalarType;
+
+    fn count_aggregate_type() -> Type<Self::ScalarType> {
+        int()
+    }
+
+    fn string_type() -> Type<Self::ScalarType> {
+        string()
+    }
 }
 
 impl QueryContext for TestContext {
@@ -95,7 +102,7 @@ impl QueryContext for TestContext {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Sequence)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, Sequence)]
 pub enum AggregateFunction {
     Average,
 }
@@ -108,7 +115,7 @@ impl NamedEnum for AggregateFunction {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Sequence)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, Sequence)]
 pub enum ComparisonOperator {
     Equal,
     Regex,
@@ -123,7 +130,7 @@ impl NamedEnum for ComparisonOperator {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Sequence)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, Sequence)]
 pub enum ScalarType {
     Bool,
     Date,
@@ -173,13 +180,11 @@ fn scalar_types() -> BTreeMap<String, ndc::ScalarType> {
         (
             ScalarType::Double.name().to_owned(),
             ndc::ScalarType {
-                representation: Some(TypeRepresentation::Float64),
+                representation: TypeRepresentation::Float64,
                 aggregate_functions: [(
                     AggregateFunction::Average.name().into(),
-                    ndc::AggregateFunctionDefinition {
-                        result_type: ndc::Type::Named {
-                            name: ScalarType::Double.name().into(),
-                        },
+                    ndc::AggregateFunctionDefinition::Average {
+                        result_type: ScalarType::Double.name().into(),
                     },
                 )]
                 .into(),
@@ -193,13 +198,11 @@ fn scalar_types() -> BTreeMap<String, ndc::ScalarType> {
         (
             ScalarType::Int.name().to_owned(),
             ndc::ScalarType {
-                representation: Some(TypeRepresentation::Int32),
+                representation: TypeRepresentation::Int32,
                 aggregate_functions: [(
                     AggregateFunction::Average.name().into(),
-                    ndc::AggregateFunctionDefinition {
-                        result_type: ndc::Type::Named {
-                            name: ScalarType::Double.name().into(),
-                        },
+                    ndc::AggregateFunctionDefinition::Average {
+                        result_type: ScalarType::Double.name().into(),
                     },
                 )]
                 .into(),
@@ -213,7 +216,7 @@ fn scalar_types() -> BTreeMap<String, ndc::ScalarType> {
         (
             ScalarType::String.name().to_owned(),
             ndc::ScalarType {
-                representation: Some(TypeRepresentation::String),
+                representation: TypeRepresentation::String,
                 aggregate_functions: Default::default(),
                 comparison_operators: [
                     (
@@ -249,7 +252,6 @@ pub fn make_flat_schema() -> TestContext {
                     collection_type: "Author".into(),
                     arguments: Default::default(),
                     uniqueness_constraints: make_primary_key_uniqueness_constraint("authors"),
-                    foreign_keys: Default::default(),
                 },
             ),
             (
@@ -260,7 +262,6 @@ pub fn make_flat_schema() -> TestContext {
                     collection_type: "Article".into(),
                     arguments: Default::default(),
                     uniqueness_constraints: make_primary_key_uniqueness_constraint("articles"),
-                    foreign_keys: Default::default(),
                 },
             ),
         ]),
@@ -297,7 +298,6 @@ pub fn make_nested_schema() -> TestContext {
                     collection_type: "Author".into(),
                     arguments: Default::default(),
                     uniqueness_constraints: make_primary_key_uniqueness_constraint("authors"),
-                    foreign_keys: Default::default(),
                 },
             ),
             collection("appearances"), // new helper gives more concise syntax

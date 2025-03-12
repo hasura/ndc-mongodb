@@ -1,0 +1,10 @@
+---
+source: crates/integration-tests/src/tests/nested_collection.rs
+expression: "run_connector_query(Connector::TestCases,\nquery_request().collection(\"nested_collection\").query(query().predicate(exists(nested(\"staff\"),\nbinop(\"_eq\", target!(\"name\"),\nvalue!(\"Alyx\")))).fields([field!(\"institution\"),\nfield!(\"staff\" => \"staff\",\narray!(object!([field!(\"name\")]))),]).order_by([asc!(\"_id\")]))).await?"
+---
+- rows:
+    - institution: City 17
+      staff:
+        - name: Alyx
+        - name: Freeman
+        - name: Breen

@@ -5,7 +5,7 @@ definition:
   name: Genre
   fields:
     - name: id
-      type: ObjectId_1!
+      type: ObjectId!
     - name: genreId
       type: Int!
     - name: name
@@ -50,7 +50,7 @@ definition:
       type: Genre
       comparableFields:
         - fieldName: id
-          booleanExpressionType: ObjectIdBoolExp_1
+          booleanExpressionType: ObjectIdBoolExp
         - fieldName: genreId
           booleanExpressionType: IntBoolExp
         - fieldName: name
@@ -74,7 +74,7 @@ definition:
       aggregatedType: Genre
       aggregatableFields:
         - fieldName: id
-          aggregateExpression: ObjectIdAggExp_1
+          aggregateExpression: ObjectIdAggExp
         - fieldName: genreId
           aggregateExpression: IntAggExp
         - fieldName: name

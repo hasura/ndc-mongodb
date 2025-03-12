@@ -27,7 +27,7 @@ pub fn make_sort_stages(order_by: &OrderBy) -> Result<Vec<Stage>> {
     if !required_aliases.is_empty() {
         let fields = required_aliases
             .into_iter()
-            .map(|(alias, expression)| (alias, expression.into_aggregate_expression()))
+            .map(|(alias, expression)| (alias, expression.into_aggregate_expression().into_bson()))
             .collect();
         let stage = Stage::AddFields(fields);
         stages.push(stage);
@@ -80,6 +80,7 @@ fn safe_alias(target: &OrderByTarget) -> Result<String> {
             name,
             field_path,
             path,
+            ..
         } => {
             let name_and_path = once("__sort_key_")
                 .chain(path.iter().map(|n| n.as_str()))
@@ -95,17 +96,9 @@ fn safe_alias(target: &OrderByTarget) -> Result<String> {
                 &combine_all_elements_into_one_name,
             ))
         }
-        ndc_query_plan::OrderByTarget::SingleColumnAggregate { .. } => {
-            // TODO: ENG-1011
-            Err(MongoAgentError::NotImplemented(
-                "ordering by single column aggregate".into(),
-            ))
-        }
-        ndc_query_plan::OrderByTarget::StarCountAggregate { .. } => {
-            // TODO: ENG-1010
-            Err(MongoAgentError::NotImplemented(
-                "ordering by star count aggregate".into(),
-            ))
+        ndc_query_plan::OrderByTarget::Aggregate { .. } => {
+            // TODO: ENG-1010, ENG-1011
+            Err(MongoAgentError::NotImplemented("order by aggregate".into()))
         }
     }
 }
@@ -116,6 +109,7 @@ mod tests {
     use mongodb_support::aggregate::SortDocument;
     use ndc_models::{FieldName, OrderDirection};
     use ndc_query_plan::OrderByElement;
+    use nonempty::{nonempty, NonEmpty};
     use pretty_assertions::assert_eq;
 
     use crate::{mongo_query_plan::OrderBy, query::column_ref::ColumnRef};
@@ -131,10 +125,11 @@ mod tests {
                     name: "$schema".into(),
                     field_path: Default::default(),
                     path: Default::default(),
+                    arguments: Default::default(),
                 },
             }],
         };
-        let path: [FieldName; 1] = ["$schema".into()];
+        let path: NonEmpty<FieldName> = NonEmpty::singleton("$schema".into());
 
         let actual = make_sort(&order_by)?;
         let expected_sort_doc = SortDocument(doc! {
@@ -142,7 +137,7 @@ mod tests {
         });
         let expected_aliases = [(
             "__sort_key__·24schema".into(),
-            ColumnRef::from_field_path(path.iter()),
+            ColumnRef::from_field_path(path.as_ref()),
         )]
         .into();
         assert_eq!(actual, (expected_sort_doc, expected_aliases));
@@ -158,10 +153,11 @@ mod tests {
                     name: "configuration".into(),
                     field_path: Some(vec!["$schema".into()]),
                     path: Default::default(),
+                    arguments: Default::default(),
                 },
             }],
         };
-        let path: [FieldName; 2] = ["configuration".into(), "$schema".into()];
+        let path: NonEmpty<FieldName> = nonempty!["configuration".into(), "$schema".into()];
 
         let actual = make_sort(&order_by)?;
         let expected_sort_doc = SortDocument(doc! {
@@ -169,7 +165,7 @@ mod tests {
         });
         let expected_aliases = [(
             "__sort_key__configuration_·24schema".into(),
-            ColumnRef::from_field_path(path.iter()),
+            ColumnRef::from_field_path(path.as_ref()),
         )]
         .into();
         assert_eq!(actual, (expected_sort_doc, expected_aliases));

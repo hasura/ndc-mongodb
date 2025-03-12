@@ -1,0 +1,8 @@
+---
+source: crates/integration-tests/src/tests/remote_relationship.rs
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").variables([[(\"year\",\njson!(2014))]]).query(query().predicate(and([binop(\"_eq\", target!(\"year\"),\nvariable!(year)),\nbinop(\"_eq\", target!(\"title\"),\nvalue!(\"non-existent title\")),])).aggregates([(\"average_viewer_rating\",\ncolumn_aggregate(\"tomatoes.viewer.rating\", \"avg\").into(),),\ncolumn_count_aggregate!(\"rated_count\" => \"rated\", distinct: true),\nstar_count_aggregate!(\"count\"),])),).await?"
+---
+- aggregates:
+    average_viewer_rating: ~
+    rated_count: 0
+    count: 0

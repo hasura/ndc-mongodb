@@ -28,6 +28,7 @@ lazy_static = "^1.4.0"
 mockall = { version = "^0.13.1", optional = true }
 mongodb = { workspace = true }
 ndc-models = { workspace = true }
+nonempty = { workspace = true }
 once_cell = "1"
 pretty_assertions = { version = "1", optional = true }
 regex = "1"

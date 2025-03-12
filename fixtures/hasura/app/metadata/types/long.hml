@@ -1,0 +1,145 @@
+---
+kind: ScalarType
+version: v1
+definition:
+  name: Long
+  graphql:
+    typeName: Long
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: chinook
+  dataConnectorScalarType: Long
+  representation: Long
+  graphql:
+    comparisonExpressionTypeName: LongComparisonExp
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: sample_mflix
+  dataConnectorScalarType: Long
+  representation: Long
+  graphql:
+    comparisonExpressionTypeName: LongComparisonExp
+
+---
+kind: DataConnectorScalarRepresentation
+version: v1
+definition:
+  dataConnectorName: test_cases
+  dataConnectorScalarType: Long
+  representation: Long
+  graphql:
+    comparisonExpressionTypeName: LongComparisonExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: LongBoolExp
+  operand:
+    scalar:
+      type: Long
+      comparisonOperators:
+        - name: _eq
+          argumentType: Long!
+        - name: _gt
+          argumentType: Long!
+        - name: _gte
+          argumentType: Long!
+        - name: _in
+          argumentType: "[Long!]!"
+        - name: _lt
+          argumentType: Long!
+        - name: _lte
+          argumentType: Long!
+        - name: _neq
+          argumentType: Long!
+        - name: _nin
+          argumentType: "[Long!]!"
+      dataConnectorOperatorMapping:
+        - dataConnectorName: sample_mflix
+          dataConnectorScalarType: Long
+          operatorMapping: {}
+        - dataConnectorName: chinook
+          dataConnectorScalarType: Long
+          operatorMapping: {}
+        - dataConnectorName: test_cases
+          dataConnectorScalarType: Long
+          operatorMapping: {}
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: LongBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: LongAggExp
+  operand:
+    scalar:
+      aggregatedType: Long
+      aggregationFunctions:
+        - name: avg
+          returnType: Double
+        - name: count
+          returnType: Int!
+        - name: max
+          returnType: Long
+        - name: min
+          returnType: Long
+        - name: sum
+          returnType: Long
+      dataConnectorAggregationFunctionMapping:
+        - dataConnectorName: sample_mflix
+          dataConnectorScalarType: Long
+          functionMapping:
+            avg:
+              name: avg
+            count:
+              name: count
+            max:
+              name: max
+            min:
+              name: min
+            sum:
+              name: sum
+        - dataConnectorName: chinook
+          dataConnectorScalarType: Long
+          functionMapping:
+            avg:
+              name: avg
+            count:
+              name: count
+            max:
+              name: max
+            min:
+              name: min
+            sum:
+              name: sum
+        - dataConnectorName: test_cases
+          dataConnectorScalarType: Long
+          functionMapping:
+            avg:
+              name: avg
+            count:
+              name: count
+            max:
+              name: max
+            min:
+              name: min
+            sum:
+              name: sum
+  count:
+    enable: true
+  countDistinct:
+    enable: true
+  graphql:
+    selectTypeName: LongAggExp

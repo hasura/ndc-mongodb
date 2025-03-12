@@ -66,6 +66,7 @@ pub fn json_to_bson(expected_type: &Type, value: Value) -> Result<Bson> {
         Type::Object(object_type) => convert_object(object_type, value),
         Type::ArrayOf(element_type) => convert_array(element_type, value),
         Type::Nullable(t) => convert_nullable(t, value),
+        Type::Tuple(element_types) => convert_tuple(element_types, value),
     }
 }
 
@@ -103,7 +104,11 @@ pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Resul
             Value::Null => Bson::Undefined,
             _ => incompatible_scalar_type(S::Undefined, value)?,
         },
-        S::Regex => deserialize::<json_formats::Regex>(expected_type, value)?.into(),
+        S::Regex => {
+            deserialize::<json_formats::Either<json_formats::Regex, String>>(expected_type, value)?
+                .into_left()
+                .into()
+        }
         S::Javascript => Bson::JavaScriptCode(deserialize(expected_type, value)?),
         S::JavascriptWithScope => {
             deserialize::<json_formats::JavaScriptCodeWithScope>(expected_type, value)?.into()
@@ -122,6 +127,16 @@ fn convert_array(element_type: &Type, value: Value) -> Result<Bson> {
     let bson_array = input_elements
         .into_iter()
         .map(|v| json_to_bson(element_type, v))
+        .try_collect()?;
+    Ok(Bson::Array(bson_array))
+}
+
+fn convert_tuple(element_types: &[Type], value: Value) -> Result<Bson> {
+    let input_elements: Vec<Value> = serde_json::from_value(value)?;
+    let bson_array = element_types
+        .iter()
+        .zip(input_elements)
+        .map(|(element_type, v)| json_to_bson(element_type, v))
         .try_collect()?;
     Ok(Bson::Array(bson_array))
 }
@@ -245,35 +260,32 @@ mod tests {
 
     use super::json_to_bson;
 
+    use BsonScalarType as S;
+
     #[test]
     #[allow(clippy::approx_constant)]
     fn deserializes_specialized_scalar_types() -> anyhow::Result<()> {
-        let object_type = ObjectType {
-            name: Some("scalar_test".into()),
-            fields: [
-                ("double", BsonScalarType::Double),
-                ("int", BsonScalarType::Int),
-                ("long", BsonScalarType::Long),
-                ("decimal", BsonScalarType::Decimal),
-                ("string", BsonScalarType::String),
-                ("date", BsonScalarType::Date),
-                ("timestamp", BsonScalarType::Timestamp),
-                ("binData", BsonScalarType::BinData),
-                ("objectId", BsonScalarType::ObjectId),
-                ("bool", BsonScalarType::Bool),
-                ("null", BsonScalarType::Null),
-                ("undefined", BsonScalarType::Undefined),
-                ("regex", BsonScalarType::Regex),
-                ("javascript", BsonScalarType::Javascript),
-                ("javascriptWithScope", BsonScalarType::JavascriptWithScope),
-                ("minKey", BsonScalarType::MinKey),
-                ("maxKey", BsonScalarType::MaxKey),
-                ("symbol", BsonScalarType::Symbol),
-            ]
-            .into_iter()
-            .map(|(name, t)| (name.into(), Type::Scalar(MongoScalarType::Bson(t))))
-            .collect(),
-        };
+        let object_type = ObjectType::new([
+            ("double", Type::scalar(S::Double)),
+            ("int", Type::scalar(S::Int)),
+            ("long", Type::scalar(S::Long)),
+            ("decimal", Type::scalar(S::Decimal)),
+            ("string", Type::scalar(S::String)),
+            ("date", Type::scalar(S::Date)),
+            ("timestamp", Type::scalar(S::Timestamp)),
+            ("binData", Type::scalar(S::BinData)),
+            ("objectId", Type::scalar(S::ObjectId)),
+            ("bool", Type::scalar(S::Bool)),
+            ("null", Type::scalar(S::Null)),
+            ("undefined", Type::scalar(S::Undefined)),
+            ("regex", Type::scalar(S::Regex)),
+            ("javascript", Type::scalar(S::Javascript)),
+            ("javascriptWithScope", Type::scalar(S::JavascriptWithScope)),
+            ("minKey", Type::scalar(S::MinKey)),
+            ("maxKey", Type::scalar(S::MaxKey)),
+            ("symbol", Type::scalar(S::Symbol)),
+        ])
+        .named("scalar_test");
 
         let input = json!({
             "double": 3.14159,
@@ -376,16 +388,13 @@ mod tests {
 
     #[test]
     fn deserializes_object_with_missing_nullable_field() -> anyhow::Result<()> {
-        let expected_type = Type::Object(ObjectType {
-            name: Some("test_object".into()),
-            fields: [(
-                "field".into(),
-                Type::Nullable(Box::new(Type::Scalar(MongoScalarType::Bson(
-                    BsonScalarType::String,
-                )))),
-            )]
-            .into(),
-        });
+        let expected_type = Type::named_object(
+            "test_object",
+            [(
+                "field",
+                Type::nullable(Type::scalar(BsonScalarType::String)),
+            )],
+        );
         let value = json!({});
         let actual = json_to_bson(&expected_type, value)?;
         assert_eq!(actual, bson!({}));

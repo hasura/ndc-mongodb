@@ -137,6 +137,9 @@ The content should have this format,
   },
   "source": {
     "hash": "<hash of tagged commit>"
+  },
+  "test": {
+    "test_config_path": "../../tests/test-config.json"
   }
 }
 ```
@@ -158,6 +161,9 @@ For example,
   },
   "source": {
     "hash": "b95da1815a9b686e517aa78f677752e36e0bfda0"
+  },
+  "test": {
+    "test_config_path": "../../tests/test-config.json"
   }
 }
 ```

@@ -159,7 +159,7 @@ mod tests {
     use serde_json::json;
 
     use crate::{
-        mongo_query_plan::{ObjectType, Type},
+        mongo_query_plan::{ObjectField, ObjectType, Type},
         procedure::arguments_to_mongodb_expressions::arguments_to_mongodb_expressions,
     };
 
@@ -170,7 +170,11 @@ mod tests {
         let native_mutation = NativeMutation {
             result_type: Type::Object(ObjectType {
                 name: Some("InsertArtist".into()),
-                fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
+                fields: [(
+                    "ok".into(),
+                    ObjectField::new(Type::Scalar(MongoScalarType::Bson(S::Bool))),
+                )]
+                .into(),
             }),
             command: doc! {
                 "insert": "Artist",
@@ -224,11 +228,11 @@ mod tests {
             fields: [
                 (
                     "ArtistId".into(),
-                    Type::Scalar(MongoScalarType::Bson(S::Int)),
+                    ObjectField::new(Type::Scalar(MongoScalarType::Bson(S::Int))),
                 ),
                 (
                     "Name".into(),
-                    Type::Scalar(MongoScalarType::Bson(S::String)),
+                    ObjectField::new(Type::Scalar(MongoScalarType::Bson(S::String))),
                 ),
             ]
             .into(),
@@ -237,7 +241,11 @@ mod tests {
         let native_mutation = NativeMutation {
             result_type: Type::Object(ObjectType {
                 name: Some("InsertArtist".into()),
-                fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
+                fields: [(
+                    "ok".into(),
+                    ObjectField::new(Type::Scalar(MongoScalarType::Bson(S::Bool))),
+                )]
+                .into(),
             }),
             command: doc! {
                 "insert": "Artist",
@@ -287,7 +295,11 @@ mod tests {
         let native_mutation = NativeMutation {
             result_type: Type::Object(ObjectType {
                 name: Some("Insert".into()),
-                fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
+                fields: [(
+                    "ok".into(),
+                    ObjectField::new(Type::Scalar(MongoScalarType::Bson(S::Bool))),
+                )]
+                .into(),
             }),
             command: doc! {
                 "insert": "{{prefix}}-{{basename}}",
@@ -334,7 +346,11 @@ mod tests {
         let native_mutation = NativeMutation {
             result_type: Type::Object(ObjectType {
                 name: Some("InsertArtist".into()),
-                fields: [("ok".into(), Type::Scalar(MongoScalarType::Bson(S::Bool)))].into(),
+                fields: [(
+                    "ok".into(),
+                    ObjectField::new(Type::Scalar(MongoScalarType::Bson(S::Bool))),
+                )]
+                .into(),
             }),
             command: doc! {
                 "insert": "Artist",

@@ -5,7 +5,7 @@ definition:
   name: PlaylistTrack
   fields:
     - name: id
-      type: ObjectId_1!
+      type: ObjectId!
     - name: playlistId
       type: Int!
     - name: trackId
@@ -50,7 +50,7 @@ definition:
       type: PlaylistTrack
       comparableFields:
         - fieldName: id
-          booleanExpressionType: ObjectIdBoolExp_1
+          booleanExpressionType: ObjectIdBoolExp
         - fieldName: playlistId
           booleanExpressionType: IntBoolExp
         - fieldName: trackId
@@ -75,7 +75,7 @@ definition:
       aggregatedType: PlaylistTrack
       aggregatableFields:
         - fieldName: id
-          aggregateExpression: ObjectIdAggExp_1
+          aggregateExpression: ObjectIdAggExp
         - fieldName: playlistId
           aggregateExpression: IntAggExp
         - fieldName: trackId

@@ -5,7 +5,7 @@ definition:
   name: Employee
   fields:
     - name: id
-      type: ObjectId_1!
+      type: ObjectId!
     - name: address
       type: String!
     - name: birthDate
@@ -128,7 +128,7 @@ definition:
       type: Employee
       comparableFields:
         - fieldName: id
-          booleanExpressionType: ObjectIdBoolExp_1
+          booleanExpressionType: ObjectIdBoolExp
         - fieldName: address
           booleanExpressionType: StringBoolExp
         - fieldName: birthDate
@@ -180,7 +180,7 @@ definition:
       aggregatedType: Employee
       aggregatableFields:
         - fieldName: id
-          aggregateExpression: ObjectIdAggExp_1
+          aggregateExpression: ObjectIdAggExp
         - fieldName: address
           aggregateExpression: StringAggExp
         - fieldName: birthDate

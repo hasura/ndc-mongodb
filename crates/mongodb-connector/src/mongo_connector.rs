@@ -31,7 +31,7 @@ impl ConnectorSetup for MongoConnector {
     #[instrument(err, skip_all)]
     async fn parse_configuration(
         &self,
-        configuration_dir: impl AsRef<Path> + Send,
+        configuration_dir: &Path,
     ) -> connector::Result<MongoConfiguration> {
         let configuration = Configuration::parse_configuration(configuration_dir)
             .await

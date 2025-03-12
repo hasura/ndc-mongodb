@@ -1,6 +1,11 @@
 use crate::{connector::Connector, graphql_query, run_connector_query};
 use insta::assert_yaml_snapshot;
-use ndc_test_helpers::{asc, field, query, query_request, relation_field, relationship};
+use ndc_test_helpers::{
+    asc, binop, column, column_aggregate, column_count_aggregate, dimension_column, exists, field,
+    grouping, is_in, ordered_dimensions, query, query_request, related, relation_field,
+    relationship, star_count_aggregate, target, value,
+};
+use serde_json::json;
 
 #[tokio::test]
 async fn joins_local_relationships() -> anyhow::Result<()> {
@@ -203,8 +208,209 @@ async fn joins_on_field_names_that_require_escaping() -> anyhow::Result<()> {
                 )
                 .relationships([(
                     "join",
-                    relationship("weird_field_names", [("$invalid.name", "$invalid.name")])
+                    relationship("weird_field_names", [("$invalid.name", &["$invalid.name"])])
                 )])
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn joins_relationships_on_nested_key() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::TestCases,
+            query_request()
+                .collection("departments")
+                .query(
+                    query()
+                        .predicate(exists(
+                            related!("schools_departments"),
+                            binop("_eq", target!("name"), value!("West Valley"))
+                        ))
+                        .fields([
+                            relation_field!("departments" => "schools_departments", query().fields([
+                              field!("name")
+                            ]))
+                        ])
+                        .order_by([asc!("_id")])
+                )
+                .relationships([(
+                    "schools_departments",
+                    relationship("schools", [("_id", &["departments", "math_department_id"])])
+                )])
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn aggregates_over_related_collection() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::Chinook,
+            query_request()
+                .collection("Album")
+                .query(
+                    query()
+                        // avoid albums that are modified in mutation tests
+                        .predicate(is_in(
+                            target!("AlbumId"),
+                            [json!(15), json!(91), json!(227)]
+                        ))
+                        .fields([relation_field!("tracks" => "tracks", query().aggregates([
+                          star_count_aggregate!("count"),
+                          ("average_price", column_aggregate("UnitPrice", "avg").into()),
+                        ]))])
+                        .order_by([asc!("_id")])
+                )
+                .relationships([("tracks", relationship("Track", [("AlbumId", &["AlbumId"])]))])
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn aggregates_over_empty_subset_of_related_collection() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::Chinook,
+            query_request()
+                .collection("Album")
+                .query(
+                    query()
+                        // avoid albums that are modified in mutation tests
+                        .predicate(is_in(
+                            target!("AlbumId"),
+                            [json!(15), json!(91), json!(227)]
+                        ))
+                        .fields([relation_field!("tracks" => "tracks", query()
+                          .predicate(binop("_eq", target!("Name"), value!("non-existent name")))
+                          .aggregates([
+                          star_count_aggregate!("count"),
+                          column_count_aggregate!("composer_count" => "Composer", distinct: true),
+                          ("average_price", column_aggregate("UnitPrice", "avg").into()),
+                        ]))])
+                        .order_by([asc!("_id")])
+                )
+                .relationships([("tracks", relationship("Track", [("AlbumId", &["AlbumId"])]))])
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn groups_by_related_field() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::Chinook,
+            query_request()
+                .collection("Track")
+                .query(
+                    query()
+                        // avoid albums that are modified in mutation tests
+                        .predicate(is_in(
+                            target!("AlbumId"),
+                            [json!(15), json!(91), json!(227)]
+                        ))
+                        .groups(
+                            grouping()
+                                .dimensions([dimension_column(
+                                    column("Name").from_relationship("track_genre")
+                                )])
+                                .aggregates([(
+                                    "average_price",
+                                    column_aggregate("UnitPrice", "avg")
+                                )])
+                                .order_by(ordered_dimensions())
+                        )
+                )
+                .relationships([(
+                    "track_genre",
+                    relationship("Genre", [("GenreId", &["GenreId"])]).object_type()
+                )])
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn gets_groups_through_relationship() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::Chinook,
+            query_request()
+                .collection("Album")
+                .query(
+                    query()
+                    // avoid albums that are modified in mutation tests
+                    .predicate(is_in(target!("AlbumId"), [json!(15), json!(91), json!(227)]))
+                    .order_by([asc!("_id")])
+                    .fields([field!("AlbumId"), relation_field!("tracks" => "album_tracks", query()
+                      .groups(grouping()
+                        .dimensions([dimension_column(column("Name").from_relationship("track_genre"))])
+                          .aggregates([
+                            ("AlbumId", column_aggregate("AlbumId", "avg")),
+                            ("average_price", column_aggregate("UnitPrice", "avg")),
+                          ])
+                          .order_by(ordered_dimensions()),
+                      )
+                    )])
+                )
+                .relationships([
+                    (
+                        "album_tracks",
+                        relationship("Track", [("AlbumId", &["AlbumId"])])
+                    ),
+                    (
+                        "track_genre",
+                        relationship("Genre", [("GenreId", &["GenreId"])]).object_type()
+                    )
+                ])
+        )
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn gets_fields_and_groups_through_relationship() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        run_connector_query(
+            Connector::Chinook,
+            query_request()
+                .collection("Album")
+                .query(
+                    query()
+                    .predicate(is_in(target!("AlbumId"), [json!(15), json!(91), json!(227)]))
+                    .order_by([asc!("_id")])
+                    .fields([field!("AlbumId"), relation_field!("tracks" => "album_tracks", query()
+                      .order_by([asc!("_id")])
+                      .fields([field!("AlbumId"), field!("Name"), field!("UnitPrice")])
+                      .groups(grouping()
+                        .dimensions([dimension_column(column("Name").from_relationship("track_genre"))])
+                          .aggregates([(
+                            "average_price", column_aggregate("UnitPrice", "avg")
+                          )])
+                          .order_by(ordered_dimensions()),
+                      )
+                    )])
+                )
+                .relationships([
+                    (
+                        "album_tracks",
+                        relationship("Track", [("AlbumId", &["AlbumId"])])
+                    ),
+                    (
+                        "track_genre",
+                        relationship("Genre", [("GenreId", &["GenreId"])]).object_type()
+                    )
+                ])
         )
         .await?
     );

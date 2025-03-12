@@ -4,7 +4,7 @@ use ndc_models::{Relationship, RelationshipArgument, RelationshipType};
 
 #[derive(Clone, Debug)]
 pub struct RelationshipBuilder {
-    column_mapping: BTreeMap<ndc_models::FieldName, ndc_models::FieldName>,
+    column_mapping: BTreeMap<ndc_models::FieldName, Vec<ndc_models::FieldName>>,
     relationship_type: RelationshipType,
     target_collection: ndc_models::CollectionName,
     arguments: BTreeMap<ndc_models::ArgumentName, RelationshipArgument>,
@@ -12,17 +12,22 @@ pub struct RelationshipBuilder {
 
 pub fn relationship<const S: usize>(
     target: &str,
-    column_mapping: [(&str, &str); S],
+    column_mapping: [(&str, &[&str]); S],
 ) -> RelationshipBuilder {
     RelationshipBuilder::new(target, column_mapping)
 }
 
 impl RelationshipBuilder {
-    pub fn new<const S: usize>(target: &str, column_mapping: [(&str, &str); S]) -> Self {
+    pub fn new<const S: usize>(target: &str, column_mapping: [(&str, &[&str]); S]) -> Self {
         RelationshipBuilder {
             column_mapping: column_mapping
                 .into_iter()
-                .map(|(source, target)| (source.to_owned().into(), target.to_owned().into()))
+                .map(|(source, target)| {
+                    (
+                        source.to_owned().into(),
+                        target.iter().map(|s| s.to_owned().into()).collect(),
+                    )
+                })
                 .collect(),
             relationship_type: RelationshipType::Array,
             target_collection: target.to_owned().into(),

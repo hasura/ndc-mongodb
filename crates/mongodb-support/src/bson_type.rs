@@ -257,6 +257,31 @@ impl BsonScalarType {
         }
     }
 
+    pub fn is_fractional(self) -> bool {
+        match self {
+            S::Double => true,
+            S::Decimal => true,
+            S::Int => false,
+            S::Long => false,
+            S::String => false,
+            S::Date => false,
+            S::Timestamp => false,
+            S::BinData => false,
+            S::UUID => false,
+            S::ObjectId => false,
+            S::Bool => false,
+            S::Null => false,
+            S::Regex => false,
+            S::Javascript => false,
+            S::JavascriptWithScope => false,
+            S::MinKey => false,
+            S::MaxKey => false,
+            S::Undefined => false,
+            S::DbPointer => false,
+            S::Symbol => false,
+        }
+    }
+
     pub fn is_comparable(self) -> bool {
         match self {
             S::Double => true,

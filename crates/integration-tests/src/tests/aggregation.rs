@@ -131,7 +131,7 @@ async fn returns_zero_when_counting_empty_result_set() -> anyhow::Result<()> {
               moviesAggregate(filter_input: {where: {title: {_eq: "no such movie"}}}) {
                 _count
                 title {
-                  count
+                  _count
                 }
               }
             }
@@ -152,7 +152,6 @@ async fn returns_zero_when_counting_nested_fields_in_empty_result_set() -> anyho
               moviesAggregate(filter_input: {where: {title: {_eq: "no such movie"}}}) {
                 awards {
                   nominations {
-                    count
                     _count
                   }
                 }

@@ -1,0 +1,24 @@
+---
+source: crates/integration-tests/src/tests/remote_relationship.rs
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").variables([[(\"year\",\njson!(2014))]]).query(query().predicate(binop(\"_eq\", target!(\"year\"),\nvariable!(year))).fields([field!(\"title\"),\nfield!(\"rated\")]).order_by([asc!(\"_id\")]).groups(grouping().dimensions([dimension_column(\"rated\")]).aggregates([(\"average_viewer_rating\",\ncolumn_aggregate(\"tomatoes.viewer.rating\",\n\"avg\"),),]).order_by(ordered_dimensions()),).limit(3),),).await?"
+---
+- rows:
+    - rated: ~
+      title: Action Jackson
+    - rated: PG-13
+      title: The Giver
+    - rated: R
+      title: The Equalizer
+  groups:
+    - dimensions:
+        - ~
+      aggregates:
+        average_viewer_rating: 2.3
+    - dimensions:
+        - PG-13
+      aggregates:
+        average_viewer_rating: 3.4
+    - dimensions:
+        - R
+      aggregates:
+        average_viewer_rating: 3.9

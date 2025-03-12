@@ -7,8 +7,8 @@ use ndc_models as ndc;
 use thiserror::Error;
 
 use crate::{
-    Aggregate, ConnectorTypes, Expression, Field, NestedArray, NestedField, NestedObject, Query,
-    Relationship, RelationshipArgument, Relationships,
+    Aggregate, ConnectorTypes, Expression, Field, GroupExpression, Grouping, NestedArray,
+    NestedField, NestedObject, Query, Relationship, RelationshipArgument, Relationships,
 };
 
 #[derive(Debug, Error)]
@@ -95,7 +95,6 @@ where
 
     let mismatching_fields = [
         (a.limit != b.limit, "limit"),
-        (a.aggregates_limit != b.aggregates_limit, "aggregates_limit"),
         (a.offset != b.offset, "offset"),
         (a.order_by != b.order_by, "order_by"),
         (predicate_a != predicate_b, "predicate"),
@@ -117,13 +116,13 @@ where
     })?;
 
     let query = Query {
-        aggregates: unify_aggregates(a.aggregates, b.aggregates)?,
+        aggregates: unify_options(a.aggregates, b.aggregates, unify_aggregates)?,
         fields: unify_fields(a.fields, b.fields)?,
         limit: a.limit,
-        aggregates_limit: a.aggregates_limit,
         offset: a.offset,
         order_by: a.order_by,
         predicate: predicate_a,
+        groups: unify_options(a.groups, b.groups, unify_groups)?,
         relationships: unify_nested_relationships(a.relationships, b.relationships)?,
         scope,
     };
@@ -131,9 +130,9 @@ where
 }
 
 fn unify_aggregates<T>(
-    a: Option<IndexMap<ndc::FieldName, Aggregate<T>>>,
-    b: Option<IndexMap<ndc::FieldName, Aggregate<T>>>,
-) -> Result<Option<IndexMap<ndc::FieldName, Aggregate<T>>>>
+    a: IndexMap<ndc::FieldName, Aggregate<T>>,
+    b: IndexMap<ndc::FieldName, Aggregate<T>>,
+) -> Result<IndexMap<ndc::FieldName, Aggregate<T>>>
 where
     T: ConnectorTypes,
 {
@@ -210,11 +209,13 @@ where
                 relationship: relationship_a,
                 aggregates: aggregates_a,
                 fields: fields_a,
+                groups: groups_a,
             },
             Field::Relationship {
                 relationship: relationship_b,
                 aggregates: aggregates_b,
                 fields: fields_b,
+                groups: groups_b,
             },
         ) => {
             if relationship_a != relationship_b {
@@ -224,8 +225,9 @@ where
             } else {
                 Ok(Field::Relationship {
                     relationship: relationship_b,
-                    aggregates: unify_aggregates(aggregates_a, aggregates_b)?,
+                    aggregates: unify_options(aggregates_a, aggregates_b, unify_aggregates)?,
                     fields: unify_fields(fields_a, fields_b)?,
+                    groups: unify_options(groups_a, groups_b, unify_groups)?,
                 })
             }
         }
@@ -282,6 +284,39 @@ where
             EitherOrBoth::Right((name, b)) => Ok((name, b)),
         })
         .try_collect()
+}
+
+fn unify_groups<T>(a: Grouping<T>, b: Grouping<T>) -> Result<Grouping<T>>
+where
+    T: ConnectorTypes,
+{
+    let predicate_a = a.predicate.and_then(GroupExpression::simplify);
+    let predicate_b = b.predicate.and_then(GroupExpression::simplify);
+
+    let mismatching_fields = [
+        (a.dimensions != b.dimensions, "dimensions"),
+        (predicate_a != predicate_b, "predicate"),
+        (a.order_by != b.order_by, "order_by"),
+        (a.limit != b.limit, "limit"),
+        (a.offset != b.offset, "offset"),
+    ]
+    .into_iter()
+    .filter_map(|(is_mismatch, field_name)| if is_mismatch { Some(field_name) } else { None })
+    .collect_vec();
+
+    if !mismatching_fields.is_empty() {
+        return Err(RelationshipUnificationError::Mismatch(mismatching_fields));
+    }
+
+    let unified = Grouping {
+        dimensions: a.dimensions,
+        aggregates: unify_aggregates(a.aggregates, b.aggregates)?,
+        predicate: predicate_a,
+        order_by: a.order_by,
+        limit: a.limit,
+        offset: a.offset,
+    };
+    Ok(unified)
 }
 
 /// In some cases we receive the predicate expression `Some(Expression::And [])` which does not
@@ -341,9 +376,9 @@ mod tests {
     use crate::{
         field, object,
         plan_for_query_request::plan_test_helpers::{
-            date, double, int, object_type, relationship, string, TestContext,
+            date, double, int, relationship, string, TestContext,
         },
-        Relationship,
+        Relationship, Type,
     };
 
     use super::unify_relationship_references;
@@ -395,10 +430,10 @@ mod tests {
 
     #[test]
     fn unifies_nested_field_selections() -> anyhow::Result<()> {
-        let tomatoes_type = object_type([
+        let tomatoes_type = Type::object([
             (
                 "viewer",
-                object_type([("numReviews", int()), ("rating", double())]),
+                Type::object([("numReviews", int()), ("rating", double())]),
             ),
             ("lastUpdated", date()),
         ]);

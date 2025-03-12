@@ -9,12 +9,36 @@ definition:
       write:
         valueFromEnv: APP_CHINOOK_WRITE_URL
   schema:
-    version: v0.1
+    version: v0.2
+    capabilities:
+      version: 0.2.0
+      capabilities:
+        query:
+          aggregates: {}
+          variables: {}
+          explain: {}
+          nested_fields:
+            filter_by:
+              nested_arrays:
+                contains: {}
+                is_empty: {}
+            order_by: {}
+            aggregates: {}
+            nested_collections: {}
+          exists:
+            unrelated: {}
+            nested_collections: {}
+        mutation: {}
+        relationships:
+          relation_comparisons: {}
     schema:
       scalar_types:
         BinData:
+          representation:
+            type: json
           aggregate_functions:
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
@@ -40,6 +64,7 @@ definition:
             type: boolean
           aggregate_functions:
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
@@ -65,46 +90,27 @@ definition:
             type: timestamp
           aggregate_functions:
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
             max:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Date
+              type: max
             min:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Date
+              type: min
           comparison_operators:
             _eq:
               type: equal
             _gt:
-              type: custom
-              argument_type:
-                type: named
-                name: Date
+              type: greater_than
             _gte:
-              type: custom
-              argument_type:
-                type: named
-                name: Date
+              type: greater_than_or_equal
             _in:
               type: in
             _lt:
-              type: custom
-              argument_type:
-                type: named
-                name: Date
+              type: less_than
             _lte:
-              type: custom
-              argument_type:
-                type: named
-                name: Date
+              type: less_than_or_equal
             _neq:
               type: custom
               argument_type:
@@ -118,8 +124,11 @@ definition:
                   type: named
                   name: Date
         DbPointer:
+          representation:
+            type: json
           aggregate_functions:
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
@@ -145,58 +154,33 @@ definition:
             type: bigdecimal
           aggregate_functions:
             avg:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Decimal
+              type: average
+              result_type: Double
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
             max:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Decimal
+              type: max
             min:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Decimal
+              type: min
             sum:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Decimal
+              type: sum
+              result_type: Double
           comparison_operators:
             _eq:
               type: equal
             _gt:
-              type: custom
-              argument_type:
-                type: named
-                name: Decimal
+              type: greater_than
             _gte:
-              type: custom
-              argument_type:
-                type: named
-                name: Decimal
+              type: greater_than_or_equal
             _in:
               type: in
             _lt:
-              type: custom
-              argument_type:
-                type: named
-                name: Decimal
+              type: less_than
             _lte:
-              type: custom
-              argument_type:
-                type: named
-                name: Decimal
+              type: less_than_or_equal
             _neq:
               type: custom
               argument_type:
@@ -214,58 +198,33 @@ definition:
             type: float64
           aggregate_functions:
             avg:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Double
+              type: average
+              result_type: Double
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
             max:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Double
+              type: max
             min:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Double
+              type: min
             sum:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Double
+              type: sum
+              result_type: Double
           comparison_operators:
             _eq:
               type: equal
             _gt:
-              type: custom
-              argument_type:
-                type: named
-                name: Double
+              type: greater_than
             _gte:
-              type: custom
-              argument_type:
-                type: named
-                name: Double
+              type: greater_than_or_equal
             _in:
               type: in
             _lt:
-              type: custom
-              argument_type:
-                type: named
-                name: Double
+              type: less_than
             _lte:
-              type: custom
-              argument_type:
-                type: named
-                name: Double
+              type: less_than_or_equal
             _neq:
               type: custom
               argument_type:
@@ -283,22 +242,21 @@ definition:
             type: json
           aggregate_functions:
             avg:
+              type: custom
               result_type:
                 type: named
                 name: ExtendedJSON
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
             max:
-              result_type:
-                type: named
-                name: ExtendedJSON
+              type: max
             min:
-              result_type:
-                type: named
-                name: ExtendedJSON
+              type: min
             sum:
+              type: custom
               result_type:
                 type: named
                 name: ExtendedJSON
@@ -306,35 +264,20 @@ definition:
             _eq:
               type: equal
             _gt:
-              type: custom
-              argument_type:
-                type: named
-                name: ExtendedJSON
+              type: greater_than
             _gte:
-              type: custom
-              argument_type:
-                type: named
-                name: ExtendedJSON
+              type: greater_than_or_equal
             _in:
-              type: custom
-              argument_type:
-                type: named
-                name: ExtendedJSON
+              type: in
             _iregex:
               type: custom
               argument_type:
                 type: named
-                name: String
+                name: Regex
             _lt:
-              type: custom
-              argument_type:
-                type: named
-                name: ExtendedJSON
+              type: less_than
             _lte:
-              type: custom
-              argument_type:
-                type: named
-                name: ExtendedJSON
+              type: less_than_or_equal
             _neq:
               type: custom
               argument_type:
@@ -343,70 +286,47 @@ definition:
             _nin:
               type: custom
               argument_type:
-                type: named
-                name: ExtendedJSON
+                type: array
+                element_type:
+                  type: named
+                  name: ExtendedJSON
             _regex:
               type: custom
               argument_type:
                 type: named
-                name: String
+                name: Regex
         Int:
           representation:
             type: int32
           aggregate_functions:
             avg:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+              type: average
+              result_type: Double
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
             max:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+              type: max
             min:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+              type: min
             sum:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Int
+              type: sum
+              result_type: Long
           comparison_operators:
             _eq:
               type: equal
             _gt:
-              type: custom
-              argument_type:
-                type: named
-                name: Int
+              type: greater_than
             _gte:
-              type: custom
-              argument_type:
-                type: named
-                name: Int
+              type: greater_than_or_equal
             _in:
               type: in
             _lt:
-              type: custom
-              argument_type:
-                type: named
-                name: Int
+              type: less_than
             _lte:
-              type: custom
-              argument_type:
-                type: named
-                name: Int
+              type: less_than_or_equal
             _neq:
               type: custom
               argument_type:
@@ -420,15 +340,21 @@ definition:
                   type: named
                   name: Int
         Javascript:
+          representation:
+            type: string
           aggregate_functions:
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
           comparison_operators: {}
         JavascriptWithScope:
+          representation:
+            type: json
           aggregate_functions:
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
@@ -438,58 +364,33 @@ definition:
             type: int64
           aggregate_functions:
             avg:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Long
+              type: average
+              result_type: Double
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
             max:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Long
+              type: max
             min:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Long
+              type: min
             sum:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Long
+              type: sum
+              result_type: Long
           comparison_operators:
             _eq:
               type: equal
             _gt:
-              type: custom
-              argument_type:
-                type: named
-                name: Long
+              type: greater_than
             _gte:
-              type: custom
-              argument_type:
-                type: named
-                name: Long
+              type: greater_than_or_equal
             _in:
               type: in
             _lt:
-              type: custom
-              argument_type:
-                type: named
-                name: Long
+              type: less_than
             _lte:
-              type: custom
-              argument_type:
-                type: named
-                name: Long
+              type: less_than_or_equal
             _neq:
               type: custom
               argument_type:
@@ -503,8 +404,11 @@ definition:
                   type: named
                   name: Long
         MaxKey:
+          representation:
+            type: json
           aggregate_functions:
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
@@ -526,8 +430,11 @@ definition:
                   type: named
                   name: MaxKey
         MinKey:
+          representation:
+            type: json
           aggregate_functions:
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
@@ -548,9 +455,12 @@ definition:
                 element_type:
                   type: named
                   name: MinKey
-        "Null":
+        'Null':
+          representation:
+            type: json
           aggregate_functions:
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
@@ -563,19 +473,20 @@ definition:
               type: custom
               argument_type:
                 type: named
-                name: "Null"
+                name: 'Null'
             _nin:
               type: custom
               argument_type:
                 type: array
                 element_type:
                   type: named
-                  name: "Null"
+                  name: 'Null'
         ObjectId:
           representation:
             type: string
           aggregate_functions:
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
@@ -597,8 +508,11 @@ definition:
                   type: named
                   name: ObjectId
         Regex:
+          representation:
+            type: json
           aggregate_functions:
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
@@ -608,51 +522,32 @@ definition:
             type: string
           aggregate_functions:
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
             max:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+              type: max
             min:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: String
+              type: min
           comparison_operators:
             _eq:
               type: equal
             _gt:
-              type: custom
-              argument_type:
-                type: named
-                name: String
+              type: greater_than
             _gte:
-              type: custom
-              argument_type:
-                type: named
-                name: String
+              type: greater_than_or_equal
             _in:
               type: in
             _iregex:
               type: custom
               argument_type:
                 type: named
-                name: String
+                name: Regex
             _lt:
-              type: custom
-              argument_type:
-                type: named
-                name: String
+              type: less_than
             _lte:
-              type: custom
-              argument_type:
-                type: named
-                name: String
+              type: less_than_or_equal
             _neq:
               type: custom
               argument_type:
@@ -669,10 +564,13 @@ definition:
               type: custom
               argument_type:
                 type: named
-                name: String
+                name: Regex
         Symbol:
+          representation:
+            type: string
           aggregate_functions:
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
@@ -694,48 +592,31 @@ definition:
                   type: named
                   name: Symbol
         Timestamp:
+          representation:
+            type: json
           aggregate_functions:
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
             max:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Timestamp
+              type: max
             min:
-              result_type:
-                type: nullable
-                underlying_type:
-                  type: named
-                  name: Timestamp
+              type: min
           comparison_operators:
             _eq:
               type: equal
             _gt:
-              type: custom
-              argument_type:
-                type: named
-                name: Timestamp
+              type: greater_than
             _gte:
-              type: custom
-              argument_type:
-                type: named
-                name: Timestamp
+              type: greater_than_or_equal
             _in:
               type: in
             _lt:
-              type: custom
-              argument_type:
-                type: named
-                name: Timestamp
+              type: less_than
             _lte:
-              type: custom
-              argument_type:
-                type: named
-                name: Timestamp
+              type: less_than_or_equal
             _neq:
               type: custom
               argument_type:
@@ -749,8 +630,11 @@ definition:
                   type: named
                   name: Timestamp
         Undefined:
+          representation:
+            type: json
           aggregate_functions:
             count:
+              type: custom
               result_type:
                 type: named
                 name: Int
@@ -774,10 +658,6 @@ definition:
       object_types:
         Album:
           fields:
-            _id:
-              type:
-                type: named
-                name: ObjectId
             AlbumId:
               type:
                 type: named
@@ -790,12 +670,13 @@ definition:
               type:
                 type: named
                 name: String
-        AlbumWithTracks:
-          fields:
             _id:
               type:
                 type: named
                 name: ObjectId
+          foreign_keys: {}
+        AlbumWithTracks:
+          fields:
             Title:
               type:
                 type: named
@@ -806,12 +687,13 @@ definition:
                 element_type:
                   type: named
                   name: Track
-        Artist:
-          fields:
             _id:
               type:
                 type: named
                 name: ObjectId
+          foreign_keys: {}
+        Artist:
+          fields:
             ArtistId:
               type:
                 type: named
@@ -820,12 +702,13 @@ definition:
               type:
                 type: named
                 name: String
-        ArtistWithAlbumsAndTracks:
-          fields:
             _id:
               type:
                 type: named
                 name: ObjectId
+          foreign_keys: {}
+        ArtistWithAlbumsAndTracks:
+          fields:
             Albums:
               type:
                 type: array
@@ -836,12 +719,13 @@ definition:
               type:
                 type: named
                 name: String
-        Customer:
-          fields:
             _id:
               type:
                 type: named
                 name: ObjectId
+          foreign_keys: {}
+        Customer:
+          fields:
             Address:
               type:
                 type: named
@@ -904,12 +788,13 @@ definition:
               type:
                 type: named
                 name: Int
-        Employee:
-          fields:
             _id:
               type:
                 type: named
                 name: ObjectId
+          foreign_keys: {}
+        Employee:
+          fields:
             Address:
               type:
                 type: named
@@ -972,12 +857,13 @@ definition:
               type:
                 type: named
                 name: String
-        Genre:
-          fields:
             _id:
               type:
                 type: named
                 name: ObjectId
+          foreign_keys: {}
+        Genre:
+          fields:
             GenreId:
               type:
                 type: named
@@ -986,9 +872,14 @@ definition:
               type:
                 type: named
                 name: String
+            _id:
+              type:
+                type: named
+                name: ObjectId
+          foreign_keys: {}
         InsertArtist:
           fields:
-            "n":
+            n:
               type:
                 type: named
                 name: Int
@@ -996,12 +887,9 @@ definition:
               type:
                 type: named
                 name: Double
+          foreign_keys: {}
         Invoice:
           fields:
-            _id:
-              type:
-                type: named
-                name: ObjectId
             BillingAddress:
               type:
                 type: named
@@ -1042,12 +930,13 @@ definition:
               type:
                 type: named
                 name: Decimal
-        InvoiceLine:
-          fields:
             _id:
               type:
                 type: named
                 name: ObjectId
+          foreign_keys: {}
+        InvoiceLine:
+          fields:
             InvoiceId:
               type:
                 type: named
@@ -1068,12 +957,13 @@ definition:
               type:
                 type: named
                 name: Decimal
-        MediaType:
-          fields:
             _id:
               type:
                 type: named
                 name: ObjectId
+          foreign_keys: {}
+        MediaType:
+          fields:
             MediaTypeId:
               type:
                 type: named
@@ -1082,12 +972,13 @@ definition:
               type:
                 type: named
                 name: String
-        Playlist:
-          fields:
             _id:
               type:
                 type: named
                 name: ObjectId
+          foreign_keys: {}
+        Playlist:
+          fields:
             Name:
               type:
                 type: named
@@ -1096,12 +987,13 @@ definition:
               type:
                 type: named
                 name: Int
-        PlaylistTrack:
-          fields:
             _id:
               type:
                 type: named
                 name: ObjectId
+          foreign_keys: {}
+        PlaylistTrack:
+          fields:
             PlaylistId:
               type:
                 type: named
@@ -1110,12 +1002,13 @@ definition:
               type:
                 type: named
                 name: Int
-        Track:
-          fields:
             _id:
               type:
                 type: named
                 name: ObjectId
+          foreign_keys: {}
+        Track:
+          fields:
             AlbumId:
               type:
                 type: named
@@ -1154,147 +1047,128 @@ definition:
               type:
                 type: named
                 name: Decimal
+            _id:
+              type:
+                type: named
+                name: ObjectId
+          foreign_keys: {}
       collections:
-        - name: Album
-          arguments: {}
-          type: Album
-          uniqueness_constraints:
-            Album_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
-        - name: Artist
-          arguments: {}
-          type: Artist
-          uniqueness_constraints:
-            Artist_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
-        - name: Customer
-          arguments: {}
-          type: Customer
-          uniqueness_constraints:
-            Customer_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
-        - name: Employee
-          arguments: {}
-          type: Employee
-          uniqueness_constraints:
-            Employee_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
-        - name: Genre
-          arguments: {}
-          type: Genre
-          uniqueness_constraints:
-            Genre_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
-        - name: Invoice
-          arguments: {}
-          type: Invoice
-          uniqueness_constraints:
-            Invoice_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
-        - name: InvoiceLine
-          arguments: {}
-          type: InvoiceLine
-          uniqueness_constraints:
-            InvoiceLine_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
-        - name: MediaType
-          arguments: {}
-          type: MediaType
-          uniqueness_constraints:
-            MediaType_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
-        - name: Playlist
-          arguments: {}
-          type: Playlist
-          uniqueness_constraints:
-            Playlist_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
-        - name: PlaylistTrack
-          arguments: {}
-          type: PlaylistTrack
-          uniqueness_constraints:
-            PlaylistTrack_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
-        - name: Track
-          arguments: {}
-          type: Track
-          uniqueness_constraints:
-            Track_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
-        - name: artists_with_albums_and_tracks
-          description: combines artist, albums, and tracks into a single document per artist
-          arguments: {}
-          type: ArtistWithAlbumsAndTracks
-          uniqueness_constraints:
-            artists_with_albums_and_tracks_id:
-              unique_columns:
-                - _id
-          foreign_keys: {}
+      - name: Album
+        arguments: {}
+        type: Album
+        uniqueness_constraints:
+          Album_id:
+            unique_columns:
+            - _id
+      - name: Artist
+        arguments: {}
+        type: Artist
+        uniqueness_constraints:
+          Artist_id:
+            unique_columns:
+            - _id
+      - name: Customer
+        arguments: {}
+        type: Customer
+        uniqueness_constraints:
+          Customer_id:
+            unique_columns:
+            - _id
+      - name: Employee
+        arguments: {}
+        type: Employee
+        uniqueness_constraints:
+          Employee_id:
+            unique_columns:
+            - _id
+      - name: Genre
+        arguments: {}
+        type: Genre
+        uniqueness_constraints:
+          Genre_id:
+            unique_columns:
+            - _id
+      - name: Invoice
+        arguments: {}
+        type: Invoice
+        uniqueness_constraints:
+          Invoice_id:
+            unique_columns:
+            - _id
+      - name: InvoiceLine
+        arguments: {}
+        type: InvoiceLine
+        uniqueness_constraints:
+          InvoiceLine_id:
+            unique_columns:
+            - _id
+      - name: MediaType
+        arguments: {}
+        type: MediaType
+        uniqueness_constraints:
+          MediaType_id:
+            unique_columns:
+            - _id
+      - name: Playlist
+        arguments: {}
+        type: Playlist
+        uniqueness_constraints:
+          Playlist_id:
+            unique_columns:
+            - _id
+      - name: PlaylistTrack
+        arguments: {}
+        type: PlaylistTrack
+        uniqueness_constraints:
+          PlaylistTrack_id:
+            unique_columns:
+            - _id
+      - name: Track
+        arguments: {}
+        type: Track
+        uniqueness_constraints:
+          Track_id:
+            unique_columns:
+            - _id
+      - name: artists_with_albums_and_tracks
+        description: combines artist, albums, and tracks into a single document per artist
+        arguments: {}
+        type: ArtistWithAlbumsAndTracks
+        uniqueness_constraints:
+          artists_with_albums_and_tracks_id:
+            unique_columns:
+            - _id
       functions: []
       procedures:
-        - name: insertArtist
-          description: Example of a database update using a native mutation
-          arguments:
-            id:
-              type:
-                type: named
-                name: Int
-            name:
-              type:
-                type: named
-                name: String
-          result_type:
-            type: named
-            name: InsertArtist
-        - name: updateTrackPrices
-          description: Update unit price of every track that matches predicate
-          arguments:
-            newPrice:
-              type:
-                type: named
-                name: Decimal
-            where:
-              type:
-                type: predicate
-                object_type_name: Track
-          result_type:
-            type: named
-            name: InsertArtist
-    capabilities:
-      version: 0.1.6
+      - name: insertArtist
+        description: Example of a database update using a native mutation
+        arguments:
+          id:
+            type:
+              type: named
+              name: Int
+          name:
+            type:
+              type: named
+              name: String
+        result_type:
+          type: named
+          name: InsertArtist
+      - name: updateTrackPrices
+        description: Update unit price of every track that matches predicate
+        arguments:
+          newPrice:
+            type:
+              type: named
+              name: Decimal
+          where:
+            type:
+              type: predicate
+              object_type_name: Track
+        result_type:
+          type: named
+          name: InsertArtist
       capabilities:
         query:
-          aggregates: {}
-          variables: {}
-          explain: {}
-          nested_fields:
-            filter_by: {}
-            order_by: {}
-            aggregates: {}
-          exists:
-            nested_collections: {}
-        mutation: {}
-        relationships:
-          relation_comparisons: {}
+          aggregates:
+            count_scalar_type: Int

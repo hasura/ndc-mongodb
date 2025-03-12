@@ -192,6 +192,7 @@ impl From<ObjectType> for ndc_models::ObjectType {
                 .into_iter()
                 .map(|(name, field)| (name, field.into()))
                 .collect(),
+            foreign_keys: Default::default(),
         }
     }
 }

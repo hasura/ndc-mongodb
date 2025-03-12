@@ -1,0 +1,210 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: SchoolsDepartments
+  fields:
+    - name: englishDepartmentId
+      type: ObjectId!
+    - name: mathDepartmentId
+      type: ObjectId!
+  graphql:
+    typeName: SchoolsDepartments
+    inputTypeName: SchoolsDepartmentsInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: test_cases
+      dataConnectorObjectType: schools_departments
+      fieldMapping:
+        englishDepartmentId:
+          column:
+            name: english_department_id
+        mathDepartmentId:
+          column:
+            name: math_department_id
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: SchoolsDepartments
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - englishDepartmentId
+          - mathDepartmentId
+
+---
+kind: ObjectType
+version: v1
+definition:
+  name: Schools
+  fields:
+    - name: id
+      type: ObjectId!
+    - name: departments
+      type: SchoolsDepartments!
+    - name: name
+      type: String!
+  graphql:
+    typeName: Schools
+    inputTypeName: SchoolsInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: test_cases
+      dataConnectorObjectType: schools
+      fieldMapping:
+        id:
+          column:
+            name: _id
+        departments:
+          column:
+            name: departments
+        name:
+          column:
+            name: name
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: Schools
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - id
+          - departments
+          - name
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: SchoolsDepartmentsBoolExp
+  operand:
+    object:
+      type: SchoolsDepartments
+      comparableFields:
+        - fieldName: englishDepartmentId
+          booleanExpressionType: ObjectIdBoolExp
+        - fieldName: mathDepartmentId
+          booleanExpressionType: ObjectIdBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: SchoolsDepartmentsBoolExp
+
+---
+kind: BooleanExpressionType
+version: v1
+definition:
+  name: SchoolsBoolExp
+  operand:
+    object:
+      type: Schools
+      comparableFields:
+        - fieldName: id
+          booleanExpressionType: ObjectIdBoolExp
+        - fieldName: departments
+          booleanExpressionType: SchoolsDepartmentsBoolExp
+        - fieldName: name
+          booleanExpressionType: StringBoolExp
+      comparableRelationships: []
+  logicalOperators:
+    enable: true
+  isNull:
+    enable: true
+  graphql:
+    typeName: SchoolsBoolExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: SchoolsDepartmentsAggExp
+  operand:
+    object:
+      aggregatedType: SchoolsDepartments
+      aggregatableFields:
+        - fieldName: englishDepartmentId
+          aggregateExpression: ObjectIdAggExp
+        - fieldName: mathDepartmentId
+          aggregateExpression: ObjectIdAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: SchoolsDepartmentsAggExp
+
+---
+kind: AggregateExpression
+version: v1
+definition:
+  name: SchoolsAggExp
+  operand:
+    object:
+      aggregatedType: Schools
+      aggregatableFields:
+        - fieldName: id
+          aggregateExpression: ObjectIdAggExp
+        - fieldName: departments
+          aggregateExpression: SchoolsDepartmentsAggExp
+        - fieldName: name
+          aggregateExpression: StringAggExp
+  count:
+    enable: true
+  graphql:
+    selectTypeName: SchoolsAggExp
+
+---
+kind: Model
+version: v1
+definition:
+  name: Schools
+  objectType: Schools
+  source:
+    dataConnectorName: test_cases
+    collection: schools
+  filterExpressionType: SchoolsBoolExp
+  aggregateExpression: SchoolsAggExp
+  orderableFields:
+    - fieldName: id
+      orderByDirections:
+        enableAll: true
+    - fieldName: departments
+      orderByDirections:
+        enableAll: true
+    - fieldName: name
+      orderByDirections:
+        enableAll: true
+  graphql:
+    selectMany:
+      queryRootField: schools
+      subscription:
+        rootField: schools
+    selectUniques:
+      - queryRootField: schoolsById
+        uniqueIdentifier:
+          - id
+        subscription:
+          rootField: schoolsById
+    orderByExpressionType: SchoolsOrderBy
+    filterInputTypeName: SchoolsFilterInput
+    aggregate:
+      queryRootField: schoolsAggregate
+      subscription:
+        rootField: schoolsAggregate
+
+---
+kind: ModelPermissions
+version: v1
+definition:
+  modelName: Schools
+  permissions:
+    - role: admin
+      select:
+        filter: null
+        allowSubscriptions: true
+

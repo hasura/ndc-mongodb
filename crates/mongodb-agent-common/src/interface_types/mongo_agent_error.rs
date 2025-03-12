@@ -8,7 +8,7 @@ use mongodb::bson;
 use ndc_query_plan::QueryPlanError;
 use thiserror::Error;
 
-use crate::{procedure::ProcedureError, query::QueryResponseError};
+use crate::{mongo_query_plan::Dimension, procedure::ProcedureError, query::QueryResponseError};
 
 /// A superset of the DC-API `AgentError` type. This enum adds error cases specific to the MongoDB
 /// agent.
@@ -16,6 +16,7 @@ use crate::{procedure::ProcedureError, query::QueryResponseError};
 pub enum MongoAgentError {
     BadCollectionSchema(Box<(String, bson::Bson, bson::de::Error)>), // boxed to avoid an excessively-large stack value
     BadQuery(anyhow::Error),
+    InvalidGroupDimension(Dimension),
     InvalidVariableName(String),
     InvalidScalarTypeName(String),
     MongoDB(#[from] mongodb::error::Error),
@@ -66,6 +67,9 @@ impl MongoAgentError {
                 )
             },
             BadQuery(err) => (StatusCode::BAD_REQUEST, ErrorResponse::new(&err)),
+            InvalidGroupDimension(dimension) => (
+            StatusCode::BAD_REQUEST, ErrorResponse::new(&format!("Cannot express grouping dimension as a MongoDB query document expression: {dimension:?}"))
+        ),
             InvalidVariableName(name) => (
                 StatusCode::BAD_REQUEST,
                 ErrorResponse::new(&format!("Column identifier includes characters that are not permitted in a MongoDB variable name: {name}"))

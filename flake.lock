@@ -110,11 +110,11 @@
     "graphql-engine-source": {
       "flake": false,
       "locked": {
-        "lastModified": 1733318858,
-        "narHash": "sha256-7/nTrhvRvKnHnDwBxLPpAfwHg06qLyQd3S1iuzQjI5o=",
+        "lastModified": 1738870584,
+        "narHash": "sha256-YYp1IJpEv+MIsIVQ25rw2/aKHWZZ9avIW7GMXYJPkJU=",
         "owner": "hasura",
         "repo": "graphql-engine",
-        "rev": "8b7ad6684f30266326c49208b8c36251b984bb18",
+        "rev": "249552b0ea8669d37b77da205abac2c2b41e5b34",
         "type": "github"
       },
       "original": {
@@ -145,11 +145,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1733604522,
-        "narHash": "sha256-9XNxIgOGq8MJ3a1GPE1lGaMBSz6Ossgv/Ec+KhyaC68=",
+        "lastModified": 1738802037,
+        "narHash": "sha256-2rFnj+lf9ecXH+/qFA2ncyz/+mH/ho+XftUgVXrLjBQ=",
         "owner": "hasura",
         "repo": "ddn-cli-nix",
-        "rev": "8e9695beabd6d111a69ae288f8abba6ebf8d1c82",
+        "rev": "d439eab6b2254977234261081191f5d83bce49fd",
         "type": "github"
       },
       "original": {
