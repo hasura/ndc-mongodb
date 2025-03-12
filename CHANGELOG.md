@@ -6,6 +6,14 @@ This changelog documents the changes between release versions.
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [1.7.1] - 2025-03-12
+
+### Added
+
 - Add watch command while initializing metadata (#157)
 
 ### Changed
