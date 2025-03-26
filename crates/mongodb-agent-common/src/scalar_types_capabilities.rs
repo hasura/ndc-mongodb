@@ -87,6 +87,7 @@ fn extended_json_scalar_type() -> (ndc_models::ScalarTypeName, ScalarType) {
                     (name, ndc_definition)
                 })
                 .collect(),
+            extraction_functions: Default::default(),
         },
     )
 }
@@ -97,6 +98,7 @@ fn make_scalar_type(bson_scalar_type: BsonScalarType) -> (ndc_models::ScalarType
         representation: bson_scalar_type_representation(bson_scalar_type),
         aggregate_functions: bson_aggregation_functions(bson_scalar_type),
         comparison_operators: bson_comparison_operators(bson_scalar_type),
+        extraction_functions: Default::default(),
     };
     (scalar_type_name.into(), scalar_type)
 }
