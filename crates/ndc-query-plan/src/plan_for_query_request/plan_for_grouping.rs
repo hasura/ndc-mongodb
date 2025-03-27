@@ -29,15 +29,7 @@ pub fn plan_for_grouping<T: QueryContext>(
         })
         .collect::<Result<_>>()?;
 
-    let aggregates = plan_for_aggregates(
-        plan_state,
-        collection_object_type,
-        grouping
-            .aggregates
-            .into_iter()
-            .map(|(key, aggregate)| (key.into(), aggregate))
-            .collect(),
-    )?;
+    let aggregates = plan_for_aggregates(plan_state, collection_object_type, grouping.aggregates)?;
 
     let predicate = grouping
         .predicate
@@ -72,6 +64,7 @@ fn plan_for_dimension<T: QueryContext>(
             column_name,
             arguments,
             field_path,
+            ..
         } => {
             let (relationship_path, collection_type) = plan_for_relationship_path(
                 plan_state,

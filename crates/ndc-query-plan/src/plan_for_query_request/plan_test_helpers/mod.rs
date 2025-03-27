@@ -193,6 +193,7 @@ fn scalar_types() -> BTreeMap<String, ndc::ScalarType> {
                     ndc::ComparisonOperatorDefinition::Equal,
                 )]
                 .into(),
+                extraction_functions: Default::default(),
             },
         ),
         (
@@ -211,6 +212,7 @@ fn scalar_types() -> BTreeMap<String, ndc::ScalarType> {
                     ndc::ComparisonOperatorDefinition::Equal,
                 )]
                 .into(),
+                extraction_functions: Default::default(),
             },
         ),
         (
@@ -231,6 +233,7 @@ fn scalar_types() -> BTreeMap<String, ndc::ScalarType> {
                     ),
                 ]
                 .into(),
+                extraction_functions: Default::default(),
             },
         ),
     ]

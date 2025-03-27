@@ -282,13 +282,6 @@ fn serialize_groups(
 
             let aggregates = serialize_aggregates(mode, path, &grouping.aggregates, doc)?;
 
-            // TODO: This conversion step can be removed when the aggregates map key type is
-            // changed from String to FieldName
-            let aggregates = aggregates
-                .into_iter()
-                .map(|(key, value)| (key.to_string(), value))
-                .collect();
-
             Ok(Group {
                 dimensions,
                 aggregates,

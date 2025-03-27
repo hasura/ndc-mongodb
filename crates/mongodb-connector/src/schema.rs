@@ -24,7 +24,7 @@ pub async fn get_schema(config: &MongoConfiguration) -> connector::Result<ndc::S
         capabilities: Some(ndc::CapabilitySchemaInfo {
             query: Some(ndc::QueryCapabilitiesSchemaInfo {
                 aggregates: Some(ndc::AggregateCapabilitiesSchemaInfo {
-                    count_scalar_type: BsonScalarType::Int.graphql_name().to_string(),
+                    count_scalar_type: BsonScalarType::Int.graphql_name().into(),
                 }),
             }),
         }),

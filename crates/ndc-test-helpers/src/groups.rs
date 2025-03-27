@@ -11,7 +11,7 @@ use crate::column::Column;
 #[derive(Clone, Debug, Default)]
 pub struct GroupingBuilder {
     dimensions: Vec<Dimension>,
-    aggregates: IndexMap<String, Aggregate>,
+    aggregates: IndexMap<FieldName, Aggregate>,
     predicate: Option<GroupExpression>,
     order_by: Option<GroupOrderBy>,
     limit: Option<u32>,
@@ -33,7 +33,7 @@ impl GroupingBuilder {
 
     pub fn aggregates(
         mut self,
-        aggregates: impl IntoIterator<Item = (impl Into<String>, impl Into<Aggregate>)>,
+        aggregates: impl IntoIterator<Item = (impl Into<FieldName>, impl Into<Aggregate>)>,
     ) -> Self {
         self.aggregates = aggregates
             .into_iter()
@@ -127,6 +127,7 @@ impl From<DimensionColumnBuilder> for Dimension {
             column_name: value.column_name,
             arguments: value.arguments,
             field_path: value.field_path,
+            extraction: None,
         }
     }
 }

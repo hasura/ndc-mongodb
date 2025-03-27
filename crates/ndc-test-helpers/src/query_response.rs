@@ -134,13 +134,13 @@ pub fn row_set() -> RowSetBuilder {
 
 pub fn group(
     dimensions: impl IntoIterator<Item = impl Into<serde_json::Value>>,
-    aggregates: impl IntoIterator<Item = (impl ToString, impl Into<serde_json::Value>)>,
+    aggregates: impl IntoIterator<Item = (impl Into<FieldName>, impl Into<serde_json::Value>)>,
 ) -> Group {
     Group {
         dimensions: dimensions.into_iter().map(Into::into).collect(),
         aggregates: aggregates
             .into_iter()
-            .map(|(name, value)| (name.to_string(), value.into()))
+            .map(|(name, value)| (name.into(), value.into()))
             .collect(),
     }
 }

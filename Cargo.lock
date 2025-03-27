@@ -460,7 +460,7 @@ dependencies = [
  "async-tempfile",
  "futures",
  "googletest 0.12.0",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "mongodb",
  "mongodb-support",
  "ndc-models",
@@ -1554,9 +1554,9 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.13.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
+checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
 dependencies = [
  "either",
 ]
@@ -1818,7 +1818,7 @@ dependencies = [
  "http 0.2.12",
  "indent",
  "indexmap 2.2.6",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "lazy_static",
  "mockall",
  "mongodb",
@@ -1855,7 +1855,7 @@ dependencies = [
  "futures-util",
  "googletest 0.13.0",
  "indexmap 2.2.6",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "json-structural-diff",
  "mongodb",
  "mongodb-agent-common",
@@ -1888,7 +1888,7 @@ dependencies = [
  "futures",
  "http 0.2.12",
  "indexmap 2.2.6",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "mongodb",
  "mongodb-agent-common",
  "mongodb-support",
@@ -1949,7 +1949,7 @@ dependencies = [
 [[package]]
 name = "ndc-models"
 version = "0.2.0"
-source = "git+http://github.com/hasura/ndc-spec.git?tag=v0.2.0-rc.2#2fad1c699df79890dbb3877d1035ffd8bd0abfc2"
+source = "git+http://github.com/hasura/ndc-spec.git?tag=v0.2.0#e25213f51a7e8422d712509d63ae012c67b4f3f1"
 dependencies = [
  "indexmap 2.2.6",
  "ref-cast",
@@ -1969,7 +1969,7 @@ dependencies = [
  "enum-iterator",
  "indent",
  "indexmap 2.2.6",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "lazy_static",
  "ndc-models",
  "ndc-test-helpers",
@@ -1982,8 +1982,8 @@ dependencies = [
 
 [[package]]
 name = "ndc-sdk"
-version = "0.5.0"
-source = "git+https://github.com/hasura/ndc-sdk-rs.git?rev=643b96b8ee4c8b372b44433167ce2ac4de193332#643b96b8ee4c8b372b44433167ce2ac4de193332"
+version = "0.6.0"
+source = "git+https://github.com/hasura/ndc-sdk-rs.git?rev=v0.6.0#f8db8bff28c42f7da317a2336808bb7149408205"
 dependencies = [
  "async-trait",
  "axum",
@@ -2014,8 +2014,8 @@ dependencies = [
 
 [[package]]
 name = "ndc-sdk-core"
-version = "0.5.0"
-source = "git+https://github.com/hasura/ndc-sdk-rs.git?rev=643b96b8ee4c8b372b44433167ce2ac4de193332#643b96b8ee4c8b372b44433167ce2ac4de193332"
+version = "0.6.0"
+source = "git+https://github.com/hasura/ndc-sdk-rs.git?rev=v0.6.0#f8db8bff28c42f7da317a2336808bb7149408205"
 dependencies = [
  "async-trait",
  "axum",
@@ -2035,7 +2035,7 @@ dependencies = [
 [[package]]
 name = "ndc-test"
 version = "0.2.0"
-source = "git+http://github.com/hasura/ndc-spec.git?tag=v0.2.0-rc.2#2fad1c699df79890dbb3877d1035ffd8bd0abfc2"
+source = "git+http://github.com/hasura/ndc-spec.git?tag=v0.2.0#e25213f51a7e8422d712509d63ae012c67b4f3f1"
 dependencies = [
  "async-trait",
  "clap",
@@ -2056,7 +2056,7 @@ name = "ndc-test-helpers"
 version = "1.7.0"
 dependencies = [
  "indexmap 2.2.6",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "ndc-models",
  "serde_json",
  "smol_str",
