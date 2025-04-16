@@ -10,6 +10,10 @@ This changelog documents the changes between release versions.
 
 ### Fixed
 
+## [1.7.2] - 2025-04-16
+
+### Fixed
+
 - Database introspection no longer fails if any individual collection cannot be sampled ([#160](https://github.com/hasura/ndc-mongodb/pull/160))
 
 ## [1.7.1] - 2025-03-12
