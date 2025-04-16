@@ -10,11 +10,13 @@ This changelog documents the changes between release versions.
 
 ### Fixed
 
+- Database introspection no longer fails if any individual collection cannot be sampled ([#160](https://github.com/hasura/ndc-mongodb/pull/160))
+
 ## [1.7.1] - 2025-03-12
 
 ### Added
 
-- Add watch command while initializing metadata (#157)
+- Add watch command while initializing metadata ([#157](https://github.com/hasura/ndc-mongodb/pull/157))
 
 ### Changed
 

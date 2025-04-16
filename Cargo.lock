@@ -1944,6 +1944,7 @@ dependencies = [
  "enum-iterator",
  "futures-util",
  "googletest 0.13.0",
+ "indent",
  "indexmap 2.2.6",
  "itertools",
  "json-structural-diff",
