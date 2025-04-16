@@ -87,6 +87,14 @@ pub async fn sample_schema_from_db(
     while let Some(collection_spec) = collections_cursor.try_next().await? {
         let collection_name = collection_spec.name;
 
+        // The `system.*` namespace is reserved for internal use. In some deployments, such as
+        // MongoDB v6 running on Atlas, aggregate permissions are denied for `system.views` which
+        // causes introspection to fail. So we skip those collections.
+        if collection_name.starts_with("system.") {
+            log_warning!("collection {collection_name} is under the system namespace which is reserved for internal use - skipping");
+            continue;
+        }
+
         let previously_defined_collection =
             previously_defined_collections.remove(collection_name.as_str());
 
@@ -96,15 +104,26 @@ pub async fn sample_schema_from_db(
             .map(|c| c.collection.r#type.clone())
             .unwrap_or_else(|| collection_name.clone().into());
 
-        let Some(collection_schema) = sample_schema_from_collection(
+        let sample_result = match sample_schema_from_collection(
             &collection_name,
             collection_type_name.clone(),
             sample_size,
             all_schema_nullable,
             db,
         )
-        .await?
-        else {
+        .await
+        {
+            Ok(schema) => schema,
+            Err(err) => {
+                let indented_error = indent::indent_all_by(2, err.to_string());
+                log_warning!(
+                "an error occurred attempting to sample collection, {collection_name} - skipping\n{indented_error}"
+            );
+                continue;
+            }
+        };
+
+        let Some(collection_schema) = sample_result else {
             log_warning!("could not find any documents to sample from collection, {collection_name} - skipping");
             continue;
         };
