@@ -24,11 +24,20 @@ nativeToolchainDefinition:
       powershell: |
         $ErrorActionPreference = "Stop"
         & "$env:HASURA_DDN_NATIVE_CONNECTOR_PLUGIN_DIR\hasura-ndc-mongodb.exe" update
+    watch:
+      type: ShellScript
+      bash: |
+        #!/usr/bin/env bash
+        echo "Watch is not supported for this connector"
+        exit 1
+      powershell: |
+        Write-Output "Watch is not supported for this connector"
+        exit 1
 commands:
   update: hasura-ndc-mongodb update
 cliPlugin:
   name: ndc-mongodb
-  version: 
+  version:
 dockerComposeWatch:
   - path: ./
     target: /etc/connector

@@ -47,6 +47,22 @@ Results for `avg` are always coerced to `double`.
 Results for `sum` are coerced to `double` if the summed inputs use a fractional
 numeric type, or to `long` if inputs use an integral numeric type.
 
+### Changed
+
+### Fixed
+
+## [1.7.2] - 2025-04-16
+
+### Fixed
+
+- Database introspection no longer fails if any individual collection cannot be sampled ([#160](https://github.com/hasura/ndc-mongodb/pull/160))
+
+## [1.7.1] - 2025-03-12
+
+### Added
+
+- Add watch command while initializing metadata ([#157](https://github.com/hasura/ndc-mongodb/pull/157))
+
 ## [1.7.0] - 2025-03-10
 
 ### Added
@@ -64,7 +80,7 @@ numeric type, or to `long` if inputs use an integral numeric type.
 #### Changes to database introspection
 
 Previously running introspection would not update existing schema definitions, it would only add definitions for
-newly-added collections. This release changes that behavior to make conservative changes to existing definitions: 
+newly-added collections. This release changes that behavior to make conservative changes to existing definitions:
 
 - added fields, either top-level or nested, will be added to existing schema definitions
 - types for fields that are already configured will **not** be changed automatically
@@ -114,8 +130,8 @@ re-introspect, or edit schema files to change occurrences of `binData` to `uuid`
 
 Rust dependencies have been updated to get fixes for these advisories:
 
-- https://rustsec.org/advisories/RUSTSEC-2025-0004
-- https://rustsec.org/advisories/RUSTSEC-2025-0006
+- <https://rustsec.org/advisories/RUSTSEC-2025-0004>
+- <https://rustsec.org/advisories/RUSTSEC-2025-0006>
 
 ## [1.6.0] - 2025-01-17
 
@@ -195,7 +211,7 @@ query configuration files, and does not lock you into anything.
 You can run the new command like this:
 
 ```sh
-$ ddn connector plugin --connector app/connector/my_connector/connector.yaml -- native-query
+ddn connector plugin --connector app/connector/my_connector/connector.yaml -- native-query
 ```
 
 To create a native query create a file with a `.json` extension that contains
@@ -228,7 +244,7 @@ movie titles in a given year:
 In your supergraph directory run a command like this using the path to the pipeline file as an argument,
 
 ```sh
-$ ddn connector plugin --connector app/connector/my_connector/connector.yaml -- native-query create title_word_frequency.json --collection movies
+ddn connector plugin --connector app/connector/my_connector/connector.yaml -- native-query create title_word_frequency.json --collection movies
 ```
 
 You should see output like this:
