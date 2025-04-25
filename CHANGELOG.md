@@ -6,9 +6,46 @@ This changelog documents the changes between release versions.
 
 ### Added
 
+- Add option to skip rows on response type mismatch ([#162](https://github.com/hasura/ndc-mongodb/pull/162))
+
 ### Changed
 
 ### Fixed
+
+### Option to skip rows on response type mismatch
+
+When sending response data for a query if we encounter a value that does not match the type declared in the connector
+schema the default behavior is to respond with an error. That prevents the user from getting any data. This change adds
+an option to silently skip rows that contain type mismatches so that the user can get a partial set of result data.
+
+This can come up if, for example, you have database documents with a field that nearly always contains an `int` value,
+but in a handful of cases that field contains a `string`. Introspection may determine that the type of the field is
+`int` if the random document sampling does not happen to check one of the documents with a `string`. Then when you run
+a query that _does_ read one of those documents the query fails because the connector refuses to return a value of an
+unexpected type.
+
+The new option, `onResponseTypeMismatch`, has two possible values: `fail` (the existing, default behavior), or `skipRow`
+(the new, opt-in behavior). If you set the option to `skipRow` in the example case above the connector will silently
+exclude documents with unexpected `string` values in the response. This allows you to get access to the "good" data.
+This is opt-in because we don't want to exclude data if users are not aware that might be happening.
+
+The option is set in connector configuration in `configuration.json`. Here is an example configuration:
+
+```json
+{
+  "introspectionOptions": {
+    "sampleSize": 1000,
+    "noValidatorSchema": false,
+    "allSchemaNullable": false
+  },
+  "serializationOptions": {
+    "extendedJsonMode": "relaxed",
+    "onResponseTypeMismatch": "skipRow"
+  }
+}
+```
+
+The `skipRow` behavior does not affect aggregations, or queries that do not request the field with the unexpected type.
 
 ## [1.7.2] - 2025-04-16
 
@@ -21,10 +58,6 @@ This changelog documents the changes between release versions.
 ### Added
 
 - Add watch command while initializing metadata ([#157](https://github.com/hasura/ndc-mongodb/pull/157))
-
-### Changed
-
-### Fixed
 
 ## [1.7.0] - 2025-03-10
 

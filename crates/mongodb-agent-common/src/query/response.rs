@@ -1,10 +1,9 @@
 use std::collections::BTreeMap;
 
-use configuration::MongoScalarType;
+use configuration::{ConfigurationSerializationOptions, MongoScalarType, OnResponseTypeMismatch};
 use indexmap::IndexMap;
 use itertools::Itertools;
 use mongodb::bson::{self, Bson};
-use mongodb_support::ExtendedJsonMode;
 use ndc_models::{QueryResponse, RowFieldValue, RowSet};
 use serde::Deserialize;
 use thiserror::Error;
@@ -50,7 +49,7 @@ struct BsonRowSet {
 
 #[instrument(name = "Serialize Query Response", skip_all, fields(internal.visibility = "user"))]
 pub fn serialize_query_response(
-    mode: ExtendedJsonMode,
+    options: &ConfigurationSerializationOptions,
     query_plan: &QueryPlan,
     response_documents: Vec<bson::Document>,
 ) -> Result<QueryResponse> {
@@ -62,7 +61,7 @@ pub fn serialize_query_response(
             .map(|document| {
                 let row_set = bson::from_document(document)?;
                 serialize_row_set_with_aggregates(
-                    mode,
+                    options,
                     &[collection_name.as_str()],
                     &query_plan.query,
                     row_set,
@@ -72,14 +71,14 @@ pub fn serialize_query_response(
     } else if query_plan.query.has_aggregates() {
         let row_set = parse_single_document(response_documents)?;
         Ok(vec![serialize_row_set_with_aggregates(
-            mode,
+            options,
             &[],
             &query_plan.query,
             row_set,
         )?])
     } else {
         Ok(vec![serialize_row_set_rows_only(
-            mode,
+            options,
             &[],
             &query_plan.query,
             response_documents,
@@ -92,7 +91,7 @@ pub fn serialize_query_response(
 
 // When there are no aggregates we expect a list of rows
 fn serialize_row_set_rows_only(
-    mode: ExtendedJsonMode,
+    options: &ConfigurationSerializationOptions,
     path: &[&str],
     query: &Query,
     docs: Vec<bson::Document>,
@@ -100,7 +99,7 @@ fn serialize_row_set_rows_only(
     let rows = query
         .fields
         .as_ref()
-        .map(|fields| serialize_rows(mode, path, fields, docs))
+        .map(|fields| serialize_rows(options, path, fields, docs))
         .transpose()?;
 
     Ok(RowSet {
@@ -112,7 +111,7 @@ fn serialize_row_set_rows_only(
 // When there are aggregates we expect a single document with `rows` and `aggregates`
 // fields
 fn serialize_row_set_with_aggregates(
-    mode: ExtendedJsonMode,
+    options: &ConfigurationSerializationOptions,
     path: &[&str],
     query: &Query,
     row_set: BsonRowSet,
@@ -120,26 +119,26 @@ fn serialize_row_set_with_aggregates(
     let aggregates = query
         .aggregates
         .as_ref()
-        .map(|aggregates| serialize_aggregates(mode, path, aggregates, row_set.aggregates))
+        .map(|aggregates| serialize_aggregates(options, path, aggregates, row_set.aggregates))
         .transpose()?;
 
     let rows = query
         .fields
         .as_ref()
-        .map(|fields| serialize_rows(mode, path, fields, row_set.rows))
+        .map(|fields| serialize_rows(options, path, fields, row_set.rows))
         .transpose()?;
 
     Ok(RowSet { aggregates, rows })
 }
 
 fn serialize_aggregates(
-    mode: ExtendedJsonMode,
+    options: &ConfigurationSerializationOptions,
     path: &[&str],
     query_aggregates: &IndexMap<ndc_models::FieldName, Aggregate>,
     value: Bson,
 ) -> Result<IndexMap<ndc_models::FieldName, serde_json::Value>> {
     let aggregates_type = type_for_aggregates(query_aggregates);
-    let json = bson_to_json(mode, &aggregates_type, value)?;
+    let json = bson_to_json(options.extended_json_mode, &aggregates_type, value)?;
 
     // The NDC type uses an IndexMap for aggregate values; we need to convert the map
     // underlying the Value::Object value to an IndexMap
@@ -153,28 +152,39 @@ fn serialize_aggregates(
 }
 
 fn serialize_rows(
-    mode: ExtendedJsonMode,
+    options: &ConfigurationSerializationOptions,
     path: &[&str],
     query_fields: &IndexMap<ndc_models::FieldName, Field>,
     docs: Vec<bson::Document>,
 ) -> Result<Vec<IndexMap<ndc_models::FieldName, RowFieldValue>>> {
     let row_type = type_for_row(path, query_fields)?;
 
-    docs.into_iter()
-        .map(|doc| {
-            let json = bson_to_json(mode, &row_type, doc.into())?;
+    let rows = docs
+        .into_iter()
+        .filter_map(
+            |doc| match bson_to_json(options.extended_json_mode, &row_type, doc.into()) {
+                Ok(json) => Some(Ok(json)),
+                Err(BsonToJsonError::TypeMismatch(_, _))
+                    if options.on_response_type_mismatch == OnResponseTypeMismatch::SkipRow =>
+                {
+                    None
+                }
+                Err(error) => Some(Err(error)),
+            },
+        )
+        .map_ok(|json| {
             // The NDC types use an IndexMap for each row value; we need to convert the map
             // underlying the Value::Object value to an IndexMap
-            let index_map = match json {
+            match json {
                 serde_json::Value::Object(obj) => obj
                     .into_iter()
                     .map(|(key, value)| (key.into(), RowFieldValue(value)))
                     .collect(),
                 _ => unreachable!(),
-            };
-            Ok(index_map)
+            }
         })
-        .try_collect()
+        .try_collect()?;
+    Ok(rows)
 }
 
 fn type_for_row_set(
@@ -322,9 +332,12 @@ fn path_to_owned(path: &[&str]) -> Vec<String> {
 mod tests {
     use std::str::FromStr;
 
-    use configuration::{Configuration, MongoScalarType};
+    use configuration::{
+        Configuration, ConfigurationOptions, ConfigurationSerializationOptions, MongoScalarType,
+        OnResponseTypeMismatch,
+    };
     use mongodb::bson::{self, Bson};
-    use mongodb_support::{BsonScalarType, ExtendedJsonMode};
+    use mongodb_support::BsonScalarType;
     use ndc_models::{QueryRequest, QueryResponse, RowFieldValue, RowSet};
     use ndc_query_plan::plan_for_query_request;
     use ndc_test_helpers::{
@@ -336,7 +349,7 @@ mod tests {
 
     use crate::{
         mongo_query_plan::{MongoConfiguration, ObjectType, Type},
-        test_helpers::make_nested_schema,
+        test_helpers::{chinook_config, chinook_relationships, make_nested_schema},
     };
 
     use super::{serialize_query_response, type_for_row_set};
@@ -364,7 +377,7 @@ mod tests {
         }];
 
         let response =
-            serialize_query_response(ExtendedJsonMode::Canonical, &query_plan, response_documents)?;
+            serialize_query_response(&Default::default(), &query_plan, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -404,7 +417,7 @@ mod tests {
         }];
 
         let response =
-            serialize_query_response(ExtendedJsonMode::Canonical, &query_plan, response_documents)?;
+            serialize_query_response(&Default::default(), &query_plan, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -451,7 +464,7 @@ mod tests {
         }];
 
         let response =
-            serialize_query_response(ExtendedJsonMode::Canonical, &query_plan, response_documents)?;
+            serialize_query_response(&Default::default(), &query_plan, response_documents)?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -509,8 +522,11 @@ mod tests {
             "price_extjson": Bson::Decimal128(bson::Decimal128::from_str("-4.9999999999").unwrap()),
         }];
 
-        let response =
-            serialize_query_response(ExtendedJsonMode::Canonical, &query_plan, response_documents)?;
+        let response = serialize_query_response(
+            query_context.serialization_options(),
+            &query_plan,
+            response_documents,
+        )?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -567,8 +583,11 @@ mod tests {
             },
         }];
 
-        let response =
-            serialize_query_response(ExtendedJsonMode::Canonical, &query_plan, response_documents)?;
+        let response = serialize_query_response(
+            query_context.serialization_options(),
+            &query_plan,
+            response_documents,
+        )?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -602,11 +621,14 @@ mod tests {
                 object_type([("value", named_type("ExtendedJSON"))]),
             )]
             .into(),
-            functions: Default::default(),
-            procedures: Default::default(),
-            native_mutations: Default::default(),
-            native_queries: Default::default(),
-            options: Default::default(),
+            options: ConfigurationOptions {
+                serialization_options: ConfigurationSerializationOptions {
+                    extended_json_mode: mongodb_support::ExtendedJsonMode::Relaxed,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            ..Default::default()
         });
 
         let request = query_request()
@@ -630,8 +652,11 @@ mod tests {
             },
         }];
 
-        let response =
-            serialize_query_response(ExtendedJsonMode::Relaxed, &query_plan, response_documents)?;
+        let response = serialize_query_response(
+            query_context.serialization_options(),
+            &query_plan,
+            response_documents,
+        )?;
         assert_eq!(
             response,
             QueryResponse(vec![RowSet {
@@ -727,6 +752,137 @@ mod tests {
         });
 
         assert_eq!(row_set_type, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn fails_on_response_type_mismatch() -> anyhow::Result<()> {
+        let options = ConfigurationSerializationOptions {
+            on_response_type_mismatch: OnResponseTypeMismatch::Fail,
+            ..Default::default()
+        };
+
+        let request = query_request()
+            .collection("Track")
+            .query(query().fields([field!("Milliseconds")]))
+            .into();
+
+        let query_plan = plan_for_query_request(&chinook_config(), request)?;
+
+        let response_documents = vec![
+            bson::doc! { "Milliseconds": 1 },
+            bson::doc! { "Milliseconds": "two" },
+            bson::doc! { "Milliseconds": 3 },
+        ];
+
+        let response_result = serialize_query_response(&options, &query_plan, response_documents);
+        assert!(
+            response_result.is_err(),
+            "serialize_query_response returns an error"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn skips_rows_with_unexpected_data_type() -> anyhow::Result<()> {
+        let options = ConfigurationSerializationOptions {
+            on_response_type_mismatch: OnResponseTypeMismatch::SkipRow,
+            ..Default::default()
+        };
+
+        let request = query_request()
+            .collection("Track")
+            .query(query().fields([field!("Milliseconds")]))
+            .into();
+
+        let query_plan = plan_for_query_request(&chinook_config(), request)?;
+
+        let response_documents = vec![
+            bson::doc! { "Milliseconds": 1 },
+            bson::doc! { "Milliseconds": "two" },
+            bson::doc! { "Milliseconds": 3 },
+        ];
+
+        let response = serialize_query_response(&options, &query_plan, response_documents)?;
+        assert_eq!(
+            response,
+            QueryResponse(vec![RowSet {
+                aggregates: Default::default(),
+                rows: Some(vec![
+                    [("Milliseconds".into(), RowFieldValue(json!(1)))].into(),
+                    [("Milliseconds".into(), RowFieldValue(json!(3)))].into(),
+                ])
+            }])
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn fails_on_response_type_mismatch_in_related_collection() -> anyhow::Result<()> {
+        let options = ConfigurationSerializationOptions {
+            on_response_type_mismatch: OnResponseTypeMismatch::Fail,
+            ..Default::default()
+        };
+
+        let request = query_request()
+            .collection("Album")
+            .query(
+                query().fields([relation_field!("Tracks" => "Tracks", query().fields([
+                    field!("Milliseconds")
+                ]))]),
+            )
+            .relationships(chinook_relationships())
+            .into();
+
+        let query_plan = plan_for_query_request(&chinook_config(), request)?;
+
+        let response_documents = vec![bson::doc! { "Tracks": { "rows": [
+            bson::doc! { "Milliseconds": 1 },
+            bson::doc! { "Milliseconds": "two" },
+            bson::doc! { "Milliseconds": 3 },
+        ] } }];
+
+        let response_result = serialize_query_response(&options, &query_plan, response_documents);
+        assert!(
+            response_result.is_err(),
+            "serialize_query_response returns an error"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn skips_rows_with_unexpected_data_type_in_related_collection() -> anyhow::Result<()> {
+        let options = ConfigurationSerializationOptions {
+            on_response_type_mismatch: OnResponseTypeMismatch::SkipRow,
+            ..Default::default()
+        };
+
+        let request = query_request()
+            .collection("Album")
+            .query(
+                query().fields([relation_field!("Tracks" => "Tracks", query().fields([
+                    field!("Milliseconds")
+                ]))]),
+            )
+            .relationships(chinook_relationships())
+            .into();
+
+        let query_plan = plan_for_query_request(&chinook_config(), request)?;
+
+        let response_documents = vec![bson::doc! { "Tracks": { "rows": [
+            bson::doc! { "Milliseconds": 1 },
+            bson::doc! { "Milliseconds": "two" },
+            bson::doc! { "Milliseconds": 3 },
+        ] } }];
+
+        let response = serialize_query_response(&options, &query_plan, response_documents)?;
+        assert_eq!(
+            response,
+            QueryResponse(vec![RowSet {
+                aggregates: Default::default(),
+                rows: Some(vec![])
+            }])
+        );
         Ok(())
     }
 }
