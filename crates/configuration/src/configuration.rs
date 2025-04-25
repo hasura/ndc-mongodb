@@ -244,6 +244,26 @@ pub struct ConfigurationSerializationOptions {
     /// used for output. This setting has no effect on inputs (query arguments, etc.).
     #[serde(default)]
     pub extended_json_mode: ExtendedJsonMode,
+
+    /// When sending response data the connector may encounter data in a field that does not match
+    /// the type declared for that field in the connector schema. This option specifies what the
+    /// connector should do in this situation.
+    #[serde(default)]
+    pub on_response_type_mismatch: OnResponseTypeMismatch,
+}
+
+/// Options for connector behavior on encountering a type mismatch between query response data, and
+/// declared types in schema.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum OnResponseTypeMismatch {
+    /// On a type mismatch, send an error instead of response data. Fails the entire query.
+    #[default]
+    Fail,
+
+    /// If any field in a response row contains data of an incorrect type, exclude that row from
+    /// the response.
+    SkipRow,
 }
 
 fn merge_object_types<'a>(
