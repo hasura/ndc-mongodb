@@ -349,7 +349,7 @@ mod tests {
 
     use crate::{
         mongo_query_plan::{MongoConfiguration, ObjectType, Type},
-        test_helpers::{chinook_config, make_nested_schema},
+        test_helpers::{chinook_config, chinook_relationships, make_nested_schema},
     };
 
     use super::{serialize_query_response, type_for_row_set};
@@ -812,6 +812,75 @@ mod tests {
                     [("Milliseconds".into(), RowFieldValue(json!(1)))].into(),
                     [("Milliseconds".into(), RowFieldValue(json!(3)))].into(),
                 ])
+            }])
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn fails_on_response_type_mismatch_in_related_collection() -> anyhow::Result<()> {
+        let options = ConfigurationSerializationOptions {
+            on_response_type_mismatch: OnResponseTypeMismatch::Fail,
+            ..Default::default()
+        };
+
+        let request = query_request()
+            .collection("Album")
+            .query(
+                query().fields([relation_field!("Tracks" => "Tracks", query().fields([
+                    field!("Milliseconds")
+                ]))]),
+            )
+            .relationships(chinook_relationships())
+            .into();
+
+        let query_plan = plan_for_query_request(&chinook_config(), request)?;
+
+        let response_documents = vec![bson::doc! { "Tracks": { "rows": [
+            bson::doc! { "Milliseconds": 1 },
+            bson::doc! { "Milliseconds": "two" },
+            bson::doc! { "Milliseconds": 3 },
+        ] } }];
+
+        let response_result = serialize_query_response(&options, &query_plan, response_documents);
+        assert!(
+            response_result.is_err(),
+            "serialize_query_response returns an error"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn skips_rows_with_unexpected_data_type_in_related_collection() -> anyhow::Result<()> {
+        let options = ConfigurationSerializationOptions {
+            on_response_type_mismatch: OnResponseTypeMismatch::SkipRow,
+            ..Default::default()
+        };
+
+        let request = query_request()
+            .collection("Album")
+            .query(
+                query().fields([relation_field!("Tracks" => "Tracks", query().fields([
+                    field!("Milliseconds")
+                ]))]),
+            )
+            .relationships(chinook_relationships())
+            .into();
+
+        let query_plan = plan_for_query_request(&chinook_config(), request)?;
+
+        let response_documents = vec![bson::doc! { "Tracks": { "rows": [
+            bson::doc! { "Milliseconds": 1 },
+            bson::doc! { "Milliseconds": "two" },
+            bson::doc! { "Milliseconds": 3 },
+        ] } }];
+
+        let response = serialize_query_response(&options, &query_plan, response_documents)?;
+        assert_eq!(
+            response,
+            QueryResponse(vec![RowSet {
+                aggregates: Default::default(),
+                rows: Some(vec![[].into()])
             }])
         );
         Ok(())
