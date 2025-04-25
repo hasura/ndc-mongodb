@@ -880,7 +880,7 @@ mod tests {
             response,
             QueryResponse(vec![RowSet {
                 aggregates: Default::default(),
-                rows: Some(vec![[].into()])
+                rows: Some(vec![])
             }])
         );
         Ok(())
