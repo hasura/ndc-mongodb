@@ -2,15 +2,11 @@
 
 This changelog documents the changes between release versions.
 
-## [Unreleased]
+## [1.8.0] - 2025-04-25
 
 ### Added
 
 - Add option to skip rows on response type mismatch ([#162](https://github.com/hasura/ndc-mongodb/pull/162))
-
-### Changed
-
-### Fixed
 
 ### Option to skip rows on response type mismatch
 
