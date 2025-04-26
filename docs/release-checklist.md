@@ -6,6 +6,7 @@ Create a PR in the MongoDB connector repository with these changes:
 
 - update the `version` property in `Cargo.toml` (in the workspace root only). For example, `version = "1.5.0"`
 - update `CHANGELOG.md`, add a heading under `## [Unreleased]` with the new version number and date. For example, `## [1.5.0] - 2024-12-05`
+  - If any of the "Added", "Fixed", "Changed" sections are empty then delete the heading.
 - update `Cargo.lock` by running `cargo check`
 
 ## 2. Tag
