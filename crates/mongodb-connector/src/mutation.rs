@@ -109,7 +109,7 @@ async fn execute_procedure(
     };
 
     let json_result = bson_to_json(
-        config.extended_json_mode(),
+        config.serialization_options().extended_json_mode,
         &requested_result_type,
         rewritten_result,
     )

@@ -1,9 +1,10 @@
 use std::collections::BTreeMap;
 
+use configuration::ConfigurationSerializationOptions;
 use configuration::{
     native_mutation::NativeMutation, native_query::NativeQuery, Configuration, MongoScalarType,
 };
-use mongodb_support::{BsonScalarType, ExtendedJsonMode, EXTENDED_JSON_TYPE_NAME};
+use mongodb_support::{BsonScalarType, EXTENDED_JSON_TYPE_NAME};
 use ndc_models as ndc;
 use ndc_query_plan::{ConnectorTypes, QueryContext, QueryPlanError};
 
@@ -15,8 +16,8 @@ use crate::scalar_types_capabilities::SCALAR_TYPES;
 pub struct MongoConfiguration(pub Configuration);
 
 impl MongoConfiguration {
-    pub fn extended_json_mode(&self) -> ExtendedJsonMode {
-        self.0.options.serialization_options.extended_json_mode
+    pub fn serialization_options(&self) -> &ConfigurationSerializationOptions {
+        &self.0.options.serialization_options
     }
 
     pub fn native_queries(&self) -> &BTreeMap<ndc::FunctionName, NativeQuery> {

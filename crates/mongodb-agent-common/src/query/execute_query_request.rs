@@ -33,7 +33,8 @@ pub async fn execute_query_request(
     tracing::debug!(?query_plan, "abstract query plan");
     let pipeline = pipeline_for_query_request(config, &query_plan)?;
     let documents = execute_query_pipeline(database, config, &query_plan, pipeline).await?;
-    let response = serialize_query_response(config.extended_json_mode(), &query_plan, documents)?;
+    let response =
+        serialize_query_response(config.serialization_options(), &query_plan, documents)?;
     Ok(response)
 }
 
