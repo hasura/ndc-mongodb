@@ -55,7 +55,7 @@ async fn execute_query_pipeline(
     pipeline: Pipeline,
 ) -> Result<Vec<bson::Document>> {
     let target = QueryTarget::for_request(config, query_plan);
-    tracing::debug!(
+    tracing::info!(
         ?target,
         pipeline = %serde_json::to_string(&pipeline).unwrap(),
         "executing query"
