@@ -116,6 +116,7 @@ async fn accepts_predicate_argument() -> anyhow::Result<()> {
 async fn accepts_inputs_in_extended_json_format() -> anyhow::Result<()> {
     let movie_id = "573a1391f29313caabcd6f98";
     let plot = "A high-stakes game of Crazy Eights takes a dark turn...";
+    let released = "1924-04-01T00:00:00.000000000Z";
 
     let mutation_resp = graphql_query(
         r#"
@@ -128,7 +129,7 @@ async fn accepts_inputs_in_extended_json_format() -> anyhow::Result<()> {
     )
     .variables(json!({
         "movieId": movie_id,
-        "update": { "plot": plot },
+        "update": { "plot": plot, "released": { "$date": released } },
     }))
     .run()
     .await?;
@@ -146,6 +147,7 @@ async fn accepts_inputs_in_extended_json_format() -> anyhow::Result<()> {
               movies(where: {id: {_eq: $movieId}}) {
                 title
                 plot
+                released
               }
             }
         "#,
@@ -154,10 +156,12 @@ async fn accepts_inputs_in_extended_json_format() -> anyhow::Result<()> {
     .run()
     .await?;
 
+    assert_eq!(tracks_resp.errors, None);
     assert_json!(tracks_resp.data, {
         "movies": [{
             "title": "The Ace of Hearts",
             "plot": plot,
+            "released": released,
         }],
     });
 
