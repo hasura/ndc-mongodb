@@ -37,7 +37,7 @@
             "$setField": {
               "field": "_id",
               "value": {
-                "$oid": "573a1391f29313caabcd6f98"
+                "$oid": "{{ movieId }}"
               },
               "input": "{{ update }}"
             }
