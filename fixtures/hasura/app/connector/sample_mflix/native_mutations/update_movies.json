@@ -3,14 +3,24 @@
   "resultType": {
     "object": "UpdateMoviesResult"
   },
-  "objectTypes": {
-    "UpdateMoviesResult": {
-      "cursor": "extendedJSON",
-      "ok": "int"
+  "arguments": {
+    "update": {
+      "type": "extendedJSON"
     }
   },
-  "arguments": {
-    "update": "extendedJSON"
+  "objectTypes": {
+    "UpdateMoviesResult": {
+      "fields": {
+        "cursor": {
+          "type": "extendedJSON"
+        },
+        "ok": {
+          "type": {
+            "scalar": "int"
+          }
+        }
+      }
+    }
   },
   "command": {
     "aggregate": 1,
