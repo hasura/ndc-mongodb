@@ -1,6 +1,10 @@
-use crate::{graphql_query, non_empty_array, GraphQLResponse};
+use crate::{
+    connector::Connector, graphql_query, non_empty_array, run_connector_query, GraphQLResponse,
+};
 use assert_json::{assert_json, validators};
 use insta::assert_yaml_snapshot;
+use ndc_models::{MutationOperation, MutationRequest};
+use ndc_test_helpers::query_request;
 use serde_json::json;
 
 #[tokio::test]
@@ -107,6 +111,55 @@ async fn accepts_predicate_argument() -> anyhow::Result<()> {
         "track": non_empty_array().and(validators::array_for_each(validators::object([
             ("unitPrice".to_string(), Box::new(validators::eq("11.99")) as Box<dyn Validator>)
         ].into())))
+    });
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn updates_a_document() -> anyhow::Result<()> {
+    let movie_id = "573a1391f29313caabcd6f98";
+    let foo = "bar";
+
+    let mutation_resp = graphql_query(
+        r#"
+            mutation($foo: String!) {
+              updateMovies(update: { foo: $foo }) {
+                ok
+              }
+            }
+        "#,
+    )
+    .variables(json!({ "foo": foo }))
+    .run()
+    .await?;
+
+    assert_eq!(mutation_resp.errors, None);
+    assert_json!(mutation_resp.data, {
+        "updateMovies": {
+            "ok": 1.0
+        }
+    });
+
+    let tracks_resp = graphql_query(
+        r#"
+            query($movieId) {
+              movies(where: {_id: {_eq: $movieId}}, order_by: {_id: Asc}) {
+                title
+                foo
+              }
+            }
+        "#,
+    )
+    .variables(json!({ "movieId": movie_id }))
+    .run()
+    .await?;
+
+    assert_json!(tracks_resp.data, {
+        "movies": [{
+            "title": "The Ace of Hearts",
+            "foo": foo
+        }],
     });
 
     Ok(())

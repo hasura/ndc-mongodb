@@ -1,0 +1,28 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: UpdateMoviesResult
+  fields:
+    - name: cursor
+      type: ExtendedJSON!
+    - name: ok
+      type: Double!
+  graphql:
+    typeName: UpdateMoviesResult
+    inputTypeName: UpdateMoviesResultInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: UpdateMoviesResult
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: UpdateMoviesResult
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - cursor
+          - ok

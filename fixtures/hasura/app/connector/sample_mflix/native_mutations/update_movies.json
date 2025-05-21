@@ -1,0 +1,37 @@
+{
+  "name": "updateMovies",
+  "resultType": {
+    "object": "UpdateMoviesResult"
+  },
+  "objectTypes": {
+    "UpdateMoviesResult": {
+      "cursor": "extendedJSON",
+      "ok": "int"
+    }
+  },
+  "arguments": {
+    "update": "extendedJSON"
+  },
+  "command": {
+    "aggregate": 1,
+    "cursor": {},
+    "pipeline": [
+      {
+        "$documents": [
+          {
+            "$setField": {
+              "field": "_id",
+              "value": {
+                "$oid": "573a1391f29313caabcd6f98"
+              },
+              "input": "{{ update }}"
+            }
+          }
+        ]
+      },
+      {
+        "$merge": "movies"
+      }
+    ]
+  }
+}
