@@ -1,0 +1,55 @@
+---
+kind: ObjectType
+version: v1
+definition:
+  name: UpdateMoviesResult
+  fields:
+    - name: cursor
+      type: ExtendedJson
+    - name: ok
+      type: Int!
+  graphql:
+    typeName: UpdateMoviesResult
+    inputTypeName: UpdateMoviesResultInput
+  dataConnectorTypeMapping:
+    - dataConnectorName: sample_mflix
+      dataConnectorObjectType: UpdateMoviesResult
+
+---
+kind: TypePermissions
+version: v1
+definition:
+  typeName: UpdateMoviesResult
+  permissions:
+    - role: admin
+      output:
+        allowedFields:
+          - cursor
+          - ok
+
+---
+kind: Command
+version: v1
+definition:
+  name: UpdateMovies
+  outputType: UpdateMoviesResult!
+  arguments:
+    - name: update
+      type: ExtendedJson
+  source:
+    dataConnectorName: sample_mflix
+    dataConnectorCommand:
+      procedure: updateMovies
+  graphql:
+    rootFieldName: updateMovies
+    rootFieldKind: Mutation
+
+---
+kind: CommandPermissions
+version: v1
+definition:
+  commandName: UpdateMovies
+  permissions:
+    - role: admin
+      allowExecution: true
+

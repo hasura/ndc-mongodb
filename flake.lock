@@ -145,11 +145,10 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1733604522,
-        "narHash": "sha256-9XNxIgOGq8MJ3a1GPE1lGaMBSz6Ossgv/Ec+KhyaC68=",
+        "lastModified": 1745973480,
         "owner": "hasura",
         "repo": "ddn-cli-nix",
-        "rev": "8e9695beabd6d111a69ae288f8abba6ebf8d1c82",
+        "rev": "ec1fbd2a66b042bf25f7c63270cf3bbe67c75ddc",
         "type": "github"
       },
       "original": {
