@@ -1420,12 +1420,10 @@ definition:
       procedures:
         - name: updateMovies
           arguments:
+            movieId:
+              type: { type: named, name: ObjectId }
             update:
-              type:
-                type: nullable
-                underlying_type:
-                  name: ExtendedJSON
-                  type: named
+              type: { type: named, name: ExtendedJSON }
           result_type:
             name: UpdateMoviesResult
             type: named

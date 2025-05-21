@@ -1,10 +1,6 @@
-use crate::{
-    connector::Connector, graphql_query, non_empty_array, run_connector_query, GraphQLResponse,
-};
+use crate::{graphql_query, non_empty_array, GraphQLResponse};
 use assert_json::{assert_json, validators};
 use insta::assert_yaml_snapshot;
-use ndc_models::{MutationOperation, MutationRequest};
-use ndc_test_helpers::query_request;
 use serde_json::json;
 
 #[tokio::test]
@@ -117,20 +113,23 @@ async fn accepts_predicate_argument() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn updates_a_document() -> anyhow::Result<()> {
+async fn accepts_inputs_in_extended_json_format() -> anyhow::Result<()> {
     let movie_id = "573a1391f29313caabcd6f98";
-    let foo = "bar";
+    let plot = "A high-stakes game of Crazy Eights takes a dark turn...";
 
     let mutation_resp = graphql_query(
         r#"
-            mutation($foo: String!) {
-              updateMovies(update: { foo: $foo }) {
+            mutation($movieId: ObjectId!, $update: ExtendedJson!) {
+              updateMovies(movieId: $movieId, update: $update) {
                 ok
               }
             }
         "#,
     )
-    .variables(json!({ "foo": foo }))
+    .variables(json!({
+        "movieId": movie_id,
+        "update": { "plot": plot },
+    }))
     .run()
     .await?;
 
@@ -143,10 +142,10 @@ async fn updates_a_document() -> anyhow::Result<()> {
 
     let tracks_resp = graphql_query(
         r#"
-            query($movieId) {
-              movies(where: {_id: {_eq: $movieId}}, order_by: {_id: Asc}) {
+            query($movieId: ObjectId!) {
+              movies(where: {id: {_eq: $movieId}}) {
                 title
-                foo
+                plot
               }
             }
         "#,
@@ -158,7 +157,7 @@ async fn updates_a_document() -> anyhow::Result<()> {
     assert_json!(tracks_resp.data, {
         "movies": [{
             "title": "The Ace of Hearts",
-            "foo": foo
+            "plot": plot,
         }],
     });
 

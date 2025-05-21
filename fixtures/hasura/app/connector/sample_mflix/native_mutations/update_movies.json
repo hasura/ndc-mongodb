@@ -4,6 +4,11 @@
     "object": "UpdateMoviesResult"
   },
   "arguments": {
+    "movieId": {
+      "type": {
+        "scalar": "objectId"
+      }
+    },
     "update": {
       "type": "extendedJSON"
     }

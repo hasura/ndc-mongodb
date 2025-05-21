@@ -34,8 +34,10 @@ definition:
   name: UpdateMovies
   outputType: UpdateMoviesResult!
   arguments:
+    - name: movieId
+      type: ObjectId!
     - name: update
-      type: ExtendedJson
+      type: ExtendedJson!
   source:
     dataConnectorName: sample_mflix
     dataConnectorCommand:
