@@ -49,6 +49,19 @@ numeric type, or to `long` if inputs use an integral numeric type.
 
 ### Changed
 
+## [1.8.1] - 2025-06-04
+
+### Fixed
+
+- Include TLS root certificates in docker images to fix connections to otel collectors ([#167](https://github.com/hasura/ndc-mongodb/pull/167))
+
+#### Root certificates
+
+Connections to MongoDB use the Rust MongoDB driver, which uses rust-tls, which bundles its own root certificate store.
+So there was no problem connecting to MongoDB over TLS. But the connector's OpenTelemetry library uses openssl instead
+of rust-tls, and openssl requires a separate certificate store to be installed. So this release fixes connections to
+OpenTelemetry collectors over https.
+
 ## [1.8.0] - 2025-04-25
 
 ### Added

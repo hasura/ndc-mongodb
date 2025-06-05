@@ -1,5 +1,6 @@
 # This is a function that returns a derivation for a docker image.
 { mongodb-connector
+, cacert
 , dockerTools
 , name ? "ghcr.io/hasura/ndc-mongodb"
 
@@ -30,6 +31,7 @@ let
         "OTEL_EXPORTER_OTLP_ENDPOINT=${default-otlp-endpoint}"
       ];
     } // extraConfig;
+    contents = [ cacert ]; # include TLS root certificate store
   };
 in
 dockerTools.buildLayeredImage args

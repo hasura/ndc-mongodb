@@ -85,7 +85,6 @@ in
     useHostStore = true;
     command = [
       "engine"
-      "--unstable-feature=enable-ndc-v02-support"
       "--port=${port}"
       "--metadata-path=${metadata}"
       "--authn-config-path=${auth-config}"
