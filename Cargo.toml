@@ -30,7 +30,6 @@ schemars = "^0.8.12"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1.0", features = ["preserve_order", "raw_value"] }
 ref-cast = "1.0.23"
-reqwest = "0.12.20"
 
 # Set opt levels according to recommendations in insta documentation
 [profile.dev.package]
