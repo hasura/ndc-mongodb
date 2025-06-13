@@ -4,6 +4,12 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+## [1.8.2] - 2025-06-13
+
+### Added
+
+- Enable support for the MONGODB-AWS authentication mechanism.
+
 ## [1.8.1] - 2025-06-04
 
 ### Fixed
