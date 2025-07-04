@@ -165,10 +165,7 @@ pub fn field_selection_for_comparison_target<T: ConnectorTypes>(
         column_type: column_type.clone(),
         fields: comparison_target
             .field_path()
-            .map(|field_path| {
-                let (field_name, rest_path) = split_field_path_at_head(field_path)?;
-                nested_field_by_field_type(field_name, rest_path, column_type)
-            })
+            .map(|field_path| nested_field_by_parent_type(column_type, field_path))
             .transpose()?,
     };
     Ok(field)
@@ -178,7 +175,9 @@ pub fn field_path_to_nested_field<T: ConnectorTypes>(
     parent_object_type: &plan::ObjectType<T::ScalarType>,
     field_path: &[ndc::FieldName],
 ) -> Result<plan::NestedField<T>> {
-    let (field_name, rest_path) = split_field_path_at_head(field_path)?;
+    let [field_name, rest_path @ ..] = field_path else {
+        return Err(QueryPlanError::TypeMismatch("empty field path".to_string()));
+    };
     Ok(plan::NestedField::Object(plan::NestedObject {
         fields: [(
             field_name.clone(),
@@ -188,52 +187,31 @@ pub fn field_path_to_nested_field<T: ConnectorTypes>(
     }))
 }
 
-fn nested_field_by_field_type<T: ConnectorTypes>(
-    field_name: &ndc::FieldName,
-    rest_path: &[ndc::FieldName],
-    field_type: &plan::Type<T::ScalarType>,
+fn nested_field_by_parent_type<T: ConnectorTypes>(
+    parent_type: &plan::Type<T::ScalarType>,
+    field_path: &[ndc::FieldName],
 ) -> Result<plan::NestedField<T>> {
-    match field_type {
-        plan::Type::Object(object_type) => Ok(plan::NestedField::Object(plan::NestedObject {
-            fields: [(
-                field_name.clone(),
-                field_path_to_field_selection(object_type, field_name, rest_path)?,
-            )]
-            .into(),
-        })),
+    match parent_type {
+        plan::Type::Object(object_type) => field_path_to_nested_field(object_type, field_path),
         plan::Type::ArrayOf(t) => Ok(plan::NestedField::Array(plan::NestedArray {
-            fields: Box::new(nested_array_field(rest_path, t)?),
+            fields: Box::new(nested_field_by_parent_type(t, field_path)?),
         })),
-        plan::Type::Nullable(t) => nested_field_by_field_type(field_name, rest_path, t),
+        plan::Type::Nullable(t) => nested_field_by_parent_type(t, field_path),
         plan::Type::Scalar(_) => Err(QueryPlanError::ExpectedObject {
-            path: vec![field_name.to_string()],
+            path: vec![field_path
+                .first()
+                .map(|f| f.to_string())
+                .unwrap_or_else(|| "unknown".to_string())],
         }),
     }
 }
 
-fn nested_array_field<T: ConnectorTypes>(
-    field_path: &[ndc::FieldName],
-    array_element_type: &plan::Type<T::ScalarType>,
-) -> Result<plan::NestedField<T>> {
-    match array_element_type {
-        plan::Type::Object(object_type) => Ok(field_path_to_nested_field(object_type, field_path)?),
-        plan::Type::ArrayOf(t) => {
-            let (_, rest_path) = split_field_path_at_head(field_path)?;
-            Ok(plan::NestedField::Array(plan::NestedArray {
-                fields: Box::new(nested_array_field(rest_path, t)?),
-            }))
-        }
-        plan::Type::Nullable(t) => nested_array_field(field_path, t),
-        plan::Type::Scalar(_) => Err(QueryPlanError::ExpectedObject { path: vec![] }),
-    }
-}
-
 fn field_path_to_field_selection<T: ConnectorTypes>(
-    object_type: &plan::ObjectType<T::ScalarType>,
+    parent_object_type: &plan::ObjectType<T::ScalarType>,
     field_name: &ndc::FieldName,
     rest_path: &[ndc::FieldName],
 ) -> Result<plan::Field<T>> {
-    let field_type = find_object_field(object_type, field_name)?;
+    let field_type = find_object_field(parent_object_type, field_name)?;
     field_by_field_type(field_name.clone(), rest_path, field_type)
 }
 
@@ -262,20 +240,11 @@ fn field_by_field_type<T: ConnectorTypes>(
             fields: if rest_path.is_empty() {
                 None
             } else {
-                Some(nested_array_field(rest_path, element_type)?)
+                Some(nested_field_by_parent_type(element_type, rest_path)?)
             },
             column_type: field_type.clone(),
         },
         plan::Type::Nullable(t) => field_by_field_type(field_name, rest_path, t)?,
     };
     Ok(field)
-}
-
-fn split_field_path_at_head(
-    field_path: &[ndc::FieldName],
-) -> Result<(&ndc::FieldName, &[ndc::FieldName])> {
-    let [field_name, rest_path @ ..] = field_path else {
-        return Err(QueryPlanError::TypeMismatch("empty field path".to_string()));
-    };
-    Ok((field_name, rest_path))
 }
