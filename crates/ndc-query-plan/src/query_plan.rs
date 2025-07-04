@@ -3,7 +3,9 @@ use std::{collections::BTreeMap, fmt::Debug, iter};
 use derivative::Derivative;
 use indexmap::IndexMap;
 use itertools::Either;
-use ndc_models::{self as ndc, FieldName, OrderDirection, RelationshipType, UnaryComparisonOperator};
+use ndc_models::{
+    self as ndc, FieldName, OrderDirection, RelationshipType, UnaryComparisonOperator,
+};
 
 use crate::{vec_set::VecSet, Type};
 
@@ -392,6 +394,13 @@ impl<T: ConnectorTypes> ComparisonTarget<T> {
         match self {
             ComparisonTarget::Column { name, .. } => name,
             ComparisonTarget::ColumnInScope { name, .. } => name,
+        }
+    }
+
+    pub fn field_path(&self) -> Option<&Vec<ndc::FieldName>> {
+        match self {
+            ComparisonTarget::Column { field_path, .. } => field_path.as_ref(),
+            ComparisonTarget::ColumnInScope { field_path, .. } => field_path.as_ref(),
         }
     }
 
