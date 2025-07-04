@@ -15,7 +15,10 @@ mod tests;
 use std::{collections::VecDeque, iter::once};
 
 use crate::{self as plan, type_annotated_field, ObjectType, QueryPlan, Scope};
-use helpers::{find_nested_collection_type, value_type_in_possible_array_equality_comparison};
+use helpers::{
+    field_selection_for_comparison_target, find_nested_collection_type,
+    value_type_in_possible_array_equality_comparison,
+};
 use indexmap::IndexMap;
 use itertools::Itertools;
 use ndc::{ExistsInCollection, QueryRequest};
@@ -575,7 +578,8 @@ fn plan_for_comparison_target<T: QueryContext>(
         }
         ndc::ComparisonTarget::RootCollectionColumn { name, field_path } => {
             let field_type =
-                find_object_field_path(root_collection_object_type, &name, field_path.as_ref())?.clone();
+                find_object_field_path(root_collection_object_type, &name, field_path.as_ref())?
+                    .clone();
             Ok(plan::ComparisonTarget::ColumnInScope {
                 name,
                 field_path,
@@ -646,20 +650,22 @@ fn plan_for_exists<T: QueryContext>(
                 })
                 .transpose()?;
 
-            let fields = predicate.as_ref().map(|p| {
-                p.query_local_comparison_targets()
-                    .map(|comparison_target| {
-                        (
-                            comparison_target.column_name().to_owned(),
-                            plan::Field::Column {
-                                column: comparison_target.column_name().clone(),
-                                column_type: comparison_target.get_field_type().clone(),
-                                fields: None,
-                            },
-                        )
-                    })
-                    .collect()
-            });
+            let fields = predicate
+                .as_ref()
+                .map(|p| {
+                    p.query_local_comparison_targets()
+                        .map(|comparison_target| {
+                            Ok((
+                                comparison_target.column_name().to_owned(),
+                                field_selection_for_comparison_target(
+                                    &collection_object_type,
+                                    comparison_target,
+                                )?,
+                            )) as Result<_>
+                        })
+                        .collect()
+                })
+                .transpose()?;
 
             let relationship_query = plan::Query {
                 fields,
@@ -695,7 +701,25 @@ fn plan_for_exists<T: QueryContext>(
                 })
                 .transpose()?;
 
+            let fields = predicate
+                .as_ref()
+                .map(|p| {
+                    p.query_local_comparison_targets()
+                        .map(|comparison_target| {
+                            Ok((
+                                comparison_target.column_name().to_owned(),
+                                field_selection_for_comparison_target(
+                                    &collection_object_type,
+                                    comparison_target,
+                                )?,
+                            )) as Result<_>
+                        })
+                        .collect()
+                })
+                .transpose()?;
+
             let join_query = plan::Query {
+                fields,
                 predicate: predicate.clone(),
                 relationships: nested_state.into_relationships(),
                 ..Default::default()

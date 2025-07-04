@@ -2,7 +2,7 @@
 macro_rules! field {
     ($name:literal: $typ:expr) => {
         (
-            $name,
+            ::ndc_models::FieldName::from($name),
             $crate::Field::Column {
                 column: $name.into(),
                 column_type: $typ,
@@ -12,7 +12,7 @@ macro_rules! field {
     };
     ($name:literal => $column_name:literal: $typ:expr) => {
         (
-            $name,
+            ::ndc_models::FieldName::from($name),
             $crate::Field::Column {
                 column: $column_name.into(),
                 column_type: $typ,
@@ -22,7 +22,7 @@ macro_rules! field {
     };
     ($name:literal => $column_name:literal: $typ:expr, $fields:expr) => {
         (
-            $name,
+            ::ndc_models::FieldName::from($name),
             $crate::Field::Column {
                 column: $column_name.into(),
                 column_type: $typ,
