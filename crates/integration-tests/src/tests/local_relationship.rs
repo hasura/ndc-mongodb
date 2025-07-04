@@ -90,6 +90,28 @@ async fn filters_by_non_null_field_of_related_collection() -> anyhow::Result<()>
 }
 
 #[tokio::test]
+async fn filters_by_nested_field_of_related_collection() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+            query {
+              comments(where: {movie: {imdb: {rating: {_eq: 9.2}}}}, limit: 10, order_by: {id: Asc}) {
+                text
+                movie {
+                  title
+                  year
+                }
+              }
+            }
+            "#
+        )
+        .run()
+        .await?
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn filters_by_field_of_relationship_of_relationship() -> anyhow::Result<()> {
     assert_yaml_snapshot!(
         graphql_query(

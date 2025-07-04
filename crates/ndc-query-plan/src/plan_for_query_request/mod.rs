@@ -701,7 +701,25 @@ fn plan_for_exists<T: QueryContext>(
                 })
                 .transpose()?;
 
+            let fields = predicate
+                .as_ref()
+                .map(|p| {
+                    p.query_local_comparison_targets()
+                        .map(|comparison_target| {
+                            Ok((
+                                comparison_target.column_name().to_owned(),
+                                field_selection_for_comparison_target(
+                                    &collection_object_type,
+                                    comparison_target,
+                                )?,
+                            )) as Result<_>
+                        })
+                        .collect()
+                })
+                .transpose()?;
+
             let join_query = plan::Query {
+                fields,
                 predicate: predicate.clone(),
                 relationships: nested_state.into_relationships(),
                 ..Default::default()
