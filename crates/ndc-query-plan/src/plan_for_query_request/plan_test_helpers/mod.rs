@@ -276,6 +276,7 @@ pub fn make_flat_schema() -> TestContext {
             (
                 "Article".into(),
                 ndc_test_helpers::object_type([
+                    ("id", named_type(ScalarType::Int)),
                     ("author_id", named_type(ScalarType::Int)),
                     ("title", named_type(ScalarType::String)),
                     ("year", nullable(named_type(ScalarType::Int))),

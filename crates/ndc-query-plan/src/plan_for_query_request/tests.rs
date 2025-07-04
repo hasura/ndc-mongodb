@@ -5,8 +5,9 @@ use serde_json::json;
 
 use crate::{
     self as plan,
+    field as plan_field,
     plan_for_query_request::plan_test_helpers::{
-        self, make_flat_schema, make_nested_schema, TestContext,
+        self, int, make_flat_schema, make_nested_schema, string, TestContext
     },
     query_plan::UnrelatedJoin,
     ExistsInCollection, Expression, Field, OrderBy, Query, QueryContext, QueryPlan, Relationship,
@@ -489,6 +490,11 @@ fn translates_root_column_references() -> Result<(), anyhow::Error> {
                             },
                         ],
                     }),
+                    fields: Some([
+                        plan_field!("author_id": int()),
+                        plan_field!("id": int()),
+                        plan_field!("title": string()),
+                    ].into()),
                     ..Default::default()
                 },
             },
