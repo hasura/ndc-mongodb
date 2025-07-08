@@ -1,5 +1,6 @@
 use std::{collections::BTreeMap, iter::once};
 
+use indexmap::IndexMap;
 use itertools::join;
 use mongodb::bson::bson;
 use mongodb_support::aggregate::{SortDocument, Stage};
@@ -42,7 +43,7 @@ pub fn make_sort_stages(order_by: &OrderBy) -> Result<Vec<Stage>> {
 fn make_sort(order_by: &OrderBy) -> Result<(SortDocument, RequiredAliases<'_>)> {
     let OrderBy { elements } = order_by;
 
-    let keys_directions_expressions: BTreeMap<String, (OrderDirection, Option<ColumnRef<'_>>)> =
+    let keys_directions_expressions: IndexMap<String, (OrderDirection, Option<ColumnRef<'_>>)> =
         elements
             .iter()
             .map(|obe| {
@@ -53,7 +54,7 @@ fn make_sort(order_by: &OrderBy) -> Result<(SortDocument, RequiredAliases<'_>)> 
                 };
                 Ok((key, (obe.order_direction, required_alias)))
             })
-            .collect::<Result<BTreeMap<_, _>>>()?;
+            .collect::<Result<IndexMap<_, _>>>()?; // IndexMap preserves insertion order
 
     let sort_document = keys_directions_expressions
         .iter()
@@ -112,7 +113,7 @@ fn safe_alias(target: &OrderByTarget) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
-    use mongodb::bson::doc;
+    use mongodb::bson::{self, doc};
     use mongodb_support::aggregate::SortDocument;
     use ndc_models::{FieldName, OrderDirection};
     use ndc_query_plan::OrderByElement;
@@ -173,6 +174,46 @@ mod tests {
         )]
         .into();
         assert_eq!(actual, (expected_sort_doc, expected_aliases));
+        Ok(())
+    }
+
+    #[test]
+    fn serializes_sort_criteria_in_expected_order() -> anyhow::Result<()> {
+        let first_criteria = "year";
+        let second_criteria = "rated";
+        let order_by = OrderBy {
+            elements: vec![
+                OrderByElement {
+                    order_direction: OrderDirection::Desc,
+                    target: ndc_query_plan::OrderByTarget::Column {
+                        name: first_criteria.into(),
+                        field_path: None,
+                        path: Default::default(),
+                    },
+                },
+                OrderByElement {
+                    order_direction: OrderDirection::Desc,
+                    target: ndc_query_plan::OrderByTarget::Column {
+                        name: second_criteria.into(),
+                        field_path: None,
+                        path: Default::default(),
+                    },
+                },
+            ],
+        };
+        let (sort_doc, _) = make_sort(&order_by)?;
+        let serialized = bson::to_document(&sort_doc)?;
+        let mut sort_keys = serialized.keys();
+        assert_eq!(
+            sort_keys.next(),
+            Some(&first_criteria.to_string()),
+            "first sort criteria"
+        );
+        assert_eq!(
+            sort_keys.next(),
+            Some(&second_criteria.to_string()),
+            "second sort criteria"
+        );
         Ok(())
     }
 }
