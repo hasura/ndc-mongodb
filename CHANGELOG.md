@@ -4,6 +4,8 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+## [1.8.3] - 2025-07-08
+
 ### Fixed
 
 - Filtering on field of related collection inside nested object that is not selected for output ([#171](https://github.com/hasura/ndc-mongodb/pull/171))
