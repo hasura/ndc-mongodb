@@ -9,6 +9,7 @@ pub fn collection(name: impl Display + Clone) -> (ndc_models::CollectionName, Co
         arguments: Default::default(),
         collection_type: name.to_string().into(),
         uniqueness_constraints: make_primary_key_uniqueness_constraint(name.clone()),
+        relational_mutations: None,
     };
     (name.to_string().into(), coll)
 }

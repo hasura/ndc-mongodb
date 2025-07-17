@@ -38,7 +38,7 @@ mongodb-agent-common = { path = "../mongodb-agent-common", features = ["test-hel
 
 async-tempfile = "^0.6.0"
 googletest = "^0.13.0"
-pretty_assertions = "1"
+pretty_assertions = "1.4"
 proptest = "1"
 ndc-test-helpers = { path = "../ndc-test-helpers" }
 test-helpers = { path = "../test-helpers" }

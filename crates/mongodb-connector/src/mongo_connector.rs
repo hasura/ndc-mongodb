@@ -67,6 +67,14 @@ impl Connector for MongoConnector {
     type Configuration = MongoConfiguration;
     type State = ConnectorState;
 
+    fn connector_name() -> &'static str {
+        "ndc_mongodb"
+    }
+
+    fn connector_version() -> &'static str {
+        env!("CARGO_PKG_VERSION")
+    }
+
     #[instrument(err, skip_all)]
     fn fetch_metrics(
         _configuration: &Self::Configuration,

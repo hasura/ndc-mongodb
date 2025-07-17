@@ -44,5 +44,7 @@ pub fn mongo_capabilities() -> Capabilities {
             order_by_aggregate: None,
             nested: None, // TODO: ENG-1490
         }),
+        relational_mutation: None,
+        relational_query: None,
     }
 }
