@@ -135,6 +135,7 @@ impl From<QueryRequestBuilder> for QueryRequest {
             arguments: value.arguments.unwrap_or_default(),
             collection_relationships: value.collection_relationships.unwrap_or_default(),
             variables: value.variables,
+            request_arguments: None,
         }
     }
 }

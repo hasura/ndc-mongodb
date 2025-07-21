@@ -27,4 +27,4 @@ tracing = "0.1"
 
 [dev-dependencies]
 ndc-test-helpers = { path = "../ndc-test-helpers" }
-pretty_assertions = "1"
+pretty_assertions = "1.4"

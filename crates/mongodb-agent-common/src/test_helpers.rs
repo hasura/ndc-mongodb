@@ -20,6 +20,7 @@ pub fn make_nested_schema() -> MongoConfiguration {
                     collection_type: "Author".into(),
                     arguments: Default::default(),
                     uniqueness_constraints: make_primary_key_uniqueness_constraint("authors"),
+                    relational_mutations: None,
                 },
             ),
             collection("appearances"), // new helper gives more concise syntax

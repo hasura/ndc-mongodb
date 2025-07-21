@@ -28,6 +28,7 @@ pub async fn get_schema(config: &MongoConfiguration) -> connector::Result<ndc::S
                 }),
             }),
         }),
+        request_arguments: None,
     };
     tracing::debug!(schema = %serde_json::to_string(&schema).unwrap(), "get_schema");
     Ok(schema)
