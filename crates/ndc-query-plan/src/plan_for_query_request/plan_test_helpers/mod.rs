@@ -255,6 +255,7 @@ pub fn make_flat_schema() -> TestContext {
                     collection_type: "Author".into(),
                     arguments: Default::default(),
                     uniqueness_constraints: make_primary_key_uniqueness_constraint("authors"),
+                    relational_mutations: None,
                 },
             ),
             (
@@ -265,6 +266,7 @@ pub fn make_flat_schema() -> TestContext {
                     collection_type: "Article".into(),
                     arguments: Default::default(),
                     uniqueness_constraints: make_primary_key_uniqueness_constraint("articles"),
+                    relational_mutations: None,
                 },
             ),
         ]),
@@ -301,6 +303,7 @@ pub fn make_nested_schema() -> TestContext {
                     collection_type: "Author".into(),
                     arguments: Default::default(),
                     uniqueness_constraints: make_primary_key_uniqueness_constraint("authors"),
+                    relational_mutations: None,
                 },
             ),
             collection("appearances"), // new helper gives more concise syntax
