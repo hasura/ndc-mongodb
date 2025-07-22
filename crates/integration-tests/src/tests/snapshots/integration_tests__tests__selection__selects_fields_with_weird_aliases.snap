@@ -1,0 +1,25 @@
+---
+source: crates/integration-tests/src/tests/selection.rs
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").query(query().fields([field!(\"foo.bar\" =>\n\"title\"), field!(\"year\")]).limit(10).order_by([asc!(\"id\")]),)).await?"
+---
+- rows:
+    - foo.bar: Wild and Woolly
+      year: 1917
+    - foo.bar: In the Land of the Head Hunters
+      year: 1914
+    - foo.bar: Where Are My Children?
+      year: 1916
+    - foo.bar: The Poor Little Rich Girl
+      year: 1917
+    - foo.bar: The Birth of a Nation
+      year: 1915
+    - foo.bar: "Intolerance: Love's Struggle Throughout the Ages"
+      year: 1916
+    - foo.bar: Traffic in Souls
+      year: 1913
+    - foo.bar: A Corner in Wheat
+      year: 1909
+    - foo.bar: Blacksmith Scene
+      year: 1893
+    - foo.bar: The Immigrant
+      year: 1917
