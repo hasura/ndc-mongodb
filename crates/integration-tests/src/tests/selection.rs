@@ -11,7 +11,7 @@ async fn selects_fields_with_weird_aliases() -> anyhow::Result<()> {
                 query()
                     .fields([field!("foo.bar" => "title"), field!("year")])
                     .limit(10)
-                    .order_by([asc!("id")]),
+                    .order_by([asc!("_id")]),
             )
         )
         .await?
