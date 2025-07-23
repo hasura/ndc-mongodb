@@ -4,6 +4,8 @@ This changelog documents the changes between release versions.
 
 ## [Unreleased]
 
+## [1.8.4] - 2025-07-23
+
 ### Fixed
 
 - Escape field names or aliases with invalid characters in field selections ([#175](https://github.com/hasura/ndc-mongodb/pull/175))
