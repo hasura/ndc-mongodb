@@ -1,0 +1,25 @@
+---
+source: crates/integration-tests/src/tests/selection.rs
+expression: "run_connector_query(Connector::SampleMflix,\nquery_request().collection(\"movies\").query(query().fields([field!(\"foo.bar\" =>\n\"title\"), field!(\"year\")]).limit(10).order_by([asc!(\"_id\")]),)).await?"
+---
+- rows:
+    - foo.bar: Blacksmith Scene
+      year: 1893
+    - foo.bar: The Great Train Robbery
+      year: 1903
+    - foo.bar: The Land Beyond the Sunset
+      year: 1912
+    - foo.bar: A Corner in Wheat
+      year: 1909
+    - foo.bar: "Winsor McCay, the Famous Cartoonist of the N.Y. Herald and His Moving Comics"
+      year: 1911
+    - foo.bar: Traffic in Souls
+      year: 1913
+    - foo.bar: Gertie the Dinosaur
+      year: 1914
+    - foo.bar: In the Land of the Head Hunters
+      year: 1914
+    - foo.bar: The Perils of Pauline
+      year: 1914
+    - foo.bar: The Birth of a Nation
+      year: 1915

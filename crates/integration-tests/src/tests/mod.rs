@@ -16,4 +16,5 @@ mod native_mutation;
 mod native_query;
 mod permissions;
 mod remote_relationship;
+mod selection;
 mod sorting;
