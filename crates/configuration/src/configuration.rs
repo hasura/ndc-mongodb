@@ -230,7 +230,7 @@ pub struct ConfigurationIntrospectionOptions {
 impl Default for ConfigurationIntrospectionOptions {
     fn default() -> Self {
         ConfigurationIntrospectionOptions {
-            sample_size: 100,
+            sample_size: 10000,
             no_validator_schema: false,
             all_schema_nullable: true,
         }
