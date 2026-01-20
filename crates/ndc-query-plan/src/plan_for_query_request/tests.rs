@@ -645,7 +645,8 @@ fn translates_relationships_in_fields_predicates_and_orderings() -> Result<(), a
                             path: vec!["author_articles".into()],
                             aggregate: plan::Aggregate::SingleColumn {
                                 column: "year".into(),
-                                column_type: Type::scalar(plan_test_helpers::ScalarType::Int).into_nullable(),
+                                column_type: Type::scalar(plan_test_helpers::ScalarType::Int)
+                                    .into_nullable(),
                                 arguments: Default::default(),
                                 field_path: Default::default(),
                                 function: plan_test_helpers::AggregateFunction::Average,

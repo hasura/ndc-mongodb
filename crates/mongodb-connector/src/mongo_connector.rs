@@ -2,17 +2,23 @@ use std::path::Path;
 
 use async_trait::async_trait;
 use configuration::Configuration;
+use futures_util::stream::BoxStream;
+use futures_util::StreamExt;
 use http::StatusCode;
 use mongodb_agent_common::{
-    explain::explain_query, interface_types::MongoAgentError, mongo_query_plan::MongoConfiguration,
-    query::handle_query_request, state::ConnectorState,
+    explain::explain_query,
+    interface_types::MongoAgentError,
+    mongo_query_plan::MongoConfiguration,
+    query::handle_query_request,
+    relational::{execute_relational_query, execute_relational_query_stream},
+    state::ConnectorState,
 };
 use ndc_sdk::{
     connector::{self, Connector, ConnectorSetup, ErrorResponse},
     json_response::JsonResponse,
     models::{
         Capabilities, ExplainResponse, MutationRequest, MutationResponse, QueryRequest,
-        QueryResponse, SchemaResponse,
+        QueryResponse, RelationalQuery, RelationalQueryResponse, SchemaResponse,
     },
 };
 use serde_json::json;
@@ -140,6 +146,34 @@ impl Connector for MongoConnector {
             .await
             .map_err(map_mongo_agent_error)?;
         Ok(response.into())
+    }
+
+    #[instrument(name = "/query/relational", err, skip_all, fields(internal.visibility = "user"))]
+    async fn query_relational(
+        _configuration: &Self::Configuration,
+        state: &Self::State,
+        request: RelationalQuery,
+    ) -> connector::Result<JsonResponse<RelationalQueryResponse>> {
+        let response = execute_relational_query(state, request)
+            .await
+            .map_err(map_mongo_agent_error)?;
+        Ok(response.into())
+    }
+
+    #[instrument(name = "/query/relational/stream", err, skip_all, fields(internal.visibility = "user"))]
+    async fn query_relational_stream(
+        _configuration: &Self::Configuration,
+        state: &Self::State,
+        request: RelationalQuery,
+    ) -> connector::Result<BoxStream<'static, connector::Result<Vec<serde_json::Value>>>> {
+        let stream = execute_relational_query_stream(state, request)
+            .await
+            .map_err(map_mongo_agent_error)?;
+
+        // Map the stream to convert MongoAgentError to connector::Result
+        let mapped_stream = stream.map(|result| result.map_err(map_mongo_agent_error));
+
+        Ok(Box::pin(mapped_stream))
     }
 }
 

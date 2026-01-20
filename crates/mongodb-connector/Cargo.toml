@@ -13,17 +13,18 @@ anyhow = "1"
 async-trait = "^0.1"
 enum-iterator = "^2.0.0"
 futures = "^0.3"
-http = "^0.2"
+http = "^1"
 indexmap = { workspace = true }
 itertools = { workspace = true }
 mongodb = { workspace = true }
 ndc-sdk = { workspace = true }
-prometheus = "*" # share version from ndc-sdk
+prometheus = "0.14" # match version from ndc-sdk
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = "1"
 tokio = { version = "1.28.1", features = ["full"] }
 tracing = "0.1"
+futures-util = "0.3.31"
 
 [dev-dependencies]
 ndc-test-helpers = { path = "../ndc-test-helpers" }

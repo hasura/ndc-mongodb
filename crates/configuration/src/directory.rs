@@ -209,6 +209,14 @@ pub async fn parse_configuration_options_file(dir: &Path) -> anyhow::Result<Conf
     Ok(defaults)
 }
 
+/// Write configuration options to the configuration file
+pub async fn write_configuration_options_file(
+    dir: &Path,
+    options: &ConfigurationOptions,
+) -> anyhow::Result<()> {
+    write_file(dir, CONFIGURATION_OPTIONS_BASENAME, options).await
+}
+
 fn configuration_file_path(dir: &Path, format: FileFormat) -> PathBuf {
     let mut file_path = dir.join(CONFIGURATION_OPTIONS_BASENAME);
     match format {

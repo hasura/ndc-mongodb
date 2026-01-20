@@ -1,6 +1,7 @@
 use insta::assert_yaml_snapshot;
 use ndc_test_helpers::{
-    and, asc, binop, column_aggregate, column_count_aggregate, dimension_column, field, grouping, or, ordered_dimensions, query, query_request, star_count_aggregate, target, value
+    and, asc, binop, column_aggregate, column_count_aggregate, dimension_column, field, grouping,
+    or, ordered_dimensions, query, query_request, star_count_aggregate, target, value,
 };
 
 use crate::{connector::Connector, run_connector_query};

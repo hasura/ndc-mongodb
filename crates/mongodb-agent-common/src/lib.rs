@@ -8,6 +8,7 @@ pub mod mongodb;
 pub mod mongodb_connection;
 pub mod procedure;
 pub mod query;
+pub mod relational;
 pub mod scalar_types_capabilities;
 pub mod schema;
 pub mod state;
