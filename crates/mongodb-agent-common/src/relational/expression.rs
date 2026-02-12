@@ -259,49 +259,22 @@ pub fn translate_expression(
         RelationalExpression::Like { expr, pattern } => {
             let expr_bson = translate_expression(expr, ctx)?;
             let pattern_bson = translate_expression(pattern, ctx)?;
-            // For literal patterns, convert to regex; for dynamic, use $regexMatch with input
-            Ok(bson!({
-                "$regexMatch": {
-                    "input": expr_bson,
-                    "regex": pattern_bson
-                }
-            }))
+            Ok(safe_regex_match(expr_bson, pattern_bson, false, false))
         }
         RelationalExpression::NotLike { expr, pattern } => {
             let expr_bson = translate_expression(expr, ctx)?;
             let pattern_bson = translate_expression(pattern, ctx)?;
-            Ok(bson!({
-                "$not": [{
-                    "$regexMatch": {
-                        "input": expr_bson,
-                        "regex": pattern_bson
-                    }
-                }]
-            }))
+            Ok(safe_regex_match(expr_bson, pattern_bson, false, true))
         }
         RelationalExpression::ILike { expr, pattern } => {
             let expr_bson = translate_expression(expr, ctx)?;
             let pattern_bson = translate_expression(pattern, ctx)?;
-            Ok(bson!({
-                "$regexMatch": {
-                    "input": expr_bson,
-                    "regex": pattern_bson,
-                    "options": "i"
-                }
-            }))
+            Ok(safe_regex_match(expr_bson, pattern_bson, true, false))
         }
         RelationalExpression::NotILike { expr, pattern } => {
             let expr_bson = translate_expression(expr, ctx)?;
             let pattern_bson = translate_expression(pattern, ctx)?;
-            Ok(bson!({
-                "$not": [{
-                    "$regexMatch": {
-                        "input": expr_bson,
-                        "regex": pattern_bson,
-                        "options": "i"
-                    }
-                }]
-            }))
+            Ok(safe_regex_match(expr_bson, pattern_bson, true, true))
         }
         RelationalExpression::Between { low, expr, high } => {
             let low_bson = translate_expression(low, ctx)?;
@@ -1249,23 +1222,72 @@ fn translate_json_path_access(
     // Start with the base JSON expression
     let mut result = translate_expression(json, ctx)?;
 
-    // Chain $getField for each key in the path
+    // Chain $getField for each key in the path. For literal JSONPath strings
+    // like "$.a.b", normalize into ["a", "b"] segments.
     for key in keys {
-        let key_bson = translate_expression(key, ctx)?;
-        result = bson!({
-            "$getField": {
-                "field": key_bson,
-                "input": result
+        if let Some(path_segments) = json_path_segments_from_key_expr(key) {
+            for segment in path_segments {
+                result = bson!({
+                    "$getField": {
+                        "field": segment,
+                        "input": result
+                    }
+                });
             }
-        });
+        } else {
+            let key_bson = translate_expression(key, ctx)?;
+            result = bson!({
+                "$getField": {
+                    "field": key_bson,
+                    "input": result
+                }
+            });
+        }
     }
 
     // Apply optional type conversion
     if let Some(operator) = conversion_operator {
-        result = bson!({ operator: result });
+        result = if operator == "$toString" {
+            bson!({
+                "$convert": {
+                    "input": result,
+                    "to": "string",
+                    "onError": null,
+                    "onNull": null
+                }
+            })
+        } else {
+            bson!({ operator: result })
+        };
     }
 
     Ok(result)
+}
+
+/// Extract normalized JSON path segments from a key expression if it is a
+/// literal string path. Supports both plain keys ("market") and JSONPath-like
+/// strings ("$.market", "$.a.b").
+fn json_path_segments_from_key_expr(key: &RelationalExpression) -> Option<Vec<String>> {
+    let RelationalExpression::Literal {
+        literal: RelationalLiteral::String { value },
+    } = key
+    else {
+        return None;
+    };
+
+    if !value.starts_with("$.") {
+        // Plain key, keep as-is.
+        return Some(vec![value.clone()]);
+    }
+
+    let path = &value[2..];
+    let segments = path
+        .split('.')
+        .filter(|segment| !segment.is_empty())
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+
+    Some(segments)
 }
 
 /// Translate a Cast expression to MongoDB BSON.
@@ -1445,6 +1467,58 @@ fn cast_to_string_bson(expr_bson: &Bson, safe: bool) -> Bson {
             },
             "then": expr_bson.clone(),
             "else": scalar_string_cast
+        }
+    })
+}
+
+/// Build a LIKE/ILIKE expression that never throws when input is non-string.
+///
+/// MongoDB `$regexMatch` requires a string input. We first `$convert` with
+/// `onError: null` / `onNull: null`, then only evaluate `$regexMatch` when the
+/// conversion succeeded.
+fn safe_regex_match(
+    expr_bson: Bson,
+    pattern_bson: Bson,
+    case_insensitive: bool,
+    negate: bool,
+) -> Bson {
+    let regex_input = bson!({
+        "$convert": {
+            "input": expr_bson,
+            "to": "string",
+            "onError": null,
+            "onNull": null
+        }
+    });
+
+    let regex_match = if case_insensitive {
+        bson!({
+            "$regexMatch": {
+                "input": regex_input.clone(),
+                "regex": pattern_bson,
+                "options": "i"
+            }
+        })
+    } else {
+        bson!({
+            "$regexMatch": {
+                "input": regex_input.clone(),
+                "regex": pattern_bson
+            }
+        })
+    };
+
+    let predicate = if negate {
+        bson!({ "$not": [regex_match] })
+    } else {
+        regex_match
+    };
+
+    bson!({
+        "$cond": {
+            "if": { "$eq": [regex_input, null] },
+            "then": null,
+            "else": predicate
         }
     })
 }

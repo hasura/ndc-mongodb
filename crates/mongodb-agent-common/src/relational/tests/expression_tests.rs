@@ -238,6 +238,195 @@ fn translates_to_lower() {
     assert_eq!(result, bson!({ "$toLower": "$name" }));
 }
 
+#[test]
+fn translates_like_with_safe_string_conversion() {
+    let (_, ctx) = make_context(&["value"]);
+    let expr = RelationalExpression::Like {
+        expr: Box::new(RelationalExpression::Column { index: 0 }),
+        pattern: Box::new(RelationalExpression::Literal {
+            literal: RelationalLiteral::String {
+                value: "BELGIUM".to_string(),
+            },
+        }),
+    };
+    let result = translate_expression(&expr, &ctx).unwrap();
+    assert_eq!(
+        result,
+        bson!({
+            "$cond": {
+                "if": {
+                    "$eq": [{
+                        "$convert": {
+                            "input": "$value",
+                            "to": "string",
+                            "onError": null,
+                            "onNull": null
+                        }
+                    }, null]
+                },
+                "then": null,
+                "else": {
+                    "$regexMatch": {
+                        "input": {
+                            "$convert": {
+                                "input": "$value",
+                                "to": "string",
+                                "onError": null,
+                                "onNull": null
+                            }
+                        },
+                        "regex": "BELGIUM"
+                    }
+                }
+            }
+        })
+    );
+}
+
+#[test]
+fn translates_ilike_with_safe_string_conversion() {
+    let (_, ctx) = make_context(&["value"]);
+    let expr = RelationalExpression::ILike {
+        expr: Box::new(RelationalExpression::Column { index: 0 }),
+        pattern: Box::new(RelationalExpression::Literal {
+            literal: RelationalLiteral::String {
+                value: "BELGIUM".to_string(),
+            },
+        }),
+    };
+    let result = translate_expression(&expr, &ctx).unwrap();
+    assert_eq!(
+        result,
+        bson!({
+            "$cond": {
+                "if": {
+                    "$eq": [{
+                        "$convert": {
+                            "input": "$value",
+                            "to": "string",
+                            "onError": null,
+                            "onNull": null
+                        }
+                    }, null]
+                },
+                "then": null,
+                "else": {
+                    "$regexMatch": {
+                        "input": {
+                            "$convert": {
+                                "input": "$value",
+                                "to": "string",
+                                "onError": null,
+                                "onNull": null
+                            }
+                        },
+                        "regex": "BELGIUM",
+                        "options": "i"
+                    }
+                }
+            }
+        })
+    );
+}
+
+#[test]
+fn translates_json_get_str_with_plain_key() {
+    let (_, ctx) = make_context(&["json_col"]);
+    let expr = RelationalExpression::JsonGetStr {
+        json: Box::new(RelationalExpression::Column { index: 0 }),
+        keys: vec![RelationalExpression::Literal {
+            literal: RelationalLiteral::String {
+                value: "market".to_string(),
+            },
+        }],
+    };
+
+    let result = translate_expression(&expr, &ctx).unwrap();
+    assert_eq!(
+        result,
+        bson!({
+            "$convert": {
+                "input": {
+                    "$getField": {
+                        "field": "market",
+                        "input": "$json_col"
+                    }
+                },
+                "to": "string",
+                "onError": null,
+                "onNull": null
+            }
+        })
+    );
+}
+
+#[test]
+fn translates_json_get_str_with_json_path_literal() {
+    let (_, ctx) = make_context(&["json_col"]);
+    let expr = RelationalExpression::JsonGetStr {
+        json: Box::new(RelationalExpression::Column { index: 0 }),
+        keys: vec![RelationalExpression::Literal {
+            literal: RelationalLiteral::String {
+                value: "$.market".to_string(),
+            },
+        }],
+    };
+
+    let result = translate_expression(&expr, &ctx).unwrap();
+    assert_eq!(
+        result,
+        bson!({
+            "$convert": {
+                "input": {
+                    "$getField": {
+                        "field": "market",
+                        "input": "$json_col"
+                    }
+                },
+                "to": "string",
+                "onError": null,
+                "onNull": null
+            }
+        })
+    );
+}
+
+#[test]
+fn translates_json_get_str_with_nested_json_path_literal() {
+    let (_, ctx) = make_context(&["json_col"]);
+    let expr = RelationalExpression::JsonGetStr {
+        json: Box::new(RelationalExpression::Column { index: 0 }),
+        keys: vec![RelationalExpression::Literal {
+            literal: RelationalLiteral::String {
+                value: "$.a.b".to_string(),
+            },
+        }],
+    };
+
+    let result = translate_expression(&expr, &ctx).unwrap();
+    assert_eq!(
+        result,
+        bson!({
+            "$convert": {
+                "input": {
+                    "$getField": {
+                        "field": "b",
+                        "input": {
+                            "$getField": {
+                                "field": "a",
+                                "input": "$json_col"
+                            }
+                        }
+                    }
+                },
+                "to": "string",
+                "onError": null,
+                "onNull": null
+            }
+        })
+    );
+}
+
 // Phase 2 tests - Conditional functions
 
 #[test]
