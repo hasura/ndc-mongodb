@@ -1050,16 +1050,12 @@ fn translate_literal(literal: &RelationalLiteral) -> Result<Bson, RelationalErro
         RelationalLiteral::TimestampMillisecond { value } => {
             Ok(Bson::DateTime(mongodb::bson::DateTime::from_millis(*value)))
         }
-        RelationalLiteral::TimestampMicrosecond { value } => {
-            Ok(Bson::DateTime(mongodb::bson::DateTime::from_millis(
-                *value / 1000,
-            )))
-        }
-        RelationalLiteral::TimestampNanosecond { value } => {
-            Ok(Bson::DateTime(mongodb::bson::DateTime::from_millis(
-                *value / 1_000_000,
-            )))
-        }
+        RelationalLiteral::TimestampMicrosecond { value } => Ok(Bson::DateTime(
+            mongodb::bson::DateTime::from_millis(*value / 1000),
+        )),
+        RelationalLiteral::TimestampNanosecond { value } => Ok(Bson::DateTime(
+            mongodb::bson::DateTime::from_millis(*value / 1_000_000),
+        )),
 
         // Duration types - stored as milliseconds (Int64)
         RelationalLiteral::DurationSecond { value } => Ok(Bson::Int64(*value * 1000)),
@@ -1284,7 +1280,7 @@ fn translate_cast(
 
     match as_type {
         CastType::Boolean => Ok(bson!({ "$toBool": expr_bson })),
-        CastType::Utf8 => Ok(bson!({ "$toString": expr_bson })),
+        CastType::Utf8 => Ok(cast_to_string_bson(&expr_bson, false)),
         CastType::Int8 | CastType::Int16 | CastType::Int32 => Ok(bson!({ "$toInt": expr_bson })),
         CastType::Int64 => Ok(bson!({ "$toLong": expr_bson })),
         CastType::UInt8 | CastType::UInt16 | CastType::UInt32 => {
@@ -1357,7 +1353,7 @@ fn translate_try_cast(
 
     match as_type {
         CastType::Boolean => Ok(simple_convert("bool")),
-        CastType::Utf8 => Ok(simple_convert("string")),
+        CastType::Utf8 => Ok(cast_to_string_bson(&expr_bson, true)),
         CastType::Int8 | CastType::Int16 | CastType::Int32 => Ok(simple_convert("int")),
         CastType::Int64 => Ok(simple_convert("long")),
         CastType::UInt8 | CastType::UInt16 | CastType::UInt32 => Ok(simple_convert("int")),
@@ -1418,4 +1414,37 @@ fn translate_try_cast(
             }))
         }
     }
+}
+
+/// Cast expression to string while handling object/array values.
+///
+/// MongoDB does not support converting objects/arrays to string with `$toString`/`$convert`.
+/// For those values we return them unchanged and rely on relational response serialization
+/// (which stringifies documents/arrays as JSON text). For scalar values we use normal casting.
+fn cast_to_string_bson(expr_bson: &Bson, safe: bool) -> Bson {
+    let scalar_string_cast = if safe {
+        bson!({
+            "$convert": {
+                "input": expr_bson.clone(),
+                "to": "string",
+                "onError": null,
+                "onNull": null
+            }
+        })
+    } else {
+        bson!({ "$toString": expr_bson.clone() })
+    };
+
+    bson!({
+        "$cond": {
+            "if": {
+                "$or": [
+                    { "$isArray": expr_bson.clone() },
+                    { "$eq": [{ "$type": expr_bson.clone() }, "object"] }
+                ]
+            },
+            "then": expr_bson.clone(),
+            "else": scalar_string_cast
+        }
+    })
 }

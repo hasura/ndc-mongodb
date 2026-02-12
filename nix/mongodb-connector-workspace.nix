@@ -30,6 +30,7 @@
 { package ? null # leave as null to build or test all packages
 , profile ? "release" # "dev", "release", "test", or "bench"
 , staticallyLinked ? false
+, ndc-sdk-source # path to ndc-sdk-rs source, passed from flake.nix
 
   # The following arguments come from nixpkgs, and are automatically populated
   # by `callPackage`.
@@ -39,6 +40,7 @@
 , pkgsStatic
 , pkg-config
 , protobuf
+, runCommand
 }:
 
 let
@@ -51,9 +53,11 @@ let
   # for a `musl` target.
   inherit (boilerplate) craneLib;
 
-  # Filters source directory to select only files required to build Rust crates.
-  # This avoids unnecessary rebuilds when other files in the repo change. 
+  # Clean the ndc-mongodb source (this is what Crane will use)
   src = craneLib.cleanCargoSource (craneLib.path ./..);
+
+  # Clean the ndc-sdk-rs source
+  ndcSdkSrc = craneLib.cleanCargoSource ndc-sdk-source;
 
   # If you need modify the filter to include some files that are being filtered
   # out you can change the assignment of `src` to something like this:
@@ -72,6 +76,13 @@ let
       inherit src;
 
       pname = "mongodb-connector-workspace";
+
+      # The Cargo.toml has a path dependency: ndc-sdk = { path = "../ndc-sdk-rs/crates/sdk" }
+      # After unpacking, the source is at /build/source/. We need to create
+      # /build/ndc-sdk-rs/ so the path dependency resolves correctly.
+      postUnpack = ''
+        cp -r ${ndcSdkSrc} $NIX_BUILD_TOP/ndc-sdk-rs
+      '';
 
       # buildInputs are compiled for the target platform that we are compiling for
       buildInputs = [

@@ -55,10 +55,7 @@ async fn execute_relational_query_impl(
 
     let rows = cursor_to_rows(cursor, &pipeline_result.output_columns).await?;
 
-    tracing::debug!(
-        row_count = rows.len(),
-        "relational query completed"
-    );
+    tracing::debug!(row_count = rows.len(), "relational query completed");
 
     Ok(RelationalQueryResponse { rows })
 }
@@ -203,11 +200,14 @@ fn bson_to_json(bson: &mongodb::bson::Bson) -> serde_json::Value {
             use serde_with::SerializeAs;
 
             // Use serde_with's Base64 serializer
-            let base64_str: String = Base64::<Standard, Padded>::serialize_as(&binary.bytes, serde_json::value::Serializer)
-                .unwrap_or_else(|_| Value::String(String::new()))
-                .as_str()
-                .unwrap_or("")
-                .to_string();
+            let base64_str: String = Base64::<Standard, Padded>::serialize_as(
+                &binary.bytes,
+                serde_json::value::Serializer,
+            )
+            .unwrap_or_else(|_| Value::String(String::new()))
+            .as_str()
+            .unwrap_or("")
+            .to_string();
 
             json!({
                 "base64": base64_str,

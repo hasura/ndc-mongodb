@@ -103,9 +103,7 @@ fn builds_pipeline_for_sort_with_case_expression() {
                 when: vec![
                     ndc_models::CaseWhen {
                         when: RelationalExpression::Literal {
-                            literal: ndc_models::RelationalLiteral::String {
-                                value: "A".into(),
-                            },
+                            literal: ndc_models::RelationalLiteral::String { value: "A".into() },
                         },
                         then: RelationalExpression::Literal {
                             literal: ndc_models::RelationalLiteral::Int64 { value: 1 },
@@ -113,9 +111,7 @@ fn builds_pipeline_for_sort_with_case_expression() {
                     },
                     ndc_models::CaseWhen {
                         when: RelationalExpression::Literal {
-                            literal: ndc_models::RelationalLiteral::String {
-                                value: "B".into(),
-                            },
+                            literal: ndc_models::RelationalLiteral::String { value: "B".into() },
                         },
                         then: RelationalExpression::Literal {
                             literal: ndc_models::RelationalLiteral::Int64 { value: 2 },
@@ -1011,7 +1007,9 @@ fn join_with_multiple_conditions() {
 
     // Check $lookup stage has multiple conditions
     match &result.pipeline.stages[0] {
-        Stage::Lookup { r#let, pipeline, .. } => {
+        Stage::Lookup {
+            r#let, pipeline, ..
+        } => {
             let let_doc = r#let.as_ref().unwrap();
             assert!(let_doc.contains_key("left_0"));
             assert!(let_doc.contains_key("left_1"));
@@ -1115,7 +1113,11 @@ fn join_with_filter_on_left() {
     match &result.pipeline.stages[1] {
         Stage::Match(doc) => {
             // With Stage 4 optimization, we get query document syntax, not $expr
-            assert!(doc.contains_key("amount"), "Expected query document with 'amount' field, got {:?}", doc);
+            assert!(
+                doc.contains_key("amount"),
+                "Expected query document with 'amount' field, got {:?}",
+                doc
+            );
         }
         other => panic!("Expected Match stage with query document, got {:?}", other),
     }
@@ -1157,7 +1159,10 @@ fn builds_pipeline_for_row_number() {
             assert!(swf.contains_key("sortBy"));
             assert!(swf.contains_key("output"));
         }
-        other => panic!("Expected Other stage with $setWindowFields, got {:?}", other),
+        other => panic!(
+            "Expected Other stage with $setWindowFields, got {:?}",
+            other
+        ),
     }
 
     // Check $project stage
@@ -1207,7 +1212,10 @@ fn builds_pipeline_for_rank() {
             let w0 = output.get_document("_w0").unwrap();
             assert!(w0.contains_key("$rank"));
         }
-        other => panic!("Expected Other stage with $setWindowFields, got {:?}", other),
+        other => panic!(
+            "Expected Other stage with $setWindowFields, got {:?}",
+            other
+        ),
     }
 }
 
@@ -1240,7 +1248,10 @@ fn builds_pipeline_for_dense_rank() {
             let w0 = output.get_document("_w0").unwrap();
             assert!(w0.contains_key("$denseRank"));
         }
-        other => panic!("Expected Other stage with $setWindowFields, got {:?}", other),
+        other => panic!(
+            "Expected Other stage with $setWindowFields, got {:?}",
+            other
+        ),
     }
 }
 
@@ -1286,7 +1297,12 @@ fn builds_pipeline_for_window_with_multiple_partition_columns() {
     let relation = Relation::Window {
         input: Box::new(Relation::From {
             collection: "sales".into(),
-            columns: vec!["region".into(), "category".into(), "product".into(), "amount".into()],
+            columns: vec![
+                "region".into(),
+                "category".into(),
+                "product".into(),
+                "amount".into(),
+            ],
             arguments: Default::default(),
         }),
         exprs: vec![RelationalExpression::RowNumber {
@@ -1312,7 +1328,10 @@ fn builds_pipeline_for_window_with_multiple_partition_columns() {
             assert!(partition_by.contains_key("region"));
             assert!(partition_by.contains_key("category"));
         }
-        other => panic!("Expected Other stage with $setWindowFields, got {:?}", other),
+        other => panic!(
+            "Expected Other stage with $setWindowFields, got {:?}",
+            other
+        ),
     }
 }
 
@@ -1353,7 +1372,9 @@ fn window_after_filter() {
             predicate: RelationalExpression::Gt {
                 left: Box::new(RelationalExpression::Column { index: 2 }),
                 right: Box::new(RelationalExpression::Literal {
-                    literal: RelationalLiteral::Float64 { value: Float64(100.0) },
+                    literal: RelationalLiteral::Float64 {
+                        value: Float64(100.0),
+                    },
                 }),
             },
         }),
@@ -1389,7 +1410,11 @@ fn window_after_filter() {
     match &result.pipeline.stages[1] {
         Stage::Match(doc) => {
             // With Stage 4 optimization, we get query document syntax, not $expr
-            assert!(doc.contains_key("price"), "Expected query document with 'price' field, got {:?}", doc);
+            assert!(
+                doc.contains_key("price"),
+                "Expected query document with 'price' field, got {:?}",
+                doc
+            );
         }
         other => panic!("Expected Match stage with query document, got {:?}", other),
     }
@@ -1515,7 +1540,11 @@ fn builds_pipeline_for_union_with_filter() {
         Stage::Match(doc) => {
             // With Stage 4 optimization, we get query document syntax, not $expr
             // The filter is on column 0 which is "name"
-            assert!(doc.contains_key("name"), "Expected query document with 'name' field, got {:?}", doc);
+            assert!(
+                doc.contains_key("name"),
+                "Expected query document with 'name' field, got {:?}",
+                doc
+            );
         }
         other => panic!("Expected Match stage with query document, got {:?}", other),
     }
@@ -1614,7 +1643,7 @@ fn builds_pipeline_for_right_join() {
             arguments: Default::default(),
         }),
         on: vec![JoinOn {
-            left: RelationalExpression::Column { index: 1 },  // orders.customer_id
+            left: RelationalExpression::Column { index: 1 }, // orders.customer_id
             right: RelationalExpression::Column { index: 0 }, // customers.id
         }],
         join_type: JoinType::Right,
@@ -1670,7 +1699,7 @@ fn builds_pipeline_for_right_semi_join() {
             arguments: Default::default(),
         }),
         on: vec![JoinOn {
-            left: RelationalExpression::Column { index: 1 },  // orders.customer_id
+            left: RelationalExpression::Column { index: 1 }, // orders.customer_id
             right: RelationalExpression::Column { index: 0 }, // customers.id
         }],
         join_type: JoinType::RightSemi,
@@ -1720,7 +1749,7 @@ fn builds_pipeline_for_right_anti_join() {
             arguments: Default::default(),
         }),
         on: vec![JoinOn {
-            left: RelationalExpression::Column { index: 1 },  // orders.customer_id
+            left: RelationalExpression::Column { index: 1 }, // orders.customer_id
             right: RelationalExpression::Column { index: 0 }, // customers.id
         }],
         join_type: JoinType::RightAnti,
@@ -1780,7 +1809,7 @@ fn right_join_with_complex_right_side() {
             },
         }),
         on: vec![JoinOn {
-            left: RelationalExpression::Column { index: 1 },  // orders.customer_id
+            left: RelationalExpression::Column { index: 1 }, // orders.customer_id
             right: RelationalExpression::Column { index: 0 }, // customers.id
         }],
         join_type: JoinType::Right,
@@ -1794,7 +1823,6 @@ fn right_join_with_complex_right_side() {
     // Output should have 5 columns (2 from orders + 3 from customers)
     assert_eq!(result.output_columns.len(), 5);
 }
-
 
 // Tests for string_agg and array_agg with distinct and order_by options
 
@@ -2090,11 +2118,7 @@ fn optimizations_work_together_for_filter_project_sort() {
             input: Box::new(Relation::Project {
                 input: Box::new(Relation::From {
                     collection: "failsAggregate".into(),
-                    columns: vec![
-                        "trade_date".into(),
-                        "trade_id".into(),
-                        "amount".into(),
-                    ],
+                    columns: vec!["trade_date".into(), "trade_id".into(), "amount".into()],
                     arguments: Default::default(),
                 }),
                 exprs: vec![

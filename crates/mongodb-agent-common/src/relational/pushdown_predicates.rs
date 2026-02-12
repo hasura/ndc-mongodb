@@ -29,7 +29,11 @@ pub fn pushdown_predicates(relation: &Relation) -> Relation {
         Relation::Filter { input, predicate } => {
             let normalized_input = pushdown_predicates(input);
 
-            if let Relation::Project { input: proj_input, exprs } = &normalized_input {
+            if let Relation::Project {
+                input: proj_input,
+                exprs,
+            } = &normalized_input
+            {
                 // Try to push the predicate down through the project
                 if let Some(remapped) = try_remap_predicate(predicate, exprs) {
                     // Success! Push the filter below the project
@@ -59,7 +63,11 @@ pub fn pushdown_predicates(relation: &Relation) -> Relation {
         Relation::Sort { input, exprs } => {
             let normalized_input = pushdown_predicates(input);
 
-            if let Relation::Project { input: proj_input, exprs: proj_exprs } = &normalized_input {
+            if let Relation::Project {
+                input: proj_input,
+                exprs: proj_exprs,
+            } = &normalized_input
+            {
                 // Try to push the sort down through the project
                 if let Some(remapped) = try_remap_sort(exprs, proj_exprs) {
                     // Success! Push the sort below the project
@@ -149,10 +157,7 @@ fn try_remap_predicate(
 /// Returns `Some(remapped_sorts)` if all column references in all sort expressions
 /// can be traced back to simple column references in the projection expressions.
 /// Returns `None` if any column reference maps to a computed expression.
-fn try_remap_sort(
-    sort_exprs: &[Sort],
-    proj_exprs: &[RelationalExpression],
-) -> Option<Vec<Sort>> {
+fn try_remap_sort(sort_exprs: &[Sort], proj_exprs: &[RelationalExpression]) -> Option<Vec<Sort>> {
     sort_exprs
         .iter()
         .map(|sort| {
@@ -193,7 +198,10 @@ fn remap_expression(
                 RelationalExpression::Column { index: orig_index } => {
                     Some(RelationalExpression::Column { index: *orig_index })
                 }
-                RelationalExpression::GetField { column: _, field: _ } => {
+                RelationalExpression::GetField {
+                    column: _,
+                    field: _,
+                } => {
                     // The GetField in the projection references the input columns directly.
                     // We need to check if the base column is a simple Column reference
                     // that we can pass through.
@@ -219,78 +227,56 @@ fn remap_expression(
         }
 
         // Literals don't need remapping
-        RelationalExpression::Literal { literal } => {
-            Some(RelationalExpression::Literal { literal: literal.clone() })
-        }
+        RelationalExpression::Literal { literal } => Some(RelationalExpression::Literal {
+            literal: literal.clone(),
+        }),
 
         // Binary comparisons - remap both sides
-        RelationalExpression::Eq { left, right } => {
-            Some(RelationalExpression::Eq {
-                left: Box::new(remap_expression(left, proj_exprs)?),
-                right: Box::new(remap_expression(right, proj_exprs)?),
-            })
-        }
-        RelationalExpression::NotEq { left, right } => {
-            Some(RelationalExpression::NotEq {
-                left: Box::new(remap_expression(left, proj_exprs)?),
-                right: Box::new(remap_expression(right, proj_exprs)?),
-            })
-        }
-        RelationalExpression::Lt { left, right } => {
-            Some(RelationalExpression::Lt {
-                left: Box::new(remap_expression(left, proj_exprs)?),
-                right: Box::new(remap_expression(right, proj_exprs)?),
-            })
-        }
-        RelationalExpression::LtEq { left, right } => {
-            Some(RelationalExpression::LtEq {
-                left: Box::new(remap_expression(left, proj_exprs)?),
-                right: Box::new(remap_expression(right, proj_exprs)?),
-            })
-        }
-        RelationalExpression::Gt { left, right } => {
-            Some(RelationalExpression::Gt {
-                left: Box::new(remap_expression(left, proj_exprs)?),
-                right: Box::new(remap_expression(right, proj_exprs)?),
-            })
-        }
-        RelationalExpression::GtEq { left, right } => {
-            Some(RelationalExpression::GtEq {
-                left: Box::new(remap_expression(left, proj_exprs)?),
-                right: Box::new(remap_expression(right, proj_exprs)?),
-            })
-        }
+        RelationalExpression::Eq { left, right } => Some(RelationalExpression::Eq {
+            left: Box::new(remap_expression(left, proj_exprs)?),
+            right: Box::new(remap_expression(right, proj_exprs)?),
+        }),
+        RelationalExpression::NotEq { left, right } => Some(RelationalExpression::NotEq {
+            left: Box::new(remap_expression(left, proj_exprs)?),
+            right: Box::new(remap_expression(right, proj_exprs)?),
+        }),
+        RelationalExpression::Lt { left, right } => Some(RelationalExpression::Lt {
+            left: Box::new(remap_expression(left, proj_exprs)?),
+            right: Box::new(remap_expression(right, proj_exprs)?),
+        }),
+        RelationalExpression::LtEq { left, right } => Some(RelationalExpression::LtEq {
+            left: Box::new(remap_expression(left, proj_exprs)?),
+            right: Box::new(remap_expression(right, proj_exprs)?),
+        }),
+        RelationalExpression::Gt { left, right } => Some(RelationalExpression::Gt {
+            left: Box::new(remap_expression(left, proj_exprs)?),
+            right: Box::new(remap_expression(right, proj_exprs)?),
+        }),
+        RelationalExpression::GtEq { left, right } => Some(RelationalExpression::GtEq {
+            left: Box::new(remap_expression(left, proj_exprs)?),
+            right: Box::new(remap_expression(right, proj_exprs)?),
+        }),
 
         // Logical operators
-        RelationalExpression::And { left, right } => {
-            Some(RelationalExpression::And {
-                left: Box::new(remap_expression(left, proj_exprs)?),
-                right: Box::new(remap_expression(right, proj_exprs)?),
-            })
-        }
-        RelationalExpression::Or { left, right } => {
-            Some(RelationalExpression::Or {
-                left: Box::new(remap_expression(left, proj_exprs)?),
-                right: Box::new(remap_expression(right, proj_exprs)?),
-            })
-        }
-        RelationalExpression::Not { expr } => {
-            Some(RelationalExpression::Not {
-                expr: Box::new(remap_expression(expr, proj_exprs)?),
-            })
-        }
+        RelationalExpression::And { left, right } => Some(RelationalExpression::And {
+            left: Box::new(remap_expression(left, proj_exprs)?),
+            right: Box::new(remap_expression(right, proj_exprs)?),
+        }),
+        RelationalExpression::Or { left, right } => Some(RelationalExpression::Or {
+            left: Box::new(remap_expression(left, proj_exprs)?),
+            right: Box::new(remap_expression(right, proj_exprs)?),
+        }),
+        RelationalExpression::Not { expr } => Some(RelationalExpression::Not {
+            expr: Box::new(remap_expression(expr, proj_exprs)?),
+        }),
 
         // IsNull and similar
-        RelationalExpression::IsNull { expr } => {
-            Some(RelationalExpression::IsNull {
-                expr: Box::new(remap_expression(expr, proj_exprs)?),
-            })
-        }
-        RelationalExpression::IsNotNull { expr } => {
-            Some(RelationalExpression::IsNotNull {
-                expr: Box::new(remap_expression(expr, proj_exprs)?),
-            })
-        }
+        RelationalExpression::IsNull { expr } => Some(RelationalExpression::IsNull {
+            expr: Box::new(remap_expression(expr, proj_exprs)?),
+        }),
+        RelationalExpression::IsNotNull { expr } => Some(RelationalExpression::IsNotNull {
+            expr: Box::new(remap_expression(expr, proj_exprs)?),
+        }),
 
         // For any other expression types, don't push down to be safe
         // This includes complex expressions like arithmetic, function calls, etc.
@@ -339,14 +325,20 @@ mod tests {
                 assert_eq!(exprs.len(), 2);
 
                 match input.as_ref() {
-                    Relation::Filter { input: inner, predicate } => {
+                    Relation::Filter {
+                        input: inner,
+                        predicate,
+                    } => {
                         // Inner should be From
                         assert!(matches!(inner.as_ref(), Relation::From { .. }));
 
                         // Predicate should reference original column index 1 (age)
                         match predicate {
                             RelationalExpression::Gt { left, .. } => {
-                                assert!(matches!(left.as_ref(), RelationalExpression::Column { index: 1 }));
+                                assert!(matches!(
+                                    left.as_ref(),
+                                    RelationalExpression::Column { index: 1 }
+                                ));
                             }
                             _ => panic!("Expected Gt predicate"),
                         }
@@ -463,14 +455,15 @@ mod tests {
                     Relation::Filter { predicate, .. } => {
                         // Predicate should now reference original index 1 (age)
                         match predicate {
-                            RelationalExpression::Gt { left, .. } => {
-                                match left.as_ref() {
-                                    RelationalExpression::Column { index } => {
-                                        assert_eq!(*index, 1, "Should reference original age column at index 1");
-                                    }
-                                    _ => panic!("Expected Column"),
+                            RelationalExpression::Gt { left, .. } => match left.as_ref() {
+                                RelationalExpression::Column { index } => {
+                                    assert_eq!(
+                                        *index, 1,
+                                        "Should reference original age column at index 1"
+                                    );
                                 }
-                            }
+                                _ => panic!("Expected Column"),
+                            },
                             _ => panic!("Expected Gt"),
                         }
                     }
@@ -715,4 +708,3 @@ mod tests {
         }
     }
 }
-

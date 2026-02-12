@@ -198,12 +198,12 @@ fn relational_query_capabilities() -> RelationalQueryCapabilities {
             approx_distinct: None, // Not supported - no HyperLogLog implementation
         },
         window: RelationalWindowExpressionCapabilities {
-            row_number: Some(LeafCapability {}),  // Phase 5 - $documentNumber
-            dense_rank: Some(LeafCapability {}),  // Phase 5 - $denseRank
-            ntile: None,                          // Not supported - no native MongoDB operator
-            rank: Some(LeafCapability {}),        // Phase 5 - $rank
-            cume_dist: None,                      // Not supported - no native MongoDB operator
-            percent_rank: None,                   // Not supported - no native MongoDB operator
+            row_number: Some(LeafCapability {}), // Phase 5 - $documentNumber
+            dense_rank: Some(LeafCapability {}), // Phase 5 - $denseRank
+            ntile: None,                         // Not supported - no native MongoDB operator
+            rank: Some(LeafCapability {}),       // Phase 5 - $rank
+            cume_dist: None,                     // Not supported - no native MongoDB operator
+            percent_rank: None,                  // Not supported - no native MongoDB operator
         },
         scalar_types: Some(RelationalScalarTypeCapabilities {
             // We support Interval literals and cast to Interval
@@ -258,7 +258,7 @@ fn relational_query_capabilities() -> RelationalQueryCapabilities {
         window: Some(RelationalWindowCapabilities {
             expression: window_expression, // Phase 5
         }),
-        union: Some(LeafCapability {}),      // Phase 6: Union via $unionWith
+        union: Some(LeafCapability {}), // Phase 6: Union via $unionWith
         streaming: Some(LeafCapability {}), // Implemented via MongoDB cursor
     }
 }

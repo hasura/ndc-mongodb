@@ -230,11 +230,14 @@ fn try_make_query_document(
 /// - `GetField { column, field }` -> recursively builds path like "parent.child.field"
 ///
 /// Returns `None` if the expression is not a simple field reference.
-fn extract_field_path(expr: &RelationalExpression, column_mapping: &ColumnMapping) -> Option<String> {
+fn extract_field_path(
+    expr: &RelationalExpression,
+    column_mapping: &ColumnMapping,
+) -> Option<String> {
     match expr {
-        RelationalExpression::Column { index } => {
-            column_mapping.field_for_index(*index).map(|s| s.to_string())
-        }
+        RelationalExpression::Column { index } => column_mapping
+            .field_for_index(*index)
+            .map(|s| s.to_string()),
         RelationalExpression::GetField { column, field } => {
             let base_path = extract_field_path(column, column_mapping)?;
             Some(format!("{}.{}", base_path, field))
@@ -289,9 +292,7 @@ fn build_sort(sort_exprs: &[Sort], ctx: &mut PipelineContext) -> Result<(), Rela
 
     // Check if we have any complex expressions (not simple field references)
     // Simple field references are Column or GetField chains on a Column
-    let has_complex_exprs = sort_exprs
-        .iter()
-        .any(|s| !is_simple_field_expr(&s.expr));
+    let has_complex_exprs = sort_exprs.iter().any(|s| !is_simple_field_expr(&s.expr));
 
     if has_complex_exprs {
         // Complex case: use $addFields + $sort + $project
@@ -344,8 +345,10 @@ fn build_sort(sort_exprs: &[Sort], ctx: &mut PipelineContext) -> Result<(), Rela
 
         for sort in sort_exprs {
             // Use extract_field_path to handle both Column and GetField expressions
-            let field_name = extract_field_path(&sort.expr, &ctx.column_mapping)
-                .ok_or_else(|| RelationalError::InvalidSortExpression(format!("{:?}", sort.expr)))?;
+            let field_name =
+                extract_field_path(&sort.expr, &ctx.column_mapping).ok_or_else(|| {
+                    RelationalError::InvalidSortExpression(format!("{:?}", sort.expr))
+                })?;
             let direction = match sort.direction {
                 OrderDirection::Asc => 1,
                 OrderDirection::Desc => -1,

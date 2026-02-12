@@ -158,6 +158,21 @@
         "type": "github"
       }
     },
+    "ndc-sdk-source": {
+      "flake": false,
+      "locked": {
+        "dirtyRev": "cc12fdaa9a452c6e61c69d802b824c0169fc0b53-dirty",
+        "dirtyShortRev": "cc12fda-dirty",
+        "lastModified": 1758813678,
+        "narHash": "sha256-3mTmzl53cihXN3LOYLegqhCHNakKiUS49ovD634eYb0=",
+        "type": "git",
+        "url": "file:///home/codedmart/Work/hasura/projects/ndc-sdk-rs"
+      },
+      "original": {
+        "type": "git",
+        "url": "file:///home/codedmart/Work/hasura/projects/ndc-sdk-rs"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1723362943,
@@ -198,6 +213,7 @@
         "flake-compat": "flake-compat",
         "graphql-engine-source": "graphql-engine-source",
         "hasura-ddn-cli": "hasura-ddn-cli",
+        "ndc-sdk-source": "ndc-sdk-source",
         "nixpkgs": "nixpkgs_2",
         "rust-overlay": "rust-overlay",
         "systems": "systems_2"
@@ -210,11 +226,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1749091064,
-        "narHash": "sha256-TGtYjzRX0sueFhwYsnNNFF5TTKnpnloznpIghLzxeXo=",
+        "lastModified": 1768963622,
+        "narHash": "sha256-n6VHiUgrYD9yjagzG6ncVVqFbVTsKCI54tR9PNAFCo0=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "12419593ce78f2e8e1e89a373c6515885e218acb",
+        "rev": "2ef5b3362af585a83bafd34e7fc9b1f388c2e5e2",
         "type": "github"
       },
       "original": {

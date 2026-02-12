@@ -21,9 +21,8 @@ use serde_json::json;
 
 /// Get a ConnectorState connected to the test database.
 async fn get_test_state() -> mongodb_agent_common::state::ConnectorState {
-    let uri = std::env::var("MONGODB_URI").unwrap_or_else(|_| {
-        "mongodb://localhost:27017/test_relational".to_string()
-    });
+    let uri = std::env::var("MONGODB_URI")
+        .unwrap_or_else(|_| "mongodb://localhost:27017/test_relational".to_string());
     try_init_state_from_uri(Some(&uri))
         .await
         .expect("Failed to initialize ConnectorState")
@@ -56,7 +55,13 @@ fn get_rows(response: &RelationalQueryResponse) -> &Vec<Vec<serde_json::Value>> 
 async fn test_from_relation_all_columns() {
     let relation = Relation::From {
         collection: "products".into(),
-        columns: vec!["_id".into(), "name".into(), "price".into(), "category".into(), "stock".into()],
+        columns: vec![
+            "_id".into(),
+            "name".into(),
+            "price".into(),
+            "category".into(),
+            "stock".into(),
+        ],
         arguments: Default::default(),
     };
 
@@ -92,7 +97,9 @@ async fn test_filter_equality() {
         predicate: RelationalExpression::Eq {
             left: Box::new(RelationalExpression::Column { index: 0 }),
             right: Box::new(RelationalExpression::Literal {
-                literal: RelationalLiteral::String { value: "Widget".into() },
+                literal: RelationalLiteral::String {
+                    value: "Widget".into(),
+                },
             }),
         },
     };
@@ -115,7 +122,9 @@ async fn test_filter_range() {
         predicate: RelationalExpression::Gt {
             left: Box::new(RelationalExpression::Column { index: 1 }),
             right: Box::new(RelationalExpression::Literal {
-                literal: RelationalLiteral::Float64 { value: Float64(15.0) },
+                literal: RelationalLiteral::Float64 {
+                    value: Float64(15.0),
+                },
             }),
         },
     };
@@ -194,7 +203,11 @@ async fn test_paginate_offset() {
 
     let response = execute_query(relation).await;
     let rows = get_rows(&response);
-    assert_eq!(rows.len(), 2, "Limit should restrict to 2 rows after offset");
+    assert_eq!(
+        rows.len(),
+        2,
+        "Limit should restrict to 2 rows after offset"
+    );
 }
 
 // =============================================================================
@@ -299,7 +312,11 @@ async fn test_inner_join() {
 
     let response = execute_query(relation).await;
     let rows = get_rows(&response);
-    assert_eq!(rows.len(), 4, "4 orders have matching products (not product_id=99)");
+    assert_eq!(
+        rows.len(),
+        4,
+        "4 orders have matching products (not product_id=99)"
+    );
 }
 
 // =============================================================================
@@ -399,7 +416,7 @@ async fn test_complex_join_filter_sort_paginate() {
         }),
         join_type: JoinType::Inner,
         on: vec![JoinOn {
-            left: RelationalExpression::Column { index: 0 },  // o.product_id
+            left: RelationalExpression::Column { index: 0 }, // o.product_id
             right: RelationalExpression::Column { index: 0 }, // p._id
         }],
     };
@@ -409,9 +426,11 @@ async fn test_complex_join_filter_sort_paginate() {
     let filtered = Relation::Filter {
         input: Box::new(join),
         predicate: RelationalExpression::Gt {
-            left: Box::new(RelationalExpression::Column { index: 4 }),  // price
+            left: Box::new(RelationalExpression::Column { index: 4 }), // price
             right: Box::new(RelationalExpression::Literal {
-                literal: RelationalLiteral::Float64 { value: Float64(10.0) },
+                literal: RelationalLiteral::Float64 {
+                    value: Float64(10.0),
+                },
             }),
         },
     };
@@ -420,10 +439,11 @@ async fn test_complex_join_filter_sort_paginate() {
     let projected = Relation::Project {
         input: Box::new(filtered),
         exprs: vec![
-            RelationalExpression::Column { index: 3 },  // name
-            RelationalExpression::Column { index: 1 },  // quantity
-            RelationalExpression::Column { index: 4 },  // price
-            RelationalExpression::Multiply {            // line_total = quantity * price
+            RelationalExpression::Column { index: 3 }, // name
+            RelationalExpression::Column { index: 1 }, // quantity
+            RelationalExpression::Column { index: 4 }, // price
+            RelationalExpression::Multiply {
+                // line_total = quantity * price
                 left: Box::new(RelationalExpression::Column { index: 1 }),
                 right: Box::new(RelationalExpression::Column { index: 4 }),
             },
@@ -435,7 +455,7 @@ async fn test_complex_join_filter_sort_paginate() {
     let sorted = Relation::Sort {
         input: Box::new(projected),
         exprs: vec![Sort {
-            expr: RelationalExpression::Column { index: 3 },  // line_total
+            expr: RelationalExpression::Column { index: 3 }, // line_total
             direction: OrderDirection::Desc,
             nulls_sort: NullsSort::NullsLast,
         }],
@@ -459,7 +479,10 @@ async fn test_complex_join_filter_sort_paginate() {
     if rows.len() >= 2 {
         let first_total = rows[0][3].as_f64().unwrap_or(0.0);
         let second_total = rows[1][3].as_f64().unwrap_or(0.0);
-        assert!(first_total >= second_total, "Should be sorted by line_total DESC");
+        assert!(
+            first_total >= second_total,
+            "Should be sorted by line_total DESC"
+        );
     }
 }
 
@@ -488,7 +511,7 @@ async fn test_complex_aggregate_with_multiple_functions() {
     // Step 2: Aggregate with GROUP BY category
     let aggregated = Relation::Aggregate {
         input: Box::new(from),
-        group_by: vec![RelationalExpression::Column { index: 0 }],  // category
+        group_by: vec![RelationalExpression::Column { index: 0 }], // category
         aggregates: vec![
             // COUNT(*)
             RelationalExpression::Count {
@@ -513,7 +536,7 @@ async fn test_complex_aggregate_with_multiple_functions() {
     let sorted = Relation::Sort {
         input: Box::new(aggregated),
         exprs: vec![Sort {
-            expr: RelationalExpression::Column { index: 2 },  // sum_stock
+            expr: RelationalExpression::Column { index: 2 }, // sum_stock
             direction: OrderDirection::Desc,
             nulls_sort: NullsSort::NullsLast,
         }],
@@ -531,7 +554,10 @@ async fn test_complex_aggregate_with_multiple_functions() {
     if rows.len() >= 2 {
         let first_stock = rows[0][2].as_i64().unwrap_or(0);
         let second_stock = rows[1][2].as_i64().unwrap_or(0);
-        assert!(first_stock >= second_stock, "Should be sorted by total_stock DESC");
+        assert!(
+            first_stock >= second_stock,
+            "Should be sorted by total_stock DESC"
+        );
     }
 }
 
@@ -572,9 +598,9 @@ async fn test_complex_window_with_partition_and_running_total() {
         exprs: vec![
             // ROW_NUMBER() OVER (PARTITION BY category ORDER BY price DESC)
             RelationalExpression::RowNumber {
-                partition_by: vec![RelationalExpression::Column { index: 1 }],  // category
+                partition_by: vec![RelationalExpression::Column { index: 1 }], // category
                 order_by: vec![Sort {
-                    expr: RelationalExpression::Column { index: 2 },  // price
+                    expr: RelationalExpression::Column { index: 2 }, // price
                     direction: OrderDirection::Desc,
                     nulls_sort: NullsSort::NullsLast,
                 }],
@@ -588,12 +614,12 @@ async fn test_complex_window_with_partition_and_running_total() {
         input: Box::new(windowed),
         exprs: vec![
             Sort {
-                expr: RelationalExpression::Column { index: 1 },  // category
+                expr: RelationalExpression::Column { index: 1 }, // category
                 direction: OrderDirection::Asc,
                 nulls_sort: NullsSort::NullsLast,
             },
             Sort {
-                expr: RelationalExpression::Column { index: 3 },  // row_number
+                expr: RelationalExpression::Column { index: 3 }, // row_number
                 direction: OrderDirection::Asc,
                 nulls_sort: NullsSort::NullsLast,
             },
@@ -645,7 +671,7 @@ async fn test_complex_multi_join_with_filter() {
     let active_categories = Relation::Filter {
         input: Box::new(categories),
         predicate: RelationalExpression::Eq {
-            left: Box::new(RelationalExpression::Column { index: 2 }),  // active
+            left: Box::new(RelationalExpression::Column { index: 2 }), // active
             right: Box::new(RelationalExpression::Literal {
                 literal: RelationalLiteral::Boolean { value: true },
             }),
@@ -657,13 +683,18 @@ async fn test_complex_multi_join_with_filter() {
         left: Box::new(active_categories),
         right: Box::new(Relation::From {
             collection: "products".into(),
-            columns: vec!["category".into(), "name".into(), "price".into(), "_id".into()],
+            columns: vec![
+                "category".into(),
+                "name".into(),
+                "price".into(),
+                "_id".into(),
+            ],
             arguments: Default::default(),
         }),
         join_type: JoinType::Left,
         on: vec![JoinOn {
-            left: RelationalExpression::Column { index: 0 },   // c._id
-            right: RelationalExpression::Column { index: 0 },  // p.category
+            left: RelationalExpression::Column { index: 0 }, // c._id
+            right: RelationalExpression::Column { index: 0 }, // p.category
         }],
     };
     // Output: [c._id, c.name, c.active, p.category, p.name, p.price, p._id] (indices 0-6)
@@ -678,8 +709,8 @@ async fn test_complex_multi_join_with_filter() {
         }),
         join_type: JoinType::Left,
         on: vec![JoinOn {
-            left: RelationalExpression::Column { index: 6 },   // p._id
-            right: RelationalExpression::Column { index: 0 },  // o.product_id
+            left: RelationalExpression::Column { index: 6 }, // p._id
+            right: RelationalExpression::Column { index: 0 }, // o.product_id
         }],
     };
     // Output: [c._id, c.name, c.active, p.category, p.name, p.price, p._id, o.product_id, o.quantity]
@@ -688,12 +719,13 @@ async fn test_complex_multi_join_with_filter() {
     let projected = Relation::Project {
         input: Box::new(with_orders),
         exprs: vec![
-            RelationalExpression::Column { index: 1 },  // c.name (category_name)
-            RelationalExpression::Column { index: 4 },  // p.name (product_name)
-            RelationalExpression::Column { index: 8 },  // o.quantity
-            RelationalExpression::Column { index: 5 },  // p.price
-            RelationalExpression::Multiply {            // order_value
-                left: Box::new(RelationalExpression::Column { index: 8 }),  // quantity
+            RelationalExpression::Column { index: 1 }, // c.name (category_name)
+            RelationalExpression::Column { index: 4 }, // p.name (product_name)
+            RelationalExpression::Column { index: 8 }, // o.quantity
+            RelationalExpression::Column { index: 5 }, // p.price
+            RelationalExpression::Multiply {
+                // order_value
+                left: Box::new(RelationalExpression::Column { index: 8 }), // quantity
                 right: Box::new(RelationalExpression::Column { index: 5 }), // price
             },
         ],
@@ -705,12 +737,12 @@ async fn test_complex_multi_join_with_filter() {
         input: Box::new(projected),
         exprs: vec![
             Sort {
-                expr: RelationalExpression::Column { index: 0 },  // category_name
+                expr: RelationalExpression::Column { index: 0 }, // category_name
                 direction: OrderDirection::Asc,
                 nulls_sort: NullsSort::NullsLast,
             },
             Sort {
-                expr: RelationalExpression::Column { index: 4 },  // order_value
+                expr: RelationalExpression::Column { index: 4 }, // order_value
                 direction: OrderDirection::Desc,
                 nulls_sort: NullsSort::NullsLast,
             },
@@ -721,7 +753,10 @@ async fn test_complex_multi_join_with_filter() {
     let rows = get_rows(&response);
 
     // Should have results for active categories (A and B) with their products and orders
-    assert!(!rows.is_empty(), "Should have results for active categories");
+    assert!(
+        !rows.is_empty(),
+        "Should have results for active categories"
+    );
 
     // Each row should have 5 columns
     assert_eq!(rows[0].len(), 5, "Each row should have 5 columns");
@@ -753,13 +788,13 @@ async fn test_complex_aggregate_filter_union() {
             columns: vec!["category".into(), "stock".into(), "price".into()],
             arguments: Default::default(),
         }),
-        group_by: vec![RelationalExpression::Column { index: 0 }],  // category
+        group_by: vec![RelationalExpression::Column { index: 0 }], // category
         aggregates: vec![
             RelationalExpression::Sum {
-                expr: Box::new(RelationalExpression::Column { index: 1 }),  // stock
+                expr: Box::new(RelationalExpression::Column { index: 1 }), // stock
             },
             RelationalExpression::Average {
-                expr: Box::new(RelationalExpression::Column { index: 2 }),  // price
+                expr: Box::new(RelationalExpression::Column { index: 2 }), // price
             },
         ],
     };
@@ -768,7 +803,7 @@ async fn test_complex_aggregate_filter_union() {
     let filtered_categories = Relation::Filter {
         input: Box::new(category_agg),
         predicate: RelationalExpression::Gt {
-            left: Box::new(RelationalExpression::Column { index: 1 }),  // sum_stock
+            left: Box::new(RelationalExpression::Column { index: 1 }), // sum_stock
             right: Box::new(RelationalExpression::Literal {
                 literal: RelationalLiteral::Int64 { value: 50 },
             }),
@@ -786,10 +821,10 @@ async fn test_complex_aggregate_filter_union() {
         aggregates: vec![
             // Add a literal 'ALL' for the category column to match union schema
             RelationalExpression::Sum {
-                expr: Box::new(RelationalExpression::Column { index: 0 }),  // stock
+                expr: Box::new(RelationalExpression::Column { index: 0 }), // stock
             },
             RelationalExpression::Average {
-                expr: Box::new(RelationalExpression::Column { index: 1 }),  // price
+                expr: Box::new(RelationalExpression::Column { index: 1 }), // price
             },
         ],
     };
@@ -800,10 +835,12 @@ async fn test_complex_aggregate_filter_union() {
         input: Box::new(overall_agg),
         exprs: vec![
             RelationalExpression::Literal {
-                literal: RelationalLiteral::String { value: "ALL".into() },
+                literal: RelationalLiteral::String {
+                    value: "ALL".into(),
+                },
             },
-            RelationalExpression::Column { index: 0 },  // sum_stock
-            RelationalExpression::Column { index: 1 },  // avg_price
+            RelationalExpression::Column { index: 0 }, // sum_stock
+            RelationalExpression::Column { index: 1 }, // avg_price
         ],
     };
 
@@ -851,7 +888,12 @@ async fn test_complex_multiple_window_functions() {
     // Step 1: From products
     let from = Relation::From {
         collection: "products".into(),
-        columns: vec!["name".into(), "category".into(), "price".into(), "stock".into()],
+        columns: vec![
+            "name".into(),
+            "category".into(),
+            "price".into(),
+            "stock".into(),
+        ],
         arguments: Default::default(),
     };
 
@@ -859,7 +901,7 @@ async fn test_complex_multiple_window_functions() {
     let filtered = Relation::Filter {
         input: Box::new(from),
         predicate: RelationalExpression::Gt {
-            left: Box::new(RelationalExpression::Column { index: 3 }),  // stock
+            left: Box::new(RelationalExpression::Column { index: 3 }), // stock
             right: Box::new(RelationalExpression::Literal {
                 literal: RelationalLiteral::Int64 { value: 0 },
             }),
@@ -871,9 +913,9 @@ async fn test_complex_multiple_window_functions() {
     let projected = Relation::Project {
         input: Box::new(filtered),
         exprs: vec![
-            RelationalExpression::Column { index: 0 },  // name
-            RelationalExpression::Column { index: 1 },  // category
-            RelationalExpression::Column { index: 2 },  // price
+            RelationalExpression::Column { index: 0 }, // name
+            RelationalExpression::Column { index: 1 }, // category
+            RelationalExpression::Column { index: 2 }, // price
         ],
     };
     // Output: [name, category, price] (indices 0-2)
@@ -886,16 +928,16 @@ async fn test_complex_multiple_window_functions() {
             RelationalExpression::Rank {
                 partition_by: vec![],
                 order_by: vec![Sort {
-                    expr: RelationalExpression::Column { index: 2 },  // price
+                    expr: RelationalExpression::Column { index: 2 }, // price
                     direction: OrderDirection::Desc,
                     nulls_sort: NullsSort::NullsLast,
                 }],
             },
             // DENSE_RANK() OVER (PARTITION BY category ORDER BY price DESC)
             RelationalExpression::DenseRank {
-                partition_by: vec![RelationalExpression::Column { index: 1 }],  // category
+                partition_by: vec![RelationalExpression::Column { index: 1 }], // category
                 order_by: vec![Sort {
-                    expr: RelationalExpression::Column { index: 2 },  // price
+                    expr: RelationalExpression::Column { index: 2 }, // price
                     direction: OrderDirection::Desc,
                     nulls_sort: NullsSort::NullsLast,
                 }],
@@ -909,12 +951,12 @@ async fn test_complex_multiple_window_functions() {
         input: Box::new(windowed),
         exprs: vec![
             Sort {
-                expr: RelationalExpression::Column { index: 3 },  // overall_rank
+                expr: RelationalExpression::Column { index: 3 }, // overall_rank
                 direction: OrderDirection::Asc,
                 nulls_sort: NullsSort::NullsLast,
             },
             Sort {
-                expr: RelationalExpression::Column { index: 4 },  // category_rank
+                expr: RelationalExpression::Column { index: 4 }, // category_rank
                 direction: OrderDirection::Asc,
                 nulls_sort: NullsSort::NullsLast,
             },
@@ -939,4 +981,3 @@ async fn test_complex_multiple_window_functions() {
         assert!(category_rank >= 1, "category_rank should be >= 1");
     }
 }
-

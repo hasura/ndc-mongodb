@@ -1019,7 +1019,21 @@ fn translates_cast_to_string() {
         as_type: ndc_models::CastType::Utf8,
     };
     let result = translate_expression(&expr, &ctx).unwrap();
-    assert_eq!(result, bson!({ "$toString": "$value" }));
+    assert_eq!(
+        result,
+        bson!({
+            "$cond": {
+                "if": {
+                    "$or": [
+                        { "$isArray": "$value" },
+                        { "$eq": [{ "$type": "$value" }, "object"] }
+                    ]
+                },
+                "then": "$value",
+                "else": { "$toString": "$value" }
+            }
+        })
+    );
 }
 
 #[test]
@@ -1186,11 +1200,22 @@ fn translates_try_cast_to_string() {
     assert_eq!(
         result,
         bson!({
-            "$convert": {
-                "input": "$value",
-                "to": "string",
-                "onError": null,
-                "onNull": null
+            "$cond": {
+                "if": {
+                    "$or": [
+                        { "$isArray": "$value" },
+                        { "$eq": [{ "$type": "$value" }, "object"] }
+                    ]
+                },
+                "then": "$value",
+                "else": {
+                    "$convert": {
+                        "input": "$value",
+                        "to": "string",
+                        "onError": null,
+                        "onNull": null
+                    }
+                }
             }
         })
     );

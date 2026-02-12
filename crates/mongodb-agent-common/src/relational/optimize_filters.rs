@@ -346,4 +346,3 @@ mod tests {
         assert_eq!(doc, doc! { "status": { "$eq": "active" } });
     }
 }
-

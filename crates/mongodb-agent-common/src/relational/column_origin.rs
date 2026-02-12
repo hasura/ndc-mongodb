@@ -118,7 +118,7 @@ pub fn trace_column_origin(relation: &Relation, column_index: u64) -> ColumnOrig
             ..
         } => {
             let left_count = count_output_columns(left);
-            
+
             // For semi/anti joins, only left columns are output
             if matches!(
                 join_type,
@@ -127,7 +127,10 @@ pub fn trace_column_origin(relation: &Relation, column_index: u64) -> ColumnOrig
                     | ndc_models::JoinType::RightSemi
                     | ndc_models::JoinType::RightAnti
             ) {
-                if matches!(join_type, ndc_models::JoinType::RightSemi | ndc_models::JoinType::RightAnti) {
+                if matches!(
+                    join_type,
+                    ndc_models::JoinType::RightSemi | ndc_models::JoinType::RightAnti
+                ) {
                     trace_column_origin(right, column_index)
                 } else {
                     trace_column_origin(left, column_index)
@@ -386,4 +389,3 @@ mod tests {
         assert_eq!(count_output_columns(&filter), 2);
     }
 }
-

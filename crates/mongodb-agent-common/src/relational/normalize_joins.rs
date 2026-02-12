@@ -163,10 +163,7 @@ pub fn column_count(relation: &Relation) -> u64 {
 
         Relation::Union { relations } => {
             // All inputs should have the same column count, use first
-            relations
-                .first()
-                .map(column_count)
-                .unwrap_or(0)
+            relations.first().map(column_count).unwrap_or(0)
         }
     }
 }
@@ -209,4 +206,3 @@ fn reorder_columns(left_count: u64, right_count: u64) -> Vec<RelationalExpressio
 
     exprs
 }
-
