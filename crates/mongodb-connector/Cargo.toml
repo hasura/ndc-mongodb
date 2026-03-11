@@ -5,6 +5,7 @@ version.workspace = true
 
 [dependencies]
 configuration = { path = "../configuration" }
+configuration-store = { path = "../configuration-store" }
 mongodb-agent-common = { path = "../mongodb-agent-common" }
 mongodb-support = { path = "../mongodb-support" }
 ndc-query-plan = { path = "../ndc-query-plan" }
