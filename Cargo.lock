@@ -486,7 +486,7 @@ checksum = "97af0562545a7d7f3d9222fcf909963bec36dcb502afaacab98c6ffac8da47ce"
 
 [[package]]
 name = "configuration"
-version = "1.8.4"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "async-tempfile",
@@ -509,7 +509,7 @@ dependencies = [
 
 [[package]]
 name = "configuration-store"
-version = "1.8.4"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "configuration",
@@ -1614,7 +1614,7 @@ dependencies = [
 
 [[package]]
 name = "integration-tests"
-version = "1.8.4"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "assert_json",
@@ -1944,7 +1944,7 @@ dependencies = [
 
 [[package]]
 name = "mongodb-agent-common"
-version = "1.8.4"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1985,7 +1985,7 @@ dependencies = [
 
 [[package]]
 name = "mongodb-cli-plugin"
-version = "1.8.4"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "async-tempfile",
@@ -2020,7 +2020,7 @@ dependencies = [
 
 [[package]]
 name = "mongodb-connector"
-version = "1.8.4"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2060,7 +2060,7 @@ dependencies = [
 
 [[package]]
 name = "mongodb-support"
-version = "1.8.4"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "enum-iterator",
@@ -2105,7 +2105,7 @@ dependencies = [
 
 [[package]]
 name = "ndc-query-plan"
-version = "1.8.4"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "derivative",
@@ -2200,7 +2200,7 @@ dependencies = [
 
 [[package]]
 name = "ndc-test-helpers"
-version = "1.8.4"
+version = "2.0.0"
 dependencies = [
  "indexmap 2.2.6",
  "itertools",
@@ -3634,7 +3634,7 @@ checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 
 [[package]]
 name = "test-helpers"
-version = "1.8.4"
+version = "2.0.0"
 dependencies = [
  "configuration",
  "enum-iterator",

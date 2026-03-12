@@ -6,6 +6,17 @@ This changelog documents the changes between release versions.
 
 ### Added
 
+### Fixed
+
+### Changed
+
+## [2.0.0] - 2026-03-12
+
+### Added
+
+- Add relational query support including projection, filtering, sorting, pagination, joins, aggregates,
+  window functions, unions, and streaming (<https://github.com/hasura/ndc-mongodb/pull/180>)
+- Add postgres-backed configuration store for on-demand schema loading, enabling dynamic schema management without connector restarts (<https://github.com/hasura/ndc-mongodb/pull/179>)
 - You can now group documents for aggregation according to multiple grouping criteria ([#144](https://github.com/hasura/ndc-mongodb/pull/144), [#145](https://github.com/hasura/ndc-mongodb/pull/145))
 
 ### Changed
