@@ -6,7 +6,9 @@ use std::collections::BTreeMap;
 
 use mongodb::bson::{bson, doc, Bson, Document};
 use mongodb_support::aggregate::{Accumulator, Pipeline, SortDocument, Stage};
-use ndc_models::{JoinOn, JoinType, OrderDirection, Relation, RelationalExpression, Sort};
+use ndc_models::{
+    JoinOn, JoinType, NullsSort, OrderDirection, Relation, RelationalExpression, Sort,
+};
 
 use super::{
     expression::{translate_aggregate_expression, translate_expression, ExpressionContext},
@@ -78,8 +80,15 @@ fn build_relation(relation: &Relation, ctx: &mut PipelineContext) -> Result<(), 
         Relation::From {
             collection,
             columns,
-            arguments: _,
-        } => build_from(collection, columns, ctx),
+            arguments,
+        } => {
+            if !arguments.is_empty() {
+                return Err(RelationalError::UnsupportedRelation(
+                    "From with arguments is not supported".to_string(),
+                ));
+            }
+            build_from(collection, columns, ctx)
+        }
 
         Relation::Filter { input, predicate } => {
             build_relation(input, ctx)?;
@@ -147,9 +156,7 @@ fn build_filter(
     }
 
     // Fall back to $expr (less index-friendly)
-    let expr_ctx = ExpressionContext {
-        column_mapping: &ctx.column_mapping,
-    };
+    let expr_ctx = ExpressionContext::new(&ctx.column_mapping);
     let match_expr = translate_expression(predicate, &expr_ctx)?;
     ctx.stages.push(Stage::Match(doc! { "$expr": match_expr }));
 
@@ -280,22 +287,38 @@ fn is_simple_field_expr(expr: &RelationalExpression) -> bool {
     }
 }
 
+/// Check if a sort's nulls_sort requires a non-default null ordering.
+///
+/// MongoDB default: nulls sort first in ascending order, last in descending order.
+/// Returns true if we need to add an explicit null-ordering key.
+fn needs_null_sort_key(direction: &OrderDirection, nulls_sort: &NullsSort) -> bool {
+    matches!(
+        (direction, nulls_sort),
+        (OrderDirection::Asc, NullsSort::NullsLast)
+            | (OrderDirection::Desc, NullsSort::NullsFirst)
+    )
+}
+
 /// Build the Sort relation ($sort stage).
 ///
 /// For simple field references (Column or GetField chains), we sort directly on the field.
 /// For complex expressions (like Case), we use $addFields to compute temporary
 /// sort keys, then $sort on those keys, and finally $project to remove them.
+///
+/// When `nulls_sort` doesn't match MongoDB's default behavior, we add computed
+/// null-ordering keys that sort nulls to the correct position.
 fn build_sort(sort_exprs: &[Sort], ctx: &mut PipelineContext) -> Result<(), RelationalError> {
-    let expr_ctx = ExpressionContext {
-        column_mapping: &ctx.column_mapping,
-    };
+    let expr_ctx = ExpressionContext::new(&ctx.column_mapping);
 
-    // Check if we have any complex expressions (not simple field references)
-    // Simple field references are Column or GetField chains on a Column
+    // Check if we have any complex expressions or non-default null sorting
     let has_complex_exprs = sort_exprs.iter().any(|s| !is_simple_field_expr(&s.expr));
+    let has_non_default_nulls = sort_exprs
+        .iter()
+        .any(|s| needs_null_sort_key(&s.direction, &s.nulls_sort));
 
-    if has_complex_exprs {
-        // Complex case: use $addFields + $sort + $project
+    // When we need null ordering keys or complex expressions, we always use
+    // $addFields + $sort + $unset pattern
+    if has_complex_exprs || has_non_default_nulls {
         let mut add_fields_doc = Document::new();
         let mut sort_doc = Document::new();
         let mut temp_field_names = Vec::new();
@@ -319,6 +342,25 @@ fn build_sort(sort_exprs: &[Sort], ctx: &mut PipelineContext) -> Result<(), Rela
                 }
             };
 
+            // Add null-ordering key if needed
+            if needs_null_sort_key(&sort.direction, &sort.nulls_sort) {
+                let null_key = format!("__null_order_{}", i);
+                // For NullsLast with Asc: nulls get 1 (sorted after 0)
+                // For NullsFirst with Desc: nulls get 0 (sorted before 1 in ascending)
+                let null_value = match sort.nulls_sort {
+                    NullsSort::NullsLast => 1,
+                    NullsSort::NullsFirst => 0,
+                };
+                let non_null_value = 1 - null_value;
+                add_fields_doc.insert(
+                    &null_key,
+                    bson!({ "$cond": [{ "$eq": [format!("${}", field_name), null] }, null_value, non_null_value] }),
+                );
+                temp_field_names.push(null_key.clone());
+                // Sort by null key first (always ascending)
+                sort_doc.insert(null_key, 1);
+            }
+
             let direction = match sort.direction {
                 OrderDirection::Asc => 1,
                 OrderDirection::Desc => -1,
@@ -326,7 +368,7 @@ fn build_sort(sort_exprs: &[Sort], ctx: &mut PipelineContext) -> Result<(), Rela
             sort_doc.insert(&field_name, direction);
         }
 
-        // Add the $addFields stage if there are computed expressions
+        // Add the $addFields stage if there are computed expressions or null keys
         if !add_fields_doc.is_empty() {
             ctx.stages.push(Stage::AddFields(add_fields_doc));
         }
@@ -334,17 +376,16 @@ fn build_sort(sort_exprs: &[Sort], ctx: &mut PipelineContext) -> Result<(), Rela
         // Add the $sort stage
         ctx.stages.push(Stage::Sort(SortDocument(sort_doc)));
 
-        // Remove temporary sort fields using $unset
+        // Remove temporary fields using $unset
         if !temp_field_names.is_empty() {
             let unset_doc = doc! { "$unset": temp_field_names };
             ctx.stages.push(Stage::Other(unset_doc));
         }
     } else {
-        // Simple case: all expressions are field references (Column or GetField chains)
+        // Simple case: all expressions are field references with default null ordering
         let mut sort_doc = Document::new();
 
         for sort in sort_exprs {
-            // Use extract_field_path to handle both Column and GetField expressions
             let field_name =
                 extract_field_path(&sort.expr, &ctx.column_mapping).ok_or_else(|| {
                     RelationalError::InvalidSortExpression(format!("{:?}", sort.expr))
@@ -369,11 +410,17 @@ fn build_paginate(
     ctx: &mut PipelineContext,
 ) -> Result<(), RelationalError> {
     if skip > 0 {
-        ctx.stages.push(Stage::Skip(Bson::Int64(skip as i64)));
+        let skip_i64 = i64::try_from(skip).map_err(|_| {
+            RelationalError::UnsupportedExpression("Skip value too large".to_string())
+        })?;
+        ctx.stages.push(Stage::Skip(Bson::Int64(skip_i64)));
     }
 
     if let Some(limit) = fetch {
-        ctx.stages.push(Stage::Limit(Bson::Int64(limit as i64)));
+        let limit_i64 = i64::try_from(limit).map_err(|_| {
+            RelationalError::UnsupportedExpression("Limit value too large".to_string())
+        })?;
+        ctx.stages.push(Stage::Limit(Bson::Int64(limit_i64)));
     }
 
     Ok(())
@@ -387,9 +434,7 @@ fn build_project(
 ) -> Result<(), RelationalError> {
     build_relation(input, ctx)?;
 
-    let expr_ctx = ExpressionContext {
-        column_mapping: &ctx.column_mapping,
-    };
+    let expr_ctx = ExpressionContext::new(&ctx.column_mapping);
 
     // Build $project document with positional field names
     let mut project_doc = Document::new();
@@ -411,6 +456,7 @@ fn build_project(
 }
 
 /// Extract the field name from a column reference expression.
+/// Handles both `Column` and `GetField` chains (e.g., `col.nested_field`).
 fn extract_column_field(
     expr: &RelationalExpression,
     column_mapping: &ColumnMapping,
@@ -420,6 +466,10 @@ fn extract_column_field(
             .field_for_index(*index)
             .map(|s| s.to_string())
             .ok_or(RelationalError::InvalidColumnIndex(*index)),
+        RelationalExpression::GetField { column, field } => {
+            let base = extract_column_field(column, column_mapping)?;
+            Ok(format!("{}.{}", base, field))
+        }
         other => Err(RelationalError::InvalidSortExpression(format!("{other:?}"))),
     }
 }
@@ -430,9 +480,7 @@ fn build_aggregate(
     aggregates: &[RelationalExpression],
     ctx: &mut PipelineContext,
 ) -> Result<(), RelationalError> {
-    let expr_ctx = ExpressionContext {
-        column_mapping: &ctx.column_mapping,
-    };
+    let expr_ctx = ExpressionContext::new(&ctx.column_mapping);
 
     // Build _id field based on group_by expressions
     let key_expression = match group_by.len() {
@@ -485,7 +533,7 @@ fn build_aggregate(
     for (i, agg_expr) in aggregates.iter().enumerate() {
         let field_name = format!("col_{}", group_by.len() + i);
         let source = format!("$_a{}", i);
-        let projected_value = apply_aggregate_post_processing(agg_expr, &source);
+        let projected_value = apply_aggregate_post_processing(agg_expr, &source)?;
         project_doc.insert(&field_name, projected_value);
     }
 
@@ -500,21 +548,24 @@ fn build_aggregate(
 
 /// Apply post-processing for aggregates that need it in the $project stage.
 /// Some aggregates like count distinct use $addToSet in $group and need $size in $project.
-fn apply_aggregate_post_processing(agg_expr: &RelationalExpression, source: &str) -> Bson {
+fn apply_aggregate_post_processing(
+    agg_expr: &RelationalExpression,
+    source: &str,
+) -> Result<Bson, RelationalError> {
     match agg_expr {
         // Count distinct: $addToSet produces array, need $size to get count
         RelationalExpression::Count { distinct: true, .. } => {
-            bson!({ "$size": source })
+            Ok(bson!({ "$size": source }))
         }
 
         // BoolAnd: $push produces array, need $allElementsTrue
         RelationalExpression::BoolAnd { .. } => {
-            bson!({ "$allElementsTrue": source })
+            Ok(bson!({ "$allElementsTrue": source }))
         }
 
         // BoolOr: $push produces array, need $anyElementTrue
         RelationalExpression::BoolOr { .. } => {
-            bson!({ "$anyElementTrue": source })
+            Ok(bson!({ "$anyElementTrue": source }))
         }
 
         // ArrayAgg with order_by: sort the collected array using $sortArray (MongoDB 5.2+)
@@ -522,13 +573,13 @@ fn apply_aggregate_post_processing(agg_expr: &RelationalExpression, source: &str
             order_by: Some(order_by),
             ..
         } if !order_by.is_empty() => {
-            let sort_by = build_sort_by_for_sort_array(order_by);
-            bson!({
+            let sort_by = build_sort_by_for_sort_array(order_by)?;
+            Ok(bson!({
                 "$sortArray": {
                     "input": source,
                     "sortBy": sort_by
                 }
-            })
+            }))
         }
 
         // StringAgg: $push/$addToSet produces array, optionally sort, then $reduce + $concat
@@ -540,7 +591,7 @@ fn apply_aggregate_post_processing(agg_expr: &RelationalExpression, source: &str
             // Build the input expression - apply sorting if order_by is specified
             let input_expr = if let Some(sorts) = order_by {
                 if !sorts.is_empty() {
-                    let sort_by = build_sort_by_for_sort_array(sorts);
+                    let sort_by = build_sort_by_for_sort_array(sorts)?;
                     bson!({
                         "$sortArray": {
                             "input": source,
@@ -556,7 +607,7 @@ fn apply_aggregate_post_processing(agg_expr: &RelationalExpression, source: &str
 
             // Use $reduce to concatenate array elements with separator
             // Result: "elem1, elem2, elem3" (or empty string if array is empty)
-            bson!({
+            Ok(bson!({
                 "$reduce": {
                     "input": input_expr,
                     "initialValue": "",
@@ -568,38 +619,32 @@ fn apply_aggregate_post_processing(agg_expr: &RelationalExpression, source: &str
                         }
                     }
                 }
-            })
+            }))
         }
 
         // All other aggregates: no post-processing needed
-        _ => Bson::String(source.to_string()),
+        _ => Ok(Bson::String(source.to_string())),
     }
 }
 
 /// Build a sortBy document for $sortArray from a list of Sort expressions.
 /// For simple scalar aggregates, we sort by the value itself (represented as empty string key).
-/// For complex expressions, we'd need to handle nested objects.
-fn build_sort_by_for_sort_array(order_by: &[Sort]) -> Bson {
-    // For simple scalar values, $sortArray expects sortBy: 1 or -1
-    // For objects, it expects sortBy: { field1: 1, field2: -1 }
-    //
-    // Since array_agg/string_agg typically collect scalar values or simple expressions,
-    // we handle the simple case where we sort by the value itself.
-    // For a single sort expression on the aggregated value, use simple sort direction.
+///
+/// Multi-key sorting on scalar values is not supported by $sortArray and returns an error.
+fn build_sort_by_for_sort_array(
+    order_by: &[Sort],
+) -> Result<Bson, RelationalError> {
     if order_by.len() == 1 {
         let sort = &order_by[0];
-        match sort.direction {
+        Ok(match sort.direction {
             OrderDirection::Asc => Bson::Int32(1),
             OrderDirection::Desc => Bson::Int32(-1),
-        }
+        })
     } else {
-        // For multiple sort keys, we'd need the aggregated values to be documents
-        // with named fields. This is a limitation - fall back to first sort key.
-        let sort = &order_by[0];
-        match sort.direction {
-            OrderDirection::Asc => Bson::Int32(1),
-            OrderDirection::Desc => Bson::Int32(-1),
-        }
+        Err(RelationalError::UnsupportedExpression(
+            "Multi-key sorting on scalar aggregate values is not supported by $sortArray"
+                .to_string(),
+        ))
     }
 }
 
@@ -765,7 +810,7 @@ fn build_lookup_stage(
     let let_vars = build_let_variables(left_columns, on)?;
 
     // Build pipeline with $match using $expr
-    let match_expr = build_join_match_expr(left_columns, right_info, on)?;
+    let match_expr = build_join_match_expr(right_info, on)?;
 
     let lookup_pipeline = Pipeline::new(vec![Stage::Match(doc! { "$expr": match_expr })]);
 
@@ -789,9 +834,7 @@ fn build_let_variables(
 
     for (i, join_on) in on.iter().enumerate() {
         // Translate the left expression to get the field reference
-        let ctx = ExpressionContext {
-            column_mapping: left_columns,
-        };
+        let ctx = ExpressionContext::new(left_columns);
         let left_expr = translate_expression(&join_on.left, &ctx)?;
 
         // Create variable name for this join condition
@@ -808,7 +851,6 @@ fn build_let_variables(
 /// Build the $match expression for the lookup pipeline.
 /// This compares right-side columns to left-side variables.
 fn build_join_match_expr(
-    _left_columns: &ColumnMapping,
     right_info: &JoinRightInfo,
     on: &[JoinOn],
 ) -> Result<Bson, RelationalError> {
@@ -819,9 +861,7 @@ fn build_join_match_expr(
         .enumerate()
         .map(|(i, join_on)| {
             // Translate the right expression using right-side column mapping
-            let ctx = ExpressionContext {
-                column_mapping: &right_column_mapping,
-            };
+            let ctx = ExpressionContext::new(&right_column_mapping);
             let right_expr = translate_expression(&join_on.right, &ctx)?;
 
             // Left side is referenced via variable
@@ -892,10 +932,10 @@ fn build_semi_anti_project(left_columns: &ColumnMapping) -> Result<Document, Rel
 fn update_join_column_mapping(
     ctx: &mut PipelineContext,
     left_count: usize,
-    _right_columns: &[String],
+    right_columns: &[String],
 ) {
     // Create new mapping with positional names for all columns
-    let total_columns = left_count + _right_columns.len();
+    let total_columns = left_count + right_columns.len();
     let new_mapping: Vec<String> = (0..total_columns).map(|i| format!("col_{}", i)).collect();
     ctx.column_mapping = ColumnMapping::new(new_mapping.iter().map(|s| s.as_str()));
 }

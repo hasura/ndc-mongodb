@@ -230,27 +230,32 @@ fn bson_to_json(bson: &mongodb::bson::Bson) -> serde_json::Value {
             })
         }
 
-        // MinKey/MaxKey - empty objects (no standard JSON representation)
-        Bson::MinKey | Bson::MaxKey => Value::Object(Default::default()),
+        // MinKey/MaxKey - use distinct sentinel representations
+        Bson::MinKey => json!({"$minKey": 1}),
+        Bson::MaxKey => json!({"$maxKey": 1}),
 
         // DbPointer - rare type, use Extended JSON as fallback (fallback to extjson)
         Bson::DbPointer(_) => bson.clone().into_relaxed_extjson(),
 
-        // Stringify nested documents as JSON strings
+        // Stringify nested documents as JSON strings, recursively applying bson_to_json
+        // to ensure consistent conversion (no Extended JSON for ObjectId, DateTime, etc.)
         Bson::Document(doc) => {
-            let json_value: Value = Bson::Document(doc.clone()).into();
-            Value::String(json_value.to_string())
+            let json_obj: serde_json::Map<String, Value> = doc
+                .iter()
+                .map(|(k, v)| (k.clone(), bson_to_json(v)))
+                .collect();
+            Value::String(Value::Object(json_obj).to_string())
         }
 
-        // Stringify arrays as JSON strings
+        // Stringify arrays as JSON strings, recursively applying bson_to_json
         Bson::Array(arr) => {
-            let json_value: Value = Bson::Array(arr.clone()).into();
-            Value::String(json_value.to_string())
+            let json_arr: Vec<Value> = arr.iter().map(bson_to_json).collect();
+            Value::String(Value::Array(json_arr).to_string())
         }
     }
 }
 
 /// Convert a RelationalError to a MongoAgentError.
 fn relational_error(err: RelationalError) -> MongoAgentError {
-    MongoAgentError::BadQuery(anyhow::anyhow!("{}", err))
+    MongoAgentError::BadQuery(anyhow::anyhow!(err))
 }

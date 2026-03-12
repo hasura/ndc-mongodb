@@ -133,21 +133,23 @@ fn builds_pipeline_for_sort_with_case_expression() {
     // Should have: $addFields, $sort, $unset (via Stage::Other)
     assert_eq!(result.pipeline.stages.len(), 3);
 
-    // First stage: $addFields with the Case expression computed
+    // First stage: $addFields with the Case expression computed and null-order key
+    // (NullsLast + Asc is non-default, so a __null_order_0 key is added)
     match &result.pipeline.stages[0] {
         Stage::AddFields(doc) => {
             assert!(doc.contains_key("__sort_key_0"));
+            assert!(doc.contains_key("__null_order_0"));
         }
         other => panic!("Expected AddFields stage, got {:?}", other),
     }
 
-    // Second stage: $sort on the computed field
+    // Second stage: $sort on null-order key first, then computed field
     assert_eq!(
         result.pipeline.stages[1],
-        Stage::Sort(SortDocument(doc! { "__sort_key_0": 1 }))
+        Stage::Sort(SortDocument(doc! { "__null_order_0": 1, "__sort_key_0": 1 }))
     );
 
-    // Third stage: $unset to remove the temporary field
+    // Third stage: $unset to remove the temporary fields
     match &result.pipeline.stages[2] {
         Stage::Other(doc) => {
             assert!(doc.contains_key("$unset"));

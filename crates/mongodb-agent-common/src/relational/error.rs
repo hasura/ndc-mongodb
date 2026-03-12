@@ -36,4 +36,8 @@ pub enum RelationalError {
     /// Invalid union operation.
     #[error("Invalid union: {0}")]
     InvalidUnion(String),
+
+    /// Expression nesting is too deep.
+    #[error("Expression nesting too deep (limit: 512)")]
+    ExpressionTooDeep,
 }

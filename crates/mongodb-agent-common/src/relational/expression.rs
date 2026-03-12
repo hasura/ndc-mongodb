@@ -5,9 +5,32 @@ use ndc_models::{CastType, RelationalExpression, RelationalLiteral};
 
 use super::{ColumnMapping, RelationalError};
 
+/// Maximum recursion depth for expression translation.
+const MAX_EXPRESSION_DEPTH: u32 = 512;
+
 /// Context for translating expressions.
 pub struct ExpressionContext<'a> {
     pub column_mapping: &'a ColumnMapping,
+    depth: u32,
+}
+
+impl<'a> ExpressionContext<'a> {
+    pub fn new(column_mapping: &'a ColumnMapping) -> Self {
+        Self {
+            column_mapping,
+            depth: 0,
+        }
+    }
+
+    fn nested(&self) -> Result<Self, RelationalError> {
+        if self.depth >= MAX_EXPRESSION_DEPTH {
+            return Err(RelationalError::ExpressionTooDeep);
+        }
+        Ok(Self {
+            column_mapping: self.column_mapping,
+            depth: self.depth + 1,
+        })
+    }
 }
 
 /// Translate a relational expression to MongoDB BSON.
@@ -15,6 +38,7 @@ pub fn translate_expression(
     expr: &RelationalExpression,
     ctx: &ExpressionContext<'_>,
 ) -> Result<Bson, RelationalError> {
+    let ctx = &ctx.nested()?;
     match expr {
         // Column reference
         RelationalExpression::Column { index } => {
@@ -258,23 +282,23 @@ pub fn translate_expression(
         // Extended comparison operators
         RelationalExpression::Like { expr, pattern } => {
             let expr_bson = translate_expression(expr, ctx)?;
-            let pattern_bson = translate_expression(pattern, ctx)?;
-            Ok(safe_regex_match(expr_bson, pattern_bson, false, false))
+            let regex_bson = translate_like_pattern(pattern, ctx)?;
+            Ok(safe_regex_match(expr_bson, regex_bson, false, false))
         }
         RelationalExpression::NotLike { expr, pattern } => {
             let expr_bson = translate_expression(expr, ctx)?;
-            let pattern_bson = translate_expression(pattern, ctx)?;
-            Ok(safe_regex_match(expr_bson, pattern_bson, false, true))
+            let regex_bson = translate_like_pattern(pattern, ctx)?;
+            Ok(safe_regex_match(expr_bson, regex_bson, false, true))
         }
         RelationalExpression::ILike { expr, pattern } => {
             let expr_bson = translate_expression(expr, ctx)?;
-            let pattern_bson = translate_expression(pattern, ctx)?;
-            Ok(safe_regex_match(expr_bson, pattern_bson, true, false))
+            let regex_bson = translate_like_pattern(pattern, ctx)?;
+            Ok(safe_regex_match(expr_bson, regex_bson, true, false))
         }
         RelationalExpression::NotILike { expr, pattern } => {
             let expr_bson = translate_expression(expr, ctx)?;
-            let pattern_bson = translate_expression(pattern, ctx)?;
-            Ok(safe_regex_match(expr_bson, pattern_bson, true, true))
+            let regex_bson = translate_like_pattern(pattern, ctx)?;
+            Ok(safe_regex_match(expr_bson, regex_bson, true, true))
         }
         RelationalExpression::Between { low, expr, high } => {
             let low_bson = translate_expression(low, ctx)?;
@@ -439,12 +463,13 @@ pub fn translate_expression(
                     }))
                 }
                 None => {
-                    // No length specified - go to end of string
+                    // No length specified - go to end of string.
+                    // Count = remaining chars from start position.
                     Ok(bson!({
                         "$substrCP": [
                             str_bson.clone(),
-                            { "$subtract": [start_bson, 1] },
-                            { "$strLenCP": str_bson }
+                            { "$subtract": [start_bson.clone(), 1] },
+                            { "$max": [{ "$subtract": [{ "$strLenCP": str_bson }, { "$subtract": [start_bson, 1] }] }, 0] }
                         ]
                     }))
                 }
@@ -524,10 +549,11 @@ pub fn translate_expression(
         RelationalExpression::Right { str, n } => {
             let str_bson = translate_expression(str, ctx)?;
             let n_bson = translate_expression(n, ctx)?;
+            // Clamp start index to 0 to handle n > string length
             Ok(bson!({
                 "$substrCP": [
                     str_bson.clone(),
-                    { "$subtract": [{ "$strLenCP": str_bson }, n_bson.clone()] },
+                    { "$max": [{ "$subtract": [{ "$strLenCP": str_bson }, n_bson.clone()] }, 0] },
                     n_bson
                 ]
             }))
@@ -813,8 +839,21 @@ pub fn translate_aggregate_expression(
                 let inner = translate_expression(expr, ctx)?;
                 Ok(bson!({ "$addToSet": inner }))
             } else {
-                // Non-distinct: count all rows
-                Ok(bson!({ "$sum": 1 }))
+                // Check if this is COUNT(*) represented as COUNT(NULL)
+                let is_count_star = matches!(
+                    expr.as_ref(),
+                    RelationalExpression::Literal {
+                        literal: RelationalLiteral::Null,
+                    }
+                );
+                if is_count_star {
+                    // COUNT(*) - count all rows
+                    Ok(bson!({ "$sum": 1 }))
+                } else {
+                    // COUNT(expr) - count non-null values of the expression
+                    let inner = translate_expression(expr, ctx)?;
+                    Ok(bson!({ "$sum": { "$cond": [{ "$ne": [inner, null] }, 1, 0] } }))
+                }
             }
         }
 
@@ -962,8 +1001,12 @@ fn translate_literal(literal: &RelationalLiteral) -> Result<Bson, RelationalErro
         RelationalLiteral::UInt16 { value } => Ok(Bson::Int32(i32::from(*value))),
         RelationalLiteral::UInt32 { value } => Ok(Bson::Int64(i64::from(*value))),
         RelationalLiteral::UInt64 { value } => {
-            // Note: BSON doesn't have unsigned types, so large u64 values may overflow
-            Ok(Bson::Int64(*value as i64))
+            let safe_value = i64::try_from(*value).map_err(|_| {
+                RelationalError::UnsupportedExpression(
+                    "UInt64 value too large for BSON Int64".to_string(),
+                )
+            })?;
+            Ok(Bson::Int64(safe_value))
         }
 
         // Floating point types
@@ -1031,7 +1074,12 @@ fn translate_literal(literal: &RelationalLiteral) -> Result<Bson, RelationalErro
         )),
 
         // Duration types - stored as milliseconds (Int64)
-        RelationalLiteral::DurationSecond { value } => Ok(Bson::Int64(*value * 1000)),
+        RelationalLiteral::DurationSecond { value } => {
+            let millis = value.checked_mul(1000).ok_or_else(|| {
+                RelationalError::UnsupportedExpression("Duration overflow".to_string())
+            })?;
+            Ok(Bson::Int64(millis))
+        }
         RelationalLiteral::DurationMillisecond { value } => Ok(Bson::Int64(*value)),
         RelationalLiteral::DurationMicrosecond { value } => Ok(Bson::Int64(*value / 1000)),
         RelationalLiteral::DurationNanosecond { value } => Ok(Bson::Int64(*value / 1_000_000)),
@@ -1469,6 +1517,117 @@ fn cast_to_string_bson(expr_bson: &Bson, safe: bool) -> Bson {
             "else": scalar_string_cast
         }
     })
+}
+
+/// Convert a SQL LIKE pattern string to a regex pattern string.
+///
+/// SQL LIKE uses `%` for multi-character wildcard and `_` for single-character wildcard.
+/// Backslash escapes a following `%` or `_` to match literally.
+/// All regex metacharacters in the literal portions are escaped.
+/// The result is anchored with `^` and `$` for exact match semantics.
+fn sql_like_to_regex(pattern: &str) -> String {
+    let mut regex = String::with_capacity(pattern.len() + 2);
+    regex.push('^');
+
+    let mut chars = pattern.chars().peekable();
+    while let Some(ch) = chars.next() {
+        match ch {
+            '\\' => {
+                // Escape character: next char is literal
+                if let Some(next) = chars.next() {
+                    // Escape the next char for regex if needed
+                    escape_regex_char(next, &mut regex);
+                } else {
+                    // Trailing backslash, treat as literal
+                    regex.push_str("\\\\");
+                }
+            }
+            '%' => regex.push_str(".*"),
+            '_' => regex.push('.'),
+            other => escape_regex_char(other, &mut regex),
+        }
+    }
+
+    regex.push('$');
+    regex
+}
+
+/// Escape a single character for use in a regex pattern.
+fn escape_regex_char(ch: char, out: &mut String) {
+    match ch {
+        '.' | '*' | '+' | '?' | '(' | ')' | '[' | ']' | '{' | '}' | '^' | '$' | '|' | '\\' => {
+            out.push('\\');
+            out.push(ch);
+        }
+        _ => out.push(ch),
+    }
+}
+
+/// Translate a LIKE pattern expression into a regex BSON expression.
+///
+/// If the pattern is a literal string, the SQL-to-regex conversion is done at
+/// translation time. For dynamic patterns, we build a MongoDB aggregation
+/// expression using `$replaceAll` chains to perform the conversion at runtime.
+fn translate_like_pattern(
+    pattern: &RelationalExpression,
+    ctx: &ExpressionContext<'_>,
+) -> Result<Bson, RelationalError> {
+    // If the pattern is a literal string, convert at translation time
+    if let RelationalExpression::Literal {
+        literal: RelationalLiteral::String { value },
+    } = pattern
+    {
+        return Ok(Bson::String(sql_like_to_regex(value)));
+    }
+
+    // For dynamic patterns, build a MongoDB expression pipeline that:
+    // 1. Escapes regex metacharacters
+    // 2. Converts SQL wildcards to regex equivalents
+    // 3. Anchors with ^ and $
+    let pattern_bson = translate_expression(pattern, ctx)?;
+
+    // Chain $replaceAll to escape regex metacharacters, then convert SQL wildcards.
+    // We need to escape: \ . * + ? ( ) [ ] { } ^ $ |
+    // Then convert % -> .* and _ -> .
+    // Order matters: escape \ first, then other metacharacters, then convert wildcards.
+    let escaped = chain_replace_all(
+        pattern_bson,
+        &[
+            ("\\", "\\\\"),
+            (".", "\\."),
+            ("*", "\\*"),
+            ("+", "\\+"),
+            ("?", "\\?"),
+            ("(", "\\("),
+            (")", "\\)"),
+            ("[", "\\["),
+            ("]", "\\]"),
+            ("{", "\\{"),
+            ("}", "\\}"),
+            ("^", "\\^"),
+            ("$", "\\$"),
+            ("|", "\\|"),
+            ("%", ".*"),
+            ("_", "."),
+        ],
+    );
+
+    Ok(bson!({ "$concat": ["^", escaped, "$"] }))
+}
+
+/// Build a chain of `$replaceAll` operations.
+fn chain_replace_all(input: Bson, replacements: &[(&str, &str)]) -> Bson {
+    let mut result = input;
+    for (find, replacement) in replacements {
+        result = bson!({
+            "$replaceAll": {
+                "input": result,
+                "find": *find,
+                "replacement": *replacement
+            }
+        });
+    }
+    result
 }
 
 /// Build a LIKE/ILIKE expression that never throws when input is non-string.

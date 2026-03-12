@@ -12,9 +12,7 @@ fn make_context(columns: &[&str]) -> (ColumnMapping, ExpressionContext<'static>)
     let mapping = ColumnMapping::new(columns.iter().copied());
     // SAFETY: We're leaking the mapping for test convenience
     let mapping: &'static ColumnMapping = Box::leak(Box::new(mapping));
-    let ctx = ExpressionContext {
-        column_mapping: mapping,
-    };
+    let ctx = ExpressionContext::new(mapping);
     (mapping.clone(), ctx)
 }
 
@@ -275,7 +273,7 @@ fn translates_like_with_safe_string_conversion() {
                                 "onNull": null
                             }
                         },
-                        "regex": "BELGIUM"
+                        "regex": "^BELGIUM$"
                     }
                 }
             }
@@ -320,7 +318,7 @@ fn translates_ilike_with_safe_string_conversion() {
                                 "onNull": null
                             }
                         },
-                        "regex": "BELGIUM",
+                        "regex": "^BELGIUM$",
                         "options": "i"
                     }
                 }

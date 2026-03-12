@@ -6,6 +6,8 @@
 
 use ndc_models::{Relation, RelationalExpression};
 
+use super::normalize_joins::column_count;
+
 /// Represents the origin of a column in the relation tree.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ColumnOrigin {
@@ -101,7 +103,7 @@ pub fn trace_column_origin(relation: &Relation, column_index: u64) -> ColumnOrig
 
         // Window adds new columns at the end - existing columns pass through
         Relation::Window { input, exprs: _ } => {
-            let input_column_count = count_output_columns(input);
+            let input_column_count = column_count(input);
             if column_index < input_column_count {
                 trace_column_origin(input, column_index)
             } else {
@@ -117,7 +119,7 @@ pub fn trace_column_origin(relation: &Relation, column_index: u64) -> ColumnOrig
             join_type,
             ..
         } => {
-            let left_count = count_output_columns(left);
+            let left_count = column_count(left);
 
             // For semi/anti joins, only left columns are output
             if matches!(
@@ -176,70 +178,6 @@ fn trace_expression_origin(input: &Relation, expr: &RelationalExpression) -> Col
 
         // All other expressions are computed
         _ => ColumnOrigin::computed(),
-    }
-}
-
-/// Count the number of output columns for a relation.
-///
-/// This is needed for Join and Window operations to determine which
-/// side of the join a column belongs to.
-fn count_output_columns(relation: &Relation) -> u64 {
-    match relation {
-        Relation::From { columns, .. } => columns.len() as u64,
-
-        // These relations preserve column count from input
-        Relation::Filter { input, .. }
-        | Relation::Sort { input, .. }
-        | Relation::Paginate { input, .. } => count_output_columns(input),
-
-        // Project changes the column count to the number of expressions
-        Relation::Project { exprs, .. } => exprs.len() as u64,
-
-        // Aggregate outputs group_by columns + aggregate columns
-        Relation::Aggregate {
-            group_by,
-            aggregates,
-            ..
-        } => (group_by.len() + aggregates.len()) as u64,
-
-        // Window adds new columns at the end
-        Relation::Window { input, exprs } => count_output_columns(input) + exprs.len() as u64,
-
-        // Join combines columns from both sides (except semi/anti joins)
-        Relation::Join {
-            left,
-            right,
-            join_type,
-            ..
-        } => {
-            if matches!(
-                join_type,
-                ndc_models::JoinType::LeftSemi
-                    | ndc_models::JoinType::LeftAnti
-                    | ndc_models::JoinType::RightSemi
-                    | ndc_models::JoinType::RightAnti
-            ) {
-                if matches!(
-                    join_type,
-                    ndc_models::JoinType::RightSemi | ndc_models::JoinType::RightAnti
-                ) {
-                    count_output_columns(right)
-                } else {
-                    count_output_columns(left)
-                }
-            } else {
-                count_output_columns(left) + count_output_columns(right)
-            }
-        }
-
-        // Union should have same column count as first relation
-        Relation::Union { relations } => {
-            if let Some(first) = relations.first() {
-                count_output_columns(first)
-            } else {
-                0
-            }
-        }
     }
 }
 
@@ -369,7 +307,7 @@ mod tests {
             columns: vec!["a".into(), "b".into(), "c".into()],
             arguments: Default::default(),
         };
-        assert_eq!(count_output_columns(&from), 3);
+        assert_eq!(column_count(&from), 3);
 
         let project = Relation::Project {
             input: Box::new(from.clone()),
@@ -378,7 +316,7 @@ mod tests {
                 RelationalExpression::Column { index: 1 },
             ],
         };
-        assert_eq!(count_output_columns(&project), 2);
+        assert_eq!(column_count(&project), 2);
 
         let filter = Relation::Filter {
             input: Box::new(project),
@@ -386,6 +324,6 @@ mod tests {
                 literal: ndc_models::RelationalLiteral::Boolean { value: true },
             },
         };
-        assert_eq!(count_output_columns(&filter), 2);
+        assert_eq!(column_count(&filter), 2);
     }
 }
