@@ -9,9 +9,12 @@ configuration = { path = "../configuration" }
 anyhow = "1"
 deadpool-postgres = { version = "0.14", features = ["serde"] }
 native-tls = "0.2"
+# postgres-protocol 0.6.8+ depends on rand 0.9 -> getrandom 0.3 -> wit-bindgen
+# 0.51.0 which requires Rust edition 2024 (not supported by our Rust 1.83 toolchain)
+postgres-protocol = ">=0.6, <0.6.8"
 postgres-native-tls = "0.5"
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { version = "1", features = ["rt"] }
-tokio-postgres = { version = ">=0.7, <0.7.13", features = ["with-serde_json-1"] }
+tokio-postgres = { version = "0.7", features = ["with-serde_json-1"] }
 tracing = "0.1"
