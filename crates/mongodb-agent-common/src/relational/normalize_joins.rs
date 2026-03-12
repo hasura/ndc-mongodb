@@ -55,7 +55,7 @@ pub fn normalize_right_joins(relation: &Relation) -> Relation {
                 left: Box::new(normalized_right), // Swapped!
                 right: Box::new(normalized_left), // Swapped!
                 on: swapped_on,
-                join_type: swapped_type.clone(),
+                join_type: swapped_type,
             };
 
             // For semi/anti joins, only one side's columns are output, so no reorder needed
@@ -103,7 +103,7 @@ pub fn normalize_right_joins(relation: &Relation) -> Relation {
             left: Box::new(normalize_right_joins(left)),
             right: Box::new(normalize_right_joins(right)),
             on: on.clone(),
-            join_type: join_type.clone(),
+            join_type: *join_type,
         },
 
         Relation::Aggregate {

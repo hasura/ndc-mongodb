@@ -54,7 +54,7 @@ fn interpolate_document(
             let interpolated_key = interpolate_string(&key, arguments)?;
             match interpolated_key {
                 Bson::String(string_key) => Ok((string_key, interpolated_value)),
-                _ => Err(ProcedureError::NonStringKey(interpolated_key)),
+                _ => Err(ProcedureError::NonStringKey(Box::new(interpolated_key))),
             }
         })
         .try_collect()

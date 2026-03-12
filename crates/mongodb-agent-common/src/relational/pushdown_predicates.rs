@@ -116,7 +116,7 @@ pub fn pushdown_predicates(relation: &Relation) -> Relation {
             left: Box::new(pushdown_predicates(left)),
             right: Box::new(pushdown_predicates(right)),
             on: on.clone(),
-            join_type: join_type.clone(),
+            join_type: *join_type,
         },
 
         Relation::Aggregate {
@@ -164,8 +164,8 @@ fn try_remap_sort(sort_exprs: &[Sort], proj_exprs: &[RelationalExpression]) -> O
             let remapped_expr = remap_expression(&sort.expr, proj_exprs)?;
             Some(Sort {
                 expr: remapped_expr,
-                direction: sort.direction.clone(),
-                nulls_sort: sort.nulls_sort.clone(),
+                direction: sort.direction,
+                nulls_sort: sort.nulls_sort,
             })
         })
         .collect()

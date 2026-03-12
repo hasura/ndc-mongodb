@@ -73,11 +73,11 @@ fn translates_literal_float64() {
     let (_, ctx) = make_context(&[]);
     let expr = RelationalExpression::Literal {
         literal: RelationalLiteral::Float64 {
-            value: Float64(3.14),
+            value: Float64(2.5),
         },
     };
     let result = translate_expression(&expr, &ctx).unwrap();
-    assert_eq!(result, Bson::Double(3.14));
+    assert_eq!(result, Bson::Double(2.5));
 }
 
 #[test]

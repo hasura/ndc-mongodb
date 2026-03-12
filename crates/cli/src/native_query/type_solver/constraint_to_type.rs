@@ -225,7 +225,7 @@ fn element_of(array_type: Type) -> Result<Type> {
         Type::Nullable(t) => element_of(*t).map(|t| Type::Nullable(Box::new(t))),
         Type::ExtendedJSON => Ok(Type::ExtendedJSON),
         _ => Err(Error::ExpectedArray {
-            actual_type: array_type,
+            actual_type: Box::new(array_type),
         }),
     }?;
     Ok(element_type.normalize_type())
@@ -291,7 +291,9 @@ fn field_of<'a>(
             )?;
             Ok(underlying_type.map(|t| Type::Nullable(Box::new(t))))
         }
-        t => Err(Error::ExpectedObject { actual_type: t }),
+        t => Err(Error::ExpectedObject {
+            actual_type: Box::new(t),
+        }),
     }?;
     Ok(field_type.map(Type::normalize_type))
 }
@@ -353,7 +355,9 @@ fn with_field_overrides<'a>(
             )?;
             underlying_type.map(|t| Type::Nullable(Box::new(t)))
         }
-        t => Err(Error::ExpectedObject { actual_type: t })?,
+        t => Err(Error::ExpectedObject {
+            actual_type: Box::new(t),
+        })?,
     };
     Ok(augmented_object_type.map(Type::normalize_type))
 }

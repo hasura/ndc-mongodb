@@ -9,7 +9,7 @@ pub enum ProcedureError {
     ErrorParsingArgument {
         argument_name: String,
         #[source]
-        error: JsonToBsonError,
+        error: Box<JsonToBsonError>,
     },
 
     #[error("error parsing predicate argument \"{}\": {}", .argument_name, .error)]
@@ -29,5 +29,5 @@ pub enum ProcedureError {
     NonStringInStringContext(ndc_models::ArgumentName),
 
     #[error("object keys must be strings, but got: \"{0}\"")]
-    NonStringKey(Bson),
+    NonStringKey(Box<Bson>),
 }

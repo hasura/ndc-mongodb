@@ -16,26 +16,26 @@ use super::{helpers::is_nullable, json_formats};
 #[derive(Debug, Error)]
 pub enum JsonToBsonError {
     #[error("error converting \"{1}\" to type, \"{0:?}\"")]
-    ConversionError(Type, Value),
+    ConversionError(Box<Type>, Box<Value>),
 
     #[error("error converting \"{1}\" to type, \"{0:?}\": {2}")]
-    ConversionErrorWithContext(Type, Value, #[source] anyhow::Error),
+    ConversionErrorWithContext(Box<Type>, Box<Value>, #[source] anyhow::Error),
 
     #[error("error parsing \"{0}\" as a date. Date values should be in ISO 8601 format with a time component, like `2016-01-01T00:00Z`. Underlying error: {1}")]
-    DateConversionErrorWithContext(Value, #[source] anyhow::Error),
+    DateConversionErrorWithContext(Box<Value>, #[source] anyhow::Error),
 
     #[error("cannot use value, \"{0:?}\", in position of type, \"{1:?}\"")]
-    IncompatibleType(Type, Value),
+    IncompatibleType(Box<Type>, Box<Value>),
 
     #[error("input with BSON type {expected_type:?} should be encoded in GraphQL as {expected_backing_type}, but got: {value}")]
     IncompatibleBackingType {
-        expected_type: Type,
+        expected_type: Box<Type>,
         expected_backing_type: &'static str,
-        value: Value,
+        value: Box<Value>,
     },
 
     #[error("input object of type \"{0:?}\" is missing a field, \"{1}\"")]
-    MissingObjectField(Type, String),
+    MissingObjectField(Box<Type>, String),
 
     #[error("inputs of type {0} are not implemented")]
     NotImplemented(BsonScalarType),
@@ -80,8 +80,8 @@ pub fn json_to_bson_scalar(expected_type: BsonScalarType, value: Value) -> Resul
         S::Decimal => Bson::Decimal128(
             Decimal128::from_str(&from_string(expected_type, value.clone())?).map_err(|err| {
                 JsonToBsonError::ConversionErrorWithContext(
-                    Type::Scalar(MongoScalarType::Bson(expected_type)),
-                    value,
+                    Box::new(Type::Scalar(MongoScalarType::Bson(expected_type))),
+                    Box::new(value),
                     err.into(),
                 )
             })?,
@@ -175,7 +175,7 @@ fn get_object_field_value(
     }
     Ok(Some(value.cloned().ok_or_else(|| {
         JsonToBsonError::MissingObjectField(
-            Type::Object(object_type.clone()),
+            Box::new(Type::Object(object_type.clone())),
             field_name.to_string(),
         )
     })?))
@@ -190,7 +190,10 @@ fn convert_nullable(underlying_type: &Type, value: Value) -> Result<Bson> {
 
 fn convert_date(value: &str) -> Result<Bson> {
     let date = OffsetDateTime::parse(value, &Iso8601::PARSING).map_err(|err| {
-        JsonToBsonError::DateConversionErrorWithContext(Value::String(value.to_owned()), err.into())
+        JsonToBsonError::DateConversionErrorWithContext(
+            Box::new(Value::String(value.to_owned())),
+            err.into(),
+        )
     })?;
     Ok(Bson::DateTime(bson::DateTime::from_system_time(
         date.into(),
@@ -207,8 +210,8 @@ fn convert_long(value: &str) -> Result<Bson> {
 fn convert_uuid(value: &str) -> Result<Bson> {
     let uuid = bson::Uuid::parse_str(value).map_err(|err| {
         JsonToBsonError::ConversionErrorWithContext(
-            Type::Scalar(MongoScalarType::Bson(BsonScalarType::UUID)),
-            value.into(),
+            Box::new(Type::Scalar(MongoScalarType::Bson(BsonScalarType::UUID))),
+            Box::new(value.into()),
             err.into(),
         )
     })?;
@@ -221,8 +224,8 @@ where
 {
     serde_json::from_value::<T>(value.clone()).map_err(|err| {
         JsonToBsonError::ConversionErrorWithContext(
-            Type::Scalar(MongoScalarType::Bson(expected_type)),
-            value,
+            Box::new(Type::Scalar(MongoScalarType::Bson(expected_type))),
+            Box::new(value),
             err.into(),
         )
     })
@@ -232,17 +235,17 @@ fn from_string(expected_type: BsonScalarType, value: Value) -> Result<String> {
     match value {
         Value::String(s) => Ok(s),
         _ => Err(JsonToBsonError::IncompatibleBackingType {
-            expected_type: Type::Scalar(MongoScalarType::Bson(expected_type)),
+            expected_type: Box::new(Type::Scalar(MongoScalarType::Bson(expected_type))),
             expected_backing_type: "String",
-            value,
+            value: Box::new(value),
         }),
     }
 }
 
 fn incompatible_scalar_type<T>(expected_type: BsonScalarType, value: Value) -> Result<T> {
     Err(JsonToBsonError::IncompatibleType(
-        Type::Scalar(MongoScalarType::Bson(expected_type)),
-        value,
+        Box::new(Type::Scalar(MongoScalarType::Bson(expected_type))),
+        Box::new(value),
     ))
 }
 

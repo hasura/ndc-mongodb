@@ -282,7 +282,7 @@ fn infer_type_from_unwind_stage(
 ) -> Result<TypeConstraint> {
     let field_to_unwind = parse_reference_shorthand(path)?;
     let Reference::InputDocumentField { name, nested_path } = field_to_unwind else {
-        return Err(Error::ExpectedStringPath(path.into()));
+        return Err(Error::ExpectedStringPath(Box::new(path.into())));
     };
     let field_type = infer_type_from_reference_shorthand(context, None, path)?;
 

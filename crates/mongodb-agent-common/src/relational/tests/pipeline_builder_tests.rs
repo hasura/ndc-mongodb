@@ -2276,10 +2276,7 @@ fn optimizes_get_field_filter_to_query_document() {
 
     // Should have 2 stages: early match + regular match
     // Both should use query documents, NOT $expr
-    assert!(
-        result.pipeline.stages.len() >= 1,
-        "Expected at least 1 stage"
-    );
+    assert!(!result.pipeline.stages.is_empty(), "Expected at least 1 stage");
 
     // Check that the $match uses the nested field path, not $expr
     match &result.pipeline.stages[0] {

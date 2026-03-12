@@ -10,10 +10,12 @@
 //! 1. Start MongoDB: docker run -d --name mongodb-test -p 27017:27017 mongo:7.0
 //! 2. Populate test data (see setup_test_data below)
 //! 3. Run:
+//!    ```sh
 //!    MONGODB_URI="mongodb://localhost:27017/test_relational" cargo test \
 //!      -p mongodb-agent-common \
 //!      --features relational-integration-tests \
 //!      --test relational_integration_tests
+//!    ```
 
 #![cfg(feature = "relational-integration-tests")]
 

@@ -98,7 +98,7 @@ fn type_annotated_field_helper<T: QueryContext>(
                 relationship: relationship_key,
                 aggregates,
                 fields,
-                groups,
+                groups: Box::new(groups),
             }
         }
     };

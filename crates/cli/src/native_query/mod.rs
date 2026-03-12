@@ -141,7 +141,8 @@ async fn create(
         path
     };
 
-    let configuration = read_configuration(context, &[native_query_path.clone()]).await?;
+    let configuration =
+        read_configuration(context, std::slice::from_ref(&native_query_path)).await?;
 
     let pipeline = match read_pipeline(pipeline_path).await {
         Ok(p) => p,

@@ -153,7 +153,7 @@ fn selection_for_field(
             let doc = match ResponseFacets::from_parameters(
                 aggregates.as_ref(),
                 fields.as_ref(),
-                groups.as_ref(),
+                groups.as_ref().as_ref(),
             ) {
                 ResponseFacets::Combination {
                     aggregates,

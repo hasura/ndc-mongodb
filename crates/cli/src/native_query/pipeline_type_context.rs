@@ -13,7 +13,7 @@ use itertools::Itertools as _;
 use ndc_models::{ArgumentName, ObjectTypeName};
 
 use super::{
-    error::{Error, Result},
+    error::{Error, Result, UnableToInferTypesDebug},
     helpers::unique_type_name,
     prune_object_types::prune_object_types,
     type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable, Variance},
@@ -121,8 +121,10 @@ impl PipelineTypeContext<'_> {
                         }
                     })
                     .collect(),
-                _type_variables: self.type_variables,
-                _object_type_constraints: object_type_constraints,
+                _debug: Box::new(UnableToInferTypesDebug {
+                    type_variables: self.type_variables,
+                    object_type_constraints,
+                }),
             },
             e => e,
         })?;
@@ -160,7 +162,7 @@ impl PipelineTypeContext<'_> {
         let result_document_type_name = match result_document_type {
             Type::Object(type_name) => type_name.clone().into(),
             t => Err(Error::ExpectedObject {
-                actual_type: t.clone(),
+                actual_type: Box::new(t.clone()),
             })?,
         };
 

@@ -27,7 +27,7 @@ pub enum Field<T: ConnectorTypes> {
         relationship: ndc::RelationshipName,
         aggregates: Option<IndexMap<ndc::FieldName, Aggregate<T>>>,
         fields: Option<IndexMap<ndc::FieldName, Field<T>>>,
-        groups: Option<Grouping<T>>,
+        groups: Box<Option<Grouping<T>>>,
     },
 }
 
