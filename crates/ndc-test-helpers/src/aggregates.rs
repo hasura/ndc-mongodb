@@ -45,14 +45,14 @@ impl From<AggregateColumnBuilder> for Aggregate {
     }
 }
 
-#[macro_export()]
+#[macro_export]
 macro_rules! star_count_aggregate {
     ($name:literal) => {
         ($name, $crate::ndc_models::Aggregate::StarCount {})
     };
 }
 
-#[macro_export()]
+#[macro_export]
 macro_rules! column_count_aggregate {
     ($name:literal => $column:literal, distinct:$distinct:literal) => {
         (

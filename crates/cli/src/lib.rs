@@ -31,6 +31,11 @@ pub struct UpdateArgs {
 
     #[arg(long = "all-schema-nullable", required = false)]
     all_schema_nullable: Option<bool>,
+
+    /// Enable relational mode. When set, nested types (Object, Array, ExtendedJSON) will be
+    /// represented as strings in the schema and serialized as JSON strings in query responses.
+    #[arg(long = "relational-mode", required = false)]
+    relational_mode: Option<bool>,
 }
 
 /// The command invoked by the user.
@@ -70,7 +75,7 @@ async fn update(
     args: &UpdateArgs,
     database: &impl DatabaseTrait,
 ) -> anyhow::Result<()> {
-    let configuration_options =
+    let mut configuration_options =
         configuration::parse_configuration_options_file(&context.path).await?;
     // Prefer arguments passed to cli, and fall back to the configuration file
     let sample_size = match args.sample_size {
@@ -93,6 +98,15 @@ async fn update(
                 .all_schema_nullable
         }
     };
+
+    // Handle relational mode flag - if explicitly set via CLI, update the config file
+    if let Some(relational_mode) = args.relational_mode {
+        if configuration_options.relational_mode.enabled != relational_mode {
+            configuration_options.relational_mode.enabled = relational_mode;
+            configuration::write_configuration_options_file(&context.path, &configuration_options)
+                .await?;
+        }
+    }
 
     if !no_validator_schema {
         let schemas_from_json_validation =

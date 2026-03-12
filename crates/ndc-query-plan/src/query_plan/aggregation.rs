@@ -39,7 +39,7 @@ pub enum Aggregate<T: ConnectorTypes> {
 }
 
 impl<T: ConnectorTypes> Aggregate<T> {
-    pub fn result_type(&self) -> Cow<Type<T::ScalarType>> {
+    pub fn result_type(&self) -> Cow<'_, Type<T::ScalarType>> {
         match self {
             Aggregate::ColumnCount { .. } => Cow::Owned(T::count_aggregate_type()),
             Aggregate::SingleColumn { result_type, .. } => Cow::Borrowed(result_type),
@@ -121,7 +121,7 @@ pub enum GroupComparisonTarget<T: ConnectorTypes> {
 }
 
 impl<T: ConnectorTypes> GroupComparisonTarget<T> {
-    pub fn result_type(&self) -> Cow<Type<T::ScalarType>> {
+    pub fn result_type(&self) -> Cow<'_, Type<T::ScalarType>> {
         match self {
             GroupComparisonTarget::Aggregate { aggregate } => aggregate.result_type(),
         }

@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use configuration::ConfigurationSerializationOptions;
 use configuration::{
     native_mutation::NativeMutation, native_query::NativeQuery, Configuration, MongoScalarType,
+    RelationalModeConfig,
 };
 use mongodb_support::{BsonScalarType, EXTENDED_JSON_TYPE_NAME};
 use ndc_models as ndc;
@@ -18,6 +19,10 @@ pub struct MongoConfiguration(pub Configuration);
 impl MongoConfiguration {
     pub fn serialization_options(&self) -> &ConfigurationSerializationOptions {
         &self.0.options.serialization_options
+    }
+
+    pub fn relational_mode(&self) -> &RelationalModeConfig {
+        &self.0.options.relational_mode
     }
 
     pub fn native_queries(&self) -> &BTreeMap<ndc::FunctionName, NativeQuery> {

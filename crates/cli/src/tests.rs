@@ -309,6 +309,7 @@ async fn collection_schema_from_validator(validator: bson::Document) -> anyhow::
         sample_size: Some(100),
         no_validator_schema: None,
         all_schema_nullable: Some(false),
+        relational_mode: None,
     };
 
     db.expect_list_collections().returning(move || {
@@ -367,6 +368,7 @@ async fn schema_from_sampling(
         sample_size: Some(100),
         no_validator_schema: None,
         all_schema_nullable: Some(false),
+        relational_mode: None,
     };
 
     db.expect_list_collections().returning(move || {

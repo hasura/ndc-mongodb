@@ -12,3 +12,4 @@ FIXTURES=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 "$FIXTURES"/sample_mflix/import.sh
 "$FIXTURES"/chinook/chinook-import.sh
 "$FIXTURES"/test_cases/import.sh
+"$FIXTURES"/test_relational/import.sh

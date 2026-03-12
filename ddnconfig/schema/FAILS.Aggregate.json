@@ -1,0 +1,477 @@
+{
+  "name": "FAILS.Aggregate",
+  "collections": {
+    "FAILS.Aggregate": {
+      "type": "FAILS.Aggregate"
+    }
+  },
+  "objectTypes": {
+    "FAILS.Aggregate": {
+      "fields": {
+        "_id": {
+          "type": {
+            "scalar": "objectId"
+          }
+        },
+        "aggregate_id": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "current_state": {
+          "type": {
+            "nullable": {
+              "object": "FAILS.Aggregate_current_state"
+            }
+          }
+        },
+        "expiration_time": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "id": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "last_update_time": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "version": {
+          "type": {
+            "nullable": {
+              "scalar": "int"
+            }
+          }
+        }
+      }
+    },
+    "FAILS.Aggregate_current_state": {
+      "fields": {
+        "exceptions": {
+          "type": {
+            "nullable": {
+              "arrayOf": {
+                "object": "FAILS.Aggregate_current_state_exceptions"
+              }
+            }
+          }
+        },
+        "expiration_time": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "external_counter_party_account_number": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "external_counter_party_gen_acct_usage_code": {
+          "type": {
+            "scalar": "null"
+          }
+        },
+        "external_counter_party_specific_acct_usage_code": {
+          "type": {
+            "scalar": "null"
+          }
+        },
+        "fail_assessment": {
+          "type": {
+            "scalar": "null"
+          }
+        },
+        "fail_id": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "fail_status": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "fail_type": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "firm_agent_mnemonic": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "group_clear_company_code": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "group_clear_firm_agent_mnemonic": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "group_clear_mission_id": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "internal_counter_party_gen_acct_usage_code": {
+          "type": {
+            "scalar": "null"
+          }
+        },
+        "internal_counter_party_specific_acct_usage_code": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "isin": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "legacy_agent_status": {
+          "type": {
+            "scalar": "null"
+          }
+        },
+        "legacy_never_instruct_reason": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "market": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "matching_indicator": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "mission_event_type": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "mission_held_indicator": {
+          "type": {
+            "nullable": {
+              "scalar": "bool"
+            }
+          }
+        },
+        "mission_id": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "mission_status": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "never_instruct_reason": {
+          "type": {
+            "scalar": "null"
+          }
+        },
+        "persistent_agent_status": {
+          "type": {
+            "scalar": "null"
+          }
+        },
+        "primary_product_actual_quantity": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "primary_product_business_id": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "primary_product_cfi_category": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "primary_product_quantity": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "primary_product_type": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "region": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "secondary_product_actual_quantity": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "secondary_product_business_id": {
+          "type": {
+            "scalar": "null"
+          }
+        },
+        "secondary_product_quantity": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "secondary_product_type": {
+          "type": {
+            "scalar": "null"
+          }
+        },
+        "settlement_system": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "settlement_transaction_category": {
+          "type": {
+            "scalar": "null"
+          }
+        },
+        "settlement_transaction_subcategory": {
+          "type": {
+            "scalar": "null"
+          }
+        },
+        "source_nef_2": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "source_ref_1": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "source_system": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "tenant": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "trade_date": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "trade_type": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        }
+      }
+    },
+    "FAILS.Aggregate_current_state_exceptions": {
+      "fields": {
+        "action_owner": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "actionable": {
+          "type": {
+            "nullable": {
+              "scalar": "bool"
+            }
+          }
+        },
+        "agent_status": {
+          "type": {
+            "scalar": "null"
+          }
+        },
+        "booking_owner": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "classification": {
+          "type": {
+            "scalar": "null"
+          }
+        },
+        "company_code": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "contractual_settlement_date": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "cusip": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "detailed_assessment": {
+          "type": {
+            "scalar": "null"
+          }
+        },
+        "direction": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "event_creation_time": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "event_id": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "exception_reason": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "exception_status": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "exception_type": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "exception_user_id": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        },
+        "legacy_exception_type": {
+          "type": {
+            "nullable": {
+              "scalar": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

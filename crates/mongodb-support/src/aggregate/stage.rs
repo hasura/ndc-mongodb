@@ -207,6 +207,20 @@ pub enum Stage {
         preserve_null_and_empty_arrays: Option<bool>,
     },
 
+    /// Performs a union with another collection or computed result set.
+    /// Combines documents from multiple collections or pipelines into a single result set.
+    ///
+    /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/unionWith/
+    #[serde(rename = "$unionWith", rename_all = "camelCase")]
+    UnionWith {
+        /// The collection to union with. Required unless using an inline pipeline.
+        coll: String,
+
+        /// Optional. An aggregation pipeline to apply to the collection before the union.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pipeline: Option<Pipeline>,
+    },
+
     /// For cases where we receive pipeline stages from an external source, such as a native query,
     /// and we don't want to attempt to parse it we store the stage BSON document unaltered.
     #[serde(untagged)]

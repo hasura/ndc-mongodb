@@ -9,6 +9,12 @@ use super::type_constraint::{ObjectTypeConstraint, TypeConstraint, TypeVariable}
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct UnableToInferTypesDebug {
+    pub type_variables: HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
+    pub object_type_constraints: BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+}
+
 // The URL for native query issues will be visible due to a wrapper around this error message in
 // [crate::native_query::create].
 const UNSUPPORTED_FEATURE_MESSAGE: &str = r#"For a list of currently-supported features see https://hasura.io/docs/3.0/connectors/mongodb/native-operations/supported-aggregation-pipeline-features/. Please file a bug report, and declare types for your native query by hand for the time being."#;
@@ -22,21 +28,21 @@ pub enum Error {
         "Expected {reference} to reference an array, but instead it references a {referenced_type:?}"
     )]
     ExpectedArrayReference {
-        reference: Bson,
-        referenced_type: Type,
+        reference: Box<Bson>,
+        referenced_type: Box<Type>,
     },
 
     #[error("Expected an array type, but got: {actual_type:?}")]
-    ExpectedArray { actual_type: Type },
+    ExpectedArray { actual_type: Box<Type> },
 
     #[error("Expected an array, but got: {actual_argument}")]
-    ExpectedArrayExpressionArgument { actual_argument: Bson },
+    ExpectedArrayExpressionArgument { actual_argument: Box<Bson> },
 
     #[error("Expected an object type, but got: {actual_type:?}")]
-    ExpectedObject { actual_type: Type },
+    ExpectedObject { actual_type: Box<Type> },
 
     #[error("Expected a path for the $unwind stage")]
-    ExpectedStringPath(Bson),
+    ExpectedStringPath(Box<Bson>),
 
     // This variant is not intended to be returned to the user - it is transformed with more
     // context in [super::PipelineTypeContext::into_types].
@@ -49,7 +55,7 @@ pub enum Error {
     IncompletePipeline,
 
     #[error("An object representing an expression must have exactly one field: {0}")]
-    MultipleExpressionOperators(Document),
+    MultipleExpressionOperators(Box<Document>),
 
     #[error("Object type, {object_type}, does not have a field named {field_name}")]
     ObjectMissingField {
@@ -63,8 +69,8 @@ pub enum Error {
     })]
     TypeMismatch {
         context: Option<String>,
-        a: TypeConstraint,
-        b: TypeConstraint,
+        a: Box<TypeConstraint>,
+        b: Box<TypeConstraint>,
     },
 
     #[error(
@@ -76,8 +82,7 @@ pub enum Error {
         could_not_infer_return_type: bool,
 
         // These fields are included here for internal debugging
-        type_variables: HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
-        object_type_constraints: BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+        _debug: Box<UnableToInferTypesDebug>,
     },
 
     #[error("Error parsing a string in the aggregation pipeline: {0}")]

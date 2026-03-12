@@ -44,6 +44,42 @@ pub enum Accumulator {
     /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/sum/#mongodb-group-grp.-sum
     #[serde(rename = "$sum")]
     Sum(bson::Bson),
+
+    /// Returns the value from the first document for each group.
+    ///
+    /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/first/#mongodb-group-grp.-first
+    #[serde(rename = "$first")]
+    First(bson::Bson),
+
+    /// Returns the value from the last document for each group.
+    ///
+    /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/last/#mongodb-group-grp.-last
+    #[serde(rename = "$last")]
+    Last(bson::Bson),
+
+    /// Returns the sample standard deviation of the input values.
+    ///
+    /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/stdDevSamp/#mongodb-group-grp.-stdDevSamp
+    #[serde(rename = "$stdDevSamp")]
+    StdDevSamp(bson::Bson),
+
+    /// Returns the population standard deviation of the input values.
+    ///
+    /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/stdDevPop/#mongodb-group-grp.-stdDevPop
+    #[serde(rename = "$stdDevPop")]
+    StdDevPop(bson::Bson),
+
+    /// Returns an approximation of the median value. MongoDB 7.0+.
+    ///
+    /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/median/#mongodb-group-grp.-median
+    #[serde(rename = "$median")]
+    Median(bson::Document),
+
+    /// Returns an approximation of specified percentile values. MongoDB 7.0+.
+    ///
+    /// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/percentile/#mongodb-group-grp.-percentile
+    #[serde(rename = "$percentile")]
+    Percentile(bson::Document),
 }
 
 mod empty_object {

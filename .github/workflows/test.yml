@@ -33,6 +33,9 @@ jobs:
       - name: run integration tests 📋
         run: nix develop --command just test-mongodb-versions
 
+      - name: run relational integration tests 📋
+        run: nix develop --command just test-relational-mongodb-versions
+
   audit:
     name: Security Audit
     runs-on: ubuntu-24.04
@@ -50,4 +53,4 @@ jobs:
           authToken: '${{ secrets.CACHIX_CACHE_AUTH_TOKEN }}'
 
       - name: audit for reported security problems 🔨
-        run: nix develop --command cargo audit
+        run: nix build .#checks.x86_64-linux.audit --print-build-logs

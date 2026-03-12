@@ -16,7 +16,7 @@ use crate::{mongo_query_plan::Dimension, procedure::ProcedureError, query::Query
 pub enum MongoAgentError {
     BadCollectionSchema(Box<(String, bson::Bson, bson::de::Error)>), // boxed to avoid an excessively-large stack value
     BadQuery(anyhow::Error),
-    InvalidGroupDimension(Dimension),
+    InvalidGroupDimension(Box<Dimension>),
     InvalidVariableName(String),
     InvalidScalarTypeName(String),
     MongoDB(#[from] mongodb::error::Error),
@@ -130,7 +130,9 @@ impl ErrorResponse {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Default)]
 pub enum ErrorResponseType {
+    #[default]
     UncaughtError,
     MutationConstraintViolation,
     MutationPermissionCheckFailure,
@@ -145,11 +147,5 @@ impl Display for ErrorResponseType {
                 f.write_str("mutation-permission-check-failure")
             }
         }
-    }
-}
-
-impl Default for ErrorResponseType {
-    fn default() -> ErrorResponseType {
-        Self::UncaughtError
     }
 }

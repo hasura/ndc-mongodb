@@ -34,7 +34,7 @@ fn argument_to_mongodb_expression(
         } => json_to_bson(&argument_type, value).map_err(|error| {
             ProcedureError::ErrorParsingArgument {
                 argument_name: name.to_string(),
-                error,
+                error: Box::new(error),
             }
         })?,
         MutationProcedureArgument::Predicate { expression } => make_selector(&expression)

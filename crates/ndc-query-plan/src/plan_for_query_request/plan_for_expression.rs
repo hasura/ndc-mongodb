@@ -8,8 +8,8 @@ use crate::{self as plan, QueryContext, QueryPlanError};
 
 use super::{
     helpers::{
-        find_nested_collection_object_type, find_nested_collection_type,
-        get_object_field_by_path, lookup_relationship,
+        find_nested_collection_object_type, find_nested_collection_type, get_object_field_by_path,
+        lookup_relationship,
     },
     plan_for_arguments::plan_arguments_from_plan_parameters,
     plan_for_relationship::plan_for_relationship_path,

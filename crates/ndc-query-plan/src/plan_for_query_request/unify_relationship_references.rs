@@ -227,7 +227,7 @@ where
                     relationship: relationship_b,
                     aggregates: unify_options(aggregates_a, aggregates_b, unify_aggregates)?,
                     fields: unify_fields(fields_a, fields_b)?,
-                    groups: unify_options(groups_a, groups_b, unify_groups)?,
+                    groups: Box::new(unify_options(*groups_a, *groups_b, unify_groups)?),
                 })
             }
         }

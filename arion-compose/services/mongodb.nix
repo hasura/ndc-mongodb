@@ -14,7 +14,7 @@
 , environment ? { }
 , volumes ? [
     # By default load fixtures in the mongo-connector repo
-    (import ../fixtures/mongodb.nix).allFixtures
+    (import ../fixtures/mongodb.nix).all-fixtures
   ]
 }:
 

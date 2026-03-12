@@ -22,14 +22,14 @@ pub enum BsonToJsonError {
     UuidConversion(#[from] bson::uuid::Error),
 
     #[error("input object of type {0} is missing a field, \"{1}\"")]
-    MissingObjectField(Type, String),
+    MissingObjectField(Box<Type>, String),
 
     #[error("error converting value to JSON: {0}")]
     Serde(#[from] serde_json::Error),
 
     // TODO: It would be great if we could capture a path into the larger BSON value here
     #[error("expected a value of type {0}, but got {1}")]
-    TypeMismatch(Type, Bson),
+    TypeMismatch(Box<Type>, Box<Bson>),
 
     #[error("unknown object type, \"{0}\"")]
     UnknownObjectType(String),
@@ -98,8 +98,8 @@ fn bson_scalar_to_json(
         (BsonScalarType::ObjectId, Bson::ObjectId(oid)) => Ok(Value::String(oid.to_hex())),
         (BsonScalarType::DbPointer, v) => Ok(mode.into_extjson(v)),
         (_, v) => Err(BsonToJsonError::TypeMismatch(
-            Type::Scalar(MongoScalarType::Bson(expected_type)),
-            v,
+            Box::new(Type::Scalar(MongoScalarType::Bson(expected_type))),
+            Box::new(v),
         )),
     }
 }
@@ -108,8 +108,8 @@ fn convert_array(mode: ExtendedJsonMode, element_type: &Type, value: Bson) -> Re
     let values = match value {
         Bson::Array(values) => Ok(values),
         _ => Err(BsonToJsonError::TypeMismatch(
-            Type::ArrayOf(Box::new(element_type.clone())),
-            value,
+            Box::new(Type::ArrayOf(Box::new(element_type.clone()))),
+            Box::new(value),
         )),
     }?;
     let json_array = values
@@ -123,8 +123,8 @@ fn convert_tuple(mode: ExtendedJsonMode, element_types: &[Type], value: Bson) ->
     let values = match value {
         Bson::Array(values) => Ok(values),
         _ => Err(BsonToJsonError::TypeMismatch(
-            Type::Tuple(element_types.to_vec()),
-            value,
+            Box::new(Type::Tuple(element_types.to_vec())),
+            Box::new(value),
         )),
     }?;
     let json_array = element_types
@@ -139,8 +139,8 @@ fn convert_object(mode: ExtendedJsonMode, object_type: &ObjectType, value: Bson)
     let input_doc = match value {
         Bson::Document(fields) => Ok(fields),
         _ => Err(BsonToJsonError::TypeMismatch(
-            Type::Object(object_type.to_owned()),
-            value,
+            Box::new(Type::Object(object_type.to_owned())),
+            Box::new(value),
         )),
     }?;
     let json_obj: serde_json::Map<String, Value> = object_type
@@ -174,7 +174,7 @@ fn get_object_field_value(
     }
     Ok(Some(value.cloned().ok_or_else(|| {
         BsonToJsonError::MissingObjectField(
-            Type::Object(object_type.clone()),
+            Box::new(Type::Object(object_type.clone())),
             field_name.to_string(),
         )
     })?))
@@ -224,8 +224,8 @@ fn convert_small_number(expected_type: BsonScalarType, value: Bson) -> Result<Va
         )),
         Bson::Int32(n) => Ok(Value::Number(n.into())),
         _ => Err(BsonToJsonError::TypeMismatch(
-            Type::Scalar(MongoScalarType::Bson(expected_type)),
-            value,
+            Box::new(Type::Scalar(MongoScalarType::Bson(expected_type))),
+            Box::new(value),
         )),
     }
 }

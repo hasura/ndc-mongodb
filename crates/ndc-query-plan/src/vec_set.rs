@@ -19,7 +19,7 @@ impl<T> VecSet<T> {
     where
         T: Eq,
     {
-        if self.items.iter().any(|v| *v == value) {
+        if self.items.contains(&value) {
             false
         } else {
             self.items.push(value);

@@ -57,23 +57,35 @@ fn simplify_constraints_internal(
     let constraints = constraint_sets.into_iter().flatten();
     let mut errors: Vec<Error> = error_sets.into_iter().flatten().collect();
 
-    let constraints = constraints
-        .coalesce(|constraint_a, constraint_b| {
+    let mut constraints = constraints.peekable();
+    let mut coalesced = Vec::new();
+
+    while let Some(constraint_a) = constraints.next() {
+        let mut current = constraint_a;
+
+        while let Some(constraint_b) = constraints.peek().cloned() {
             match simplify_constraint_pair(
                 state,
                 variable,
-                constraint_a.clone(),
+                current.clone(),
                 constraint_b.clone(),
             ) {
-                Ok(Some(t)) => Ok(t),
-                Ok(None) => Err((constraint_a, constraint_b)),
+                Ok(Some(t)) => {
+                    current = t;
+                    constraints.next();
+                }
+                Ok(None) => break,
                 Err(errs) => {
                     errors.extend(errs);
-                    Err((constraint_a, constraint_b))
+                    break;
                 }
             }
-        })
-        .collect();
+        }
+
+        coalesced.push(current);
+    }
+
+    let constraints = coalesced.into_iter().collect();
 
     (constraints, errors)
 }
@@ -221,12 +233,7 @@ fn simplify_constraint_pair(
             let matches: BTreeSet<_> = constraints
                 .clone()
                 .into_iter()
-                .filter_map(
-                    |c| match simplify_constraint_pair(context, variable, c, b.clone()) {
-                        Ok(c) => Some(c),
-                        Err(_) => None,
-                    },
-                )
+                .filter_map(|c| simplify_constraint_pair(context, variable, c, b.clone()).ok())
                 .flatten()
                 .collect();
 
@@ -312,8 +319,8 @@ fn solve_scalar(
         Some(t) => Ok(t),
         None => Err(Error::TypeMismatch {
             context: None,
-            a: C::Scalar(a),
-            b: C::Scalar(b),
+            a: Box::new(C::Scalar(a)),
+            b: Box::new(C::Scalar(b)),
         }),
     }
 }
@@ -677,13 +684,13 @@ mod tests {
             err(unordered_elements_are![
                 eq(&Error::TypeMismatch {
                     context: None,
-                    a: TypeConstraint::Scalar(BsonScalarType::Decimal),
-                    b: TypeConstraint::Scalar(BsonScalarType::String),
+                    a: Box::new(TypeConstraint::Scalar(BsonScalarType::Decimal)),
+                    b: Box::new(TypeConstraint::Scalar(BsonScalarType::String)),
                 }),
                 eq(&Error::TypeMismatch {
                     context: None,
-                    a: TypeConstraint::Scalar(BsonScalarType::Decimal),
-                    b: TypeConstraint::Scalar(BsonScalarType::Null),
+                    a: Box::new(TypeConstraint::Scalar(BsonScalarType::Decimal)),
+                    b: Box::new(TypeConstraint::Scalar(BsonScalarType::Null)),
                 }),
             ])
         );

@@ -1,4 +1,4 @@
-#[macro_export()]
+#[macro_export]
 macro_rules! target {
     ($column:literal) => {
         $crate::ndc_models::ComparisonTarget::Column {

@@ -212,6 +212,11 @@ pub struct ConfigurationOptions {
     /// responses.
     #[serde(default)]
     pub serialization_options: ConfigurationSerializationOptions,
+
+    /// Options for relational query mode. When enabled, nested types (Object, Array, ExtendedJSON)
+    /// are represented as strings in the schema and serialized as JSON strings in responses.
+    #[serde(default)]
+    pub relational_mode: RelationalModeConfig,
 }
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize)]
@@ -264,6 +269,19 @@ pub enum OnResponseTypeMismatch {
     /// If any field in a response row contains data of an incorrect type, exclude that row from
     /// the response.
     SkipRow,
+}
+
+/// Options for relational query mode. When enabled, nested types (Object, Array, ExtendedJSON)
+/// are represented as strings in the schema and serialized as JSON strings in query responses.
+/// This allows SQL-style queries to work with MongoDB's nested data by treating it as JSON strings.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RelationalModeConfig {
+    /// When true, the schema will report Object, Array, and ExtendedJSON types with
+    /// representation: "string", and relational query responses will serialize these values
+    /// as JSON strings.
+    #[serde(default)]
+    pub enabled: bool,
 }
 
 fn merge_object_types<'a>(

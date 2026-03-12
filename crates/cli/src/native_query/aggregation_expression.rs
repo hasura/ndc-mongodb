@@ -112,7 +112,7 @@ fn infer_type_from_aggregation_expression_document(
     let expression_operator = expression_operators.pop().map(ToString::to_string);
     let is_empty = expression_operators.is_empty();
     match (expression_operator, is_empty) {
-        (_, false) => Err(Error::MultipleExpressionOperators(document)),
+        (_, false) => Err(Error::MultipleExpressionOperators(Box::new(document))),
         (Some(operator), _) => {
             let operands = document.remove(&operator).unwrap();
             infer_type_from_operator_expression(
@@ -263,7 +263,7 @@ fn two_parameter_operand(operator: &str, operand: Bson) -> Result<(Bson, Bson)> 
             Ok((a, b))
         }
         other_bson => Err(Error::ExpectedArrayExpressionArgument {
-            actual_argument: other_bson,
+            actual_argument: Box::new(other_bson),
         })?,
     }
 }

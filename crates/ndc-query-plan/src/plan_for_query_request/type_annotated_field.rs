@@ -52,7 +52,7 @@ fn type_annotated_field_helper<T: QueryContext>(
                         plan_state,
                         root_collection_object_type,
                         column_type,
-                        nested_field,
+                        *nested_field,
                         path,
                     )
                 })
@@ -98,7 +98,7 @@ fn type_annotated_field_helper<T: QueryContext>(
                 relationship: relationship_key,
                 aggregates,
                 fields,
-                groups,
+                groups: Box::new(groups),
             }
         }
     };

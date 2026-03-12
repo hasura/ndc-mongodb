@@ -1,7 +1,8 @@
 use indexmap::IndexMap;
 
 use crate::{
-    Aggregate, ConnectorTypes, Expression, Field, Grouping, OrderBy, OrderByElement, Query, Relationships, Scope
+    Aggregate, ConnectorTypes, Expression, Field, Grouping, OrderBy, OrderByElement, Query,
+    Relationships, Scope,
 };
 
 #[derive(Clone, Debug, Default)]

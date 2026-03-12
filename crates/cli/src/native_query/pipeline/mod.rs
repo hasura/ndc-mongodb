@@ -172,6 +172,10 @@ fn infer_stage_output_type(
             include_array_index.as_deref(),
             *preserve_null_and_empty_arrays,
         )?),
+        Stage::UnionWith { .. } => Err(Error::UnknownAggregationStage {
+            stage_index,
+            stage_name: Some("$unionWith"),
+        })?,
         Stage::Other(_) => Err(Error::UnknownAggregationStage {
             stage_index,
             stage_name: None,
@@ -235,6 +239,27 @@ fn infer_type_from_group_stage(
                 Some(&TypeConstraint::numeric()),
                 expr.clone(),
             )?,
+            Accumulator::First(expr) | Accumulator::Last(expr) => {
+                infer_type_from_aggregation_expression(
+                    context,
+                    &format!("{desired_object_type_name}_first_last"),
+                    None,
+                    expr.clone(),
+                )?
+            }
+            Accumulator::StdDevSamp(expr) | Accumulator::StdDevPop(expr) => {
+                let t = infer_type_from_aggregation_expression(
+                    context,
+                    &format!("{desired_object_type_name}_stddev"),
+                    Some(&TypeConstraint::numeric()),
+                    expr.clone(),
+                )?;
+                type_for_trig_operator(t).make_nullable()
+            }
+            Accumulator::Median(_) | Accumulator::Percentile(_) => {
+                // These are complex document-based accumulators - return Double which is the result type
+                TypeConstraint::Scalar(BsonScalarType::Double).make_nullable()
+            }
         };
         Ok::<_, Error>((key.clone().into(), accumulator_type))
     });
@@ -257,7 +282,7 @@ fn infer_type_from_unwind_stage(
 ) -> Result<TypeConstraint> {
     let field_to_unwind = parse_reference_shorthand(path)?;
     let Reference::InputDocumentField { name, nested_path } = field_to_unwind else {
-        return Err(Error::ExpectedStringPath(path.into()));
+        return Err(Error::ExpectedStringPath(Box::new(path.into())));
     };
     let field_type = infer_type_from_reference_shorthand(context, None, path)?;
 

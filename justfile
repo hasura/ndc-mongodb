@@ -31,6 +31,8 @@ test-unit:
 
 test-integration: (_arion "arion-compose/integration-tests.nix" "test")
 
+test-relational: (_arion "arion-compose/relational-tests.nix" "test")
+
 test-ndc: (_arion "arion-compose/ndc-test.nix" "test")
 
 test-e2e: (_arion "arion-compose/e2e-testing.nix" "test")
@@ -40,6 +42,10 @@ test-mongodb-versions:
   MONGODB_IMAGE=mongo:6 just test-integration
   MONGODB_IMAGE=mongo:7 just test-integration
   MONGODB_IMAGE=mongo:8 just test-integration
+
+test-relational-mongodb-versions:
+  MONGODB_IMAGE=mongo:7 just test-relational
+  MONGODB_IMAGE=mongo:8 just test-relational
 
 # Runs a specified service in a specified project config using arion (a nix
 # frontend for docker-compose). Propagates the exit status from that service.
