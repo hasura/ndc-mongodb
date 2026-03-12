@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::path::Path;
 
 use async_trait::async_trait;
@@ -37,23 +38,24 @@ pub enum ConnectorConfig {
 }
 
 impl ConnectorConfig {
-    /// Resolve configuration for a specific collection by fetching from the config store.
-    /// For static mode, returns the already-loaded configuration.
-    async fn resolve_for_collection(
+    /// Resolve configuration for the collections referenced by a query.
+    /// Fetches schemas for all collections (primary + relationship targets) and merges them.
+    async fn resolve_for_collections(
         &self,
-        collection_name: &str,
+        collection_names: &[&str],
     ) -> connector::Result<MongoConfiguration> {
         match self {
             ConnectorConfig::Static(config) => Ok(config.clone()),
             ConnectorConfig::Postgres(store) => {
                 let configuration = store
-                    .read_collection_configuration(collection_name)
+                    .read_collections_configuration(collection_names)
                     .await
                     .map_err(|err| {
                         ErrorResponse::new(
                             StatusCode::INTERNAL_SERVER_ERROR,
                             format!(
-                                "failed to read configuration for collection {collection_name}: {err:#}"
+                                "failed to read configuration for collections {}: {err:#}",
+                                collection_names.join(", ")
                             ),
                             json!({}),
                         )
@@ -220,9 +222,9 @@ impl Connector for MongoConnector {
         state: &Self::State,
         request: QueryRequest,
     ) -> connector::Result<JsonResponse<ExplainResponse>> {
-        let config = configuration
-            .resolve_for_collection(request.collection.as_ref())
-            .await?;
+        let collection_names = collect_query_collection_names(&request);
+        let name_refs: Vec<&str> = collection_names.iter().map(|s| s.as_str()).collect();
+        let config = configuration.resolve_for_collections(&name_refs).await?;
         let response = explain_query(&config, state, request)
             .await
             .map_err(map_mongo_agent_error)?;
@@ -267,14 +269,25 @@ impl Connector for MongoConnector {
         state: &Self::State,
         request: QueryRequest,
     ) -> connector::Result<JsonResponse<QueryResponse>> {
-        let config = configuration
-            .resolve_for_collection(request.collection.as_ref())
-            .await?;
+        let collection_names = collect_query_collection_names(&request);
+        let name_refs: Vec<&str> = collection_names.iter().map(|s| s.as_str()).collect();
+        let config = configuration.resolve_for_collections(&name_refs).await?;
         let response = handle_query_request(&config, state, request)
             .await
             .map_err(map_mongo_agent_error)?;
         Ok(response.into())
     }
+}
+
+/// Collect all collection names referenced by a query request: the primary collection
+/// plus the target collections of all relationships.
+fn collect_query_collection_names(request: &QueryRequest) -> Vec<String> {
+    let mut names = BTreeSet::new();
+    names.insert(request.collection.to_string());
+    for relationship in request.collection_relationships.values() {
+        names.insert(relationship.target_collection.to_string());
+    }
+    names.into_iter().collect()
 }
 
 fn map_mongo_agent_error(err: MongoAgentError) -> ErrorResponse {

@@ -64,37 +64,54 @@ impl PostgresConfigurationStore {
         &self,
         collection_name: &str,
     ) -> anyhow::Result<Configuration> {
+        self.read_collections_configuration(&[collection_name])
+            .await
+    }
+
+    /// Read schemas for multiple collections by name and merge them into a single Configuration.
+    /// This is needed when a query involves relationships to other collections.
+    pub async fn read_collections_configuration(
+        &self,
+        collection_names: &[&str],
+    ) -> anyhow::Result<Configuration> {
         let client = self.get_client().await?;
 
-        let query = format!(
-            r#"SELECT name, raw_schema
-               FROM "{}".config_tables
-               WHERE UPPER(source) = UPPER($1)
-                 AND connector_id = $2
-                 AND name = $3
-                 AND deleted_at IS NULL
-               ORDER BY updated_at DESC
-               LIMIT 1"#,
-            self.schema
-        );
+        let mut merged_schema = Schema::default();
 
-        let row = client
-            .query_opt(&query, &[&SOURCE, &self.connector_id, &collection_name])
-            .await
-            .with_context(|| {
-                format!("failed to query config_tables for collection {collection_name}")
-            })?
-            .ok_or_else(|| {
-                anyhow::anyhow!("collection {collection_name} not found in config store")
-            })?;
+        for &collection_name in collection_names {
+            let query = format!(
+                r#"SELECT name, raw_schema
+                   FROM "{}".config_tables
+                   WHERE UPPER(source) = UPPER($1)
+                     AND connector_id = $2
+                     AND name = $3
+                     AND is_deleted = false
+                   ORDER BY updated_at DESC
+                   LIMIT 1"#,
+                self.schema
+            );
 
-        let name: String = row.get(0);
-        let raw_schema_json: serde_json::Value = row.get(1);
-        let schema: Schema = serde_json::from_value(raw_schema_json)
-            .with_context(|| format!("failed to parse raw_schema for collection {name}"))?;
+            let row = client
+                .query_opt(&query, &[&SOURCE, &self.connector_id, &collection_name])
+                .await
+                .with_context(|| {
+                    format!("failed to query config_tables for collection {collection_name}")
+                })?
+                .ok_or_else(|| {
+                    anyhow::anyhow!("collection {collection_name} not found in config store")
+                })?;
+
+            let name: String = row.get(0);
+            let raw_schema_json: serde_json::Value = row.get(1);
+            let schema: Schema = serde_json::from_value(raw_schema_json)
+                .with_context(|| format!("failed to parse raw_schema for collection {name}"))?;
+
+            merged_schema.collections.extend(schema.collections);
+            merged_schema.object_types.extend(schema.object_types);
+        }
 
         Configuration::validate(
-            schema,
+            merged_schema,
             Default::default(),
             Default::default(),
             ConfigurationOptions::default(),
