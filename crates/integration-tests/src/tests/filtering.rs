@@ -139,3 +139,33 @@ async fn filters_by_uuid() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+#[tokio::test]
+async fn filters_by_multiple_criteria_using_variable() -> anyhow::Result<()> {
+    assert_yaml_snapshot!(
+        graphql_query(
+            r#"
+            query TestQuery($filter: [MoviesOrderBy!] = {}) {
+              movies(
+                order_by: $filter
+                where: { year: { _gt: 0 }, imdb: { rating: { _gt: 9 } } }
+                limit: 15
+              ) {
+                title
+                year
+                rated
+              }
+            }
+            "#
+        )
+        .variables(json!({
+            "filter": [
+                { "year": "Desc" },
+                { "rated": "Desc" },
+            ]
+        }))
+        .run()
+        .await?
+    );
+    Ok(())
+}

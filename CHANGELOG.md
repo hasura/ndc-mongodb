@@ -47,7 +47,24 @@ Results for `avg` are always coerced to `double`.
 Results for `sum` are coerced to `double` if the summed inputs use a fractional
 numeric type, or to `long` if inputs use an integral numeric type.
 
-### Changed
+## [1.8.4] - 2025-07-23
+
+### Fixed
+
+- Escape field names or aliases with invalid characters in field selections ([#175](https://github.com/hasura/ndc-mongodb/pull/175))
+
+## [1.8.3] - 2025-07-08
+
+### Fixed
+
+- Filtering on field of related collection inside nested object that is not selected for output ([#171](https://github.com/hasura/ndc-mongodb/pull/171))
+- Ensure correct ordering of sort criteria in MongoDB query plan ([#172](https://github.com/hasura/ndc-mongodb/pull/172))
+
+## [1.8.2] - 2025-06-13
+
+### Added
+
+- Enable support for the MONGODB-AWS authentication mechanism.
 
 ## [1.8.1] - 2025-06-04
 
