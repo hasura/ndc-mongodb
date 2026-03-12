@@ -1,14 +1,11 @@
-{ callPackage
-, craneLib
+{ craneLib
 , jq
 , makeWrapper
+, mongodbConnectorWorkspace
 }:
 
-let
-  workspace = callPackage ./mongodb-connector-workspace.nix { };
-in
 craneLib.buildPackage
-  (workspace.buildArgs // {
+  (mongodbConnectorWorkspace.buildArgs // {
     pname = "mongodb-connector-integration-tests";
 
     doCheck = false;
@@ -27,7 +24,7 @@ craneLib.buildPackage
     cargoExtraArgs = "--locked --tests --package integration-tests --features integration";
 
     # Add programs we need for postInstall hook to nativeBuildInputs
-    nativeBuildInputs = workspace.buildArgs.nativeBuildInputs ++ [
+    nativeBuildInputs = mongodbConnectorWorkspace.buildArgs.nativeBuildInputs ++ [
       jq
       makeWrapper
     ];
@@ -51,4 +48,3 @@ craneLib.buildPackage
         --set-default INSTA_WORKSPACE_ROOT "${./..}"
     '';
   })
-

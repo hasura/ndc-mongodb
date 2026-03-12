@@ -105,7 +105,9 @@
             mongodbConnectorWorkspace = final.mongodb-connector-workspace;
           };
           graphql-engine = final.callPackage ./nix/graphql-engine.nix { src = "${graphql-engine-source}/v3"; package = "engine"; };
-          integration-tests = final.callPackage ./nix/integration-tests.nix { };
+          integration-tests = final.callPackage ./nix/integration-tests.nix {
+            mongodbConnectorWorkspace = final.mongodb-connector-workspace;
+          };
           dev-auth-webhook = final.callPackage ./nix/graphql-engine.nix { src = "${graphql-engine-source}/v3"; package = "dev-auth-webhook"; };
 
           # Provide cross-compiled versions of each of our packages under
