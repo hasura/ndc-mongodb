@@ -1609,3 +1609,255 @@ fn translates_try_cast_to_interval() {
         })
     );
 }
+
+// ============================================================================
+// Regression Tests for Bug Fixes
+// ============================================================================
+
+// Fix #5: UInt64 overflow safety
+#[test]
+fn uint64_within_i64_range_succeeds() {
+    let (_, ctx) = make_context(&[]);
+    let expr = RelationalExpression::Literal {
+        literal: RelationalLiteral::UInt64 { value: 42 },
+    };
+    let result = translate_expression(&expr, &ctx).unwrap();
+    assert_eq!(result, Bson::Int64(42));
+}
+
+#[test]
+fn uint64_max_i64_value_succeeds() {
+    let (_, ctx) = make_context(&[]);
+    let expr = RelationalExpression::Literal {
+        literal: RelationalLiteral::UInt64 {
+            value: i64::MAX as u64,
+        },
+    };
+    let result = translate_expression(&expr, &ctx).unwrap();
+    assert_eq!(result, Bson::Int64(i64::MAX));
+}
+
+#[test]
+fn uint64_overflow_returns_error() {
+    let (_, ctx) = make_context(&[]);
+    // Value larger than i64::MAX should fail
+    let expr = RelationalExpression::Literal {
+        literal: RelationalLiteral::UInt64 { value: u64::MAX },
+    };
+    let result = translate_expression(&expr, &ctx);
+    assert!(
+        result.is_err(),
+        "UInt64 value exceeding i64::MAX should return error"
+    );
+    let err = result.unwrap_err();
+    assert!(
+        err.to_string().contains("UInt64"),
+        "Error should mention UInt64, got: {}",
+        err
+    );
+}
+
+// Fix #6: DurationSecond overflow safety
+#[test]
+fn duration_second_normal_value_succeeds() {
+    let (_, ctx) = make_context(&[]);
+    let expr = RelationalExpression::Literal {
+        literal: RelationalLiteral::DurationSecond { value: 3600 },
+    };
+    let result = translate_expression(&expr, &ctx).unwrap();
+    assert_eq!(result, Bson::Int64(3_600_000)); // 3600 * 1000
+}
+
+#[test]
+fn duration_second_overflow_returns_error() {
+    let (_, ctx) = make_context(&[]);
+    // i64::MAX * 1000 overflows
+    let expr = RelationalExpression::Literal {
+        literal: RelationalLiteral::DurationSecond { value: i64::MAX },
+    };
+    let result = translate_expression(&expr, &ctx);
+    assert!(
+        result.is_err(),
+        "DurationSecond with i64::MAX should overflow when multiplied by 1000"
+    );
+    let err = result.unwrap_err();
+    assert!(
+        err.to_string().contains("overflow") || err.to_string().contains("Duration"),
+        "Error should mention overflow or duration, got: {}",
+        err
+    );
+}
+
+// Fix #9: Right() with n > string length clamps start index
+#[test]
+fn right_clamps_start_index_for_large_n() {
+    let (_, ctx) = make_context(&["text"]);
+    // RIGHT(text, 100) where text might be shorter than 100 chars
+    let expr = RelationalExpression::Right {
+        str: Box::new(RelationalExpression::Column { index: 0 }),
+        n: Box::new(RelationalExpression::Literal {
+            literal: RelationalLiteral::Int32 { value: 100 },
+        }),
+    };
+    let result = translate_expression(&expr, &ctx).unwrap();
+    // The result should use $max to clamp the start index to 0
+    assert_eq!(
+        result,
+        bson!({
+            "$substrCP": [
+                "$text",
+                { "$max": [{ "$subtract": [{ "$strLenCP": "$text" }, 100] }, 0] },
+                100
+            ]
+        })
+    );
+}
+
+// Fix #10: Substr without length uses remaining chars
+#[test]
+fn substr_without_length_uses_remaining_chars() {
+    let (_, ctx) = make_context(&["text"]);
+    // SUBSTR(text, 3) - no length, should go to end of string
+    let expr = RelationalExpression::Substr {
+        str: Box::new(RelationalExpression::Column { index: 0 }),
+        start_pos: Box::new(RelationalExpression::Literal {
+            literal: RelationalLiteral::Int32 { value: 3 },
+        }),
+        len: None,
+    };
+    let result = translate_expression(&expr, &ctx).unwrap();
+    // Should calculate remaining chars: max(strlen - (start - 1), 0)
+    assert_eq!(
+        result,
+        bson!({
+            "$substrCP": [
+                "$text",
+                { "$subtract": [3, 1] },
+                { "$max": [{ "$subtract": [{ "$strLenCP": "$text" }, { "$subtract": [3, 1] }] }, 0] }
+            ]
+        })
+    );
+}
+
+#[test]
+fn substr_with_length_works_normally() {
+    let (_, ctx) = make_context(&["text"]);
+    // SUBSTR(text, 2, 5) - with explicit length
+    let expr = RelationalExpression::Substr {
+        str: Box::new(RelationalExpression::Column { index: 0 }),
+        start_pos: Box::new(RelationalExpression::Literal {
+            literal: RelationalLiteral::Int32 { value: 2 },
+        }),
+        len: Some(Box::new(RelationalExpression::Literal {
+            literal: RelationalLiteral::Int32 { value: 5 },
+        })),
+    };
+    let result = translate_expression(&expr, &ctx).unwrap();
+    assert_eq!(
+        result,
+        bson!({
+            "$substrCP": [
+                "$text",
+                { "$subtract": [2, 1] },
+                5
+            ]
+        })
+    );
+}
+
+// Fix #11: Recursion depth limit
+// Note: The translate_expression function has very large stack frames due to
+// pattern matching on the RelationalExpression enum, so we need generous stack
+// sizes for deeply nested tests.
+#[test]
+fn deeply_nested_expression_hits_depth_limit() {
+    // Run in a thread with a very large stack to handle recursive calls.
+    // In debug mode, translate_expression has very large stack frames (~128KB)
+    // due to the giant RelationalExpression enum match, so we need ~128MB for 513 levels.
+    let result = std::thread::Builder::new()
+        .stack_size(256 * 1024 * 1024) // 256 MB stack
+        .spawn(|| {
+            let mapping = ColumnMapping::new(["x"].iter().copied());
+            let mapping: &'static ColumnMapping = Box::leak(Box::new(mapping));
+            let ctx = ExpressionContext::new(mapping);
+            // Build a deeply nested expression: NOT(NOT(NOT(...NOT(Column(0))...)))
+            // 513 levels of nesting should exceed the 512 limit
+            let mut expr = RelationalExpression::Column { index: 0 };
+            for _ in 0..513 {
+                expr = RelationalExpression::Not {
+                    expr: Box::new(expr),
+                };
+            }
+            translate_expression(&expr, &ctx)
+        })
+        .unwrap()
+        .join()
+        .unwrap();
+    assert!(
+        result.is_err(),
+        "Expression nested 513 levels deep should hit depth limit"
+    );
+    let err = result.unwrap_err();
+    assert!(
+        err.to_string().contains("too deep") || err.to_string().contains("512"),
+        "Error should mention depth limit, got: {}",
+        err
+    );
+}
+
+#[test]
+fn moderately_nested_expression_succeeds() {
+    // Run in a thread with a larger stack since the RelationalExpression enum
+    // creates large stack frames during recursive translation
+    let result = std::thread::Builder::new()
+        .stack_size(8 * 1024 * 1024) // 8 MB stack
+        .spawn(|| {
+            let mapping = ColumnMapping::new(["x"].iter().copied());
+            let mapping: &'static ColumnMapping = Box::leak(Box::new(mapping));
+            let ctx = ExpressionContext::new(mapping);
+            // 10 levels of nesting should be fine
+            let mut expr = RelationalExpression::Column { index: 0 };
+            for _ in 0..10 {
+                expr = RelationalExpression::Not {
+                    expr: Box::new(expr),
+                };
+            }
+            translate_expression(&expr, &ctx)
+        })
+        .unwrap()
+        .join()
+        .unwrap();
+    assert!(result.is_ok(), "Expression nested 10 levels should succeed");
+}
+
+// Fix #4: COUNT(column) counts non-null values (not COUNT(*))
+#[test]
+fn count_column_counts_non_null_values() {
+    let (_, ctx) = make_context(&["name"]);
+    // COUNT(name) - should count non-null values, not all rows
+    let expr = RelationalExpression::Count {
+        expr: Box::new(RelationalExpression::Column { index: 0 }),
+        distinct: false,
+    };
+    let result = translate_aggregate_expression(&expr, &ctx).unwrap();
+    // Should use $cond to check for non-null
+    assert_eq!(
+        result,
+        bson!({ "$sum": { "$cond": [{ "$ne": ["$name", null] }, 1, 0] } })
+    );
+}
+
+#[test]
+fn count_star_still_counts_all_rows() {
+    let (_, ctx) = make_context(&["id"]);
+    // COUNT(*) represented as COUNT(NULL) - should count all rows
+    let expr = RelationalExpression::Count {
+        expr: Box::new(RelationalExpression::Literal {
+            literal: RelationalLiteral::Null,
+        }),
+        distinct: false,
+    };
+    let result = translate_aggregate_expression(&expr, &ctx).unwrap();
+    // COUNT(*) should use simple $sum: 1
+    assert_eq!(result, bson!({ "$sum": 1 }));
+}

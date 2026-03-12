@@ -5,8 +5,8 @@ use std::collections::BTreeMap;
 use mongodb::bson::{doc, Bson};
 use mongodb_support::aggregate::{Accumulator, SortDocument, Stage};
 use ndc_models::{
-    Float64, JoinOn, JoinType, NullsSort, OrderDirection, Relation, RelationalExpression,
-    RelationalLiteral, Sort,
+    ArgumentName, Float64, JoinOn, JoinType, NullsSort, OrderDirection, Relation,
+    RelationalExpression, RelationalLiteral, Sort,
 };
 
 use crate::relational::build_relational_pipeline;
@@ -2361,4 +2361,229 @@ fn sorts_on_get_field_using_original_field_path() {
         }
         other => panic!("Expected Project stage, got {:?}", other),
     }
+}
+
+// =============================================================================
+// Regression Tests for Bug Fixes
+// =============================================================================
+
+// Fix #7: Paginate u64→i64 overflow
+#[test]
+fn paginate_with_large_skip_returns_error() {
+    let relation = Relation::Paginate {
+        input: Box::new(Relation::From {
+            collection: "items".into(),
+            columns: vec!["id".into()],
+            arguments: Default::default(),
+        }),
+        skip: u64::MAX, // Larger than i64::MAX
+        fetch: Some(10),
+    };
+
+    let result = build_relational_pipeline(&relation);
+    assert!(
+        result.is_err(),
+        "Skip value exceeding i64::MAX should return error"
+    );
+}
+
+#[test]
+fn paginate_with_large_fetch_returns_error() {
+    let relation = Relation::Paginate {
+        input: Box::new(Relation::From {
+            collection: "items".into(),
+            columns: vec!["id".into()],
+            arguments: Default::default(),
+        }),
+        skip: 0,
+        fetch: Some(u64::MAX), // Larger than i64::MAX
+    };
+
+    let result = build_relational_pipeline(&relation);
+    assert!(
+        result.is_err(),
+        "Fetch value exceeding i64::MAX should return error"
+    );
+}
+
+// Fix #3: Multi-key sort on $sortArray returns error instead of silently dropping
+#[test]
+fn array_agg_with_multi_key_sort_returns_error() {
+    // ARRAY_AGG(name ORDER BY name ASC, price DESC)
+    // Multi-key sort on scalar values is not supported by $sortArray
+    let relation = Relation::Aggregate {
+        input: Box::new(Relation::From {
+            collection: "users".into(),
+            columns: vec!["name".into(), "price".into()],
+            arguments: Default::default(),
+        }),
+        group_by: vec![],
+        aggregates: vec![RelationalExpression::ArrayAgg {
+            expr: Box::new(RelationalExpression::Column { index: 0 }),
+            distinct: false,
+            order_by: Some(vec![
+                Sort {
+                    expr: RelationalExpression::Column { index: 0 },
+                    direction: OrderDirection::Asc,
+                    nulls_sort: NullsSort::NullsLast,
+                },
+                Sort {
+                    expr: RelationalExpression::Column { index: 1 },
+                    direction: OrderDirection::Desc,
+                    nulls_sort: NullsSort::NullsLast,
+                },
+            ]),
+        }],
+    };
+
+    let result = build_relational_pipeline(&relation);
+    assert!(
+        result.is_err(),
+        "Multi-key sort on $sortArray should return error, not silently drop keys"
+    );
+    let err = result.unwrap_err();
+    assert!(
+        err.to_string().contains("Multi-key") || err.to_string().contains("sortArray"),
+        "Error should mention multi-key sort limitation, got: {}",
+        err
+    );
+}
+
+// Fix #8: extract_column_field handles GetField chains in sort
+#[test]
+fn sort_on_get_field_expression_works() {
+    // Sort on a nested field: ORDER BY current_state.trade_date
+    let relation = Relation::Sort {
+        input: Box::new(Relation::From {
+            collection: "events".into(),
+            columns: vec!["id".into(), "current_state".into()],
+            arguments: Default::default(),
+        }),
+        exprs: vec![Sort {
+            expr: RelationalExpression::GetField {
+                column: Box::new(RelationalExpression::Column { index: 1 }),
+                field: "trade_date".into(),
+            },
+            direction: OrderDirection::Desc,
+            nulls_sort: NullsSort::NullsLast,
+        }],
+    };
+
+    let result = build_relational_pipeline(&relation).unwrap();
+
+    assert_eq!(result.collection, "events");
+    // Should use the dotted field path for sort
+    assert_eq!(result.pipeline.stages.len(), 1);
+    assert_eq!(
+        result.pipeline.stages[0],
+        Stage::Sort(SortDocument(doc! { "current_state.trade_date": -1 }))
+    );
+}
+
+// Fix #17: From with non-empty arguments returns error
+#[test]
+fn from_with_arguments_returns_error() {
+    let mut arguments = BTreeMap::new();
+    arguments.insert(
+        ArgumentName::from("some_arg"),
+        RelationalLiteral::String {
+            value: "value".into(),
+        },
+    );
+
+    let relation = Relation::From {
+        collection: "items".into(),
+        columns: vec!["id".into()],
+        arguments,
+    };
+
+    let result = build_relational_pipeline(&relation);
+    assert!(
+        result.is_err(),
+        "From with non-empty arguments should return error"
+    );
+    let err = result.unwrap_err();
+    assert!(
+        err.to_string().contains("arguments"),
+        "Error should mention arguments, got: {}",
+        err
+    );
+}
+
+// Fix #2: nulls_sort handling - NullsFirst with Desc is non-default
+#[test]
+fn sort_with_nulls_first_desc_adds_null_order_key() {
+    // DESC + NullsFirst is non-default for MongoDB (MongoDB puts nulls last for DESC)
+    let relation = Relation::Sort {
+        input: Box::new(Relation::From {
+            collection: "items".into(),
+            columns: vec!["value".into()],
+            arguments: Default::default(),
+        }),
+        exprs: vec![Sort {
+            expr: RelationalExpression::Column { index: 0 },
+            direction: OrderDirection::Desc,
+            nulls_sort: NullsSort::NullsFirst,
+        }],
+    };
+
+    let result = build_relational_pipeline(&relation).unwrap();
+
+    // Non-default nulls_sort should add $addFields + $sort + $unset
+    assert_eq!(result.pipeline.stages.len(), 3);
+
+    // First stage: $addFields with null-order key
+    match &result.pipeline.stages[0] {
+        Stage::AddFields(doc) => {
+            assert!(
+                doc.contains_key("__null_order_0"),
+                "Should have null-order key, got: {:?}",
+                doc
+            );
+        }
+        other => panic!("Expected AddFields stage, got {:?}", other),
+    }
+
+    // Second stage: $sort includes the null-order key
+    match &result.pipeline.stages[1] {
+        Stage::Sort(SortDocument(doc)) => {
+            assert!(
+                doc.contains_key("__null_order_0"),
+                "Sort should include null-order key, got: {:?}",
+                doc
+            );
+            assert!(
+                doc.contains_key("value"),
+                "Sort should include original field, got: {:?}",
+                doc
+            );
+        }
+        other => panic!("Expected Sort stage, got {:?}", other),
+    }
+}
+
+#[test]
+fn sort_with_default_nulls_sort_has_no_null_order_key() {
+    // ASC + NullsFirst is MongoDB default - should NOT add null-order key
+    let relation = Relation::Sort {
+        input: Box::new(Relation::From {
+            collection: "items".into(),
+            columns: vec!["value".into()],
+            arguments: Default::default(),
+        }),
+        exprs: vec![Sort {
+            expr: RelationalExpression::Column { index: 0 },
+            direction: OrderDirection::Asc,
+            nulls_sort: NullsSort::NullsFirst,
+        }],
+    };
+
+    let result = build_relational_pipeline(&relation).unwrap();
+
+    // Default nulls_sort should produce simple $sort
+    assert_eq!(result.pipeline.stages.len(), 1);
+    assert_eq!(
+        result.pipeline.stages[0],
+        Stage::Sort(SortDocument(doc! { "value": 1 }))
+    );
 }

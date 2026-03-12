@@ -259,3 +259,101 @@ fn bson_to_json(bson: &mongodb::bson::Bson) -> serde_json::Value {
 fn relational_error(err: RelationalError) -> MongoAgentError {
     MongoAgentError::BadQuery(anyhow::anyhow!(err))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::bson_to_json;
+    use mongodb::bson::{doc, oid::ObjectId, Bson};
+    use serde_json::json;
+
+    // Fix #12: Nested BSON-to-JSON recursively applies conversion
+    #[test]
+    fn nested_document_converts_objectid_to_string() {
+        // A document containing an ObjectId should NOT produce Extended JSON
+        let oid = ObjectId::parse_str("507f1f77bcf86cd799439011").unwrap();
+        let bson = Bson::Document(doc! {
+            "name": "test",
+            "_id": oid,
+        });
+        let result = bson_to_json(&bson);
+        // Result should be a JSON string (documents are stringified)
+        let s = result.as_str().expect("Document should be stringified");
+        // Should NOT contain "$oid" (Extended JSON format)
+        assert!(
+            !s.contains("$oid"),
+            "Nested ObjectId should not use Extended JSON, got: {}",
+            s
+        );
+        // Should contain the hex string directly
+        assert!(
+            s.contains("507f1f77bcf86cd799439011"),
+            "Should contain ObjectId hex, got: {}",
+            s
+        );
+    }
+
+    #[test]
+    fn nested_array_converts_recursively() {
+        // An array containing an ObjectId and Int64 should convert properly
+        let oid = ObjectId::parse_str("507f1f77bcf86cd799439011").unwrap();
+        let bson = Bson::Array(vec![
+            Bson::ObjectId(oid),
+            Bson::Int64(9999999999999),
+            Bson::String("hello".into()),
+        ]);
+        let result = bson_to_json(&bson);
+        let s = result.as_str().expect("Array should be stringified");
+        // Should NOT contain "$oid" or "$numberLong"
+        assert!(
+            !s.contains("$oid"),
+            "Nested ObjectId should not use Extended JSON, got: {}",
+            s
+        );
+        assert!(
+            !s.contains("$numberLong"),
+            "Nested Int64 should not use Extended JSON, got: {}",
+            s
+        );
+    }
+
+    #[test]
+    fn nested_document_with_datetime_avoids_extended_json() {
+        let dt = mongodb::bson::DateTime::from_millis(1768867200000); // 2026-01-20
+        let bson = Bson::Document(doc! {
+            "created_at": dt,
+            "value": 42,
+        });
+        let result = bson_to_json(&bson);
+        let s = result.as_str().expect("Document should be stringified");
+        // Should NOT contain "$date" (Extended JSON format)
+        assert!(
+            !s.contains("$date"),
+            "Nested DateTime should not use Extended JSON, got: {}",
+            s
+        );
+    }
+
+    // Fix #13: MinKey/MaxKey produce distinct JSON representations
+    #[test]
+    fn minkey_and_maxkey_are_distinct() {
+        let minkey_result = bson_to_json(&Bson::MinKey);
+        let maxkey_result = bson_to_json(&Bson::MaxKey);
+
+        assert_ne!(
+            minkey_result, maxkey_result,
+            "MinKey and MaxKey should produce distinct JSON values"
+        );
+    }
+
+    #[test]
+    fn minkey_has_minkey_marker() {
+        let result = bson_to_json(&Bson::MinKey);
+        assert_eq!(result, json!({"$minKey": 1}));
+    }
+
+    #[test]
+    fn maxkey_has_maxkey_marker() {
+        let result = bson_to_json(&Bson::MaxKey);
+        assert_eq!(result, json!({"$maxKey": 1}));
+    }
+}
