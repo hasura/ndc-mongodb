@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use itertools::Itertools as _;
 use ndc_models::{self as ndc};
 
-use crate::{self as plan, ConnectorTypes};
+use crate::{self as plan};
 
 use super::query_plan_error::QueryPlanError;
 

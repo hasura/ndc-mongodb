@@ -183,6 +183,7 @@ mod tests {
                     order_direction: OrderDirection::Desc,
                     target: ndc_query_plan::OrderByTarget::Column {
                         name: first_criteria.into(),
+                        arguments: Default::default(),
                         field_path: None,
                         path: Default::default(),
                     },
@@ -191,6 +192,7 @@ mod tests {
                     order_direction: OrderDirection::Desc,
                     target: ndc_query_plan::OrderByTarget::Column {
                         name: second_criteria.into(),
+                        arguments: Default::default(),
                         field_path: None,
                         path: Default::default(),
                     },

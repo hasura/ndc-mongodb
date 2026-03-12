@@ -2,6 +2,7 @@ use insta::assert_yaml_snapshot;
 use ndc_test_helpers::{
     array_contains, binop, field, is_empty, query, query_request, target, value, variable,
 };
+use serde_json::json;
 
 use crate::{connector::Connector, graphql_query, run_connector_query};
 
