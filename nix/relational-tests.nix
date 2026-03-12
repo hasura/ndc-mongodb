@@ -10,8 +10,8 @@ craneLib.buildPackage
 
     doCheck = false;
 
-    # Build only the ignored MongoDB-backed relational integration test harness.
-    cargoExtraArgs = "--locked --test relational_integration_tests --package mongodb-agent-common";
+    # Build only the MongoDB-backed relational integration test harness.
+    cargoExtraArgs = "--locked --features relational-integration-tests --test relational_integration_tests --package mongodb-agent-common";
 
     nativeBuildInputs = mongodbConnectorWorkspace.buildArgs.nativeBuildInputs ++ [
       jq

@@ -245,7 +245,7 @@ mod tests {
 
         let authors_type = schema
             .object_types
-            .get(&"authors".into())
+            .get("authors")
             .expect("authors object type should exist");
 
         assert_eq!(
@@ -283,7 +283,7 @@ mod tests {
 
         let ext_json = schema
             .scalar_types
-            .get(&"ExtendedJSON".into())
+            .get("ExtendedJSON")
             .expect("ExtendedJSON scalar should exist");
         assert_eq!(ext_json.representation, ndc::TypeRepresentation::String);
     }

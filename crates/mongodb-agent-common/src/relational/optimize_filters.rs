@@ -85,6 +85,8 @@ fn try_make_early_query_document(
     input: &Relation,
     predicate: &RelationalExpression,
 ) -> Option<Document> {
+    let root_collection = root_collection_name(input)?;
+
     match predicate {
         // Binary comparisons can be converted if the left side is a column that traces to an original field
         RelationalExpression::Eq { left, right }
@@ -93,7 +95,7 @@ fn try_make_early_query_document(
         | RelationalExpression::Lt { left, right }
         | RelationalExpression::LtEq { left, right }
         | RelationalExpression::NotEq { left, right } => {
-            try_make_comparison_query(input, left, right, predicate)
+            try_make_comparison_query(input, &root_collection, left, right, predicate)
         }
 
         // AND: both sub-expressions must be convertible
@@ -112,13 +114,13 @@ fn try_make_early_query_document(
 
         // IsNull check
         RelationalExpression::IsNull { expr } => {
-            let field_path = trace_expression_to_path(input, expr)?;
+            let field_path = trace_expression_to_path(input, expr, &root_collection)?;
             Some(doc! { field_path: { "$eq": Bson::Null } })
         }
 
         // IsNotNull check
         RelationalExpression::IsNotNull { expr } => {
-            let field_path = trace_expression_to_path(input, expr)?;
+            let field_path = trace_expression_to_path(input, expr, &root_collection)?;
             Some(doc! { field_path: { "$ne": Bson::Null } })
         }
 
@@ -130,12 +132,13 @@ fn try_make_early_query_document(
 /// Try to make a comparison query document from a binary comparison expression.
 fn try_make_comparison_query(
     input: &Relation,
+    root_collection: &str,
     left: &RelationalExpression,
     right: &RelationalExpression,
     original_expr: &RelationalExpression,
 ) -> Option<Document> {
     // Left side should be a field reference (Column or GetField chain)
-    let field_path = trace_expression_to_path(input, left)?;
+    let field_path = trace_expression_to_path(input, left, root_collection)?;
 
     // Right side should be a literal
     let value = literal_to_bson(right)?;
@@ -161,17 +164,39 @@ fn try_make_comparison_query(
 /// - `GetField { column, field }` -> recursively traces and appends field names
 ///
 /// Returns `None` if the expression doesn't trace to an original field.
-fn trace_expression_to_path(input: &Relation, expr: &RelationalExpression) -> Option<String> {
+fn trace_expression_to_path(
+    input: &Relation,
+    expr: &RelationalExpression,
+    root_collection: &str,
+) -> Option<String> {
     match expr {
         RelationalExpression::Column { index } => {
             let origin = trace_column_origin(input, *index);
-            origin.original_path
+            if origin.collection.as_deref() == Some(root_collection) {
+                origin.original_path
+            } else {
+                None
+            }
         }
         RelationalExpression::GetField { column, field } => {
-            let base_path = trace_expression_to_path(input, column)?;
+            let base_path = trace_expression_to_path(input, column, root_collection)?;
             Some(format!("{}.{}", base_path, field))
         }
         _ => None,
+    }
+}
+
+fn root_collection_name(relation: &Relation) -> Option<String> {
+    match relation {
+        Relation::From { collection, .. } => Some(collection.to_string()),
+        Relation::Filter { input, .. }
+        | Relation::Sort { input, .. }
+        | Relation::Paginate { input, .. }
+        | Relation::Project { input, .. }
+        | Relation::Aggregate { input, .. }
+        | Relation::Window { input, .. } => root_collection_name(input),
+        Relation::Join { left, .. } => root_collection_name(left),
+        Relation::Union { .. } => None,
     }
 }
 
@@ -344,5 +369,39 @@ mod tests {
 
         let doc = result.query_document.unwrap();
         assert_eq!(doc, doc! { "status": { "$eq": "active" } });
+    }
+
+    #[test]
+    fn does_not_extract_filter_on_right_side_of_join() {
+        let relation = Relation::Filter {
+            input: Box::new(Relation::Join {
+                left: Box::new(Relation::From {
+                    collection: "orders".into(),
+                    columns: vec!["product_id".into(), "quantity".into()],
+                    arguments: Default::default(),
+                }),
+                right: Box::new(Relation::From {
+                    collection: "products".into(),
+                    columns: vec!["_id".into(), "price".into()],
+                    arguments: Default::default(),
+                }),
+                on: vec![ndc_models::JoinOn {
+                    left: RelationalExpression::Column { index: 0 },
+                    right: RelationalExpression::Column { index: 0 },
+                }],
+                join_type: ndc_models::JoinType::Inner,
+            }),
+            predicate: RelationalExpression::Gt {
+                left: Box::new(RelationalExpression::Column { index: 3 }),
+                right: Box::new(RelationalExpression::Literal {
+                    literal: RelationalLiteral::Float64 {
+                        value: Float64(10.0),
+                    },
+                }),
+            },
+        };
+
+        let result = extract_early_match(&relation);
+        assert!(result.query_document.is_none());
     }
 }

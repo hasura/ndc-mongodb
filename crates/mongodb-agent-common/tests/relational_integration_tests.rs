@@ -9,7 +9,13 @@
 //! To run these tests:
 //! 1. Start MongoDB: docker run -d --name mongodb-test -p 27017:27017 mongo:7.0
 //! 2. Populate test data (see setup_test_data below)
-//! 3. Run: MONGODB_URI="mongodb://localhost:27017/test_relational" cargo test -p mongodb-agent-common --test relational_integration_tests -- --ignored
+//! 3. Run:
+//!    MONGODB_URI="mongodb://localhost:27017/test_relational" cargo test \
+//!      -p mongodb-agent-common \
+//!      --features relational-integration-tests \
+//!      --test relational_integration_tests
+
+#![cfg(feature = "relational-integration-tests")]
 
 use mongodb_agent_common::relational::execute_relational_query;
 use mongodb_agent_common::state::try_init_state_from_uri;
@@ -51,7 +57,6 @@ fn get_rows(response: &RelationalQueryResponse) -> &Vec<Vec<serde_json::Value>> 
 // =============================================================================
 
 #[tokio::test]
-#[ignore]
 async fn test_from_relation_all_columns() {
     let relation = Relation::From {
         collection: "products".into(),
@@ -71,7 +76,6 @@ async fn test_from_relation_all_columns() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_from_relation_column_subset() {
     let relation = Relation::From {
         collection: "products".into(),
@@ -86,7 +90,6 @@ async fn test_from_relation_column_subset() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_filter_equality() {
     let relation = Relation::Filter {
         input: Box::new(Relation::From {
@@ -111,7 +114,6 @@ async fn test_filter_equality() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_filter_range() {
     let relation = Relation::Filter {
         input: Box::new(Relation::From {
@@ -135,7 +137,6 @@ async fn test_filter_range() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_sort_ascending() {
     let relation = Relation::Sort {
         input: Box::new(Relation::From {
@@ -157,7 +158,6 @@ async fn test_sort_ascending() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_paginate_limit() {
     let relation = Relation::Paginate {
         input: Box::new(Relation::Sort {
@@ -182,7 +182,6 @@ async fn test_paginate_limit() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_paginate_offset() {
     let relation = Relation::Paginate {
         input: Box::new(Relation::Sort {
@@ -215,7 +214,6 @@ async fn test_paginate_offset() {
 // =============================================================================
 
 #[tokio::test]
-#[ignore]
 async fn test_aggregate_count() {
     let relation = Relation::Aggregate {
         input: Box::new(Relation::From {
@@ -239,7 +237,6 @@ async fn test_aggregate_count() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_aggregate_sum_with_group_by() {
     let relation = Relation::Aggregate {
         input: Box::new(Relation::From {
@@ -263,7 +260,6 @@ async fn test_aggregate_sum_with_group_by() {
 // =============================================================================
 
 #[tokio::test]
-#[ignore]
 async fn test_left_join() {
     let relation = Relation::Join {
         left: Box::new(Relation::From {
@@ -290,7 +286,6 @@ async fn test_left_join() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_inner_join() {
     let relation = Relation::Join {
         left: Box::new(Relation::From {
@@ -324,7 +319,6 @@ async fn test_inner_join() {
 // =============================================================================
 
 #[tokio::test]
-#[ignore]
 async fn test_window_row_number() {
     let relation = Relation::Window {
         input: Box::new(Relation::Sort {
@@ -360,7 +354,6 @@ async fn test_window_row_number() {
 // =============================================================================
 
 #[tokio::test]
-#[ignore]
 async fn test_union_two_collections() {
     let relation = Relation::Union {
         relations: vec![
@@ -400,7 +393,6 @@ async fn test_union_two_collections() {
 /// LIMIT 5;
 /// ```
 #[tokio::test]
-#[ignore]
 async fn test_complex_join_filter_sort_paginate() {
     // Step 1: Join orders with products
     let join = Relation::Join {
@@ -498,7 +490,6 @@ async fn test_complex_join_filter_sort_paginate() {
 /// ORDER BY total_stock DESC;
 /// ```
 #[tokio::test]
-#[ignore]
 async fn test_complex_aggregate_with_multiple_functions() {
     // Step 1: From products with relevant columns
     let from = Relation::From {
@@ -572,7 +563,6 @@ async fn test_complex_aggregate_with_multiple_functions() {
 /// ORDER BY category, category_rank;
 /// ```
 #[tokio::test]
-#[ignore]
 async fn test_complex_window_with_partition_and_running_total() {
     // Step 1: From products
     let from = Relation::From {
@@ -657,7 +647,6 @@ async fn test_complex_window_with_partition_and_running_total() {
 /// ORDER BY c.name, order_value DESC NULLS LAST;
 /// ```
 #[tokio::test]
-#[ignore]
 async fn test_complex_multi_join_with_filter() {
     // Step 1: From categories
     let categories = Relation::From {
@@ -779,7 +768,6 @@ async fn test_complex_multi_join_with_filter() {
 /// FROM products;
 /// ```
 #[tokio::test]
-#[ignore]
 async fn test_complex_aggregate_filter_union() {
     // Branch 1: Category stats filtered by stock > 50
     let category_agg = Relation::Aggregate {
@@ -883,7 +871,6 @@ async fn test_complex_aggregate_filter_union() {
 /// ORDER BY overall_rank, category_rank;
 /// ```
 #[tokio::test]
-#[ignore]
 async fn test_complex_multiple_window_functions() {
     // Step 1: From products
     let from = Relation::From {

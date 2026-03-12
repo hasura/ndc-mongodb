@@ -8,7 +8,6 @@ let
     useHostStore = true;
     command = [
       "${pkgs.pkgsCross.linux.relationalTests}/bin/relational-tests"
-      "--ignored"
     ];
     environment = {
       MONGODB_URI = mongodb-uri;

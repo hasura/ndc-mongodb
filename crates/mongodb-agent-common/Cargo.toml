@@ -6,6 +6,7 @@ version.workspace = true
 
 [features]
 default = []
+relational-integration-tests = []
 test-helpers = ["dep:mockall", "dep:pretty_assertions"] # exports mock database impl
 
 [dependencies]
@@ -38,7 +39,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 serde_with = { version = "^3.7", features = ["base64", "hex"] }
 thiserror = "1"
-time = { version = "0.3.29", features = ["formatting", "parsing", "serde"] }
+time = { version = "0.3.44", features = ["formatting", "parsing", "serde"] }
 tracing = "0.1"
 
 [dev-dependencies]
