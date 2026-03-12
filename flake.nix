@@ -56,7 +56,7 @@
     # To use a GitHub version instead:
     #     url = "github:hasura/ndc-sdk-rs";
     ndc-sdk-source = {
-      url = "git+file:///home/codedmart/Work/hasura/projects/ndc-sdk-rs";
+      url = "github:hasura/ndc-sdk-rs";
       flake = false;
     };
   };
@@ -101,6 +101,9 @@
           }; # builds all packages in this repo
           mongodb-connector = final.mongodb-connector-workspace.override { package = "mongodb-connector"; }; # override `package` to build one specific crate
           mongodb-cli-plugin = final.mongodb-connector-workspace.override { package = "mongodb-cli-plugin"; };
+          relationalTests = final.callPackage ./nix/relational-tests.nix {
+            mongodbConnectorWorkspace = final.mongodb-connector-workspace;
+          };
           graphql-engine = final.callPackage ./nix/graphql-engine.nix { src = "${graphql-engine-source}/v3"; package = "engine"; };
           integration-tests = final.callPackage ./nix/integration-tests.nix { };
           dev-auth-webhook = final.callPackage ./nix/graphql-engine.nix { src = "${graphql-engine-source}/v3"; package = "dev-auth-webhook"; };

@@ -1,0 +1,5 @@
+{"_id":1,"name":"Widget","price":10.0,"category":"A","stock":30}
+{"_id":2,"name":"Gadget","price":25.0,"category":"A","stock":25}
+{"_id":3,"name":"Gizmo","price":15.0,"category":"B","stock":40}
+{"_id":4,"name":"Thing","price":30.0,"category":"B","stock":0}
+{"_id":5,"name":"Item","price":null,"category":"C","stock":10}

@@ -33,6 +33,9 @@ jobs:
       - name: run integration tests 📋
         run: nix develop --command just test-mongodb-versions
 
+      - name: run relational integration tests 📋
+        run: nix develop --command just test-relational-mongodb-versions
+
   audit:
     name: Security Audit
     runs-on: ubuntu-24.04
