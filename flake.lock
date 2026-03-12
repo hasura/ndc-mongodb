@@ -161,16 +161,17 @@
     "ndc-sdk-source": {
       "flake": false,
       "locked": {
-        "dirtyRev": "cc12fdaa9a452c6e61c69d802b824c0169fc0b53-dirty",
-        "dirtyShortRev": "cc12fda-dirty",
-        "lastModified": 1758813678,
-        "narHash": "sha256-3mTmzl53cihXN3LOYLegqhCHNakKiUS49ovD634eYb0=",
-        "type": "git",
-        "url": "file:///home/codedmart/Work/hasura/projects/ndc-sdk-rs"
+        "lastModified": 1773323648,
+        "narHash": "sha256-z5ctPO92H7WrT1JAZEHvGf57/lmNYu/t71EYohuzCm8=",
+        "owner": "hasura",
+        "repo": "ndc-sdk-rs",
+        "rev": "b84850bdfada675e38deeaf236b8f7947ea3b516",
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///home/codedmart/Work/hasura/projects/ndc-sdk-rs"
+        "owner": "hasura",
+        "repo": "ndc-sdk-rs",
+        "type": "github"
       }
     },
     "nixpkgs": {
@@ -226,11 +227,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1768963622,
-        "narHash": "sha256-n6VHiUgrYD9yjagzG6ncVVqFbVTsKCI54tR9PNAFCo0=",
+        "lastModified": 1773284828,
+        "narHash": "sha256-0qI+a9z7KpYCBbp4ENN32b2tf0VmC3MhgFw1KAroqxQ=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "2ef5b3362af585a83bafd34e7fc9b1f388c2e5e2",
+        "rev": "2b18fe48d9a8a4ff3850d56b67cfe72f2a589237",
         "type": "github"
       },
       "original": {
