@@ -45,15 +45,21 @@ let
   # Ideally we would pass in a crossSystem argument of the form
   # "aarch64-unknown-linux-musl" instead of doing this fixup. But that doesn't
   # seem to work.
-  buildTarget =
+  buildTargetName =
     if staticallyLinked then builtins.replaceStrings [ "gnu" ] [ "musl" ] hostPlatform.config
     else hostPlatform.config;
+
+  # nixpkgs decided to change the name of the darwin targets
+  buildTargetNameFixed = 
+    if buildTargetName == "arm64-apple-darwin"
+      then "aarch64-apple-darwin"
+      else buildTargetName;
 
   # Make sure the Rust toolchain includes support for the platform we are
   # building for in case we are cross-compiling. In practice this is only
   # necessary if we are statically linking, and therefore have a `musl` target.
   # But it doesn't hurt anything to make this override in other cases.
-  toolchain = pkgs: pkgs.rustToolchain.override { targets = [ buildTarget ]; };
+  toolchain = pkgs: pkgs.rustToolchain.override { targets = [ buildTargetNameFixed ]; };
 
   # Converts host system string for use in environment variable names
   envCase = triple: lib.strings.toUpper (builtins.replaceStrings [ "-" ] [ "_" ] triple);
@@ -61,11 +67,7 @@ in
 {
   buildArgs = {
     # buildInputs are compiled for the target platform that we are compiling for
-    buildInputs = lib.optionals hostPlatform.isDarwin [
-      darwin.apple_sdk.frameworks.CoreServices # needed to run mongodb-connector unit tests
-      pkgsStatic.darwin.apple_sdk.frameworks.Security
-      pkgsStatic.darwin.apple_sdk.frameworks.SystemConfiguration
-    ];
+    buildInputs = lib.optionals hostPlatform.isDarwin [];
 
     # nativeBuildInputs are intended to run on the platform we are building on,
     # as opposed to the platform we are targetting for compilation
@@ -73,8 +75,8 @@ in
       libiconv
     ];
 
-    CARGO_BUILD_TARGET = buildTarget;
-    "CARGO_TARGET_${envCase buildTarget}_LINKER" = "${stdenv.cc.targetPrefix}cc";
+    CARGO_BUILD_TARGET = buildTargetNameFixed;
+    "CARGO_TARGET_${envCase buildTargetNameFixed}_LINKER" = "${stdenv.cc.targetPrefix}cc";
 
     # This environment variable may be necessary if any of your dependencies use
     # a build-script which invokes the `cc` crate to build some other code. The

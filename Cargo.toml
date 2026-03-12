@@ -5,6 +5,7 @@ version = "1.8.1"
 members = [
   "crates/cli",
   "crates/configuration",
+  "crates/configuration-store",
   "crates/integration-tests",
   "crates/mongodb-agent-common",
   "crates/mongodb-connector",

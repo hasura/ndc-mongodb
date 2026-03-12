@@ -1,7 +1,11 @@
+use std::collections::BTreeSet;
 use std::path::Path;
 
 use async_trait::async_trait;
 use configuration::Configuration;
+use configuration_store::{
+    resolve_configuration_mode, ConfigurationMode, PostgresConfigurationStore,
+};
 use futures_util::stream::BoxStream;
 use futures_util::StreamExt;
 use http::StatusCode;
@@ -11,7 +15,7 @@ use mongodb_agent_common::{
     mongo_query_plan::MongoConfiguration,
     query::handle_query_request,
     relational::{execute_relational_query, execute_relational_query_stream},
-    state::ConnectorState,
+    state::{self, ConnectorState},
 };
 use ndc_sdk::{
     connector::{self, Connector, ConnectorSetup, ErrorResponse},
@@ -26,6 +30,45 @@ use tracing::instrument;
 
 use crate::{capabilities::mongo_capabilities, mutation::handle_mutation_request};
 
+/// The connector's configuration type. In JSON mode, the full configuration is loaded at startup.
+/// In Postgres mode, configuration is fetched on-demand per request from the config store.
+#[derive(Clone, Debug)]
+pub enum ConnectorConfig {
+    /// File-based configuration, fully loaded at startup.
+    Static(MongoConfiguration),
+    /// Postgres-based configuration, fetched per request.
+    Postgres(PostgresConfigurationStore),
+}
+
+impl ConnectorConfig {
+    /// Resolve configuration for the collections referenced by a query.
+    /// Fetches schemas for all collections (primary + relationship targets) and merges them.
+    async fn resolve_for_collections(
+        &self,
+        collection_names: &[&str],
+    ) -> connector::Result<MongoConfiguration> {
+        match self {
+            ConnectorConfig::Static(config) => Ok(config.clone()),
+            ConnectorConfig::Postgres(store) => {
+                let configuration = store
+                    .read_collections_configuration(collection_names)
+                    .await
+                    .map_err(|err| {
+                        ErrorResponse::new(
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            format!(
+                                "failed to read configuration for collections {}: {err:#}",
+                                collection_names.join(", ")
+                            ),
+                            json!({}),
+                        )
+                    })?;
+                Ok(MongoConfiguration(configuration))
+            }
+        }
+    }
+}
+
 #[derive(Clone, Default)]
 pub struct MongoConnector;
 
@@ -38,39 +81,97 @@ impl ConnectorSetup for MongoConnector {
     async fn parse_configuration(
         &self,
         configuration_dir: &Path,
-    ) -> connector::Result<MongoConfiguration> {
-        let configuration = Configuration::parse_configuration(configuration_dir)
-            .await
-            .map_err(|err| {
-                ErrorResponse::new(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("{err:#}"), // alternate selector (:#) includes root cause in string
-                    json!({}),
-                )
-            })?;
-        tracing::debug!(?configuration);
-        Ok(MongoConfiguration(configuration))
+    ) -> connector::Result<ConnectorConfig> {
+        let mode = resolve_configuration_mode().map_err(|err| {
+            ErrorResponse::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to resolve configuration mode: {err:#}"),
+                json!({}),
+            )
+        })?;
+
+        match mode {
+            ConfigurationMode::Json => {
+                tracing::info!("using file-based configuration");
+                let configuration = Configuration::parse_configuration(configuration_dir)
+                    .await
+                    .map_err(|err| {
+                        ErrorResponse::new(
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            format!("{err:#}"),
+                            json!({}),
+                        )
+                    })?;
+                tracing::debug!(?configuration);
+                Ok(ConnectorConfig::Static(MongoConfiguration(configuration)))
+            }
+            ConfigurationMode::Postgres {
+                url,
+                connector_id,
+                schema,
+            } => {
+                tracing::info!(
+                    connector_id = %connector_id,
+                    schema = %schema,
+                    "using postgres-based configuration (on-demand per request)"
+                );
+                let store =
+                    PostgresConfigurationStore::new(url, connector_id, schema).map_err(|err| {
+                        ErrorResponse::new(
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            format!("failed to create postgres config store: {err:#}"),
+                            json!({}),
+                        )
+                    })?;
+                Ok(ConnectorConfig::Postgres(store))
+            }
+        }
     }
 
-    /// Reads database connection URI from environment variable
+    /// Reads database connection URI from environment variable, or from postgres config store.
     #[instrument(err, skip_all)]
-    // `instrument` automatically emits traces when this function returns.
-    // - `err` limits logging to `Err` results, at log level `error`
-    // - `skip_all` omits arguments from the trace
     async fn try_init_state(
         &self,
-        _configuration: &MongoConfiguration,
+        configuration: &ConnectorConfig,
         _metrics: &mut prometheus::Registry,
     ) -> connector::Result<ConnectorState> {
-        let state = mongodb_agent_common::state::try_init_state().await?;
-        Ok(state)
+        let connector_state = match configuration {
+            ConnectorConfig::Static(_) => state::try_init_state().await?,
+            ConnectorConfig::Postgres(store) => {
+                let uri = store.read_connection_uri().await.map_err(|err| {
+                    ErrorResponse::new(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("failed to read connection URI from config store: {err:#}"),
+                        json!({}),
+                    )
+                })?;
+                let resolved_uri = uri.resolve().map_err(|err| {
+                    ErrorResponse::new(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("failed to resolve connection URI: {err:#}"),
+                        json!({}),
+                    )
+                })?;
+                state::try_init_state_from_uri(Some(&resolved_uri))
+                    .await
+                    .map_err(|err| {
+                        ErrorResponse::new(
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            format!("failed to initialize MongoDB state: {err:#}"),
+                            json!({}),
+                        )
+                    })?
+            }
+        };
+
+        Ok(connector_state)
     }
 }
 
 #[allow(clippy::blocks_in_conditions)]
 #[async_trait]
 impl Connector for MongoConnector {
-    type Configuration = MongoConfiguration;
+    type Configuration = ConnectorConfig;
     type State = ConnectorState;
 
     fn connector_name() -> &'static str {
@@ -97,8 +198,25 @@ impl Connector for MongoConnector {
     async fn get_schema(
         configuration: &Self::Configuration,
     ) -> connector::Result<JsonResponse<SchemaResponse>> {
-        let response = crate::schema::get_schema(configuration).await?;
-        Ok(response.into())
+        match configuration {
+            ConnectorConfig::Static(config) => {
+                let response = crate::schema::get_schema(config).await?;
+                Ok(response.into())
+            }
+            ConnectorConfig::Postgres(_) => {
+                // In postgres mode, schema is managed externally.
+                // Return an empty schema response.
+                Ok(JsonResponse::Value(SchemaResponse {
+                    collections: vec![],
+                    functions: vec![],
+                    procedures: vec![],
+                    object_types: Default::default(),
+                    scalar_types: Default::default(),
+                    capabilities: None,
+                    request_arguments: None,
+                }))
+            }
+        }
     }
 
     #[instrument(err, skip_all)]
@@ -107,7 +225,10 @@ impl Connector for MongoConnector {
         state: &Self::State,
         request: QueryRequest,
     ) -> connector::Result<JsonResponse<ExplainResponse>> {
-        let response = explain_query(configuration, state, request)
+        let collection_names = collect_query_collection_names(&request);
+        let name_refs: Vec<&str> = collection_names.iter().map(|s| s.as_str()).collect();
+        let config = configuration.resolve_for_collections(&name_refs).await?;
+        let response = explain_query(&config, state, request)
             .await
             .map_err(map_mongo_agent_error)?;
         Ok(response.into())
@@ -132,8 +253,17 @@ impl Connector for MongoConnector {
         state: &Self::State,
         request: MutationRequest,
     ) -> connector::Result<JsonResponse<MutationResponse>> {
-        let response = handle_mutation_request(configuration, state, request).await?;
-        Ok(response)
+        match configuration {
+            ConnectorConfig::Static(config) => {
+                let response = handle_mutation_request(config, state, request).await?;
+                Ok(response)
+            }
+            ConnectorConfig::Postgres(_) => Err(ErrorResponse::new(
+                StatusCode::NOT_IMPLEMENTED,
+                "Mutations are not supported in postgres configuration mode".to_string(),
+                json!({}),
+            )),
+        }
     }
 
     #[instrument(name = "/query", err, skip_all, fields(internal.visibility = "user"))]
@@ -142,7 +272,10 @@ impl Connector for MongoConnector {
         state: &Self::State,
         request: QueryRequest,
     ) -> connector::Result<JsonResponse<QueryResponse>> {
-        let response = handle_query_request(configuration, state, request)
+        let collection_names = collect_query_collection_names(&request);
+        let name_refs: Vec<&str> = collection_names.iter().map(|s| s.as_str()).collect();
+        let config = configuration.resolve_for_collections(&name_refs).await?;
+        let response = handle_query_request(&config, state, request)
             .await
             .map_err(map_mongo_agent_error)?;
         Ok(response.into())
@@ -175,6 +308,17 @@ impl Connector for MongoConnector {
 
         Ok(Box::pin(mapped_stream))
     }
+}
+
+/// Collect all collection names referenced by a query request: the primary collection
+/// plus the target collections of all relationships.
+fn collect_query_collection_names(request: &QueryRequest) -> Vec<String> {
+    let mut names = BTreeSet::new();
+    names.insert(request.collection.to_string());
+    for relationship in request.collection_relationships.values() {
+        names.insert(relationship.target_collection.to_string());
+    }
+    names.into_iter().collect()
 }
 
 fn map_mongo_agent_error(err: MongoAgentError) -> ErrorResponse {
