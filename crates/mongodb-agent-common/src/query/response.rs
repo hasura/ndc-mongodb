@@ -28,7 +28,10 @@ use super::serialization::is_nullable;
 
 #[derive(Debug, Error)]
 pub enum QueryResponseError {
-    #[error("expected aggregates to be an object at path {}", path.join("."))]
+    #[error(
+        "expected aggregates to be an object at path {}",
+        display_path(path)
+    )]
     AggregatesNotObject { path: Vec<String> },
 
     #[error("{0}")]
@@ -37,13 +40,19 @@ pub enum QueryResponseError {
     #[error("{0}")]
     BsonToJson(#[from] BsonToJsonError),
 
-    #[error("a group response is missing its '{GROUP_DIMENSIONS_KEY}' field")]
+    #[error(
+        "a group response is missing its '{GROUP_DIMENSIONS_KEY}' field at path {}",
+        display_path(path)
+    )]
     GroupMissingDimensions { path: Vec<String> },
 
     #[error("expected a single response document from MongoDB, but did not get one")]
     ExpectedSingleDocument,
 
-    #[error("a query field referenced a relationship, but no fields from the relationship were selected")]
+    #[error(
+        "a query field referenced a relationship at path {}, but no fields from the relationship were selected",
+        display_path(path)
+    )]
     NoFieldsSelected { path: Vec<String> },
 }
 
@@ -494,6 +503,14 @@ fn append_to_path<'a>(path: &[&'a str], elems: impl IntoIterator<Item = &'a str>
 
 fn path_to_owned(path: &[&str]) -> Vec<String> {
     path.iter().map(|x| (*x).to_owned()).collect()
+}
+
+fn display_path(path: &[String]) -> Cow<'_, str> {
+    if path.is_empty() {
+        Cow::Borrowed("<root>")
+    } else {
+        Cow::Owned(path.join("."))
+    }
 }
 
 #[cfg(test)]

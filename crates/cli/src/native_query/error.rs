@@ -76,8 +76,8 @@ pub enum Error {
         could_not_infer_return_type: bool,
 
         // These fields are included here for internal debugging
-        type_variables: HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
-        object_type_constraints: BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
+        _type_variables: HashMap<TypeVariable, BTreeSet<TypeConstraint>>,
+        _object_type_constraints: BTreeMap<ObjectTypeName, ObjectTypeConstraint>,
     },
 
     #[error("Error parsing a string in the aggregation pipeline: {0}")]

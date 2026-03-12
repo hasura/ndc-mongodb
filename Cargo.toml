@@ -18,7 +18,7 @@ resolver = "2"
 # The tag or rev of ndc-models must match the locked tag or rev of the
 # ndc-models dependency of ndc-sdk
 [workspace.dependencies]
-ndc-sdk = { path = "../ndc-sdk-rs/crates/sdk" }
+ndc-sdk = { git = "https://github.com/hasura/ndc-sdk-rs.git", rev = "v0.9.0" }
 ndc-models = { git = "http://github.com/hasura/ndc-spec.git", tag = "v0.2.12" }
 
 indexmap = { version = "2", features = [
@@ -26,8 +26,8 @@ indexmap = { version = "2", features = [
 ] } # should match the version that ndc-models uses
 itertools = "^0.14.0"
 mongodb = { version = "^3.1.0", features = ["tracing-unstable"] }
-nonempty = "^0.11.0"
-schemars = "^0.8.12"
+nonempty = "^0.12.0"
+schemars = { version = "^0.8.21", features = ["smol_str"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1.0", features = ["preserve_order", "raw_value"] }
 ref-cast = "1.0.23"

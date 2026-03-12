@@ -121,8 +121,8 @@ impl PipelineTypeContext<'_> {
                         }
                     })
                     .collect(),
-                type_variables: self.type_variables,
-                object_type_constraints,
+                _type_variables: self.type_variables,
+                _object_type_constraints: object_type_constraints,
             },
             e => e,
         })?;
