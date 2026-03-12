@@ -1,0 +1,47 @@
+---
+source: crates/integration-tests/src/tests/local_relationship.rs
+expression: "graphql_query(r#\"\n            query {\n              comments(where: {movie: {imdb: {rating: {_eq: 9.2}}}}, limit: 10, order_by: {id: Asc}) {\n                text\n                movie {\n                  title\n                  year\n                }\n              }\n            }\n            \"#).run().await?"
+---
+data:
+  comments:
+    - text: Odit libero reprehenderit vitae dolore. Consequuntur neque ab eos id quibusdam. Odit laborum ex rem.
+      movie:
+        title: The Godfather
+        year: 1972
+    - text: Minima cupiditate veritatis rerum sequi vitae illum. Ea eos voluptas non adipisci quidem suscipit cum quo. In itaque cum architecto non blanditiis.
+      movie:
+        title: The Godfather
+        year: 1972
+    - text: Enim id inventore magnam hic. Error a nobis earum delectus saepe qui. Tenetur odit facilis ratione voluptates. Aliquid ullam temporibus porro mollitia.
+      movie:
+        title: The Godfather
+        year: 1972
+    - text: Eveniet aliquid et quae consectetur saepe repellendus veritatis voluptates. Harum porro facilis modi in. Dolor architecto vel reiciendis fuga.
+      movie:
+        title: The Godfather
+        year: 1972
+    - text: Aliquid iste eos facere corporis repellendus doloremque. Beatae libero itaque dolorum delectus debitis. Pariatur optio tempora pariatur unde culpa dolores.
+      movie:
+        title: The Godfather
+        year: 1972
+    - text: Doloribus esse quos atque voluptatem nihil libero molestias porro. Accusantium sapiente perferendis quae fugiat dicta. Ab consequuntur dicta blanditiis enim vitae odit tempora.
+      movie:
+        title: The Godfather
+        year: 1972
+    - text: Unde ratione ad nemo eligendi cupiditate aut iusto natus. Consequuntur cum totam laborum rerum dolorum sint. Odit recusandae autem dolorum natus sunt.
+      movie:
+        title: The Godfather
+        year: 1972
+    - text: Veniam doloribus ea cum error. Voluptates voluptatum tempore culpa earum nihil. Voluptate ad asperiores architecto hic.
+      movie:
+        title: The Godfather
+        year: 1972
+    - text: Eveniet voluptate quo quas quia fuga eos quibusdam. Neque molestiae quis assumenda nostrum. Ipsa laudantium esse voluptas recusandae.
+      movie:
+        title: The Godfather
+        year: 1972
+    - text: Mollitia ut sint veniam accusamus quam. Quod ullam voluptatum perspiciatis odio. Non ullam maxime recusandae ipsam possimus sit. Ullam doloribus quisquam at.
+      movie:
+        title: The Godfather
+        year: 1972
+errors: ~

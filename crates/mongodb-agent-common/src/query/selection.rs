@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use mongodb::bson::{doc, Bson, Document};
+use mongodb::bson::{bson, doc, Bson, Document};
 use mongodb_support::aggregate::Selection;
 use ndc_models::FieldName;
 use nonempty::NonEmpty;
@@ -10,6 +10,7 @@ use crate::{
     },
     interface_types::MongoAgentError,
     mongo_query_plan::{Aggregate, Field, Grouping, NestedArray, NestedField, NestedObject},
+    mongodb::sanitize::is_name_safe,
     query::column_ref::ColumnRef,
 };
 
@@ -34,10 +35,11 @@ fn for_fields_helper(
     parent: Option<ColumnRef<'_>>,
     field_selection: &IndexMap<ndc_models::FieldName, Field>,
 ) -> Result<Document, MongoAgentError> {
-    field_selection
+    let selection_doc = field_selection
         .iter()
         .map(|(key, value)| Ok((key.to_string(), selection_for_field(parent.clone(), value)?)))
-        .collect()
+        .collect::<Result<_, MongoAgentError>>()?;
+    Ok(escape_invalid_keys(selection_doc))
 }
 
 /// Wraps column reference with an `$isNull` check. That catches cases where a field is missing
@@ -264,6 +266,27 @@ fn nested_column_reference<'a>(
         Some(parent) => parent.into_nested_field(column.as_ref()),
         None => ColumnRef::from_field_path(NonEmpty::singleton(column)),
     }
+}
+
+/// If any key in our selection document contains invalid characters then we have to switch syntax
+/// to using $setField to escape the field name. Unfortunately this syntax is only capable of
+/// adding _one_ field to an object at a time, so we have to nest invocations of $setField for
+/// every selected field.
+fn escape_invalid_keys(doc: Document) -> Document {
+    if doc.keys().all(is_name_safe) {
+        return doc;
+    }
+    doc.into_iter()
+        .fold(None, |input: Option<Document>, (key, value)| {
+            Some(doc! {
+                "$setField": {
+                    "field": key,
+                    "value": value,
+                    "input": if let Some(prev_doc) = input { prev_doc.into() } else { bson!("$$CURRENT") },
+                }
+            })
+        })
+        .expect("selected at least one field") // safety: if the doc was empty we would have hit the early return
 }
 
 #[cfg(test)]

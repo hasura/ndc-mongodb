@@ -1,0 +1,52 @@
+---
+source: crates/integration-tests/src/tests/filtering.rs
+expression: "graphql_query(r#\"\n            query TestQuery($filter: [MoviesOrderBy!] = {}) {\n              movies(\n                order_by: $filter\n                where: { year: { _gt: 0 }, imdb: { rating: { _gt: 9 } } }\n                limit: 15\n              ) {\n                title\n                year\n                rated\n              }\n            }\n            \"#).variables(json!({\n    \"filter\": [{ \"year\": \"Desc\" }, { \"rated\": \"Desc\" },]\n})).run().await?"
+---
+data:
+  movies:
+    - title: "A Brave Heart: The Lizzie Velasquez Story"
+      year: 2015
+      rated: PG-13
+    - title: The Real Miyagi
+      year: 2015
+      rated: ~
+    - title: Over the Garden Wall
+      year: 2014
+      rated: TV-PG
+    - title: Frozen Planet
+      year: 2011
+      rated: ~
+    - title: Human Planet
+      year: 2011
+      rated: ~
+    - title: Life
+      year: 2009
+      rated: PG
+    - title: Planet Earth
+      year: 2006
+      rated: TV-G
+    - title: Band of Brothers
+      year: 2001
+      rated: TV-MA
+    - title: The Blue Planet
+      year: 2001
+      rated: ~
+    - title: Pride and Prejudice
+      year: 1995
+      rated: ~
+    - title: Baseball
+      year: 1994
+      rated: TV-PG
+    - title: The Shawshank Redemption
+      year: 1994
+      rated: R
+    - title: The Shawshank Redemption
+      year: 1994
+      rated: R
+    - title: The Civil War
+      year: 1990
+      rated: ~
+    - title: The Civil War
+      year: 1990
+      rated: ~
+errors: ~
