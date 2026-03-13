@@ -10,6 +10,12 @@ This changelog documents the changes between release versions.
 
 ### Changed
 
+## [2.0.1] - 2026-03-13
+
+### Fixed
+
+- Bug and release fixes
+
 ## [2.0.0] - 2026-03-12
 
 ### Added
