@@ -10,11 +10,14 @@ use ndc_models::{
     JoinOn, JoinType, NullsSort, OrderDirection, Relation, RelationalExpression, Sort,
 };
 
+use crate::mongo_query_plan::MongoConfiguration;
+
 use super::{
     expression::{translate_aggregate_expression, translate_expression, ExpressionContext},
     normalize_joins::normalize_right_joins,
-    optimize_filters::extract_early_match,
+    optimize_filters::extract_early_match_with_config,
     pushdown_predicates::pushdown_predicates,
+    type_lookup::{literal_to_bson_with_field_type, lookup_field_type},
     ColumnMapping, RelationalError, RelationalPipelineResult,
 };
 
@@ -27,6 +30,13 @@ use super::{
 pub fn build_relational_pipeline(
     relation: &Relation,
 ) -> Result<RelationalPipelineResult, RelationalError> {
+    build_relational_pipeline_with_config(relation, None)
+}
+
+pub fn build_relational_pipeline_with_config(
+    relation: &Relation,
+    config: Option<&MongoConfiguration>,
+) -> Result<RelationalPipelineResult, RelationalError> {
     // Step 1: Normalize right joins to left joins
     let normalized_relation = normalize_right_joins(relation);
 
@@ -34,9 +44,9 @@ pub fn build_relational_pipeline(
     let optimized_relation = pushdown_predicates(&normalized_relation);
 
     // Step 3: Extract early match optimization - generate index-friendly $match if possible
-    let early_match = extract_early_match(&optimized_relation);
+    let early_match = extract_early_match_with_config(&optimized_relation, config);
 
-    let mut ctx = PipelineContext::new();
+    let mut ctx = PipelineContext::new(config);
     build_relation(&optimized_relation, &mut ctx)?;
 
     let collection = ctx.collection.ok_or(RelationalError::NoCollection)?;
@@ -55,7 +65,9 @@ pub fn build_relational_pipeline(
 }
 
 /// Context used while building the pipeline.
-struct PipelineContext {
+struct PipelineContext<'a> {
+    /// Connector configuration used to resolve field types for literal coercion.
+    config: Option<&'a MongoConfiguration>,
     /// The collection to query (set by From relation).
     collection: Option<String>,
     /// Current column mapping.
@@ -64,9 +76,10 @@ struct PipelineContext {
     stages: Vec<Stage>,
 }
 
-impl PipelineContext {
-    fn new() -> Self {
+impl<'a> PipelineContext<'a> {
+    fn new(config: Option<&'a MongoConfiguration>) -> Self {
         Self {
+            config,
             collection: None,
             column_mapping: ColumnMapping::default(),
             stages: Vec::new(),
@@ -75,7 +88,10 @@ impl PipelineContext {
 }
 
 /// Recursively build the pipeline from a relation node.
-fn build_relation(relation: &Relation, ctx: &mut PipelineContext) -> Result<(), RelationalError> {
+fn build_relation(
+    relation: &Relation,
+    ctx: &mut PipelineContext<'_>,
+) -> Result<(), RelationalError> {
     match relation {
         Relation::From {
             collection,
@@ -132,7 +148,7 @@ fn build_relation(relation: &Relation, ctx: &mut PipelineContext) -> Result<(), 
 fn build_from(
     collection: &ndc_models::CollectionName,
     columns: &[ndc_models::FieldName],
-    ctx: &mut PipelineContext,
+    ctx: &mut PipelineContext<'_>,
 ) -> Result<(), RelationalError> {
     ctx.collection = Some(collection.to_string());
     ctx.column_mapping = ColumnMapping::new(columns.iter().map(|c| c.as_str()));
@@ -147,10 +163,15 @@ fn build_from(
 /// back to using `$expr` which is less index-friendly.
 fn build_filter(
     predicate: &RelationalExpression,
-    ctx: &mut PipelineContext,
+    ctx: &mut PipelineContext<'_>,
 ) -> Result<(), RelationalError> {
     // Try to generate a query document first (more index-friendly)
-    if let Some(query_doc) = try_make_query_document(predicate, &ctx.column_mapping) {
+    if let Some(query_doc) = try_make_query_document(
+        predicate,
+        &ctx.column_mapping,
+        ctx.collection.as_deref(),
+        ctx.config,
+    ) {
         ctx.stages.push(Stage::Match(query_doc));
         return Ok(());
     }
@@ -170,6 +191,8 @@ fn build_filter(
 fn try_make_query_document(
     predicate: &RelationalExpression,
     column_mapping: &ColumnMapping,
+    collection: Option<&str>,
+    config: Option<&MongoConfiguration>,
 ) -> Option<Document> {
     match predicate {
         // Binary comparisons: column/getfield op literal
@@ -183,7 +206,7 @@ fn try_make_query_document(
             let field_path = extract_field_path(left, column_mapping)?;
 
             // Right side should be a literal
-            let value = literal_to_bson(right)?;
+            let value = literal_to_bson(right, collection, config, &field_path)?;
 
             // Determine the operator
             let operator = match predicate {
@@ -201,15 +224,15 @@ fn try_make_query_document(
 
         // Logical AND: all sub-expressions must be convertible
         RelationalExpression::And { left, right } => {
-            let left_doc = try_make_query_document(left, column_mapping)?;
-            let right_doc = try_make_query_document(right, column_mapping)?;
+            let left_doc = try_make_query_document(left, column_mapping, collection, config)?;
+            let right_doc = try_make_query_document(right, column_mapping, collection, config)?;
             Some(doc! { "$and": [left_doc, right_doc] })
         }
 
         // Logical OR: all sub-expressions must be convertible
         RelationalExpression::Or { left, right } => {
-            let left_doc = try_make_query_document(left, column_mapping)?;
-            let right_doc = try_make_query_document(right, column_mapping)?;
+            let left_doc = try_make_query_document(left, column_mapping, collection, config)?;
+            let right_doc = try_make_query_document(right, column_mapping, collection, config)?;
             Some(doc! { "$or": [left_doc, right_doc] })
         }
 
@@ -254,26 +277,20 @@ fn extract_field_path(
 }
 
 /// Convert a literal RelationalExpression to Bson.
-fn literal_to_bson(expr: &RelationalExpression) -> Option<Bson> {
-    use ndc_models::{Float32, Float64, RelationalLiteral};
-
+fn literal_to_bson(
+    expr: &RelationalExpression,
+    collection: Option<&str>,
+    config: Option<&MongoConfiguration>,
+    field_path: &str,
+) -> Option<Bson> {
     let RelationalExpression::Literal { literal } = expr else {
         return None;
     };
 
-    match literal {
-        RelationalLiteral::Boolean { value } => Some(Bson::Boolean(*value)),
-        RelationalLiteral::String { value } => Some(Bson::String(value.clone())),
-        RelationalLiteral::Int8 { value } => Some(Bson::Int32(i32::from(*value))),
-        RelationalLiteral::Int16 { value } => Some(Bson::Int32(i32::from(*value))),
-        RelationalLiteral::Int32 { value } => Some(Bson::Int32(*value)),
-        RelationalLiteral::Int64 { value } => Some(Bson::Int64(*value)),
-        RelationalLiteral::Float32 { value: Float32(v) } => Some(Bson::Double(f64::from(*v))),
-        RelationalLiteral::Float64 { value: Float64(v) } => Some(Bson::Double(*v)),
-        RelationalLiteral::Null => Some(Bson::Null),
-        // For other types, fall back to $expr
-        _ => None,
-    }
+    let field_type =
+        collection.and_then(|name| config.and_then(|cfg| lookup_field_type(cfg, name, field_path)));
+
+    literal_to_bson_with_field_type(literal, field_type)
 }
 
 /// Check if an expression is a simple field reference (Column or GetField chain on a Column).
@@ -307,7 +324,7 @@ fn needs_null_sort_key(direction: &OrderDirection, nulls_sort: &NullsSort) -> bo
 ///
 /// When `nulls_sort` doesn't match MongoDB's default behavior, we add computed
 /// null-ordering keys that sort nulls to the correct position.
-fn build_sort(sort_exprs: &[Sort], ctx: &mut PipelineContext) -> Result<(), RelationalError> {
+fn build_sort(sort_exprs: &[Sort], ctx: &mut PipelineContext<'_>) -> Result<(), RelationalError> {
     let expr_ctx = ExpressionContext::new(&ctx.column_mapping);
 
     // Check if we have any complex expressions or non-default null sorting
@@ -407,7 +424,7 @@ fn build_sort(sort_exprs: &[Sort], ctx: &mut PipelineContext) -> Result<(), Rela
 fn build_paginate(
     fetch: Option<u64>,
     skip: u64,
-    ctx: &mut PipelineContext,
+    ctx: &mut PipelineContext<'_>,
 ) -> Result<(), RelationalError> {
     if skip > 0 {
         let skip_i64 = i64::try_from(skip).map_err(|_| {
@@ -430,7 +447,7 @@ fn build_paginate(
 fn build_project(
     input: &Relation,
     exprs: &[RelationalExpression],
-    ctx: &mut PipelineContext,
+    ctx: &mut PipelineContext<'_>,
 ) -> Result<(), RelationalError> {
     build_relation(input, ctx)?;
 
@@ -478,7 +495,7 @@ fn extract_column_field(
 fn build_aggregate(
     group_by: &[RelationalExpression],
     aggregates: &[RelationalExpression],
-    ctx: &mut PipelineContext,
+    ctx: &mut PipelineContext<'_>,
 ) -> Result<(), RelationalError> {
     let expr_ctx = ExpressionContext::new(&ctx.column_mapping);
 
@@ -691,29 +708,32 @@ fn bson_to_accumulator(bson: Bson) -> Result<Accumulator, RelationalError> {
     }
 }
 
-/// Information about the right side of a join (must be a From relation).
-struct JoinRightInfo {
-    collection: String,
-    columns: Vec<String>,
-}
-
 /// Build a Join relation.
 fn build_join(
     left: &Relation,
     right: &Relation,
     on: &[JoinOn],
     join_type: &JoinType,
-    ctx: &mut PipelineContext,
+    ctx: &mut PipelineContext<'_>,
 ) -> Result<(), RelationalError> {
     // Build left pipeline first (this sets the collection context)
     build_relation(left, ctx)?;
     let left_column_count = ctx.column_mapping.len();
 
-    // Extract right collection info (must be a From relation)
-    let right_info = extract_join_right_info(right)?;
+    // Build the full right relation into the lookup pipeline so we preserve
+    // projections, filters, casts, and any other shaping applied by the SQL planner.
+    let mut right_ctx = PipelineContext::new(ctx.config);
+    build_relation(right, &mut right_ctx)?;
+    let right_collection = right_ctx.collection.ok_or(RelationalError::NoCollection)?;
 
     // Build the $lookup stage with join conditions
-    let lookup_stage = build_lookup_stage(&ctx.column_mapping, &right_info, on)?;
+    let lookup_stage = build_lookup_stage(
+        &ctx.column_mapping,
+        &right_collection,
+        &right_ctx.column_mapping,
+        right_ctx.stages,
+        on,
+    )?;
     ctx.stages.push(lookup_stage);
 
     // Apply join-type-specific logic
@@ -727,11 +747,11 @@ fn build_join(
             });
 
             // Add $project to remap columns
-            let project = build_join_project(&ctx.column_mapping, &right_info.columns)?;
+            let project = build_join_project(&ctx.column_mapping, &right_ctx.column_mapping)?;
             ctx.stages.push(Stage::Project(project));
 
             // Update column mapping
-            update_join_column_mapping(ctx, left_column_count, &right_info.columns);
+            update_join_column_mapping(ctx, left_column_count, &right_ctx.column_mapping);
         }
         JoinType::Inner => {
             // $unwind without preserveNullAndEmptyArrays filters out non-matches
@@ -742,11 +762,11 @@ fn build_join(
             });
 
             // Add $project to remap columns
-            let project = build_join_project(&ctx.column_mapping, &right_info.columns)?;
+            let project = build_join_project(&ctx.column_mapping, &right_ctx.column_mapping)?;
             ctx.stages.push(Stage::Project(project));
 
             // Update column mapping
-            update_join_column_mapping(ctx, left_column_count, &right_info.columns);
+            update_join_column_mapping(ctx, left_column_count, &right_ctx.column_mapping);
         }
         JoinType::LeftSemi => {
             // Keep rows where _joined is non-empty, but only output left columns
@@ -781,41 +801,26 @@ fn build_join(
     Ok(())
 }
 
-/// Extract collection info from the right side of a join.
-/// The right side must be a From relation.
-fn extract_join_right_info(relation: &Relation) -> Result<JoinRightInfo, RelationalError> {
-    match relation {
-        Relation::From {
-            collection,
-            columns,
-            ..
-        } => Ok(JoinRightInfo {
-            collection: collection.to_string(),
-            columns: columns.iter().map(|c| c.to_string()).collect(),
-        }),
-        other => Err(RelationalError::InvalidJoinRightSide(format!(
-            "{:?}",
-            std::mem::discriminant(other)
-        ))),
-    }
-}
-
 /// Build the $lookup stage for a join.
 fn build_lookup_stage(
     left_columns: &ColumnMapping,
-    right_info: &JoinRightInfo,
+    right_collection: &str,
+    right_columns: &ColumnMapping,
+    mut right_pipeline_stages: Vec<Stage>,
     on: &[JoinOn],
 ) -> Result<Stage, RelationalError> {
     // Build `let` clause - pass left column values as variables
     let let_vars = build_let_variables(left_columns, on)?;
 
-    // Build pipeline with $match using $expr
-    let match_expr = build_join_match_expr(right_info, on)?;
+    // Build the join predicate against the right relation's output schema and
+    // append it after any right-side shaping stages.
+    let match_expr = build_join_match_expr(right_columns, on)?;
+    right_pipeline_stages.push(Stage::Match(doc! { "$expr": match_expr }));
 
-    let lookup_pipeline = Pipeline::new(vec![Stage::Match(doc! { "$expr": match_expr })]);
+    let lookup_pipeline = Pipeline::new(right_pipeline_stages);
 
     Ok(Stage::Lookup {
-        from: Some(right_info.collection.clone()),
+        from: Some(right_collection.to_string()),
         local_field: None,
         foreign_field: None,
         r#let: Some(let_vars),
@@ -851,17 +856,15 @@ fn build_let_variables(
 /// Build the $match expression for the lookup pipeline.
 /// This compares right-side columns to left-side variables.
 fn build_join_match_expr(
-    right_info: &JoinRightInfo,
+    right_columns: &ColumnMapping,
     on: &[JoinOn],
 ) -> Result<Bson, RelationalError> {
-    let right_column_mapping = ColumnMapping::new(right_info.columns.iter().map(|s| s.as_str()));
-
     let conditions: Result<Vec<Bson>, RelationalError> = on
         .iter()
         .enumerate()
         .map(|(i, join_on)| {
             // Translate the right expression using right-side column mapping
-            let ctx = ExpressionContext::new(&right_column_mapping);
+            let ctx = ExpressionContext::new(right_columns);
             let right_expr = translate_expression(&join_on.right, &ctx)?;
 
             // Left side is referenced via variable
@@ -886,7 +889,7 @@ fn build_join_match_expr(
 /// Left columns keep their names, right columns are extracted from _joined.
 fn build_join_project(
     left_columns: &ColumnMapping,
-    right_columns: &[String],
+    right_columns: &ColumnMapping,
 ) -> Result<Document, RelationalError> {
     let mut project_doc = Document::new();
     project_doc.insert("_id", 0);
@@ -905,7 +908,7 @@ fn build_join_project(
     // Right columns get offset indices
     for (i, right_col) in right_columns.iter().enumerate() {
         let field_name = format!("col_{}", left_count + i);
-        project_doc.insert(&field_name, format!("$_joined.{}", right_col));
+        project_doc.insert(&field_name, format!("$_joined.{right_col}"));
     }
 
     Ok(project_doc)
@@ -930,9 +933,9 @@ fn build_semi_anti_project(left_columns: &ColumnMapping) -> Result<Document, Rel
 
 /// Update the column mapping after a join to include right columns.
 fn update_join_column_mapping(
-    ctx: &mut PipelineContext,
+    ctx: &mut PipelineContext<'_>,
     left_count: usize,
-    right_columns: &[String],
+    right_columns: &ColumnMapping,
 ) {
     // Create new mapping with positional names for all columns
     let total_columns = left_count + right_columns.len();
@@ -957,7 +960,7 @@ struct WindowSpec {
 /// Build the Window relation.
 fn build_window(
     exprs: &[RelationalExpression],
-    ctx: &mut PipelineContext,
+    ctx: &mut PipelineContext<'_>,
 ) -> Result<(), RelationalError> {
     let input_column_count = ctx.column_mapping.len();
 
@@ -1120,7 +1123,10 @@ fn translate_window_order_by(
 /// Union combines results from multiple relations into a single result set.
 /// The first relation determines the base collection; subsequent relations
 /// are added using `$unionWith` stages.
-fn build_union(relations: &[Relation], ctx: &mut PipelineContext) -> Result<(), RelationalError> {
+fn build_union(
+    relations: &[Relation],
+    ctx: &mut PipelineContext<'_>,
+) -> Result<(), RelationalError> {
     if relations.is_empty() {
         return Err(RelationalError::InvalidUnion(
             "Union requires at least one relation".to_string(),
@@ -1136,7 +1142,7 @@ fn build_union(relations: &[Relation], ctx: &mut PipelineContext) -> Result<(), 
     // For each additional relation, add $unionWith
     for (i, relation) in relations.iter().enumerate().skip(1) {
         // Build the relation in a fresh context to get its pipeline
-        let union_result = build_relational_pipeline(relation)?;
+        let union_result = build_relational_pipeline_with_config(relation, ctx.config)?;
 
         // Verify column counts match
         if union_result.output_columns.len() != first_column_count {

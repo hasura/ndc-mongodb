@@ -12,12 +12,16 @@ mod normalize_joins;
 mod optimize_filters;
 mod pipeline_builder;
 mod pushdown_predicates;
+mod type_lookup;
 mod types;
 
 pub use column_mapping::ColumnMapping;
 pub use column_origin::{trace_column_origin, ColumnOrigin};
 pub use error::RelationalError;
-pub use execute::{execute_relational_query, execute_relational_query_stream};
+pub use execute::{
+    execute_relational_query, execute_relational_query_stream,
+    execute_relational_query_stream_with_config, execute_relational_query_with_config,
+};
 pub use normalize_joins::{column_count, normalize_right_joins};
 pub use optimize_filters::{extract_early_match, EarlyMatchResult};
 pub use pipeline_builder::build_relational_pipeline;
