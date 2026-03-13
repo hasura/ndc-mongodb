@@ -7,15 +7,28 @@ use tracing::Instrument;
 
 use crate::{
     interface_types::MongoAgentError,
+    mongo_query_plan::MongoConfiguration,
     mongodb::{CollectionTrait, DatabaseTrait},
     state::ConnectorState,
 };
 
-use super::{build_relational_pipeline, ColumnMapping, RelationalError};
+use super::{
+    pipeline_builder::build_relational_pipeline_with_config, build_relational_pipeline,
+    ColumnMapping, RelationalError,
+};
 
 /// Execute a relational query and return all rows.
 pub async fn execute_relational_query(
     state: &ConnectorState,
+    query: RelationalQuery,
+) -> Result<RelationalQueryResponse, MongoAgentError> {
+    execute_relational_query_with_config(state, None, query).await
+}
+
+/// Execute a relational query with connector configuration available for type-aware coercions.
+pub async fn execute_relational_query_with_config(
+    state: &ConnectorState,
+    config: Option<&MongoConfiguration>,
     query: RelationalQuery,
 ) -> Result<RelationalQueryResponse, MongoAgentError> {
     tracing::debug!(
@@ -24,16 +37,22 @@ pub async fn execute_relational_query(
     );
 
     let database = state.database();
-    execute_relational_query_impl(database, query).await
+    execute_relational_query_impl(database, config, query).await
 }
 
 /// Internal implementation that accepts a database trait for testing.
 async fn execute_relational_query_impl(
     database: impl DatabaseTrait,
+    config: Option<&MongoConfiguration>,
     query: RelationalQuery,
 ) -> Result<RelationalQueryResponse, MongoAgentError> {
-    let pipeline_result =
-        build_relational_pipeline(&query.root_relation).map_err(relational_error)?;
+    let pipeline_result = match config {
+        Some(config) => {
+            build_relational_pipeline_with_config(&query.root_relation, Some(config))
+                .map_err(relational_error)?
+        }
+        None => build_relational_pipeline(&query.root_relation).map_err(relational_error)?,
+    };
 
     tracing::debug!(
         collection = %pipeline_result.collection,
@@ -65,22 +84,37 @@ pub async fn execute_relational_query_stream(
     state: &ConnectorState,
     query: RelationalQuery,
 ) -> Result<impl Stream<Item = Result<Vec<serde_json::Value>, MongoAgentError>>, MongoAgentError> {
+    execute_relational_query_stream_with_config(state, None, query).await
+}
+
+/// Execute a relational query stream with connector configuration available for type-aware coercions.
+pub async fn execute_relational_query_stream_with_config(
+    state: &ConnectorState,
+    config: Option<&MongoConfiguration>,
+    query: RelationalQuery,
+) -> Result<impl Stream<Item = Result<Vec<serde_json::Value>, MongoAgentError>>, MongoAgentError> {
     tracing::debug!(
         relational_query = %serde_json::to_string(&query).unwrap_or_else(|_| "<serialization error>".to_string()),
         "relational query stream request"
     );
 
     let database = state.database();
-    execute_relational_query_stream_impl(database, query).await
+    execute_relational_query_stream_impl(database, config, query).await
 }
 
 /// Internal implementation that accepts a database trait for testing.
 async fn execute_relational_query_stream_impl(
     database: impl DatabaseTrait,
+    config: Option<&MongoConfiguration>,
     query: RelationalQuery,
 ) -> Result<impl Stream<Item = Result<Vec<serde_json::Value>, MongoAgentError>>, MongoAgentError> {
-    let pipeline_result =
-        build_relational_pipeline(&query.root_relation).map_err(relational_error)?;
+    let pipeline_result = match config {
+        Some(config) => {
+            build_relational_pipeline_with_config(&query.root_relation, Some(config))
+                .map_err(relational_error)?
+        }
+        None => build_relational_pipeline(&query.root_relation).map_err(relational_error)?,
+    };
 
     tracing::debug!(
         collection = %pipeline_result.collection,

@@ -2,14 +2,15 @@
 
 use std::collections::BTreeMap;
 
-use mongodb::bson::{doc, Bson};
+use mongodb::bson::{doc, oid::ObjectId, Bson};
 use mongodb_support::aggregate::{Accumulator, SortDocument, Stage};
 use ndc_models::{
-    ArgumentName, Float64, JoinOn, JoinType, NullsSort, OrderDirection, Relation,
+    ArgumentName, CastType, Float64, JoinOn, JoinType, NullsSort, OrderDirection, Relation,
     RelationalExpression, RelationalLiteral, Sort,
 };
 
 use crate::relational::build_relational_pipeline;
+use crate::{relational::pipeline_builder::build_relational_pipeline_with_config, test_helpers::mflix_config};
 
 #[test]
 fn builds_pipeline_for_from_relation() {
@@ -2586,4 +2587,349 @@ fn sort_with_default_nulls_sort_has_no_null_order_key() {
         result.pipeline.stages[0],
         Stage::Sort(SortDocument(doc! { "value": 1 }))
     );
+}
+
+#[test]
+fn left_join_with_project_on_right_side() {
+    // When the SQL planner wraps the right side of a join in Project,
+    // the lookup pipeline must preserve that projection instead of joining
+    // against the raw collection schema.
+    let relation = Relation::Join {
+        left: Box::new(Relation::From {
+            collection: "movies".into(),
+            columns: vec!["_id".into(), "title".into()],
+            arguments: Default::default(),
+        }),
+        right: Box::new(Relation::Project {
+            input: Box::new(Relation::From {
+                collection: "comments".into(),
+                columns: vec!["email".into(), "text".into(), "movie_id".into()],
+                arguments: Default::default(),
+            }),
+            exprs: vec![
+                RelationalExpression::Column { index: 0 },
+                RelationalExpression::Column { index: 1 },
+                RelationalExpression::Column { index: 2 },
+            ],
+        }),
+        on: vec![JoinOn {
+            left: RelationalExpression::Column { index: 0 },
+            right: RelationalExpression::Column { index: 2 },
+        }],
+        join_type: JoinType::Left,
+    };
+
+    let result = build_relational_pipeline(&relation).unwrap();
+
+    assert_eq!(result.collection, "movies");
+    assert_eq!(result.pipeline.stages.len(), 3); // $lookup, $unwind, $project
+
+    // Check $lookup stage references the correct collection
+    match &result.pipeline.stages[0] {
+        Stage::Lookup {
+            from,
+            r#as,
+            pipeline,
+            ..
+        } => {
+            assert_eq!(from.as_deref(), Some("comments"));
+            assert_eq!(r#as, "_joined");
+            let pipeline = pipeline.as_ref().expect("lookup pipeline should be present");
+            assert_eq!(pipeline.stages.len(), 2);
+            assert_eq!(
+                pipeline.stages[0],
+                Stage::Project(doc! {
+                    "_id": 0,
+                    "col_0": "$email",
+                    "col_1": "$text",
+                    "col_2": "$movie_id"
+                })
+            );
+            assert_eq!(
+                pipeline.stages[1],
+                Stage::Match(doc! {
+                    "$expr": {
+                        "$eq": ["$col_2", "$$left_0"]
+                    }
+                })
+            );
+        }
+        other => panic!("Expected Lookup stage, got {:?}", other),
+    }
+}
+
+#[test]
+fn nested_left_joins_with_project_on_right() {
+    // Simulates a query like:
+    //   SELECT m._id, m.title, c.email, c.text, cm._id, cm.title
+    //   FROM movies m
+    //   LEFT JOIN comments c ON c.movie_id = m._id
+    //   LEFT JOIN movies cm ON cm._id = c.movie_id
+    // where the SQL planner wraps the right side of the second join in Project.
+    let inner_join = Relation::Join {
+        left: Box::new(Relation::From {
+            collection: "movies".into(),
+            columns: vec!["_id".into(), "title".into()],
+            arguments: Default::default(),
+        }),
+        right: Box::new(Relation::From {
+            collection: "comments".into(),
+            columns: vec!["email".into(), "text".into(), "movie_id".into()],
+            arguments: Default::default(),
+        }),
+        on: vec![JoinOn {
+            left: RelationalExpression::Column { index: 0 },
+            right: RelationalExpression::Column { index: 2 },
+        }],
+        join_type: JoinType::Left,
+    };
+
+    let relation = Relation::Join {
+        left: Box::new(inner_join),
+        right: Box::new(Relation::Project {
+            input: Box::new(Relation::From {
+                collection: "movies".into(),
+                columns: vec!["_id".into(), "title".into()],
+                arguments: Default::default(),
+            }),
+            exprs: vec![
+                RelationalExpression::Column { index: 0 },
+                RelationalExpression::Column { index: 1 },
+            ],
+        }),
+        on: vec![JoinOn {
+            left: RelationalExpression::Column { index: 4 },
+            right: RelationalExpression::Column { index: 0 },
+        }],
+        join_type: JoinType::Left,
+    };
+
+    let result = build_relational_pipeline(&relation).unwrap();
+
+    assert_eq!(result.collection, "movies");
+    // First join: $lookup, $unwind, $project = 3 stages
+    // Second join: $lookup, $unwind, $project = 3 stages
+    assert_eq!(result.pipeline.stages.len(), 6);
+
+    // Check second $lookup references the correct collection
+    match &result.pipeline.stages[3] {
+        Stage::Lookup {
+            from,
+            r#as,
+            pipeline,
+            ..
+        } => {
+            assert_eq!(from.as_deref(), Some("movies"));
+            assert_eq!(r#as, "_joined");
+            let pipeline = pipeline.as_ref().expect("lookup pipeline should be present");
+            assert_eq!(pipeline.stages.len(), 2);
+            assert_eq!(
+                pipeline.stages[0],
+                Stage::Project(doc! {
+                    "_id": 0,
+                    "col_0": "$_id",
+                    "col_1": "$title"
+                })
+            );
+            assert_eq!(
+                pipeline.stages[1],
+                Stage::Match(doc! {
+                    "$expr": {
+                        "$eq": ["$col_0", "$$left_0"]
+                    }
+                })
+            );
+        }
+        other => panic!("Expected Lookup stage at index 3, got {:?}", other),
+    }
+}
+
+#[test]
+fn left_join_with_filter_on_right_side_keeps_filter_inside_lookup() {
+    let relation = Relation::Join {
+        left: Box::new(Relation::From {
+            collection: "movies".into(),
+            columns: vec!["_id".into(), "title".into()],
+            arguments: Default::default(),
+        }),
+        right: Box::new(Relation::Filter {
+            input: Box::new(Relation::From {
+                collection: "comments".into(),
+                columns: vec!["movie_id".into(), "email".into()],
+                arguments: Default::default(),
+            }),
+            predicate: RelationalExpression::Eq {
+                left: Box::new(RelationalExpression::Column { index: 1 }),
+                right: Box::new(RelationalExpression::Literal {
+                    literal: RelationalLiteral::String {
+                        value: "ned@example.com".into(),
+                    },
+                }),
+            },
+        }),
+        on: vec![JoinOn {
+            left: RelationalExpression::Column { index: 0 },
+            right: RelationalExpression::Column { index: 0 },
+        }],
+        join_type: JoinType::Left,
+    };
+
+    let result = build_relational_pipeline(&relation).unwrap();
+
+    match &result.pipeline.stages[0] {
+        Stage::Lookup { pipeline, .. } => {
+            let pipeline = pipeline.as_ref().expect("lookup pipeline should be present");
+            assert_eq!(pipeline.stages.len(), 2);
+            assert_eq!(
+                pipeline.stages[0],
+                Stage::Match(doc! { "email": { "$eq": "ned@example.com" } })
+            );
+            assert_eq!(
+                pipeline.stages[1],
+                Stage::Match(doc! {
+                    "$expr": {
+                        "$eq": ["$movie_id", "$$left_0"]
+                    }
+                })
+            );
+        }
+        other => panic!("Expected Lookup stage, got {:?}", other),
+    }
+}
+
+#[test]
+fn coerces_object_id_string_literal_when_filtering_raw_field() {
+    let relation = Relation::Filter {
+        input: Box::new(Relation::From {
+            collection: "comments".into(),
+            columns: vec!["_id".into(), "movie_id".into()],
+            arguments: Default::default(),
+        }),
+        predicate: RelationalExpression::Eq {
+            left: Box::new(RelationalExpression::Column { index: 0 }),
+            right: Box::new(RelationalExpression::Literal {
+                literal: RelationalLiteral::String {
+                    value: "5a9427648b0beebeb69579cc".into(),
+                },
+            }),
+        },
+    };
+
+    let config = mflix_config();
+    let result = build_relational_pipeline_with_config(&relation, Some(&config)).unwrap();
+    let expected_id = ObjectId::parse_str("5a9427648b0beebeb69579cc").unwrap();
+
+    assert_eq!(result.collection, "comments");
+    assert_eq!(result.pipeline.stages.len(), 2);
+    assert_eq!(
+        result.pipeline.stages[0],
+        Stage::Match(doc! { "_id": { "$eq": expected_id } })
+    );
+    assert_eq!(
+        result.pipeline.stages[1],
+        Stage::Match(doc! { "_id": { "$eq": expected_id } })
+    );
+}
+
+#[test]
+fn left_join_with_cast_on_right_side_keeps_cast_inside_lookup() {
+    let relation = Relation::Join {
+        left: Box::new(Relation::Project {
+            input: Box::new(Relation::From {
+                collection: "comments".into(),
+                columns: vec!["movie_id".into()],
+                arguments: Default::default(),
+            }),
+            exprs: vec![RelationalExpression::Cast {
+                expr: Box::new(RelationalExpression::Column { index: 0 }),
+                from_type: None,
+                as_type: CastType::Utf8,
+            }],
+        }),
+        right: Box::new(Relation::Project {
+            input: Box::new(Relation::From {
+                collection: "movies".into(),
+                columns: vec!["_id".into(), "title".into()],
+                arguments: Default::default(),
+            }),
+            exprs: vec![
+                RelationalExpression::Cast {
+                    expr: Box::new(RelationalExpression::Column { index: 0 }),
+                    from_type: None,
+                    as_type: CastType::Utf8,
+                },
+                RelationalExpression::Column { index: 1 },
+            ],
+        }),
+        on: vec![JoinOn {
+            left: RelationalExpression::Column { index: 0 },
+            right: RelationalExpression::Column { index: 0 },
+        }],
+        join_type: JoinType::Left,
+    };
+
+    let result = build_relational_pipeline(&relation).unwrap();
+
+    assert_eq!(result.pipeline.stages.len(), 4);
+    assert_eq!(
+        result.pipeline.stages[0],
+        Stage::Project(doc! {
+            "_id": 0,
+            "col_0": {
+                "$cond": {
+                    "if": {
+                        "$or": [
+                            { "$isArray": "$movie_id" },
+                            { "$eq": [{ "$type": "$movie_id" }, "object"] }
+                        ]
+                    },
+                    "then": "$movie_id",
+                    "else": { "$toString": "$movie_id" }
+                }
+            }
+        })
+    );
+
+    match &result.pipeline.stages[1] {
+        Stage::Lookup {
+            from,
+            r#as,
+            pipeline,
+            ..
+        } => {
+            assert_eq!(from.as_deref(), Some("movies"));
+            assert_eq!(r#as, "_joined");
+
+            let pipeline = pipeline.as_ref().expect("lookup pipeline should be present");
+            assert_eq!(pipeline.stages.len(), 2);
+            assert_eq!(
+                pipeline.stages[0],
+                Stage::Project(doc! {
+                    "_id": 0,
+                    "col_0": {
+                        "$cond": {
+                            "if": {
+                                "$or": [
+                                    { "$isArray": "$_id" },
+                                    { "$eq": [{ "$type": "$_id" }, "object"] }
+                                ]
+                            },
+                            "then": "$_id",
+                            "else": { "$toString": "$_id" }
+                        }
+                    },
+                    "col_1": "$title"
+                })
+            );
+            assert_eq!(
+                pipeline.stages[1],
+                Stage::Match(doc! {
+                    "$expr": {
+                        "$eq": ["$col_0", "$$left_0"]
+                    }
+                })
+            );
+        }
+        other => panic!("Expected Lookup stage, got {:?}", other),
+    }
 }

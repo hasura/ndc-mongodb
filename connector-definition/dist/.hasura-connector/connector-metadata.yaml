@@ -1,0 +1,67 @@
+version: v2
+ndcSpecGeneration: v0.2
+packagingDefinition:
+  type: PrebuiltDockerImage
+  dockerImage: ghcr.io/hasura/ndc-mongodb:v2.0.0
+supportedEnvironmentVariables:
+  - name: MONGODB_DATABASE_URI
+    description: The URI for the MongoDB database
+nativeToolchainDefinition:
+  commands:
+    start:
+      type: ShellScript
+      bash: |
+        #!/usr/bin/env bash
+        set -eu -o pipefail        
+        HASURA_CONFIGURATION_DIRECTORY="$HASURA_PLUGIN_CONNECTOR_CONTEXT_PATH" "$HASURA_DDN_NATIVE_CONNECTOR_DIR/mongodb-connector" serve
+      powershell: |
+        $ErrorActionPreference = "Stop"
+        $env:HASURA_CONFIGURATION_DIRECTORY="$env:HASURA_PLUGIN_CONNECTOR_CONTEXT_PATH"; & "$env:HASURA_DDN_NATIVE_CONNECTOR_DIR\mongodb-connector.exe" serve
+    update:
+      type: ShellScript
+      bash: |
+        #!/usr/bin/env bash
+        set -eu -o pipefail
+        "$HASURA_DDN_NATIVE_CONNECTOR_PLUGIN_DIR/hasura-ndc-mongodb" update
+      powershell: |
+        $ErrorActionPreference = "Stop"
+        & "$env:HASURA_DDN_NATIVE_CONNECTOR_PLUGIN_DIR\hasura-ndc-mongodb.exe" update
+    watch:
+      type: ShellScript
+      bash: |
+        #!/usr/bin/env bash
+        echo "Watch is not supported for this connector"
+        exit 1
+      powershell: |
+        Write-Output "Watch is not supported for this connector"
+        exit 1
+commands:
+  update: hasura-ndc-mongodb update
+cliPlugin:
+  type: BinaryInline
+  platforms:
+    - selector: darwin-arm64
+      uri: "https://github.com/hasura/ndc-mongodb/releases/download/v2.0.0/mongodb-cli-plugin-aarch64-apple-darwin"
+      sha256: "5204faf81c9548c5bba79be5a04b59e2d1968b8b802f37984ef9e0cf8441ac1d"
+      bin: "hasura-ndc-mongodb"
+    - selector: linux-arm64
+      uri: "https://github.com/hasura/ndc-mongodb/releases/download/v2.0.0/mongodb-cli-plugin-aarch64-unknown-linux-musl"
+      sha256: "f252e651f2450a6373a306d21602a2b6ff991613027f7c404570a4fe8ba64831"
+      bin: "hasura-ndc-mongodb"
+    - selector: darwin-amd64
+      uri: "https://github.com/hasura/ndc-mongodb/releases/download/v2.0.0/mongodb-cli-plugin-x86_64-apple-darwin"
+      sha256: "4696d05d7e0afe82c5f5ff6e12fdae078c32104df31e2a857d55718b6dd6c879"
+      bin: "hasura-ndc-mongodb"
+    - selector: windows-amd64
+      uri: "https://github.com/hasura/ndc-mongodb/releases/download/v2.0.0/mongodb-cli-plugin-x86_64-pc-windows-msvc.exe"
+      sha256: "98c35fcc38e098984862ef7fb5dfd7429660ba72d176e46fe70537fc0369f8ce"
+      bin: "hasura-ndc-mongodb.exe"
+    - selector: linux-amd64
+      uri: "https://github.com/hasura/ndc-mongodb/releases/download/v2.0.0/mongodb-cli-plugin-x86_64-unknown-linux-musl"
+      sha256: "256dea1268c59ae4043ae4fee5f9a97fad6d03f4ba66ca6762c854269b368d12"
+      bin: "hasura-ndc-mongodb"
+dockerComposeWatch:
+  - path: ./
+    target: /etc/connector
+    action: sync+restart
+documentationPage: "https://hasura.info/mongodb-getting-started"

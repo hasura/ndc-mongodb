@@ -14,7 +14,7 @@ use mongodb_agent_common::{
     interface_types::MongoAgentError,
     mongo_query_plan::MongoConfiguration,
     query::handle_query_request,
-    relational::{execute_relational_query, execute_relational_query_stream},
+    relational::{execute_relational_query_stream_with_config, execute_relational_query_with_config},
     state::{self, ConnectorState},
 };
 use ndc_sdk::{
@@ -283,11 +283,14 @@ impl Connector for MongoConnector {
 
     #[instrument(name = "/query/relational", err, skip_all, fields(internal.visibility = "user"))]
     async fn query_relational(
-        _configuration: &Self::Configuration,
+        configuration: &Self::Configuration,
         state: &Self::State,
         request: RelationalQuery,
     ) -> connector::Result<JsonResponse<RelationalQueryResponse>> {
-        let response = execute_relational_query(state, request)
+        let collection_names = collect_relational_collection_names(&request.root_relation);
+        let name_refs: Vec<&str> = collection_names.iter().map(|s| s.as_str()).collect();
+        let config = configuration.resolve_for_collections(&name_refs).await?;
+        let response = execute_relational_query_with_config(state, Some(&config), request)
             .await
             .map_err(map_mongo_agent_error)?;
         Ok(response.into())
@@ -295,11 +298,14 @@ impl Connector for MongoConnector {
 
     #[instrument(name = "/query/relational/stream", err, skip_all, fields(internal.visibility = "user"))]
     async fn query_relational_stream(
-        _configuration: &Self::Configuration,
+        configuration: &Self::Configuration,
         state: &Self::State,
         request: RelationalQuery,
     ) -> connector::Result<BoxStream<'static, connector::Result<Vec<serde_json::Value>>>> {
-        let stream = execute_relational_query_stream(state, request)
+        let collection_names = collect_relational_collection_names(&request.root_relation);
+        let name_refs: Vec<&str> = collection_names.iter().map(|s| s.as_str()).collect();
+        let config = configuration.resolve_for_collections(&name_refs).await?;
+        let stream = execute_relational_query_stream_with_config(state, Some(&config), request)
             .await
             .map_err(map_mongo_agent_error)?;
 
@@ -319,6 +325,40 @@ fn collect_query_collection_names(request: &QueryRequest) -> Vec<String> {
         names.insert(relationship.target_collection.to_string());
     }
     names.into_iter().collect()
+}
+
+fn collect_relational_collection_names(relation: &ndc_sdk::models::Relation) -> Vec<String> {
+    let mut names = BTreeSet::new();
+    collect_relational_collection_names_into(relation, &mut names);
+    names.into_iter().collect()
+}
+
+fn collect_relational_collection_names_into(
+    relation: &ndc_sdk::models::Relation,
+    names: &mut BTreeSet<String>,
+) {
+    match relation {
+        ndc_sdk::models::Relation::From { collection, .. } => {
+            names.insert(collection.to_string());
+        }
+        ndc_sdk::models::Relation::Filter { input, .. }
+        | ndc_sdk::models::Relation::Sort { input, .. }
+        | ndc_sdk::models::Relation::Paginate { input, .. }
+        | ndc_sdk::models::Relation::Project { input, .. }
+        | ndc_sdk::models::Relation::Aggregate { input, .. }
+        | ndc_sdk::models::Relation::Window { input, .. } => {
+            collect_relational_collection_names_into(input, names);
+        }
+        ndc_sdk::models::Relation::Join { left, right, .. } => {
+            collect_relational_collection_names_into(left, names);
+            collect_relational_collection_names_into(right, names);
+        }
+        ndc_sdk::models::Relation::Union { relations } => {
+            for relation in relations {
+                collect_relational_collection_names_into(relation, names);
+            }
+        }
+    }
 }
 
 fn map_mongo_agent_error(err: MongoAgentError) -> ErrorResponse {

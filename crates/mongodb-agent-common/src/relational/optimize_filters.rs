@@ -5,9 +5,14 @@
 //! This enables MongoDB to use indexes on those fields.
 
 use mongodb::bson::{doc, Bson, Document};
-use ndc_models::{Float32, Float64, Relation, RelationalExpression, RelationalLiteral};
+use ndc_models::{Relation, RelationalExpression};
 
-use super::column_origin::trace_column_origin;
+use crate::mongo_query_plan::MongoConfiguration;
+
+use super::{
+    column_origin::trace_column_origin,
+    type_lookup::{literal_to_bson_with_field_type, lookup_field_type},
+};
 
 /// Result of extracting an early match from a relation.
 #[derive(Debug)]
@@ -46,28 +51,34 @@ impl EarlyMatchResult {
 /// # Returns
 /// An `EarlyMatchResult` containing the query document if extraction is possible.
 pub fn extract_early_match(relation: &Relation) -> EarlyMatchResult {
+    extract_early_match_with_config(relation, None)
+}
+
+pub fn extract_early_match_with_config(
+    relation: &Relation,
+    config: Option<&MongoConfiguration>,
+) -> EarlyMatchResult {
     // Walk down to find Filter nodes and analyze their predicates
     match relation {
         Relation::Filter { input, predicate } => {
             // Try to convert the predicate to a query document using original field paths
-            if let Some(doc) = try_make_early_query_document(input, predicate) {
+            if let Some(doc) = try_make_early_query_document(input, predicate, config) {
                 return EarlyMatchResult::with_query(doc);
             }
             // If this filter can't be optimized, check the input
-            extract_early_match(input)
+            extract_early_match_with_config(input, config)
         }
         Relation::Sort { input, .. }
         | Relation::Paginate { input, .. }
-        | Relation::Project { input, .. } => extract_early_match(input),
-        Relation::Aggregate { input, .. } => extract_early_match(input),
-        Relation::Window { input, .. } => extract_early_match(input),
-        Relation::Join { left, right, .. } => {
-            // Try left side first, then right side
-            let left_result = extract_early_match(left);
-            if left_result.query_document.is_some() {
-                return left_result;
-            }
-            extract_early_match(right)
+        | Relation::Project { input, .. } => extract_early_match_with_config(input, config),
+        Relation::Aggregate { input, .. } => extract_early_match_with_config(input, config),
+        Relation::Window { input, .. } => extract_early_match_with_config(input, config),
+        Relation::Join { left, .. } => {
+            // The root pipeline runs against the left/root collection only.
+            // Right-side filters must stay inside the $lookup pipeline; prepending
+            // them to the root collection would apply the predicate to the wrong
+            // collection and can eliminate all rows.
+            extract_early_match_with_config(left, config)
         }
         Relation::Union { relations: _ } => {
             // Try to find a common early match across all branches
@@ -84,6 +95,7 @@ pub fn extract_early_match(relation: &Relation) -> EarlyMatchResult {
 fn try_make_early_query_document(
     input: &Relation,
     predicate: &RelationalExpression,
+    config: Option<&MongoConfiguration>,
 ) -> Option<Document> {
     let root_collection = root_collection_name(input)?;
 
@@ -95,20 +107,20 @@ fn try_make_early_query_document(
         | RelationalExpression::Lt { left, right }
         | RelationalExpression::LtEq { left, right }
         | RelationalExpression::NotEq { left, right } => {
-            try_make_comparison_query(input, &root_collection, left, right, predicate)
+            try_make_comparison_query(input, &root_collection, left, right, predicate, config)
         }
 
         // AND: both sub-expressions must be convertible
         RelationalExpression::And { left, right } => {
-            let left_doc = try_make_early_query_document(input, left)?;
-            let right_doc = try_make_early_query_document(input, right)?;
+            let left_doc = try_make_early_query_document(input, left, config)?;
+            let right_doc = try_make_early_query_document(input, right, config)?;
             Some(doc! { "$and": [left_doc, right_doc] })
         }
 
         // OR: both sub-expressions must be convertible
         RelationalExpression::Or { left, right } => {
-            let left_doc = try_make_early_query_document(input, left)?;
-            let right_doc = try_make_early_query_document(input, right)?;
+            let left_doc = try_make_early_query_document(input, left, config)?;
+            let right_doc = try_make_early_query_document(input, right, config)?;
             Some(doc! { "$or": [left_doc, right_doc] })
         }
 
@@ -136,12 +148,13 @@ fn try_make_comparison_query(
     left: &RelationalExpression,
     right: &RelationalExpression,
     original_expr: &RelationalExpression,
+    config: Option<&MongoConfiguration>,
 ) -> Option<Document> {
     // Left side should be a field reference (Column or GetField chain)
     let field_path = trace_expression_to_path(input, left, root_collection)?;
 
     // Right side should be a literal
-    let value = literal_to_bson(right)?;
+    let value = literal_to_bson(right, root_collection, &field_path, config)?;
 
     // Generate the appropriate comparison operator
     let operator = match original_expr {
@@ -201,30 +214,26 @@ fn root_collection_name(relation: &Relation) -> Option<String> {
 }
 
 /// Convert a RelationalExpression::Literal to Bson.
-fn literal_to_bson(expr: &RelationalExpression) -> Option<Bson> {
+fn literal_to_bson(
+    expr: &RelationalExpression,
+    collection: &str,
+    field_path: &str,
+    config: Option<&MongoConfiguration>,
+) -> Option<Bson> {
     let RelationalExpression::Literal { literal } = expr else {
         return None;
     };
 
-    match literal {
-        RelationalLiteral::Boolean { value } => Some(Bson::Boolean(*value)),
-        RelationalLiteral::String { value } => Some(Bson::String(value.clone())),
-        RelationalLiteral::Int8 { value } => Some(Bson::Int32(*value as i32)),
-        RelationalLiteral::Int16 { value } => Some(Bson::Int32(*value as i32)),
-        RelationalLiteral::Int32 { value } => Some(Bson::Int32(*value)),
-        RelationalLiteral::Int64 { value } => Some(Bson::Int64(*value)),
-        RelationalLiteral::Float32 { value: Float32(v) } => Some(Bson::Double(f64::from(*v))),
-        RelationalLiteral::Float64 { value: Float64(v) } => Some(Bson::Double(*v)),
-        RelationalLiteral::Null => Some(Bson::Null),
-        // For other types like Date, Timestamp, etc., we'd need conversion
-        // For now, return None and let the regular $expr path handle them
-        _ => None,
-    }
+    let field_type =
+        config.and_then(|cfg| lookup_field_type(cfg, collection, field_path));
+
+    literal_to_bson_with_field_type(literal, field_type)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndc_models::{Float64, RelationalLiteral};
 
     #[test]
     fn extracts_simple_comparison_from_filter() {
@@ -399,6 +408,40 @@ mod tests {
                     },
                 }),
             },
+        };
+
+        let result = extract_early_match(&relation);
+        assert!(result.query_document.is_none());
+    }
+
+    #[test]
+    fn does_not_extract_embedded_right_side_filter_from_join() {
+        let relation = Relation::Join {
+            left: Box::new(Relation::From {
+                collection: "orders".into(),
+                columns: vec!["product_id".into(), "quantity".into()],
+                arguments: Default::default(),
+            }),
+            right: Box::new(Relation::Filter {
+                input: Box::new(Relation::From {
+                    collection: "products".into(),
+                    columns: vec!["_id".into(), "price".into()],
+                    arguments: Default::default(),
+                }),
+                predicate: RelationalExpression::Gt {
+                    left: Box::new(RelationalExpression::Column { index: 1 }),
+                    right: Box::new(RelationalExpression::Literal {
+                        literal: RelationalLiteral::Float64 {
+                            value: Float64(10.0),
+                        },
+                    }),
+                },
+            }),
+            on: vec![ndc_models::JoinOn {
+                left: RelationalExpression::Column { index: 0 },
+                right: RelationalExpression::Column { index: 0 },
+            }],
+            join_type: ndc_models::JoinType::Inner,
         };
 
         let result = extract_early_match(&relation);
