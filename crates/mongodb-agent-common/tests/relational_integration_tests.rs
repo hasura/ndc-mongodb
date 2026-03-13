@@ -4,7 +4,8 @@
 //! testing the complete end-to-end flow from `RelationalQuery` to `RelationalQueryResponse`.
 //!
 //! These tests require MongoDB 7.0+ running on localhost:27017 with the test_relational database
-//! populated with test data.
+//! populated with test data. Some regression tests also use the sample_mflix dataset on a
+//! separate MongoDB instance when available.
 //!
 //! To run these tests:
 //! 1. Start MongoDB: docker run -d --name mongodb-test -p 27017:27017 mongo:7.0
@@ -19,7 +20,10 @@
 
 #![cfg(feature = "relational-integration-tests")]
 
-use mongodb_agent_common::relational::execute_relational_query;
+use mongodb_agent_common::mongo_query_plan::MongoConfiguration;
+use mongodb_agent_common::relational::{
+    execute_relational_query, execute_relational_query_with_config,
+};
 use mongodb_agent_common::state::try_init_state_from_uri;
 use ndc_models::{
     Float64, JoinOn, JoinType, NullsSort, OrderDirection, Relation, RelationalExpression,
@@ -36,6 +40,16 @@ async fn get_test_state() -> mongodb_agent_common::state::ConnectorState {
         .expect("Failed to initialize ConnectorState")
 }
 
+/// Get a ConnectorState connected to the sample_mflix database.
+async fn get_mflix_state() -> mongodb_agent_common::state::ConnectorState {
+    let uri = std::env::var("MONGODB_MFLIX_URI").unwrap_or_else(|_| {
+        "mongodb://codedmart:pass@localhost:27018/sample_mflix?authSource=admin".to_string()
+    });
+    try_init_state_from_uri(Some(&uri))
+        .await
+        .expect("Failed to initialize ConnectorState for sample_mflix")
+}
+
 /// Execute a relational query through the full execute_relational_query function.
 /// This tests the complete end-to-end flow: RelationalQuery -> ConnectorState -> MongoDB -> RelationalQueryResponse
 async fn execute_query(relation: Relation) -> RelationalQueryResponse {
@@ -49,9 +63,65 @@ async fn execute_query(relation: Relation) -> RelationalQueryResponse {
         .expect("Failed to execute relational query")
 }
 
+/// Execute a relational query against sample_mflix with connector config so ObjectId coercions apply.
+async fn execute_mflix_query(relation: Relation) -> RelationalQueryResponse {
+    let state = get_mflix_state().await;
+    let config = MongoConfiguration(test_helpers::configuration::mflix_config());
+    let query = RelationalQuery {
+        root_relation: relation,
+        request_arguments: None,
+    };
+    execute_relational_query_with_config(&state, Some(&config), query)
+        .await
+        .expect("Failed to execute relational query against sample_mflix")
+}
+
 /// Helper to get rows from response
 fn get_rows(response: &RelationalQueryResponse) -> &Vec<Vec<serde_json::Value>> {
     &response.rows
+}
+
+#[tokio::test]
+async fn test_mflix_left_join_filters_object_id_and_returns_null_title_for_orphan_movie() {
+    let relation = Relation::Project {
+        input: Box::new(Relation::Join {
+            left: Box::new(Relation::Filter {
+                input: Box::new(Relation::From {
+                    collection: "comments".into(),
+                    columns: vec!["_id".into(), "movie_id".into()],
+                    arguments: Default::default(),
+                }),
+                predicate: RelationalExpression::Eq {
+                    left: Box::new(RelationalExpression::Column { index: 0 }),
+                    right: Box::new(RelationalExpression::Literal {
+                        literal: RelationalLiteral::String {
+                            value: "5a9427648b0beebeb69579cc".into(),
+                        },
+                    }),
+                },
+            }),
+            right: Box::new(Relation::From {
+                collection: "movies".into(),
+                columns: vec!["_id".into(), "title".into()],
+                arguments: Default::default(),
+            }),
+            on: vec![JoinOn {
+                left: RelationalExpression::Column { index: 1 },
+                right: RelationalExpression::Column { index: 0 },
+            }],
+            join_type: JoinType::Left,
+        }),
+        exprs: vec![RelationalExpression::Column { index: 3 }],
+    };
+
+    let response = execute_mflix_query(relation).await;
+    let rows = get_rows(&response);
+
+    assert_eq!(
+        rows,
+        &vec![vec![serde_json::Value::Null]],
+        "Expected one row with NULL title for the orphaned movie reference"
+    );
 }
 
 // =============================================================================
