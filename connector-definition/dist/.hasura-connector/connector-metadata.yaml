@@ -2,7 +2,7 @@ version: v2
 ndcSpecGeneration: v0.2
 packagingDefinition:
   type: PrebuiltDockerImage
-  dockerImage: ghcr.io/hasura/ndc-mongodb:${RELEASE_VERSION}
+  dockerImage: ghcr.io/hasura/ndc-mongodb:v2.0.1
 supportedEnvironmentVariables:
   - name: MONGODB_DATABASE_URI
     description: The URI for the MongoDB database
@@ -12,24 +12,24 @@ cliPlugin:
   type: BinaryInline
   platforms:
     - selector: darwin-arm64
-      uri: https://github.com/hasura/ndc-mongodb/releases/download/${RELEASE_VERSION}/mongodb-cli-plugin-aarch64-apple-darwin
-      sha256: ${MACOS_ARM64_SHA256}
+      uri: https://github.com/hasura/ndc-mongodb/releases/download/v2.0.1/mongodb-cli-plugin-aarch64-apple-darwin
+      sha256: f636636ff9bb2e41a7469e7c71367d1d15fadb9bee4030d5205f6d072f30240e
       bin: hasura-ndc-mongodb
     - selector: linux-arm64
-      uri: https://github.com/hasura/ndc-mongodb/releases/download/${RELEASE_VERSION}/mongodb-cli-plugin-aarch64-unknown-linux-musl
-      sha256: ${LINUX_ARM64_SHA256}
+      uri: https://github.com/hasura/ndc-mongodb/releases/download/v2.0.1/mongodb-cli-plugin-aarch64-unknown-linux-musl
+      sha256: cefe765d4797601962639217249de4094b8e76e8bc4c498031f2e579e9b298b1
       bin: hasura-ndc-mongodb
     - selector: darwin-amd64
-      uri: https://github.com/hasura/ndc-mongodb/releases/download/${RELEASE_VERSION}/mongodb-cli-plugin-x86_64-apple-darwin
-      sha256: ${MACOS_AMD64_SHA256}
+      uri: https://github.com/hasura/ndc-mongodb/releases/download/v2.0.1/mongodb-cli-plugin-x86_64-apple-darwin
+      sha256: 82bb8645340fd9295f2ff037abc43b15657d4841102b2f0d447c698ba4b2705e
       bin: hasura-ndc-mongodb
     - selector: windows-amd64
-      uri: https://github.com/hasura/ndc-mongodb/releases/download/${RELEASE_VERSION}/mongodb-cli-plugin-x86_64-pc-windows-msvc.exe
-      sha256: ${WINDOWS_AMD64_SHA256}
+      uri: https://github.com/hasura/ndc-mongodb/releases/download/v2.0.1/mongodb-cli-plugin-x86_64-pc-windows-msvc.exe
+      sha256: 12c21bb10478b275aa711b8d4212a070e88841c579c5df108cc6e719d6d9fd0f
       bin: hasura-ndc-mongodb.exe
     - selector: linux-amd64
-      uri: https://github.com/hasura/ndc-mongodb/releases/download/${RELEASE_VERSION}/mongodb-cli-plugin-x86_64-unknown-linux-musl
-      sha256: ${LINUX_AMD64_SHA256}
+      uri: https://github.com/hasura/ndc-mongodb/releases/download/v2.0.1/mongodb-cli-plugin-x86_64-unknown-linux-musl
+      sha256: a5eef9dd1019471653558fc2a31cdad5d50f877fe3c03114c2143f13686fb1ba
       bin: hasura-ndc-mongodb
 dockerComposeWatch:
   - path: ./

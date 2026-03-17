@@ -135,6 +135,19 @@ impl ConnectorSetup for MongoConnector {
         configuration: &ConnectorConfig,
         _metrics: &mut prometheus::Registry,
     ) -> connector::Result<ConnectorState> {
+        let configuration_mode = match configuration {
+            ConnectorConfig::Static(_) => "static",
+            ConnectorConfig::Postgres(_) => "postgres",
+        };
+        let ssl_cert_file =
+            std::env::var("SSL_CERT_FILE").unwrap_or_else(|_| "<unset>".to_string());
+        tracing::info!(
+            version = env!("CARGO_PKG_VERSION"),
+            configuration_mode,
+            ssl_cert_file = %ssl_cert_file,
+            "try_init_state starting"
+        );
+
         let connector_state = match configuration {
             ConnectorConfig::Static(_) => state::try_init_state().await?,
             ConnectorConfig::Postgres(store) => {

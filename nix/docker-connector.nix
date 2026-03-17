@@ -29,6 +29,7 @@ let
         "MONGODB_DATABASE_URI=${default-database-uri}"
         "OTEL_SERVICE_NAME=mongodb-connector"
         "OTEL_EXPORTER_OTLP_ENDPOINT=${default-otlp-endpoint}"
+        "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
       ];
     } // extraConfig;
     contents = [ cacert ]; # include TLS root certificate store
