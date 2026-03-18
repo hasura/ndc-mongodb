@@ -1,7 +1,8 @@
 use anyhow::Context as _;
 use configuration::{serialized::Schema, Configuration, ConfigurationOptions};
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
-use postgres_native_tls::MakeTlsConnector;
+use openssl::ssl::{SslConnector, SslMethod, SslVerifyMode};
+use postgres_openssl::MakeTlsConnector;
 
 const SOURCE: &str = "MONGODB";
 
@@ -26,10 +27,10 @@ impl std::fmt::Debug for PostgresConfigurationStore {
 
 impl PostgresConfigurationStore {
     pub fn new(url: String, connector_id: String, schema: String) -> anyhow::Result<Self> {
-        let tls_connector = native_tls::TlsConnector::builder()
-            .build()
-            .context("failed to build TLS connector")?;
-        let tls = MakeTlsConnector::new(tls_connector);
+        let mut ssl_builder = SslConnector::builder(SslMethod::tls())
+            .context("failed to create SSL connector builder")?;
+        ssl_builder.set_verify(SslVerifyMode::NONE);
+        let tls = MakeTlsConnector::new(ssl_builder.build());
 
         let pg_config: tokio_postgres::Config = url
             .parse()
