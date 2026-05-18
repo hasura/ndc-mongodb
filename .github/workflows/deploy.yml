@@ -78,6 +78,95 @@ jobs:
         path: release
         if-no-files-found: error
 
+  # Builds and publishes the `-env-loader` variant of the connector image.
+  # Uses the statically-linked binaries produced above + Alpine + jq so that
+  # the Helm chart's external-secrets integration can mount JSON secrets at
+  # /secrets/ and have them exported as env vars before the connector starts.
+  docker-env-loader:
+    name: deploy::docker (env-loader)
+    needs: build-connector-binaries
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+
+      - name: Download connector binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+          pattern: mongodb-connector-*
+          merge-multiple: true
+
+      - name: Compute docker tags
+        id: tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Mirrors the tag derivation in scripts/publish-docker-image.nix so
+          # the env-loader image tracks the regular image's tag set, with a
+          # `-env-loader` suffix appended to each tag.
+          ref="${GITHUB_REF}"
+          tags=()
+          if [[ "$ref" =~ ^refs/tags/(v.*)$ ]]; then
+            tags+=("${BASH_REMATCH[1]}")
+          elif [[ "$ref" =~ ^refs/heads/(.*)$ ]]; then
+            branch="${BASH_REMATCH[1]}"
+            prefix="dev-${branch}"
+            version=$(TZ=UTC0 git show --quiet \
+              --date='format-local:%Y%m%dT%H%M' \
+              --format="${prefix}-%cd-%h")
+            tags+=("$version" "$prefix")
+          fi
+
+          if [[ ${#tags[@]} -eq 0 ]]; then
+            echo "Ref $ref is not a release tag or branch — skipping push."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          image="ghcr.io/hasura/ndc-mongodb"
+          docker_tags=""
+          for t in "${tags[@]}"; do
+            docker_tags+="${image}:${t}-env-loader"$'\n'
+          done
+          {
+            echo "skip=false"
+            echo "tags<<EOF"
+            echo "${docker_tags}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        if: steps.tags.outputs.skip != 'true'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: steps.tags.outputs.skip != 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry 📦
+        if: steps.tags.outputs.skip != 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push env-loader image
+        if: steps.tags.outputs.skip != 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.env-loader
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha,scope=env-loader
+          cache-to: type=gha,mode=max,scope=env-loader
+
   # Builds without nix to get Windows binaries
   build-cli-binaries:
     name: build the CLI binaries
