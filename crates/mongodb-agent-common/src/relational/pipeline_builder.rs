@@ -14,6 +14,7 @@ use crate::mongo_query_plan::MongoConfiguration;
 
 use super::{
     expression::{translate_aggregate_expression, translate_expression, ExpressionContext},
+    native_query::{lookup_native_query, materialize_native_query},
     normalize_joins::normalize_right_joins,
     optimize_filters::extract_early_match_with_config,
     pushdown_predicates::pushdown_predicates,
@@ -43,8 +44,18 @@ pub fn build_relational_pipeline_with_config(
     // Step 2: Push predicates down through projections
     let optimized_relation = pushdown_predicates(&normalized_relation);
 
-    // Step 3: Extract early match optimization - generate index-friendly $match if possible
-    let early_match = extract_early_match_with_config(&optimized_relation, config);
+    // Step 3: Extract early match optimization - generate index-friendly $match if possible.
+    //
+    // When the root of the query is a native query, the configured native pipeline is an
+    // immutable source prefix (it may begin with an Atlas `$search`/`$searchMeta`/`$vectorSearch`
+    // stage that must remain first). The early-match optimization inserts a `$match` at stage
+    // zero, so it must be skipped for native-query roots to avoid injecting a stage before that
+    // prefix. Filters are still applied — they are appended after the prefix by `build_filter`.
+    let early_match = if root_targets_native_query(&optimized_relation, config) {
+        super::EarlyMatchResult::empty()
+    } else {
+        extract_early_match_with_config(&optimized_relation, config)
+    };
 
     let mut ctx = PipelineContext::new(config);
     build_relation(&optimized_relation, &mut ctx)?;
@@ -61,15 +72,39 @@ pub fn build_relational_pipeline_with_config(
         collection,
         pipeline: Pipeline::new(stages),
         output_columns: ctx.column_mapping,
+        target_collection: ctx.target_collection,
     })
+}
+
+/// Determine whether the left-most `From` of a relation tree resolves to a configured native
+/// query. The root pipeline runs against that source, so a native-query root means its configured
+/// pipeline is an immutable prefix that no stage may precede.
+fn root_targets_native_query(relation: &Relation, config: Option<&MongoConfiguration>) -> bool {
+    let Some(config) = config else {
+        return false;
+    };
+    match relation {
+        Relation::From { collection, .. } => lookup_native_query(config, collection).is_some(),
+        Relation::Filter { input, .. }
+        | Relation::Sort { input, .. }
+        | Relation::Paginate { input, .. }
+        | Relation::Project { input, .. }
+        | Relation::Aggregate { input, .. }
+        | Relation::Window { input, .. } => root_targets_native_query(input, Some(config)),
+        Relation::Join { left, .. } => root_targets_native_query(left, Some(config)),
+        Relation::Union { .. } => false,
+    }
 }
 
 /// Context used while building the pipeline.
 struct PipelineContext<'a> {
     /// Connector configuration used to resolve field types for literal coercion.
     config: Option<&'a MongoConfiguration>,
-    /// The collection to query (set by From relation).
+    /// The logical name of the query source (physical collection name, or native query name).
     collection: Option<String>,
+    /// The physical collection to run the aggregation against, if any. `None` means a
+    /// database-level aggregation (native query with no `input_collection`).
+    target_collection: Option<String>,
     /// Current column mapping.
     column_mapping: ColumnMapping,
     /// Accumulated pipeline stages.
@@ -81,6 +116,7 @@ impl<'a> PipelineContext<'a> {
         Self {
             config,
             collection: None,
+            target_collection: None,
             column_mapping: ColumnMapping::default(),
             stages: Vec::new(),
         }
@@ -97,14 +133,7 @@ fn build_relation(
             collection,
             columns,
             arguments,
-        } => {
-            if !arguments.is_empty() {
-                return Err(RelationalError::UnsupportedRelation(
-                    "From with arguments is not supported".to_string(),
-                ));
-            }
-            build_from(collection, columns, ctx)
-        }
+        } => build_from(collection, columns, arguments, ctx),
 
         Relation::Filter { input, predicate } => {
             build_relation(input, ctx)?;
@@ -144,13 +173,42 @@ fn build_relation(
     }
 }
 
-/// Build the From relation (collection scan).
+/// Build the From relation.
+///
+/// The `collection` may name a physical MongoDB collection or a configured
+/// collection-representation native query. A native query is materialized into an immutable source
+/// prefix (its interpolated pipeline) with its argument values validated and bound; a physical
+/// collection is an implicit collection scan.
 fn build_from(
     collection: &ndc_models::CollectionName,
     columns: &[ndc_models::FieldName],
+    arguments: &BTreeMap<ndc_models::ArgumentName, ndc_models::RelationalLiteral>,
     ctx: &mut PipelineContext<'_>,
 ) -> Result<(), RelationalError> {
+    // Resolve against configured native queries when configuration is available.
+    if let Some(config) = ctx.config {
+        if let Some(native_query) = lookup_native_query(config, collection) {
+            let materialized =
+                materialize_native_query(config, collection, native_query, arguments)?;
+            ctx.collection = Some(collection.to_string());
+            ctx.target_collection = materialized.target_collection;
+            // The configured native pipeline is the immutable source prefix. Generated relational
+            // stages are appended after it by subsequent build steps.
+            ctx.stages.extend(materialized.prefix_stages);
+            ctx.column_mapping = ColumnMapping::new(columns.iter().map(|c| c.as_str()));
+            return Ok(());
+        }
+    }
+
+    // Physical collection scan. Arguments are only meaningful for native queries.
+    if !arguments.is_empty() {
+        return Err(RelationalError::UnsupportedRelation(format!(
+            "From with arguments is not supported for physical collection \"{collection}\""
+        )));
+    }
+
     ctx.collection = Some(collection.to_string());
+    ctx.target_collection = Some(collection.to_string());
     ctx.column_mapping = ColumnMapping::new(columns.iter().map(|c| c.as_str()));
     // No pipeline stages needed - collection scan is implicit
     Ok(())
@@ -724,7 +782,14 @@ fn build_join(
     // projections, filters, casts, and any other shaping applied by the SQL planner.
     let mut right_ctx = PipelineContext::new(ctx.config);
     build_relation(right, &mut right_ctx)?;
-    let right_collection = right_ctx.collection.ok_or(RelationalError::NoCollection)?;
+    // A native-query right side contributes its interpolated pipeline (already in
+    // `right_ctx.stages`) as the head of the `$lookup` sub-pipeline; the `$lookup` `from` must be
+    // the physical collection (the native query's `input_collection`).
+    let right_collection = right_ctx
+        .target_collection
+        .clone()
+        .or_else(|| right_ctx.collection.clone())
+        .ok_or(RelationalError::NoCollection)?;
 
     // Build the $lookup stage with join conditions
     let lookup_stage = build_lookup_stage(
