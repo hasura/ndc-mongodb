@@ -1,7 +1,8 @@
 //! Execution of relational queries against MongoDB.
 
-use futures_util::{Stream, StreamExt, TryStreamExt};
+use futures_util::{future::Either, Stream, StreamExt, TryStreamExt};
 use mongodb::bson::Document;
+use mongodb_support::aggregate::Pipeline;
 use ndc_models::{RelationalQuery, RelationalQueryResponse};
 use tracing::Instrument;
 
@@ -14,7 +15,7 @@ use crate::{
 
 use super::{
     pipeline_builder::build_relational_pipeline_with_config, build_relational_pipeline,
-    ColumnMapping, RelationalError,
+    ColumnMapping, RelationalError, RelationalPipelineResult,
 };
 
 /// Execute a relational query and return all rows.
@@ -56,23 +57,21 @@ async fn execute_relational_query_impl(
 
     tracing::debug!(
         collection = %pipeline_result.collection,
+        target_collection = ?pipeline_result.target_collection,
         pipeline = %serde_json::to_string(&pipeline_result.pipeline).unwrap_or_else(|_| "<serialization error>".to_string()),
         output_columns = ?pipeline_result.output_columns,
         "executing relational query pipeline"
     );
 
-    let collection = database.collection(&pipeline_result.collection);
+    let RelationalPipelineResult {
+        pipeline,
+        output_columns,
+        target_collection,
+        ..
+    } = pipeline_result;
 
-    let cursor = collection
-        .aggregate(pipeline_result.pipeline, None)
-        .instrument(tracing::info_span!(
-            "MongoDB Aggregate Command (Relational)",
-            internal.visibility = "user"
-        ))
-        .await
-        .map_err(MongoAgentError::MongoDB)?;
-
-    let rows = cursor_to_rows(cursor, &pipeline_result.output_columns).await?;
+    let cursor = aggregate_relational(&database, pipeline, target_collection).await?;
+    let rows = cursor_to_rows(cursor, &output_columns).await?;
 
     tracing::debug!(row_count = rows.len(), "relational query completed");
 
@@ -118,23 +117,20 @@ async fn execute_relational_query_stream_impl(
 
     tracing::debug!(
         collection = %pipeline_result.collection,
+        target_collection = ?pipeline_result.target_collection,
         pipeline = %serde_json::to_string(&pipeline_result.pipeline).unwrap_or_else(|_| "<serialization error>".to_string()),
         output_columns = ?pipeline_result.output_columns,
         "executing relational query stream pipeline"
     );
 
-    let collection = database.collection(&pipeline_result.collection);
+    let RelationalPipelineResult {
+        pipeline,
+        output_columns,
+        target_collection,
+        ..
+    } = pipeline_result;
 
-    let cursor = collection
-        .aggregate(pipeline_result.pipeline, None)
-        .instrument(tracing::info_span!(
-            "MongoDB Aggregate Command (Relational Stream)",
-            internal.visibility = "user"
-        ))
-        .await
-        .map_err(MongoAgentError::MongoDB)?;
-
-    let output_columns = pipeline_result.output_columns;
+    let cursor = aggregate_relational(&database, pipeline, target_collection).await?;
 
     tracing::debug!("relational query stream started");
 
@@ -145,6 +141,49 @@ async fn execute_relational_query_stream_impl(
     });
 
     Ok(stream)
+}
+
+/// Run a relational aggregation against the physical collection when one is known (a collection
+/// scan, or a native query's `input_collection`), otherwise run a database-level aggregation (a
+/// native query with no `input_collection`, e.g. a pipeline beginning with `$documents`).
+///
+/// The collection cursor and the database cursor are distinct associated types; they are unified
+/// with [`Either`], which implements [`Stream`] (and is `Send` when both variants are), so the
+/// result works for both the buffered and streaming execution paths.
+async fn aggregate_relational<D>(
+    database: &D,
+    pipeline: Pipeline,
+    target_collection: Option<String>,
+) -> Result<
+    Either<<D::Collection as CollectionTrait<Document>>::DocumentCursor, D::DocumentCursor>,
+    MongoAgentError,
+>
+where
+    D: DatabaseTrait,
+{
+    let span = tracing::info_span!(
+        "MongoDB Aggregate Command (Relational)",
+        internal.visibility = "user"
+    );
+    match target_collection {
+        Some(collection_name) => {
+            let cursor = database
+                .collection(&collection_name)
+                .aggregate(pipeline, None)
+                .instrument(span)
+                .await
+                .map_err(MongoAgentError::MongoDB)?;
+            Ok(Either::Left(cursor))
+        }
+        None => {
+            let cursor = database
+                .aggregate(pipeline, None)
+                .instrument(span)
+                .await
+                .map_err(MongoAgentError::MongoDB)?;
+            Ok(Either::Right(cursor))
+        }
+    }
 }
 
 /// Convert a cursor of documents to a vector of rows.

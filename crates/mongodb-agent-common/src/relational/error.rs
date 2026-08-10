@@ -40,4 +40,37 @@ pub enum RelationalError {
     /// Expression nesting is too deep.
     #[error("Expression nesting too deep (limit: 512)")]
     ExpressionTooDeep,
+
+    /// A function-representation native query was used as a relational table.
+    #[error("Native query \"{0}\" is represented as a function and cannot be used as a relational table; only collection-representation native queries are supported")]
+    FunctionRepresentationNotSupported(String),
+
+    /// An argument was supplied that the native query does not declare.
+    #[error("Unknown argument \"{argument}\" supplied to native query \"{native_query}\"")]
+    UnknownArgument {
+        native_query: String,
+        argument: String,
+    },
+
+    /// A required native-query argument was not supplied.
+    #[error("Missing argument \"{argument}\" for native query \"{native_query}\"")]
+    MissingArgument {
+        native_query: String,
+        argument: String,
+    },
+
+    /// An argument value could not be validated/bound to the declared argument type.
+    #[error("Invalid value for argument \"{argument}\" of native query \"{native_query}\": {message}")]
+    ArgumentBindingError {
+        native_query: String,
+        argument: String,
+        message: String,
+    },
+
+    /// Interpolating a native query's configured pipeline failed.
+    #[error("Failed to interpolate pipeline for native query \"{native_query}\": {message}")]
+    InterpolationError {
+        native_query: String,
+        message: String,
+    },
 }

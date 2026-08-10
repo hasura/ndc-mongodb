@@ -8,6 +8,7 @@ mod column_origin;
 mod error;
 mod execute;
 pub mod expression;
+mod native_query;
 mod normalize_joins;
 mod optimize_filters;
 mod pipeline_builder;
