@@ -10,6 +10,13 @@ This changelog documents the changes between release versions.
 
 ### Changed
 
+## [2.1.0] - 2026-08-15
+
+### Added
+
+- You can now use collection-representation native queries — including Atlas `$search`, `$searchMeta`, and `$vectorSearch` pipelines — as sources in relational queries, with full argument typing, validation, and interpolation ([#190](https://github.com/hasura/ndc-mongodb/pull/190))
+- Added an `-env-loader` image variant that exports key/value pairs from JSON files in `/secrets/` as environment variables before starting the connector, for external-secrets deployments ([#187](https://github.com/hasura/ndc-mongodb/pull/187))
+
 ## [2.0.1] - 2026-03-13
 
 ### Fixed
