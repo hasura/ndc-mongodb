@@ -3,7 +3,10 @@
 use mongodb::bson::{bson, Bson, Decimal128};
 use ndc_models::{CastType, RelationalExpression, RelationalLiteral};
 
-use super::{ColumnMapping, RelationalError};
+use super::{
+    type_lookup::{literal_operand, string_to_bson_for_field, FieldTypes},
+    ColumnMapping, RelationalError,
+};
 
 /// Maximum recursion depth for expression translation.
 const MAX_EXPRESSION_DEPTH: u32 = 512;
@@ -11,6 +14,8 @@ const MAX_EXPRESSION_DEPTH: u32 = 512;
 /// Context for translating expressions.
 pub struct ExpressionContext<'a> {
     pub column_mapping: &'a ColumnMapping,
+    /// Types literals compared with fields; empty where field types aren't known.
+    field_types: FieldTypes<'a>,
     depth: u32,
 }
 
@@ -18,7 +23,15 @@ impl<'a> ExpressionContext<'a> {
     pub fn new(column_mapping: &'a ColumnMapping) -> Self {
         Self {
             column_mapping,
+            field_types: FieldTypes::default(),
             depth: 0,
+        }
+    }
+
+    pub fn with_field_types(self, field_types: FieldTypes<'a>) -> Self {
+        Self {
+            field_types,
+            ..self
         }
     }
 
@@ -28,6 +41,7 @@ impl<'a> ExpressionContext<'a> {
         }
         Ok(Self {
             column_mapping: self.column_mapping,
+            field_types: self.field_types,
             depth: self.depth + 1,
         })
     }
@@ -70,33 +84,27 @@ pub fn translate_expression(
 
         // Comparison operators
         RelationalExpression::Eq { left, right } => {
-            let left_bson = translate_expression(left, ctx)?;
-            let right_bson = translate_expression(right, ctx)?;
+            let (left_bson, right_bson) = translate_comparison_operands(left, right, ctx)?;
             Ok(bson!({ "$eq": [left_bson, right_bson] }))
         }
         RelationalExpression::NotEq { left, right } => {
-            let left_bson = translate_expression(left, ctx)?;
-            let right_bson = translate_expression(right, ctx)?;
+            let (left_bson, right_bson) = translate_comparison_operands(left, right, ctx)?;
             Ok(bson!({ "$ne": [left_bson, right_bson] }))
         }
         RelationalExpression::Lt { left, right } => {
-            let left_bson = translate_expression(left, ctx)?;
-            let right_bson = translate_expression(right, ctx)?;
+            let (left_bson, right_bson) = translate_comparison_operands(left, right, ctx)?;
             Ok(bson!({ "$lt": [left_bson, right_bson] }))
         }
         RelationalExpression::LtEq { left, right } => {
-            let left_bson = translate_expression(left, ctx)?;
-            let right_bson = translate_expression(right, ctx)?;
+            let (left_bson, right_bson) = translate_comparison_operands(left, right, ctx)?;
             Ok(bson!({ "$lte": [left_bson, right_bson] }))
         }
         RelationalExpression::Gt { left, right } => {
-            let left_bson = translate_expression(left, ctx)?;
-            let right_bson = translate_expression(right, ctx)?;
+            let (left_bson, right_bson) = translate_comparison_operands(left, right, ctx)?;
             Ok(bson!({ "$gt": [left_bson, right_bson] }))
         }
         RelationalExpression::GtEq { left, right } => {
-            let left_bson = translate_expression(left, ctx)?;
-            let right_bson = translate_expression(right, ctx)?;
+            let (left_bson, right_bson) = translate_comparison_operands(left, right, ctx)?;
             Ok(bson!({ "$gte": [left_bson, right_bson] }))
         }
 
@@ -105,8 +113,7 @@ pub fn translate_expression(
             // a IS DISTINCT FROM b = NOT (a IS NOT DISTINCT FROM b)
             // a IS NOT DISTINCT FROM b = (a IS NULL AND b IS NULL) OR (a = b)
             // So: a IS DISTINCT FROM b = NOT ((a IS NULL AND b IS NULL) OR (a = b))
-            let left_bson = translate_expression(left, ctx)?;
-            let right_bson = translate_expression(right, ctx)?;
+            let (left_bson, right_bson) = translate_comparison_operands(left, right, ctx)?;
             Ok(bson!({
                 "$not": [{
                     "$or": [
@@ -118,8 +125,7 @@ pub fn translate_expression(
         }
         RelationalExpression::IsNotDistinctFrom { left, right } => {
             // (a IS NULL AND b IS NULL) OR (a = b)
-            let left_bson = translate_expression(left, ctx)?;
-            let right_bson = translate_expression(right, ctx)?;
+            let (left_bson, right_bson) = translate_comparison_operands(left, right, ctx)?;
             Ok(bson!({
                 "$or": [
                     { "$and": [{ "$eq": [left_bson.clone(), null] }, { "$eq": [right_bson.clone(), null] }] },
@@ -159,14 +165,18 @@ pub fn translate_expression(
         // In / Not In
         RelationalExpression::In { expr, list } => {
             let expr_bson = translate_expression(expr, ctx)?;
-            let list_bson: Result<Vec<Bson>, _> =
-                list.iter().map(|e| translate_expression(e, ctx)).collect();
+            let list_bson: Result<Vec<Bson>, _> = list
+                .iter()
+                .map(|e| translate_operand(e, expr, ctx))
+                .collect();
             Ok(bson!({ "$in": [expr_bson, list_bson?] }))
         }
         RelationalExpression::NotIn { expr, list } => {
             let expr_bson = translate_expression(expr, ctx)?;
-            let list_bson: Result<Vec<Bson>, _> =
-                list.iter().map(|e| translate_expression(e, ctx)).collect();
+            let list_bson: Result<Vec<Bson>, _> = list
+                .iter()
+                .map(|e| translate_operand(e, expr, ctx))
+                .collect();
             Ok(bson!({ "$not": [{ "$in": [expr_bson, list_bson?] }] }))
         }
 
@@ -301,9 +311,9 @@ pub fn translate_expression(
             Ok(safe_regex_match(expr_bson, regex_bson, true, true))
         }
         RelationalExpression::Between { low, expr, high } => {
-            let low_bson = translate_expression(low, ctx)?;
+            let low_bson = translate_operand(low, expr, ctx)?;
             let expr_bson = translate_expression(expr, ctx)?;
-            let high_bson = translate_expression(high, ctx)?;
+            let high_bson = translate_operand(high, expr, ctx)?;
             Ok(bson!({
                 "$and": [
                     { "$gte": [expr_bson.clone(), low_bson] },
@@ -312,9 +322,9 @@ pub fn translate_expression(
             }))
         }
         RelationalExpression::NotBetween { low, expr, high } => {
-            let low_bson = translate_expression(low, ctx)?;
+            let low_bson = translate_operand(low, expr, ctx)?;
             let expr_bson = translate_expression(expr, ctx)?;
-            let high_bson = translate_expression(high, ctx)?;
+            let high_bson = translate_operand(high, expr, ctx)?;
             Ok(bson!({
                 "$or": [
                     { "$lt": [expr_bson.clone(), low_bson] },
@@ -822,6 +832,38 @@ pub fn translate_expression(
         // Unsupported expressions for Phase 1
         _ => Err(RelationalError::UnsupportedExpression(format!("{expr:?}"))),
     }
+}
+
+/// Translate both sides of a comparison, typing a literal on either side by the field on the other.
+fn translate_comparison_operands(
+    left: &RelationalExpression,
+    right: &RelationalExpression,
+    ctx: &ExpressionContext<'_>,
+) -> Result<(Bson, Bson), RelationalError> {
+    Ok((
+        translate_operand(left, right, ctx)?,
+        translate_operand(right, left, ctx)?,
+    ))
+}
+
+/// Translate `operand`, which is compared with `other`. `$expr` comparisons are type-strict, so a
+/// string literal compared with an ObjectId or UUID field must become that type to ever match; it
+/// is converted as the GraphQL query path converts typed comparison values. Anything that stays a
+/// string is translated as before.
+fn translate_operand(
+    operand: &RelationalExpression,
+    other: &RelationalExpression,
+    ctx: &ExpressionContext<'_>,
+) -> Result<Bson, RelationalError> {
+    if let Some(RelationalLiteral::String { value }) = literal_operand(operand) {
+        if let Some(field_type) = ctx.field_types.of(other) {
+            let converted = string_to_bson_for_field(value, Some(field_type));
+            if !matches!(converted, Bson::String(_)) {
+                return Ok(converted);
+            }
+        }
+    }
+    translate_expression(operand, ctx)
 }
 
 /// Translate an aggregate expression to MongoDB accumulator syntax for $group stage.

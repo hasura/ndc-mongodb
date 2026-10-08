@@ -18,7 +18,9 @@ use super::{
     normalize_joins::normalize_right_joins,
     optimize_filters::extract_early_match_with_config,
     pushdown_predicates::pushdown_predicates,
-    type_lookup::{literal_to_bson_with_field_type, lookup_field_type},
+    type_lookup::{
+        field_comparison, field_in_literals, literal_to_bson_with_field_type, FieldTypes,
+    },
     ColumnMapping, RelationalError, RelationalPipelineResult,
 };
 
@@ -137,7 +139,7 @@ fn build_relation(
 
         Relation::Filter { input, predicate } => {
             build_relation(input, ctx)?;
-            build_filter(predicate, ctx)
+            build_filter(input, predicate, ctx)
         }
 
         Relation::Sort { input, exprs } => {
@@ -220,22 +222,20 @@ fn build_from(
 /// (e.g., `{ field: { $gt: value } }`). If that's not possible, it falls
 /// back to using `$expr` which is less index-friendly.
 fn build_filter(
+    input: &Relation,
     predicate: &RelationalExpression,
     ctx: &mut PipelineContext<'_>,
 ) -> Result<(), RelationalError> {
+    let field_types = FieldTypes::new(ctx.config, input);
+
     // Try to generate a query document first (more index-friendly)
-    if let Some(query_doc) = try_make_query_document(
-        predicate,
-        &ctx.column_mapping,
-        ctx.collection.as_deref(),
-        ctx.config,
-    ) {
+    if let Some(query_doc) = try_make_query_document(predicate, &ctx.column_mapping, field_types) {
         ctx.stages.push(Stage::Match(query_doc));
         return Ok(());
     }
 
     // Fall back to $expr (less index-friendly)
-    let expr_ctx = ExpressionContext::new(&ctx.column_mapping);
+    let expr_ctx = ExpressionContext::new(&ctx.column_mapping).with_field_types(field_types);
     let match_expr = translate_expression(predicate, &expr_ctx)?;
     ctx.stages.push(Stage::Match(doc! { "$expr": match_expr }));
 
@@ -249,48 +249,47 @@ fn build_filter(
 fn try_make_query_document(
     predicate: &RelationalExpression,
     column_mapping: &ColumnMapping,
-    collection: Option<&str>,
-    config: Option<&MongoConfiguration>,
+    field_types: FieldTypes<'_>,
 ) -> Option<Document> {
     match predicate {
-        // Binary comparisons: column/getfield op literal
-        RelationalExpression::Eq { left, right }
-        | RelationalExpression::NotEq { left, right }
-        | RelationalExpression::Lt { left, right }
-        | RelationalExpression::LtEq { left, right }
-        | RelationalExpression::Gt { left, right }
-        | RelationalExpression::GtEq { left, right } => {
-            // Left side should be a field reference (Column or GetField chain)
-            let field_path = extract_field_path(left, column_mapping)?;
+        // Binary comparisons: a field reference (Column or GetField chain) and a literal
+        RelationalExpression::Eq { .. }
+        | RelationalExpression::NotEq { .. }
+        | RelationalExpression::Lt { .. }
+        | RelationalExpression::LtEq { .. }
+        | RelationalExpression::Gt { .. }
+        | RelationalExpression::GtEq { .. } => {
+            let comparison = field_comparison(predicate)?;
+            let field_path = extract_field_path(comparison.field, column_mapping)?;
+            let value = literal_to_bson_with_field_type(
+                comparison.literal,
+                field_types.of(comparison.field),
+            )?;
+            Some(doc! { field_path: { comparison.operator: value } })
+        }
 
-            // Right side should be a literal
-            let value = literal_to_bson(right, collection, config, &field_path)?;
-
-            // Determine the operator
-            let operator = match predicate {
-                RelationalExpression::Eq { .. } => "$eq",
-                RelationalExpression::NotEq { .. } => "$ne",
-                RelationalExpression::Lt { .. } => "$lt",
-                RelationalExpression::LtEq { .. } => "$lte",
-                RelationalExpression::Gt { .. } => "$gt",
-                RelationalExpression::GtEq { .. } => "$gte",
-                _ => return None,
-            };
-
-            Some(doc! { field_path: { operator: value } })
+        RelationalExpression::In { .. } => {
+            let (field, literals) = field_in_literals(predicate)?;
+            let field_path = extract_field_path(field, column_mapping)?;
+            let field_type = field_types.of(field);
+            let values = literals
+                .into_iter()
+                .map(|literal| literal_to_bson_with_field_type(literal, field_type))
+                .collect::<Option<Vec<_>>>()?;
+            Some(doc! { field_path: { "$in": values } })
         }
 
         // Logical AND: all sub-expressions must be convertible
         RelationalExpression::And { left, right } => {
-            let left_doc = try_make_query_document(left, column_mapping, collection, config)?;
-            let right_doc = try_make_query_document(right, column_mapping, collection, config)?;
+            let left_doc = try_make_query_document(left, column_mapping, field_types)?;
+            let right_doc = try_make_query_document(right, column_mapping, field_types)?;
             Some(doc! { "$and": [left_doc, right_doc] })
         }
 
         // Logical OR: all sub-expressions must be convertible
         RelationalExpression::Or { left, right } => {
-            let left_doc = try_make_query_document(left, column_mapping, collection, config)?;
-            let right_doc = try_make_query_document(right, column_mapping, collection, config)?;
+            let left_doc = try_make_query_document(left, column_mapping, field_types)?;
+            let right_doc = try_make_query_document(right, column_mapping, field_types)?;
             Some(doc! { "$or": [left_doc, right_doc] })
         }
 
@@ -332,23 +331,6 @@ fn extract_field_path(
         }
         _ => None,
     }
-}
-
-/// Convert a literal RelationalExpression to Bson.
-fn literal_to_bson(
-    expr: &RelationalExpression,
-    collection: Option<&str>,
-    config: Option<&MongoConfiguration>,
-    field_path: &str,
-) -> Option<Bson> {
-    let RelationalExpression::Literal { literal } = expr else {
-        return None;
-    };
-
-    let field_type =
-        collection.and_then(|name| config.and_then(|cfg| lookup_field_type(cfg, name, field_path)));
-
-    literal_to_bson_with_field_type(literal, field_type)
 }
 
 /// Check if an expression is a simple field reference (Column or GetField chain on a Column).

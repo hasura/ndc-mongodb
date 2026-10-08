@@ -21,7 +21,7 @@ use configuration::{
     MongoScalarType,
 };
 use mongodb::bson::Bson;
-use mongodb_support::{aggregate::Stage, BsonScalarType, EXTENDED_JSON_TYPE_NAME};
+use mongodb_support::{aggregate::Stage, BsonScalarType};
 use ndc_models::{self as ndc, ArgumentName, RelationalLiteral};
 use serde_json::Value;
 
@@ -31,7 +31,7 @@ use crate::{
     query::serialization::json_to_bson,
 };
 
-use super::RelationalError;
+use super::{type_lookup::ndc_type_to_plan_type, RelationalError};
 
 /// The immutable source prefix produced by materializing a native query, along with the physical
 /// collection (if any) the aggregation should run against.
@@ -171,37 +171,6 @@ fn scalar_type_of(t: &Type) -> Option<BsonScalarType> {
         Type::Scalar(MongoScalarType::Bson(scalar_type)) => Some(*scalar_type),
         Type::Nullable(inner) => scalar_type_of(inner),
         _ => None,
-    }
-}
-
-/// Convert a declared NDC argument type into the internal query-plan type used by `json_to_bson`.
-///
-/// `RelationalLiteral` only expresses scalars and null, so object/predicate types (which cannot be
-/// produced by a relational literal) are treated as Extended JSON.
-fn ndc_type_to_plan_type(t: &ndc::Type) -> Type {
-    match t {
-        ndc::Type::Named { name } => {
-            let name = name.to_string();
-            if name == EXTENDED_JSON_TYPE_NAME {
-                Type::Scalar(MongoScalarType::ExtendedJSON)
-            } else {
-                // Scalar type names in the NDC schema use graphql names (e.g. `ObjectId`,
-                // `Int`); `from_bson_name` matches case-insensitively against the BSON names.
-                match BsonScalarType::from_bson_name(&name) {
-                    Ok(scalar_type) => Type::Scalar(MongoScalarType::Bson(scalar_type)),
-                    // Object/collection type names cannot describe a scalar literal argument;
-                    // treat as Extended JSON so `json_to_bson` handles it generically.
-                    Err(_) => Type::Scalar(MongoScalarType::ExtendedJSON),
-                }
-            }
-        }
-        ndc::Type::Nullable { underlying_type } => {
-            Type::Nullable(Box::new(ndc_type_to_plan_type(underlying_type)))
-        }
-        ndc::Type::Array { element_type } => {
-            Type::ArrayOf(Box::new(ndc_type_to_plan_type(element_type)))
-        }
-        ndc::Type::Predicate { .. } => Type::Scalar(MongoScalarType::ExtendedJSON),
     }
 }
 
