@@ -11,7 +11,9 @@ use crate::mongo_query_plan::MongoConfiguration;
 
 use super::{
     column_origin::trace_column_origin,
-    type_lookup::{literal_to_bson_with_field_type, lookup_field_type},
+    type_lookup::{
+        field_comparison, field_in_literals, literal_to_bson_with_field_type, lookup_field_type,
+    },
 };
 
 /// Result of extracting an early match from a relation.
@@ -100,14 +102,32 @@ fn try_make_early_query_document(
     let root_collection = root_collection_name(input)?;
 
     match predicate {
-        // Binary comparisons can be converted if the left side is a column that traces to an original field
-        RelationalExpression::Eq { left, right }
-        | RelationalExpression::Gt { left, right }
-        | RelationalExpression::GtEq { left, right }
-        | RelationalExpression::Lt { left, right }
-        | RelationalExpression::LtEq { left, right }
-        | RelationalExpression::NotEq { left, right } => {
-            try_make_comparison_query(input, &root_collection, left, right, predicate, config)
+        // Binary comparisons can be converted if one side is a column that traces to an original
+        // field and the other is a literal
+        RelationalExpression::Eq { .. }
+        | RelationalExpression::Gt { .. }
+        | RelationalExpression::GtEq { .. }
+        | RelationalExpression::Lt { .. }
+        | RelationalExpression::LtEq { .. }
+        | RelationalExpression::NotEq { .. } => {
+            let comparison = field_comparison(predicate)?;
+            let field_path = trace_expression_to_path(input, comparison.field, &root_collection)?;
+            let field_type =
+                config.and_then(|cfg| lookup_field_type(cfg, &root_collection, &field_path));
+            let value = literal_to_bson_with_field_type(comparison.literal, field_type)?;
+            Some(doc! { field_path: { comparison.operator: value } })
+        }
+
+        RelationalExpression::In { .. } => {
+            let (field, literals) = field_in_literals(predicate)?;
+            let field_path = trace_expression_to_path(input, field, &root_collection)?;
+            let field_type =
+                config.and_then(|cfg| lookup_field_type(cfg, &root_collection, &field_path));
+            let values = literals
+                .into_iter()
+                .map(|literal| literal_to_bson_with_field_type(literal, field_type))
+                .collect::<Option<Vec<_>>>()?;
+            Some(doc! { field_path: { "$in": values } })
         }
 
         // AND: both sub-expressions must be convertible
@@ -139,35 +159,6 @@ fn try_make_early_query_document(
         // Other expressions cannot be converted to early match
         _ => None,
     }
-}
-
-/// Try to make a comparison query document from a binary comparison expression.
-fn try_make_comparison_query(
-    input: &Relation,
-    root_collection: &str,
-    left: &RelationalExpression,
-    right: &RelationalExpression,
-    original_expr: &RelationalExpression,
-    config: Option<&MongoConfiguration>,
-) -> Option<Document> {
-    // Left side should be a field reference (Column or GetField chain)
-    let field_path = trace_expression_to_path(input, left, root_collection)?;
-
-    // Right side should be a literal
-    let value = literal_to_bson(right, root_collection, &field_path, config)?;
-
-    // Generate the appropriate comparison operator
-    let operator = match original_expr {
-        RelationalExpression::Eq { .. } => "$eq",
-        RelationalExpression::NotEq { .. } => "$ne",
-        RelationalExpression::Gt { .. } => "$gt",
-        RelationalExpression::GtEq { .. } => "$gte",
-        RelationalExpression::Lt { .. } => "$lt",
-        RelationalExpression::LtEq { .. } => "$lte",
-        _ => return None,
-    };
-
-    Some(doc! { field_path: { operator: value } })
 }
 
 /// Trace an expression to its original field path.
@@ -211,23 +202,6 @@ fn root_collection_name(relation: &Relation) -> Option<String> {
         Relation::Join { left, .. } => root_collection_name(left),
         Relation::Union { .. } => None,
     }
-}
-
-/// Convert a RelationalExpression::Literal to Bson.
-fn literal_to_bson(
-    expr: &RelationalExpression,
-    collection: &str,
-    field_path: &str,
-    config: Option<&MongoConfiguration>,
-) -> Option<Bson> {
-    let RelationalExpression::Literal { literal } = expr else {
-        return None;
-    };
-
-    let field_type =
-        config.and_then(|cfg| lookup_field_type(cfg, collection, field_path));
-
-    literal_to_bson_with_field_type(literal, field_type)
 }
 
 #[cfg(test)]
