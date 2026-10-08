@@ -10,6 +10,12 @@ This changelog documents the changes between release versions.
 
 ### Changed
 
+## [2.1.1] - 2026-10-08
+
+### Fixed
+
+- Relational queries now match ObjectId and UUID fields filtered with string values, including permission filters, `IN` lists, and comparisons in either operand order ([#192](https://github.com/hasura/ndc-mongodb/pull/192))
+
 ## [2.1.0] - 2026-08-15
 
 ### Added
