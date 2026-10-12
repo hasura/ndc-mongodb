@@ -10,6 +10,12 @@ This changelog documents the changes between release versions.
 
 ### Changed
 
+## [2.1.2] - 2026-10-12
+
+### Fixed
+
+- Restore system CA certificate discovery in the Nix-built connector image by setting `SSL_CERT_FILE` to the included `/etc/ssl/certs/ca-bundle.crt`.
+
 ## [2.1.1] - 2026-10-08
 
 ### Fixed
