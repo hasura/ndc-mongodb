@@ -36,6 +36,22 @@ jobs:
       - name: run relational integration tests 📋
         run: nix develop --command just test-relational-mongodb-versions
 
+      - name: verify Docker image CA bundle configuration 📋
+        shell: bash
+        run: |
+          set -euo pipefail
+          nix build .#docker-image-x86_64-linux --print-build-logs
+          image_ref=$(docker load < result | sed -n 's/^Loaded image: //p' | tail -1)
+          test -n "$image_ref"
+          docker inspect "$image_ref" \
+            --format '{{range .Config.Env}}{{println .}}{{end}}' \
+            | grep -Fx 'SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt'
+          container_id=$(docker create "$image_ref")
+          trap 'docker rm "$container_id"' EXIT
+          docker export "$container_id" \
+            | tar -tf - \
+            | grep -Fx 'etc/ssl/certs/ca-bundle.crt' > /dev/null
+
   audit:
     name: Security Audit
     runs-on: ubuntu-24.04
