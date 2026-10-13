@@ -50,7 +50,7 @@ jobs:
           trap 'docker rm "$container_id"' EXIT
           docker export "$container_id" \
             | tar -tf - \
-            | grep -Eq '^etc/ssl/certs/ca-bundle\.crt$'
+            | grep -Fx 'etc/ssl/certs/ca-bundle.crt' > /dev/null
 
   audit:
     name: Security Audit
