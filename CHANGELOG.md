@@ -10,6 +10,13 @@ This changelog documents the changes between release versions.
 
 ### Changed
 
+## [2.1.3] - 2026-10-13
+
+### Fixed
+
+- Fix TLS connections to the Postgres configuration store when the server uses a self-signed certificate ([#195](https://github.com/hasura/ndc-mongodb/pull/195))
+- Release `connector-definition.tgz` now includes the connector image tag and CLI plugin checksums instead of empty values ([#195](https://github.com/hasura/ndc-mongodb/pull/195))
+
 ## [2.1.2] - 2026-10-12
 
 ### Fixed
