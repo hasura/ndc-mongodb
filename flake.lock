@@ -161,17 +161,18 @@
     "ndc-sdk-source": {
       "flake": false,
       "locked": {
-        "lastModified": 1773323648,
-        "narHash": "sha256-z5ctPO92H7WrT1JAZEHvGf57/lmNYu/t71EYohuzCm8=",
+        "lastModified": 1792659991,
+        "narHash": "sha256-QXNyxMsZRcSLFa4smkToh3TGM8koM40jbm7BJoQRllc=",
         "owner": "hasura",
         "repo": "ndc-sdk-rs",
-        "rev": "b84850bdfada675e38deeaf236b8f7947ea3b516",
+        "rev": "e66debcb863781f52a0ad189ff4165d6dcf625b8",
         "type": "github"
       },
       "original": {
         "owner": "hasura",
         "repo": "ndc-sdk-rs",
-        "type": "github"
+        "type": "github",
+        "ref": "v0.9.1"
       }
     },
     "nixpkgs": {
