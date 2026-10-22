@@ -56,7 +56,7 @@
     # To use a GitHub version instead:
     #     url = "github:hasura/ndc-sdk-rs";
     ndc-sdk-source = {
-      url = "github:hasura/ndc-sdk-rs";
+      url = "github:hasura/ndc-sdk-rs/v0.9.1";
       flake = false;
     };
   };
