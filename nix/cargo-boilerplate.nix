@@ -61,6 +61,10 @@ let
   # But it doesn't hurt anything to make this override in other cases.
   toolchain = pkgs: pkgs.rustToolchain.override { targets = [ buildTargetNameFixed ]; };
 
+  # C compiler targeting musl, for C dependencies of statically-linked builds
+  muslCC = "${pkgsStatic.stdenv.cc}/bin/${pkgsStatic.stdenv.cc.targetPrefix}cc";
+  muslTargetEnv = builtins.replaceStrings [ "-" ] [ "_" ] buildTargetNameFixed;
+
   # Converts host system string for use in environment variable names
   envCase = triple: lib.strings.toUpper (builtins.replaceStrings [ "-" ] [ "_" ] triple);
 in
@@ -87,6 +91,15 @@ in
   }
   // lib.optionalAttrs staticallyLinked {
     CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
+
+    # C code built by build scripts (e.g. aws-lc-sys, pulled in by rustls via
+    # the mongodb driver's aws-auth feature) must be compiled against musl, not
+    # glibc, or the static link fails with undefined glibc-only symbols such as
+    # `__isoc23_sscanf` and `__memcpy_chk`. `CC_<target>` is read by the `cc`
+    # crate; aws-lc-sys prefers `TARGET_CC*` when cross-compiling, and the
+    # pkgsCross stdenv sets a glibc `TARGET_CC`, so override that per-target too.
+    "CC_${muslTargetEnv}" = muslCC;
+    "TARGET_CC_${muslTargetEnv}" = muslCC;
   };
 
   craneLib = craneLib.overrideToolchain toolchain;

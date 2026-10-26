@@ -51,14 +51,6 @@
       flake = false;
     };
 
-    # NDC SDK source for local development.
-    # Using local path to pick up uncommitted changes.
-    # To use a GitHub version instead:
-    #     url = "github:hasura/ndc-sdk-rs";
-    ndc-sdk-source = {
-      url = "github:hasura/ndc-sdk-rs";
-      flake = false;
-    };
   };
 
   outputs =
@@ -70,7 +62,6 @@
     , advisory-db
     , arion
     , graphql-engine-source
-    , ndc-sdk-source
     , systems
     , ...
     }:
@@ -96,9 +87,7 @@
           # Extend our package set with mongodb-connector, graphql-engine, and
           # other packages built by this flake to make these packages accessible
           # in arion-compose.nix.
-          mongodb-connector-workspace = final.callPackage ./nix/mongodb-connector-workspace.nix {
-            inherit ndc-sdk-source;
-          }; # builds all packages in this repo
+          mongodb-connector-workspace = final.callPackage ./nix/mongodb-connector-workspace.nix { }; # builds all packages in this repo
           mongodb-connector = final.mongodb-connector-workspace.override { package = "mongodb-connector"; }; # override `package` to build one specific crate
           mongodb-cli-plugin = final.mongodb-connector-workspace.override { package = "mongodb-cli-plugin"; };
           relationalTests = final.callPackage ./nix/relational-tests.nix {
