@@ -1,0 +1,94 @@
+name: Trivy
+
+# Scans Rust dependencies (Cargo.lock) and the env-loader image's Alpine
+# packages for known vulnerabilities. (The Nix image holds only a static
+# binary and a CA bundle, which Trivy cannot inventory; its Rust dependencies
+# are covered by the Cargo.lock scan.), so that findings surface on the PR that introduces
+# them instead of during the connector release process.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  schedule:
+    # Weekly, to catch newly disclosed advisories against unchanged code.
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  TRIVY_VERSION: 0.76.1
+  TRIVY_SHA256: c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0
+  TRIVY_SEVERITY: HIGH,CRITICAL
+
+jobs:
+  dependencies:
+    name: trivy::dependencies
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+
+      - name: Install Trivy 🔧
+        shell: bash
+        run: |
+          set -euo pipefail
+          tarball="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          curl -sSfL -o "/tmp/$tarball" \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/$tarball"
+          echo "${TRIVY_SHA256}  /tmp/$tarball" | sha256sum -c -
+          sudo tar -xzf "/tmp/$tarball" -C /usr/local/bin trivy
+          trivy --version
+
+      - name: Scan Cargo.lock 🔍
+        run: >
+          trivy fs --scanners vuln --severity "$TRIVY_SEVERITY"
+          --ignore-unfixed --exit-code 1 .
+
+  images:
+    name: trivy::images
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+
+      - name: Install Nix ❄
+        uses: DeterminateSystems/nix-installer-action@v4
+
+      - name: Link Cachix 🔌
+        uses: cachix/cachix-action@v12
+        with:
+          name: '${{ vars.CACHIX_CACHE_NAME }}'
+          authToken: '${{ secrets.CACHIX_CACHE_AUTH_TOKEN }}'
+
+      - name: Install Trivy 🔧
+        shell: bash
+        run: |
+          set -euo pipefail
+          tarball="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          curl -sSfL -o "/tmp/$tarball" \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/$tarball"
+          echo "${TRIVY_SHA256}  /tmp/$tarball" | sha256sum -c -
+          sudo tar -xzf "/tmp/$tarball" -C /usr/local/bin trivy
+          trivy --version
+
+      - name: Build env-loader image 🔨
+        shell: bash
+        run: |
+          set -euo pipefail
+          nix build --print-build-logs .#mongodb-connector-x86_64-linux -o result-connector
+          mkdir -p release
+          cp result-connector/bin/mongodb-connector release/mongodb-connector-x86_64-linux
+          docker build --platform linux/amd64 -f Dockerfile.env-loader \
+            -t ndc-mongodb:env-loader-scan .
+
+      - name: Scan env-loader image 🔍
+        run: >
+          trivy image --scanners vuln --severity "$TRIVY_SEVERITY"
+          --ignore-unfixed --exit-code 1 ndc-mongodb:env-loader-scan

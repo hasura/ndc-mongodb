@@ -9,6 +9,7 @@ This changelog documents the changes between release versions.
 ### Fixed
 
 - Upgrade the MongoDB driver to 3.9.1, removing the outdated `rustls-webpki` 0.101 and `webpki-roots` 0.25 pulled in by its OIDC path; update `rustls`, `rustls-webpki`, `webpki-roots`, `h2`, `time` and `tokio-postgres` to resolve security advisories ([#197](https://github.com/hasura/ndc-mongodb/pull/197))
+- Update `openssl`, `aws-config` (and with it `aws-smithy-json` and `aws-sdk-sts`), `serde_with` and `rand` to resolve security advisories reported by Trivy; the Rust toolchain moves to 1.94.1, which the updated AWS SDK crates require ([#199](https://github.com/hasura/ndc-mongodb/pull/199))
 
 ### Changed
 
