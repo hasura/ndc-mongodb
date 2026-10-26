@@ -3,11 +3,11 @@
     "advisory-db": {
       "flake": false,
       "locked": {
-        "lastModified": 1748950236,
-        "narHash": "sha256-kNiGMrXi5Bq/aWoQmnpK0v+ufQA4FOInhbkY56iUndc=",
+        "lastModified": 1792830613,
+        "narHash": "sha256-OmVyhTSW8M6JY6W7kSw+jJ9nobAX5pnk8Hl+caD5+KI=",
         "owner": "rustsec",
         "repo": "advisory-db",
-        "rev": "a1f651cba8bf224f52c5d55d8182b3bb0ebce49e",
+        "rev": "21d909e4c8bd4e14c7aea58bf980c881a0053ab1",
         "type": "github"
       },
       "original": {
@@ -158,23 +158,6 @@
         "type": "github"
       }
     },
-    "ndc-sdk-source": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1792659991,
-        "narHash": "sha256-QXNyxMsZRcSLFa4smkToh3TGM8koM40jbm7BJoQRllc=",
-        "owner": "hasura",
-        "repo": "ndc-sdk-rs",
-        "rev": "e66debcb863781f52a0ad189ff4165d6dcf625b8",
-        "type": "github"
-      },
-      "original": {
-        "owner": "hasura",
-        "repo": "ndc-sdk-rs",
-        "type": "github",
-        "ref": "v0.9.1"
-      }
-    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1723362943,
@@ -193,11 +176,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1748929857,
-        "narHash": "sha256-lcZQ8RhsmhsK8u7LIFsJhsLh/pzR9yZ8yqpTzyGdj+Q=",
+        "lastModified": 1792773339,
+        "narHash": "sha256-rZLrzrC6i+jnTAlvPZHogKDulY7WWDEv9hJeHieO7Zw=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "c2a03962b8e24e669fb37b7df10e7c79531ff1a4",
+        "rev": "3ec636362e1816bc2f0888fa0fa2c69f1bc9e504",
         "type": "github"
       },
       "original": {
@@ -215,7 +198,6 @@
         "flake-compat": "flake-compat",
         "graphql-engine-source": "graphql-engine-source",
         "hasura-ddn-cli": "hasura-ddn-cli",
-        "ndc-sdk-source": "ndc-sdk-source",
         "nixpkgs": "nixpkgs_2",
         "rust-overlay": "rust-overlay",
         "systems": "systems_2"
