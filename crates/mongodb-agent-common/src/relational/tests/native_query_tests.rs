@@ -177,7 +177,7 @@ fn native_query_config() -> MongoConfiguration {
     )
     .expect("native query configuration should validate");
 
-    MongoConfiguration(config)
+    MongoConfiguration::new(config)
 }
 
 fn int64(value: i64) -> RelationalExpression {

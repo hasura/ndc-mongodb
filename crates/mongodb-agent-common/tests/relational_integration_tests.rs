@@ -69,7 +69,7 @@ async fn execute_mflix_query(
     relation: Relation,
 ) -> Result<RelationalQueryResponse, MongoAgentError> {
     let state = get_mflix_state().await;
-    let config = MongoConfiguration(test_helpers::configuration::mflix_config());
+    let config = MongoConfiguration::new(test_helpers::configuration::mflix_config());
     let query = RelationalQuery {
         root_relation: relation,
         request_arguments: None,

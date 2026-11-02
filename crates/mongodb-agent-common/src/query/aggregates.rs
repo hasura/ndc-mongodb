@@ -389,7 +389,7 @@ mod tests {
     // - groups and relationships
 
     fn students_config() -> MongoConfiguration {
-        MongoConfiguration(Configuration {
+        MongoConfiguration::new(Configuration {
             collections: [collection("students")].into(),
             object_types: [(
                 "students".into(),

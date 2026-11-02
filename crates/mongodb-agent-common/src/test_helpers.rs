@@ -10,7 +10,7 @@ use ndc_test_helpers::{
 use crate::mongo_query_plan::MongoConfiguration;
 
 pub fn make_nested_schema() -> MongoConfiguration {
-    MongoConfiguration(Configuration {
+    MongoConfiguration::new(Configuration {
         collections: BTreeMap::from([
             (
                 "authors".into(),
@@ -89,7 +89,7 @@ pub fn make_nested_schema() -> MongoConfiguration {
 /// Configuration for a MongoDB database with Chinook test data
 #[allow(dead_code)]
 pub fn chinook_config() -> MongoConfiguration {
-    MongoConfiguration(Configuration {
+    MongoConfiguration::new(Configuration {
         collections: [
             collection("Album"),
             collection("Artist"),
@@ -163,5 +163,5 @@ pub fn chinook_relationships() -> BTreeMap<String, ndc_models::Relationship> {
 
 /// Configuration for a MongoDB database that resembles MongoDB's sample_mflix test data set.
 pub fn mflix_config() -> MongoConfiguration {
-    MongoConfiguration(test_helpers::configuration::mflix_config())
+    MongoConfiguration::new(test_helpers::configuration::mflix_config())
 }
