@@ -50,4 +50,12 @@ test-relational-mongodb-versions:
 # Runs a specified service in a specified project config using arion (a nix
 # frontend for docker-compose). Propagates the exit status from that service.
 _arion project service:
-  arion --file {{project}} run --rm {{service}}; status=$?; arion --file {{project}} down; exit $status
+  arion --file {{project}} run --rm {{service}}; status=$?; \
+  if [ "$status" -ne 0 ]; then \
+    echo 'Integration service failed; capturing diagnostics before teardown'; \
+    arion --file {{project}} ps || true; \
+    arion --file {{project}} logs --no-color || true; \
+    mongodb_containers=$(docker ps -aq --filter label=com.docker.compose.service=mongodb); \
+    if [ -n "$mongodb_containers" ]; then docker inspect $mongodb_containers || true; fi; \
+  fi; \
+  arion --file {{project}} down; exit "$status"
