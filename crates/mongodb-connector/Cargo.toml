@@ -4,6 +4,7 @@ edition = "2021"
 version.workspace = true
 
 [dependencies]
+mimalloc = "=0.1.52"
 configuration = { path = "../configuration" }
 configuration-store = { path = "../configuration-store" }
 mongodb-agent-common = { path = "../mongodb-agent-common" }
