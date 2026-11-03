@@ -196,7 +196,7 @@ mod tests {
             description: None,
         };
 
-        let config = MongoConfiguration(Configuration::validate(
+        let config = MongoConfiguration::new(Configuration::validate(
             Default::default(),
             Default::default(),
             [("vectorSearch".into(), native_query)].into(),

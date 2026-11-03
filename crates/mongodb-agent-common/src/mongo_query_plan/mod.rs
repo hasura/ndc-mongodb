@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc};
 
 use configuration::ConfigurationSerializationOptions;
 use configuration::{
@@ -13,10 +13,15 @@ use crate::aggregation_function::AggregationFunction;
 use crate::comparison_function::ComparisonFunction;
 use crate::scalar_types_capabilities::SCALAR_TYPES;
 
+/// Immutable query configuration shared by router-state and per-query clones.
 #[derive(Clone, Debug)]
-pub struct MongoConfiguration(pub Configuration);
+pub struct MongoConfiguration(pub Arc<Configuration>);
 
 impl MongoConfiguration {
+    pub fn new(configuration: Configuration) -> Self {
+        Self(Arc::new(configuration))
+    }
+
     pub fn serialization_options(&self) -> &ConfigurationSerializationOptions {
         &self.0.options.serialization_options
     }
@@ -142,3 +147,18 @@ pub type Relationship = ndc_query_plan::Relationship<MongoConfiguration>;
 pub type Relationships = ndc_query_plan::Relationships<MongoConfiguration>;
 pub type Type = ndc_query_plan::Type<MongoScalarType>;
 pub type VariableTypes = ndc_query_plan::VariableTypes<MongoScalarType>;
+
+#[cfg(test)]
+mod configuration_sharing_tests {
+    use super::*;
+
+    #[test]
+    fn clones_share_the_same_immutable_configuration() {
+        let original = MongoConfiguration::new(Configuration::default());
+        let cloned = original.clone();
+        assert!(Arc::ptr_eq(&original.0, &cloned.0));
+        assert_eq!(Arc::strong_count(&original.0), 2);
+        drop(cloned);
+        assert_eq!(Arc::strong_count(&original.0), 1);
+    }
+}

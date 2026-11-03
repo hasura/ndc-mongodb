@@ -681,7 +681,7 @@ mod tests {
 
     #[test]
     fn serializes_response_with_decimal_128_fields() -> anyhow::Result<()> {
-        let query_context = MongoConfiguration(Configuration {
+        let query_context = MongoConfiguration::new(Configuration {
             collections: [collection("business")].into(),
             object_types: [(
                 "business".into(),
@@ -737,7 +737,7 @@ mod tests {
 
     #[test]
     fn serializes_response_with_nested_extjson() -> anyhow::Result<()> {
-        let query_context = MongoConfiguration(Configuration {
+        let query_context = MongoConfiguration::new(Configuration {
             collections: [collection("data")].into(),
             object_types: [(
                 "data".into(),
@@ -804,7 +804,7 @@ mod tests {
 
     #[test]
     fn serializes_response_with_nested_extjson_in_relaxed_mode() -> anyhow::Result<()> {
-        let query_context = MongoConfiguration(Configuration {
+        let query_context = MongoConfiguration::new(Configuration {
             collections: [collection("data")].into(),
             object_types: [(
                 "data".into(),

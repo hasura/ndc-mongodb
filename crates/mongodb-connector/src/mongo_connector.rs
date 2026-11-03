@@ -63,7 +63,7 @@ impl ConnectorConfig {
                             json!({}),
                         )
                     })?;
-                Ok(MongoConfiguration(configuration))
+                Ok(MongoConfiguration::new(configuration))
             }
         }
     }
@@ -103,7 +103,9 @@ impl ConnectorSetup for MongoConnector {
                         )
                     })?;
                 tracing::debug!(?configuration);
-                Ok(ConnectorConfig::Static(MongoConfiguration(configuration)))
+                Ok(ConnectorConfig::Static(MongoConfiguration::new(
+                    configuration,
+                )))
             }
             ConfigurationMode::Postgres {
                 url,
@@ -368,4 +370,27 @@ fn map_mongo_agent_error(err: MongoAgentError) -> ErrorResponse {
         None => json!({}),
     };
     ErrorResponse::new(status_code, err_response.message, details)
+}
+
+#[cfg(test)]
+mod configuration_sharing_tests {
+    use super::*;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn static_router_clone_and_resolution_share_configuration() {
+        let config = MongoConfiguration::new(Configuration::default());
+        let server_config = ConnectorConfig::Static(config.clone());
+        let router_clone = server_config.clone();
+        let resolved = router_clone
+            .resolve_for_collections(&["items"])
+            .await
+            .unwrap();
+        assert!(Arc::ptr_eq(&config.0, &resolved.0));
+        assert_eq!(Arc::strong_count(&config.0), 4);
+        drop(server_config);
+        drop(router_clone);
+        assert!(Arc::ptr_eq(&config.0, &resolved.0));
+        assert_eq!(Arc::strong_count(&config.0), 2);
+    }
 }

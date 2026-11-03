@@ -239,7 +239,7 @@ mod tests {
             },
             ..Default::default()
         };
-        let schema = get_schema(&MongoConfiguration(config))
+        let schema = get_schema(&MongoConfiguration::new(config))
             .await
             .expect("schema should be generated");
 

@@ -1004,7 +1004,7 @@ mod tests {
     }
 
     fn students_config() -> MongoConfiguration {
-        MongoConfiguration(Configuration {
+        MongoConfiguration::new(Configuration {
             collections: [
                 collection("assignments"),
                 collection("classes"),
@@ -1049,7 +1049,7 @@ mod tests {
     }
 
     fn test_cases_config() -> MongoConfiguration {
-        MongoConfiguration(Configuration {
+        MongoConfiguration::new(Configuration {
             collections: [collection("weird_field_names")].into(),
             object_types: [(
                 "weird_field_names".into(),

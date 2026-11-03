@@ -501,7 +501,7 @@ mod tests {
     }
 
     fn music_config() -> MongoConfiguration {
-        MongoConfiguration(Configuration {
+        MongoConfiguration::new(Configuration {
             collections: [collection("tracks")].into(),
             object_types: [(
                 "tracks".into(),

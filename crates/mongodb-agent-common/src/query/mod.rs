@@ -156,7 +156,7 @@ mod tests {
     }
 
     fn students_config() -> MongoConfiguration {
-        MongoConfiguration(Configuration {
+        MongoConfiguration::new(Configuration {
             collections: [collection("students")].into(),
             object_types: [(
                 "students".into(),
@@ -172,7 +172,7 @@ mod tests {
     }
 
     fn comments_config() -> MongoConfiguration {
-        MongoConfiguration(Configuration {
+        MongoConfiguration::new(Configuration {
             collections: [collection("comments")].into(),
             object_types: [(
                 "comments".into(),

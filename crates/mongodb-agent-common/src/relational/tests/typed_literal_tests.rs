@@ -18,7 +18,7 @@ const ID: &str = "507f1f77bcf86cd799439011";
 const OTHER_ID: &str = "507f191e810c19729de860ea";
 
 fn orders_config() -> MongoConfiguration {
-    MongoConfiguration(Configuration {
+    MongoConfiguration::new(Configuration {
         collections: [collection("orders")].into(),
         object_types: [
             (
