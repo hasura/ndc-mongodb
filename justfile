@@ -53,6 +53,8 @@ _arion project service:
   arion --file {{project}} run --rm {{service}}; status=$?; \
   if [ "$status" -ne 0 ]; then \
     echo 'Integration service failed; capturing diagnostics before teardown'; \
+    echo 'CI host kernel:'; uname -a; \
+    if [ -r /proc/version_signature ]; then cat /proc/version_signature; fi; \
     arion --file {{project}} ps || true; \
     arion --file {{project}} logs --no-color || true; \
     mongodb_containers=$(docker ps -aq --filter label=com.docker.compose.service=mongodb); \
