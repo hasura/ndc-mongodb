@@ -10,6 +10,12 @@ This changelog documents the changes between release versions.
 
 ### Changed
 
+## [2.1.5] - 2026-11-03
+
+### Fixed
+
+- Share immutable MongoDB configuration across router-state and per-query clones instead of copying the full configuration, reducing memory usage for large static schemas ([#201](https://github.com/hasura/ndc-mongodb/pull/201))
+
 ## [2.1.4] - 2026-10-26
 
 ### Fixed
